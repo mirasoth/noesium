@@ -1,5 +1,5 @@
 """
-Ollama LLM provider for Cogents.
+Ollama LLM provider for Noesium.
 
 This module provides:
 - Chat completion using Ollama models
@@ -24,7 +24,7 @@ from noesium.core.utils.logging import get_logger
 # Only import OPIK if tracing is enabled
 OPIK_AVAILABLE = False
 track = lambda func: func  # Default no-op decorator
-if os.getenv("COGENTS_OPIK_TRACING", "false").lower() == "true":
+if os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true":
     try:
         from opik import track
 
@@ -394,7 +394,7 @@ class LLMClient(BaseLLMClient):
             if len(embedding) != expected_dims:
                 logger.warning(
                     f"Embedding has {len(embedding)} dimensions, expected {expected_dims}. "
-                    f"Consider setting COGENTS_EMBEDDING_DIMS={len(embedding)} or "
+                    f"Consider setting NOESIUM_EMBEDDING_DIMS={len(embedding)} or "
                     f"using a different embedding model."
                 )
 

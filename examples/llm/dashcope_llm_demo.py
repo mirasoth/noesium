@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-DashScope (Alibaba Cloud) LLM Demo for Cogents
+DashScope (Alibaba Cloud) LLM Demo for Noesium
 
 This demo showcases the DashScope client capabilities using OpenAI-compatible API:
 - Basic chat completion with Qwen models
@@ -416,7 +416,7 @@ def main():
     """Main demo function."""
     logger = setup_demo_logging()
 
-    print("🌟 DashScope (Alibaba Cloud) LLM Demo for Cogents")
+    print("🌟 DashScope (Alibaba Cloud) LLM Demo for Noesium")
     print("=" * 60)
 
     # Check configuration

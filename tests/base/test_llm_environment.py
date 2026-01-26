@@ -179,7 +179,7 @@ class TestLLMEnvironment:
         for name, url in endpoints_to_test:
             try:
                 request = urllib.request.Request(url)
-                request.add_header("User-Agent", "cogents-test/1.0")
+                request.add_header("User-Agent", "noesium-test/1.0")
 
                 with urllib.request.urlopen(request, timeout=5) as response:
                     if response.status == 200:

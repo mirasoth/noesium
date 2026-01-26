@@ -18,7 +18,7 @@ class BaseLLMClient(ABC):
         Args:
             **kwargs: Additional arguments to pass to the LLM client
         """
-        self.debug = os.getenv("COGENTS_DEBUG", "false").lower() == "true"
+        self.debug = os.getenv("NOESIUM_DEBUG", "false").lower() == "true"
 
     @abstractmethod
     def completion(
@@ -149,4 +149,4 @@ class BaseLLMClient(ABC):
         Returns:
             int: Expected embedding dimensions
         """
-        return int(os.getenv("COGENTS_EMBEDDING_DIMS", str(DEFAULT_EMBEDDING_DIMS)))
+        return int(os.getenv("NOESIUM_EMBEDDING_DIMS", str(DEFAULT_EMBEDDING_DIMS)))

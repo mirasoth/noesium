@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Weaviate Vector Store Demo for cogents-tools
+Weaviate Vector Store Demo for noesium-tools
 
 This demo showcases basic Weaviate vector store capabilities:
 1. Connect to Weaviate instance
@@ -72,7 +72,7 @@ async def demo_weaviate_vector_store():
         "additional_headers": {},
     }
 
-    collection_name = "cogents_demo_documents"
+    collection_name = "noesium_demo_documents"
     embedding_dims = 768  # nomic-embed-text:latest generates 768-dimensional vectors
 
     print(f"🔗 Connecting to Weaviate at: {weaviate_config['cluster_url']}")
@@ -194,7 +194,7 @@ async def demo_weaviate_vector_store():
 
 async def main():
     """Main demo function."""
-    print_section("Cogents-Tools Weaviate Vector Store Demo")
+    print_section("Noesium-Tools Weaviate Vector Store Demo")
 
     print("🚀 Welcome to the Weaviate vector store demonstration!")
     print("\n📋 This demo demonstrates:")

@@ -37,7 +37,7 @@ class BaseVectorStore(ABC):
                 raise ValueError(
                     f"Vector at index {i} has {len(vector)} dimensions, "
                     f"expected {self.embedding_model_dims}. "
-                    f"Check that your embedding model matches COGENTS_EMBEDDING_DIMS={self.embedding_model_dims}"
+                    f"Check that your embedding model matches NOESIUM_EMBEDDING_DIMS={self.embedding_model_dims}"
                 )
 
     @abstractmethod

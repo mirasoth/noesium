@@ -1,5 +1,5 @@
 """
-Unified test configuration for cogents.
+Unified test configuration for noesium.
 
 This file provides shared fixtures and configuration for both unit and integration tests.
 """

@@ -77,7 +77,7 @@ class LLMDecomposer(GoalDecomposer):
 
     def __init__(
         self,
-        provider: str = os.getenv("COGENTS_LLM_PROVIDER", "openrouter"),
+        provider: str = os.getenv("NOESIUM_LLM_PROVIDER", "openrouter"),
         model_name: Optional[str] = None,
         temperature: float = 0.3,
         max_tokens: int = 2000,

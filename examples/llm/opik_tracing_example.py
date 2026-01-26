@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Opik Tracing Example for Cogents
+Opik Tracing Example for Noesium
 
 This example demonstrates how to use Opik tracing with the Noesium LLM clients.
 Opik provides comprehensive observability and monitoring for LLM applications.
@@ -11,12 +11,12 @@ Requirements:
 - Set appropriate LLM API keys
 
 Environment Variables for Opik:
-- COGENTS_OPIK_TRACING: Global toggle for Opik tracing (default: false)
+- NOESIUM_OPIK_TRACING: Global toggle for Opik tracing (default: false)
 - OPIK_USE_LOCAL: Use local Opik deployment (default: true)
 - OPIK_LOCAL_URL: Local Opik URL (default: http://localhost:5173)
 - OPIK_API_KEY: Your Comet ML API key (only needed for cloud)
 - OPIK_WORKSPACE: Your workspace name (optional)
-- OPIK_PROJECT_NAME: Project name for organizing traces (default: cogents-llm)
+- OPIK_PROJECT_NAME: Project name for organizing traces (default: noesium-llm)
 - OPIK_URL: Custom Opik URL (for cloud deployment)
 - OPIK_TRACING: Enable/disable tracing (default: true if enabled globally)
 
@@ -24,7 +24,7 @@ Local Deployment Setup:
 1. Install Opik locally: pip install opik
 2. Start local Opik server: opik local start
 3. Set environment variables:
-   export COGENTS_OPIK_TRACING=true
+   export NOESIUM_OPIK_TRACING=true
    export OPIK_USE_LOCAL=true
    # Optional: export OPIK_LOCAL_URL=http://localhost:5173
 
@@ -73,12 +73,12 @@ def check_opik_configuration(logger):
     logger.info("🔍 Checking Opik configuration...")
 
     # Check global Noesium toggle first
-    cogents_opik_enabled = os.getenv("COGENTS_OPIK_TRACING", "false").lower() == "true"
+    noesium_opik_enabled = os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true"
 
-    if not cogents_opik_enabled:
-        logger.warning("⚠️ COGENTS_OPIK_TRACING not enabled")
+    if not noesium_opik_enabled:
+        logger.warning("⚠️ NOESIUM_OPIK_TRACING not enabled")
         logger.info("💡 To enable Opik tracing:")
-        logger.info("   1. Set: export COGENTS_OPIK_TRACING=true")
+        logger.info("   1. Set: export NOESIUM_OPIK_TRACING=true")
         logger.info("   2. Configure Opik: opik configure (or set environment variables)")
         logger.info("   3. For cloud: set OPIK_API_KEY")
         logger.info("   4. For local: ensure Opik server is running")
@@ -88,7 +88,7 @@ def check_opik_configuration(logger):
     use_local = os.getenv("OPIK_USE_LOCAL", "true").lower() == "true"
     api_key = os.getenv("OPIK_API_KEY")
     workspace = os.getenv("OPIK_WORKSPACE")
-    project = os.getenv("OPIK_PROJECT_NAME", "cogents-llm")
+    project = os.getenv("OPIK_PROJECT_NAME", "noesium-llm")
     tracing_enabled = os.getenv("OPIK_TRACING", "true").lower() == "true"
 
     if not tracing_enabled:
@@ -233,7 +233,7 @@ def main():
     """Main demo function."""
     logger = setup_demo_logging()
 
-    print("🔍 Opik Tracing Demo for Cogents")
+    print("🔍 Opik Tracing Demo for Noesium")
     print("=" * 50)
 
     # Check Opik configuration

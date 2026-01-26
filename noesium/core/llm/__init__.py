@@ -55,7 +55,7 @@ __all__ = [
 
 
 def get_llm_client(
-    provider: str = os.getenv("COGENTS_LLM_PROVIDER", "openai"),
+    provider: str = os.getenv("NOESIUM_LLM_PROVIDER", "openai"),
     base_url: Optional[str] = None,
     api_key: Optional[str] = None,
     structured_output: bool = True,

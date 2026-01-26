@@ -20,7 +20,7 @@ from noesium.core.utils.logging import get_logger
 # Only import OPIK if tracing is enabled
 OPIK_AVAILABLE = False
 track = lambda func: func  # Default no-op decorator
-if os.getenv("COGENTS_OPIK_TRACING", "false").lower() == "true":
+if os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true":
     try:
         pass
 

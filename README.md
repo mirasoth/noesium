@@ -1,10 +1,10 @@
-# Cogents-core
+# Noesium-core
 
 [![CI](https://github.com/mirasoth/noesium/actions/workflows/ci.yml/badge.svg)](https://github.com/mirasoth/noesium/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/noesium.svg)](https://pypi.org/project/noesium/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mirasoth/noesium)
 
-This is part of [Project Cogents](https://www.xiaming.site/2025/08/30/project-cogents/), an initiative to develop a computation-driven, cognitive agentic system. This repo contains the foundational abstractions (Agent, Memory, Tool, Goal, Orchestration, and more) along with essential modules such as LLM clients, logging, message buses, model routing, and observability. For the underlying philosophy, refer to my talk on MAS ([link](https://github.com/mirasoth/mas-talk-2508/blob/master/mas-talk-xmingc.pdf)).
+Project Noesium is an initiative to develop a computation-driven, cognitive agentic system. This repo contains the foundational abstractions (Agent, Memory, Tool, Goal, Orchestration, and more) along with essential modules such as LLM clients, logging, message buses, model routing, and observability. For the underlying philosophy, refer to my talk on MAS ([link](https://github.com/mirasoth/mas-talk-2508/blob/master/mas-talk-xmingc.pdf)).
 
 ## Installation
 
@@ -327,7 +327,7 @@ Set these environment variables for different providers:
 
 ```bash
 # Default LLM provider
-export COGENTS_LLM_PROVIDER="openai"
+export NOESIUM_LLM_PROVIDER="openai"
 
 # OpenAI
 export OPENAI_API_KEY="sk-..."

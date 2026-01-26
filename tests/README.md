@@ -1,6 +1,6 @@
 # Noesium Test Suite
 
-This directory contains the unified test suite for cogents, including both unit and integration tests.
+This directory contains the unified test suite for noesium, including both unit and integration tests.
 
 ## Test Structure
 

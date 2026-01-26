@@ -17,7 +17,7 @@ def configure_opik() -> bool:
     Configure Opik tracing based on environment variables.
 
     Environment variables:
-        COGENTS_OPIK_TRACING: Global toggle for Opik tracing (default: false)
+        NOESIUM_OPIK_TRACING: Global toggle for Opik tracing (default: false)
         OPIK_USE_LOCAL: Use local Opik deployment (default: true)
         OPIK_LOCAL_URL: Local Opik URL (default: http://localhost:5173)
         OPIK_API_KEY: API key for Comet ML/Opik (only needed for cloud)
@@ -31,10 +31,10 @@ def configure_opik() -> bool:
     """
     try:
         # Check global Noesium Opik tracing toggle first
-        cogents_opik_enabled = os.getenv("COGENTS_OPIK_TRACING", "false").lower() == "true"
+        noesium_opik_enabled = os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true"
 
-        if not cogents_opik_enabled:
-            logger.debug("Opik tracing disabled via COGENTS_OPIK_TRACING=false")
+        if not noesium_opik_enabled:
+            logger.debug("Opik tracing disabled via NOESIUM_OPIK_TRACING=false")
             return False
 
         # Check if using local deployment
@@ -43,7 +43,7 @@ def configure_opik() -> bool:
         # Configuration variables
         opik_api_key = os.getenv("OPIK_API_KEY")
         os.getenv("OPIK_WORKSPACE")
-        opik_project = os.getenv("OPIK_PROJECT_NAME", "cogents-llm")
+        opik_project = os.getenv("OPIK_PROJECT_NAME", "noesium-llm")
         opik_tracing = os.getenv("OPIK_TRACING", "true").lower() == "true"
 
         if not opik_tracing:
@@ -88,9 +88,9 @@ def is_opik_enabled() -> bool:
     """
     try:
         # Check global Noesium Opik tracing toggle first
-        cogents_opik_enabled = os.getenv("COGENTS_OPIK_TRACING", "false").lower() == "true"
+        noesium_opik_enabled = os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true"
 
-        if not cogents_opik_enabled:
+        if not noesium_opik_enabled:
             return False
 
         import opik

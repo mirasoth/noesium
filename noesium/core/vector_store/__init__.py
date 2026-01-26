@@ -33,9 +33,9 @@ __all__ = [
 
 
 def get_vector_store(
-    provider: str = os.getenv("COGENTS_VECTOR_STORE_PROVIDER", "weaviate"),
+    provider: str = os.getenv("NOESIUM_VECTOR_STORE_PROVIDER", "weaviate"),
     collection_name: str = "default_collection",
-    embedding_model_dims: int = int(os.getenv("COGENTS_EMBEDDING_DIMS", "768")),
+    embedding_model_dims: int = int(os.getenv("NOESIUM_EMBEDDING_DIMS", "768")),
     **kwargs,
 ):
     """

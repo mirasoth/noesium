@@ -31,7 +31,7 @@ help: ## Show this help message
 
 install: ## Install development dependencies
 	@echo "$(BLUE)🔧 Installing development dependencies...$(RESET)"
-	@$(UV) sync --extra dev
+	@$(UV) sync --extra dev --extra tools
 
 setup: install ## Setup development environment
 	@echo "$(GREEN)✅ Development environment ready$(RESET)"

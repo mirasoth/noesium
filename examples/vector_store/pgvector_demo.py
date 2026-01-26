@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PGVector Store Demo for cogents-tools
+PGVector Store Demo for noesium-tools
 
 This demo showcases basic PGVector (PostgreSQL + pgvector) capabilities:
 1. Connect to PostgreSQL instance with pgvector extension
@@ -77,7 +77,7 @@ async def demo_pgvector_store():
         "hnsw": os.getenv("USE_HNSW", "true").lower() == "true",
     }
 
-    collection_name = "cogents_demo_vectors"
+    collection_name = "noesium_demo_vectors"
     embedding_dims = 768  # nomic-embed-text:latest generates 768-dimensional vectors
 
     print(f"🐘 Connecting to PostgreSQL at: {pg_config['host']}:{pg_config['port']}")
@@ -192,7 +192,7 @@ async def demo_pgvector_store():
 
 async def main():
     """Main demo function."""
-    print_section("Cogents-Tools PGVector Store Demo")
+    print_section("Noesium-Tools PGVector Store Demo")
 
     print("🚀 Welcome to the PGVector store demonstration!")
     print("\n📋 This demo demonstrates:")

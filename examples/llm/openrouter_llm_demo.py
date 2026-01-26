@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenRouter LLM Demo for Cogents
+OpenRouter LLM Demo for Noesium
 
 This demo showcases the OpenRouter client capabilities using OpenAI-compatible API:
 - Basic chat completion with various models (Gemini, Claude, GPT, etc.)
@@ -443,7 +443,7 @@ def main():
     """Main demo function."""
     logger = setup_demo_logging()
 
-    print("🌟 OpenRouter LLM Demo for Cogents")
+    print("🌟 OpenRouter LLM Demo for Noesium")
     print("=" * 60)
 
     # Check configuration

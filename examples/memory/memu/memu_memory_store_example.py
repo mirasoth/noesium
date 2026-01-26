@@ -20,7 +20,7 @@ Environment Setup:
 
     3. For OpenAI (official):
        - Create a .env file with OPENAI_API_KEY and other OpenAI settings
-       - Set COGENTS_LLM_PROVIDER=openai
+       - Set NOESIUM_LLM_PROVIDER=openai
 
 Usage:
     python examples/memory/memu_memory_store_example.py
