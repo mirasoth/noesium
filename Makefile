@@ -2,8 +2,8 @@
 PYTHON = python3
 UV = uv
 PYTEST = pytest
-PYTHON_MODULES = pytemplate tests examples
-COVERAGE_MODULES = pytemplate
+PYTHON_MODULES = noesium tests examples
+COVERAGE_MODULES = noesium
 TEST_DIR = tests
 LINE_LENGTH = 120
 
@@ -210,7 +210,7 @@ publish-test: check-publish-prereqs ## Publish package to TestPyPI
 check-publish-prereqs: ## Check prerequisites for publishing
 	@echo "$(BLUE)🔍 Checking publishing prerequisites...$(RESET)"
 	@$(UV) --version >/dev/null 2>&1 || (echo "$(RED)❌ uv not found. Install with: curl -LsSf https://astral.sh/uv/install.sh | sh$(RESET)" && exit 1)
-	@if [ -z "$${UV_PUBLISH_TOKEN}" ] && [ ! -f ~/.pypirc ]; then \
+	@if [ -z "$${UV_PUBLISH_TOKEN}" ] && [ -z "$${PYPI_TOKEN}" ] && [ ! -f ~/.pypirc ]; then \
 		echo "$(YELLOW)⚠️  PyPI credentials not found. Set UV_PUBLISH_TOKEN or configure ~/.pypirc$(RESET)"; \
 		echo "$(BLUE)💡 You can set credentials with:$(RESET)"; \
 		echo "   export UV_PUBLISH_TOKEN=pypi-your_token_here"; \

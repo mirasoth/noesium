@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pytemplate"
-version = "0.0.1"
-description = "Python app template"
+name = "noesium"
+version = "0.1.0"
+description = "Towards a cognitive agentic framework"
 readme = "README.md"
 license = "MIT"
 authors = [
@@ -14,20 +14,48 @@ authors = [
 maintainers = [
     {name = "Xiaming Chen", email = "chenxm35@gmail.com"}
 ]
-keywords = ["python", "template"]
+keywords = ["agents", "multi-agent system", "cognition", "artificial intelligence"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-requires-python = ">=3.12.6"
+requires-python = ">=3.11"
 dependencies = [
+    # Basic dependencies
     "pydantic>=2.0.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.1.1",
+    "colorlog>=6.8.0",
+    "typing-extensions>=4.8.0",
+    "deprecated>=1.2.18",
+    "bubus>=1.5.6",  # requires python 3.11+
+    # LLM and AI dependencies
+    "openai>=1.0.0",
+    "instructor>=1.10.0",
+    "google-genai>=1.5.0",
+    "litellm>=1.0.0",
+    "ollama>=0.5.3",
+    "huggingface-hub>=0.34.4",
+    "llama-cpp-python>=0.3.16",
+    # LangChain ecosystem
+    "langchain-core>=0.3.72",
+    "langchain-text-splitters>=0.3.0",
+    "langchain-ollama>=0.2.0",
+    "langgraph>=0.5.4",
+    # Orchestration
+    "networkx>=3.5",
+    # MCP support
+    "mcp>=1.0.0",
+    # vector store
+    "protobuf>=5,<6",
+    "weaviate-client>=4,<5",
+    "psycopg2>=2.9.10",
+    "psycopg2-binary>=2.9.0",
 ]
 
 [project.optional-dependencies]
@@ -39,18 +67,23 @@ dev = [
     "pytest-trio>=0.8.0",
     "pytest-twisted>=1.14.3",
     "twisted>=25.5.0",
-    "black>=25.1.0",
-    "isort>=6.0.1",
+    "black>=23.0.0",
+    "isort>=5.12.0",
     "flake8>=7.3.0",
     "autoflake>=2.3.1",
+    "pillow>=11.3.0",  # Optional dependency for image understanding
 ]
 
 [project.urls]
-Homepage = "https://github.com/mirasoth/pytemplate"
+Homepage = "https://github.com/mirasoth/noesium"
+Repository = "https://github.com/mirasoth/noesium"
+
+[tool.uv.extra-build-variables."llama-cpp-python"]
+CC = "gcc"
+CXX = "g++"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["pytemplate*"]
+include = ["noesium*"]
 
 [tool.black]
 line-length = 120
@@ -68,7 +101,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["pytemplate"]
+source = ["noesium"]
 
 [tool.coverage.report]
 exclude_lines = [
