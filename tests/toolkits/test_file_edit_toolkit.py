@@ -10,8 +10,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from noesium.core.toolify.config import ToolkitConfig
 
+from noesium.core.toolify.config import ToolkitConfig
 from noesium.toolkits.file_edit_toolkit import FileEditToolkit
 
 

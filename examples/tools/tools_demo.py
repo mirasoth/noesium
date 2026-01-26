@@ -139,8 +139,7 @@ async def demo_mcp_integration():
     # This is a hypothetical example - you would need an actual MCP server
     logger.info("MCP integration is available but requires an MCP server to demonstrate")
     logger.info("Example usage:")
-    logger.info(
-        """
+    logger.info("""
     from noesium.core.toolify import create_mcp_toolkit
     
     # Create MCP toolkit
@@ -154,8 +153,7 @@ async def demo_mcp_integration():
     async with mcp_toolkit:
         tools = await mcp_toolkit.get_tools_map()
         result = await mcp_toolkit.call_tool("tool_name", arg1="value1")
-    """
-    )
+    """)
 
 
 async def demo_multiple_toolkits():

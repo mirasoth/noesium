@@ -4,9 +4,10 @@ Information Extractor for AskuraAgent - Handles multi-topic information extracti
 
 from typing import Any, Dict, Optional
 
+from langchain_core.tools import BaseTool
+
 from noesium.core.llm import BaseLLMClient
 from noesium.core.utils.logging import get_logger
-from langchain_core.tools import BaseTool
 
 from .models import AskuraConfig, AskuraState, InformationSlot
 

@@ -8,8 +8,8 @@ import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from noesium.core.toolify import ToolkitConfig, get_toolkit
 
+from noesium.core.toolify import ToolkitConfig, get_toolkit
 from noesium.toolkits.audio_aliyun_toolkit import AudioAliyunToolkit
 
 

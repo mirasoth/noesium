@@ -9,8 +9,8 @@ import tempfile
 from unittest.mock import Mock, patch
 
 import pytest
-from noesium.core.toolify.config import ToolkitConfig
 
+from noesium.core.toolify.config import ToolkitConfig
 from noesium.toolkits.bash_toolkit import BashToolkit
 
 

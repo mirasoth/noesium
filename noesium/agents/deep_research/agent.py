@@ -6,14 +6,15 @@ Enhanced base class designed for extensibility.
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
-from noesium.core.agent import BaseResearcher, ResearchOutput
-from noesium.core.llm import BaseLLMClient
-from noesium.core.utils.logging import get_logger
-from noesium.core.utils.typing import override
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
+
+from noesium.core.agent import BaseResearcher, ResearchOutput
+from noesium.core.llm import BaseLLMClient
+from noesium.core.utils.logging import get_logger
+from noesium.core.utils.typing import override
 
 from .prompts import answer_instructions, query_writer_instructions, reflection_instructions
 from .schemas import Reflection, SearchQueryList

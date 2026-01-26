@@ -5,6 +5,7 @@ Interactive AskuraAgent demo (LLM-enhanced, HITL).
 Run this script to chat with Askura as a trip planner.
 Type 'exit' or 'quit' to stop.
 """
+
 import sys
 from pathlib import Path
 

@@ -63,36 +63,30 @@ class PGVectorStore(BaseVectorStore):
             distance (str): Distance metric (not used in PGVector, for compatibility).
         """
         self.cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-        self.cur.execute(
-            f"""
+        self.cur.execute(f"""
             CREATE TABLE IF NOT EXISTS {self.collection_name} (
                 id UUID PRIMARY KEY,
                 vector vector({vector_size}),
                 payload JSONB
             );
-        """
-        )
+        """)
 
         if self.use_diskann and vector_size < 2000:
             # Check if vectorscale extension is installed
             self.cur.execute("SELECT * FROM pg_extension WHERE extname = 'vectorscale'")
             if self.cur.fetchone():
                 # Create DiskANN index if extension is installed for faster search
-                self.cur.execute(
-                    f"""
+                self.cur.execute(f"""
                     CREATE INDEX IF NOT EXISTS {self.collection_name}_diskann_idx
                     ON {self.collection_name}
                     USING diskann (vector);
-                """
-                )
+                """)
         elif self.use_hnsw:
-            self.cur.execute(
-                f"""
+            self.cur.execute(f"""
                 CREATE INDEX IF NOT EXISTS {self.collection_name}_hnsw_idx
                 ON {self.collection_name}
                 USING hnsw (vector vector_cosine_ops)
-            """
-            )
+            """)
 
         self.conn.commit()
 
