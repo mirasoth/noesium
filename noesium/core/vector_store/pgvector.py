@@ -6,7 +6,10 @@ try:
     import psycopg2
     from psycopg2.extras import execute_values
 except ImportError:
-    raise ImportError("The 'psycopg2' library is required. Please install it using 'pip install psycopg2'.")
+    raise ImportError(
+        "The 'psycopg2' library is required for PGVector support. "
+        "Install it with 'pip install noesium[postgres]' or 'pip install psycopg2-binary'."
+    )
 
 from .base import BaseVectorStore, OutputData
 

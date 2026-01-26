@@ -59,7 +59,7 @@ test-unit: ## Run unit tests only
 
 test-integration: ## Run integration tests only
 	@echo "$(BLUE)🧪 Running integration tests...$(RESET)"
-	$(UV) run $(PYTEST) $(TEST_DIR) -v -m "integration"
+	$(UV) run $(PYTEST) $(TEST_DIR) -v -m "integration" --runintegration
 
 test-coverage: ## Run tests with coverage
 	@echo "$(BLUE)🧪 Running tests with coverage...$(RESET)"

@@ -48,6 +48,7 @@ def sample_csv_file():
 class TestTabularDataToolkit:
     """Test cases for TabularDataToolkit."""
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization(self, tabular_toolkit):
         """Test that TabularDataToolkit initializes correctly."""
         assert tabular_toolkit is not None
@@ -56,6 +57,7 @@ class TestTabularDataToolkit:
         assert hasattr(tabular_toolkit, "get_data_summary")
         assert hasattr(tabular_toolkit, "validate_data_quality")
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, tabular_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await tabular_toolkit.get_tools_map()
@@ -113,6 +115,7 @@ class TestTabularDataToolkit:
             finally:
                 Path(f.name).unlink()
 
+    @pytest.mark.asyncio
     async def test_get_tabular_columns_success(self, tabular_toolkit, sample_csv_file):
         """Test successful column retrieval."""
         result = await tabular_toolkit.get_tabular_columns(sample_csv_file)
@@ -123,6 +126,7 @@ class TestTabularDataToolkit:
         assert "Column 3" in result
         assert "Column 4" in result
 
+    @pytest.mark.asyncio
     async def test_get_tabular_columns_file_not_found(self, tabular_toolkit):
         """Test column retrieval with file not found."""
         result = await tabular_toolkit.get_tabular_columns("/nonexistent/file.csv")
@@ -131,6 +135,7 @@ class TestTabularDataToolkit:
         assert "Error:" in result
         assert "does not exist" in result
 
+    @pytest.mark.asyncio
     async def test_get_tabular_columns_load_error(self, tabular_toolkit):
         """Test column retrieval with loading error."""
         # Create invalid CSV file
@@ -148,6 +153,7 @@ class TestTabularDataToolkit:
             finally:
                 Path(f.name).unlink()
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_get_column_info_success(self, tabular_toolkit, sample_csv_file):
         """Test successful column info retrieval."""
@@ -156,6 +162,7 @@ class TestTabularDataToolkit:
         assert isinstance(result, str)
         assert "Column" in result  # Should contain column information
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_get_column_info_string_column(self, tabular_toolkit, sample_csv_file):
         """Test column info for string column."""
@@ -164,6 +171,7 @@ class TestTabularDataToolkit:
         assert isinstance(result, str)
         assert "Column" in result  # Should contain column information
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_get_column_info_nonexistent_column(self, tabular_toolkit, sample_csv_file):
         """Test column info for non-existent column."""
@@ -172,6 +180,7 @@ class TestTabularDataToolkit:
         assert isinstance(result, str)
         assert "Column" in result  # Should contain column information
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_get_column_info_file_not_found(self, tabular_toolkit):
         """Test column info with file not found."""
@@ -184,6 +193,7 @@ class TestTabularDataToolkit:
 class TestTabularDataToolkitEdgeCases:
     """Test edge cases and error conditions."""
 
+    @pytest.mark.asyncio
     async def test_large_dataset_handling(self, tabular_toolkit):
         """Test handling of large datasets."""
         # Create a large CSV file
@@ -203,6 +213,7 @@ class TestTabularDataToolkitEdgeCases:
             finally:
                 Path(f.name).unlink()
 
+    @pytest.mark.asyncio
     async def test_empty_dataset(self, tabular_toolkit):
         """Test handling of empty datasets."""
         # Create empty CSV file (only headers)
@@ -219,6 +230,7 @@ class TestTabularDataToolkitEdgeCases:
             finally:
                 Path(f.name).unlink()
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_dataset_with_missing_values(self, tabular_toolkit):
         """Test handling of datasets with missing values."""
@@ -241,6 +253,7 @@ class TestTabularDataToolkitEdgeCases:
             finally:
                 Path(f.name).unlink()
 
+    @pytest.mark.asyncio
     async def test_concurrent_operations(self, tabular_toolkit, sample_csv_file):
         """Test concurrent tabular data operations."""
         import asyncio
@@ -257,6 +270,7 @@ class TestTabularDataToolkitEdgeCases:
         for result in results:
             assert isinstance(result, str)
 
+    @pytest.mark.asyncio
     async def test_special_characters_in_data(self, tabular_toolkit):
         """Test handling data with special characters."""
         # Create CSV with special characters

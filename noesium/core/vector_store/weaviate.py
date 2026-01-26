@@ -6,7 +6,8 @@ try:
     import weaviate
 except ImportError:
     raise ImportError(
-        "The 'weaviate' library is required. Please install it using 'pip install weaviate-client weaviate'."
+        "The 'weaviate' library is required for Weaviate support. "
+        "Install it with 'pip install noesium[weaviate]' or 'pip install weaviate-client'."
     )
 
 import weaviate.classes.config as wvcc

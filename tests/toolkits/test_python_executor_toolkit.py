@@ -25,11 +25,13 @@ def python_toolkit(python_config):
 class TestPythonExecutorToolkit:
     """Test cases for PythonExecutorToolkit."""
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization(self, python_toolkit):
         """Test that PythonExecutorToolkit initializes correctly."""
         assert python_toolkit is not None
         assert hasattr(python_toolkit, "execute_python_code")
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, python_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await python_toolkit.get_tools_map()
@@ -39,6 +41,7 @@ class TestPythonExecutorToolkit:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
 
+    @pytest.mark.asyncio
     async def test_simple_code_execution(self, python_toolkit):
         """Test execution of simple Python code."""
         test_code = """
@@ -53,6 +56,7 @@ a
         assert result.get("success") is True
         assert "Result: 3" in result.get("message", "")
 
+    @pytest.mark.asyncio
     async def test_numpy_code_execution(self, python_toolkit):
         """Test execution of code with numpy."""
         test_code = """
@@ -69,6 +73,7 @@ mean_val
         assert result.get("success") is True
         assert "Mean: 3.0" in result.get("message", "")
 
+    @pytest.mark.asyncio
     async def test_matplotlib_plot_generation(self, python_toolkit):
         """Test matplotlib plot generation."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -99,6 +104,7 @@ print("Plot generated successfully")
             assert len(files) > 0
             assert any("output_image" in f for f in files)
 
+    @pytest.mark.asyncio
     async def test_error_handling(self, python_toolkit):
         """Test error handling for invalid code."""
         test_code = """
@@ -114,6 +120,7 @@ def invalid_function(
         assert "error" in result
         assert "SyntaxError" in result.get("message", "")
 
+    @pytest.mark.asyncio
     async def test_runtime_error_handling(self, python_toolkit):
         """Test handling of runtime errors."""
         test_code = """
@@ -128,6 +135,7 @@ x = 1 / 0
         assert "error" in result
         assert "ZeroDivisionError" in result.get("message", "")
 
+    @pytest.mark.asyncio
     async def test_timeout_handling(self, python_toolkit):
         """Test timeout handling for long-running code."""
         test_code = """
@@ -143,6 +151,7 @@ print("This should not print")
         assert result.get("success") is False
         assert "timed out" in result.get("message", "").lower()
 
+    @pytest.mark.asyncio
     async def test_empty_code_handling(self, python_toolkit):
         """Test handling of empty code."""
         result = await python_toolkit.execute_python_code("")
@@ -151,6 +160,7 @@ print("This should not print")
         assert result.get("success") is True  # Empty code is considered successful
         assert "no output" in result.get("message", "").lower()
 
+    @pytest.mark.asyncio
     async def test_code_with_imports(self, python_toolkit):
         """Test code execution with various imports."""
         test_code = """
@@ -175,6 +185,7 @@ data
         assert result.get("success") is True
         assert "python_version" in result.get("message", "")
 
+    @pytest.mark.asyncio
     async def test_workdir_creation(self, python_toolkit):
         """Test that working directory is created correctly."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -198,6 +209,7 @@ print("File created")
             test_file_path = os.path.join(workdir, "test_file.txt")
             assert os.path.exists(test_file_path)
 
+    @pytest.mark.asyncio
     async def test_multiple_plots(self, python_toolkit):
         """Test generation of multiple plots."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -230,6 +242,7 @@ print("Two plots generated")
             image_files = [f for f in files if "output_image" in f]
             assert len(image_files) >= 1
 
+    @pytest.mark.asyncio
     async def test_pandas_operations(self, python_toolkit):
         """Test pandas operations."""
         test_code = """
@@ -271,6 +284,7 @@ mean_A
             ("import nonexistent_module", False),
         ],
     )
+    @pytest.mark.asyncio
     async def test_various_code_snippets(self, python_toolkit, code, expected_success):
         """Test various code snippets."""
         result = await python_toolkit.execute_python_code(code)
@@ -283,6 +297,7 @@ mean_A
 class TestPythonExecutorIntegration:
     """Integration tests for PythonExecutorToolkit."""
 
+    @pytest.mark.asyncio
     async def test_complex_data_analysis(self, python_toolkit):
         """Test complex data analysis workflow."""
         test_code = """

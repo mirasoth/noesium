@@ -3,7 +3,15 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from noesium.core.vector_store.weaviate import BaseVectorStore, WeaviateVectorStore
+try:
+    import weaviate
+    from noesium.core.vector_store.weaviate import BaseVectorStore, WeaviateVectorStore
+except ImportError as e:
+    pytest.skip(
+        f"Skipping Weaviate tests: {e}\n"
+        "Install optional dependencies with: pip install noesium[weaviate] or pip install weaviate-client",
+        allow_module_level=True,
+    )
 
 
 class TestWeaviateVectorStoreUnit:

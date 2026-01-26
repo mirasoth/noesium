@@ -30,6 +30,7 @@ def search_toolkit(search_config):
 class TestSearchToolkit:
     """Test cases for SearchToolkit."""
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization(self, search_toolkit):
         """Test that SearchToolkit initializes correctly."""
         assert search_toolkit is not None
@@ -39,6 +40,7 @@ class TestSearchToolkit:
         assert hasattr(search_toolkit, "tavily_search")
         assert hasattr(search_toolkit, "google_ai_search")
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, search_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await search_toolkit.get_tools_map()
@@ -48,6 +50,7 @@ class TestSearchToolkit:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.post")
     async def test_search_google_api_success(self, mock_post, search_toolkit):
         """Test successful Google search API call."""
@@ -65,6 +68,7 @@ class TestSearchToolkit:
         assert "Test Result" in result
         assert "https://example.com" in result
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.post")
     async def test_search_google_api_error(self, mock_post, search_toolkit):
         """Test Google search API error handling."""
@@ -81,6 +85,7 @@ class TestSearchToolkit:
         assert isinstance(result, str)
         assert "error" in result.lower() or "failed" in result.lower()
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_get_web_content_success(self, mock_get, search_toolkit):
         """Test successful content extraction."""
@@ -95,6 +100,7 @@ class TestSearchToolkit:
         assert isinstance(result, str)
         assert "Test Content" in result
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_get_web_content_error(self, mock_get, search_toolkit):
         """Test content extraction error handling."""
@@ -106,6 +112,7 @@ class TestSearchToolkit:
         assert isinstance(result, str)
         assert "Error" in result
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.search_toolkit.SearchToolkit.get_web_content")
     @patch("noesium.toolkits.search_toolkit.SearchToolkit.llm_client")
     async def test_web_qa_with_question(self, mock_llm, mock_get_web_content, search_toolkit):
@@ -123,6 +130,7 @@ class TestSearchToolkit:
         # LLM is called twice: once for answering and once for extracting related links
         assert mock_llm.completion.call_count == 2
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.search_toolkit.SearchToolkit.get_web_content")
     @patch("noesium.toolkits.search_toolkit.SearchToolkit.llm_client")
     async def test_web_qa_summary(self, mock_llm, mock_get_web_content, search_toolkit):
@@ -140,6 +148,7 @@ class TestSearchToolkit:
         # LLM is called twice: once for answering and once for extracting related links
         assert mock_llm.completion.call_count == 2
 
+    @pytest.mark.asyncio
     async def test_invalid_url_handling(self, search_toolkit):
         """Test handling of invalid URLs."""
         result = await search_toolkit.get_web_content("not-a-url")
@@ -147,6 +156,7 @@ class TestSearchToolkit:
         assert isinstance(result, str)
         assert "Error" in result or "Invalid" in result
 
+    @pytest.mark.asyncio
     async def test_empty_query_handling(self, search_toolkit):
         """Test handling of empty search queries."""
         result = await search_toolkit.search_google_api("")
@@ -154,6 +164,7 @@ class TestSearchToolkit:
         assert isinstance(result, str)
         # Should handle empty query gracefully
 
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("num_results", [1, 5, 10, 20])
     async def test_search_result_limits(self, search_toolkit, num_results):
         """Test different result limits for search."""
@@ -176,6 +187,7 @@ class TestSearchToolkit:
             result_count = result.count("Result ")
             assert result_count <= num_results
 
+    @pytest.mark.asyncio
     @patch("wizsearch.TavilySearch")
     async def test_tavily_search_success(self, mock_tavily_wrapper, search_toolkit):
         """Test successful Tavily search."""
@@ -203,6 +215,7 @@ class TestSearchToolkit:
         assert result.answer == "This is a test answer"
         mock_instance.search.assert_called_once_with(query="test query")
 
+    @pytest.mark.asyncio
     @patch("wizsearch.TavilySearch")
     async def test_tavily_search_error(self, mock_tavily_wrapper, search_toolkit):
         """Test Tavily search error handling."""
@@ -212,6 +225,7 @@ class TestSearchToolkit:
         with pytest.raises(RuntimeError, match="Tavily search failed"):
             await search_toolkit.tavily_search("test query")
 
+    @pytest.mark.asyncio
     @patch("wizsearch.GoogleAISearch")
     async def test_google_ai_search_success(self, mock_google_ai, search_toolkit):
         """Test successful Google AI search."""
@@ -244,6 +258,7 @@ class TestSearchToolkit:
             query="AI research trends", model="gemini-2.5-flash", temperature=0.0
         )
 
+    @pytest.mark.asyncio
     @patch("wizsearch.GoogleAISearch")
     async def test_google_ai_search_error(self, mock_google_ai, search_toolkit):
         """Test Google AI search error handling."""
@@ -253,6 +268,7 @@ class TestSearchToolkit:
         with pytest.raises(RuntimeError, match="Google AI search failed"):
             await search_toolkit.google_ai_search("test query")
 
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("search_depth", ["basic", "advanced"])
     async def test_tavily_search_depth_options(self, search_depth, search_toolkit):
         """Test Tavily search with different depth options."""
@@ -271,6 +287,7 @@ class TestSearchToolkit:
             call_kwargs = mock_wrapper.call_args[1]
             assert call_kwargs["search_depth"] == search_depth
 
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("model", ["gemini-2.5-flash", "gemini-2.0-flash-exp"])
     async def test_google_ai_search_model_options(self, model, search_toolkit):
         """Test Google AI search with different model options."""
@@ -292,6 +309,7 @@ class TestSearchToolkit:
 class TestSearchToolkitIntegration:
     """Integration tests for SearchToolkit (require API keys)."""
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_real_search_api(self):
         """Test with real Serper API (requires API key)."""
@@ -308,6 +326,7 @@ class TestSearchToolkitIntegration:
             assert "title" in item
             assert "link" in item
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_real_content_extraction(self):
         """Test with real content extraction (requires API key)."""

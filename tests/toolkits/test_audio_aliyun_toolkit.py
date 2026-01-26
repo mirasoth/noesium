@@ -113,6 +113,7 @@ class TestAudioAliyunToolkit:
             assert toolkit.ak_secret == "env_secret_key"
             assert toolkit.app_key == "env_app_key"
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, aliyun_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await aliyun_toolkit.get_tools_map()
@@ -154,6 +155,7 @@ class TestAudioAliyunToolkit:
 
         assert result == "direct text result"
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit._transcribe_file_aliyun")
     async def test_transcribe_audio_success(self, mock_transcribe, aliyun_toolkit, mock_aliyun_response):
         """Test successful audio transcription API."""
@@ -166,6 +168,7 @@ class TestAudioAliyunToolkit:
         assert result["provider"] == "aliyun_nls"
         assert "aliyun_result" in result
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit._transcribe_file_aliyun")
     async def test_transcribe_audio_failure(self, mock_transcribe, aliyun_toolkit):
         """Test audio transcription failure."""
@@ -177,6 +180,7 @@ class TestAudioAliyunToolkit:
         assert "Processing failed" in result["error"]
         assert result["text"] == ""
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit.transcribe_audio")
     async def test_audio_qa_success(self, mock_transcribe, aliyun_toolkit):
         """Test successful audio Q&A."""
@@ -197,6 +201,7 @@ class TestAudioAliyunToolkit:
             assert "人工智能" in result or "机器学习" in result
             mock_llm_client.completion.assert_called_once()
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit.transcribe_audio")
     async def test_audio_qa_no_speech(self, mock_transcribe, aliyun_toolkit):
         """Test audio Q&A with no speech detected."""
@@ -206,6 +211,7 @@ class TestAudioAliyunToolkit:
 
         assert result == "No speech detected in the audio file."
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit.transcribe_audio")
     async def test_audio_qa_transcription_error(self, mock_transcribe, aliyun_toolkit):
         """Test audio Q&A with transcription error."""
@@ -215,6 +221,7 @@ class TestAudioAliyunToolkit:
 
         assert "Failed to transcribe audio" in result
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit.transcribe_audio")
     async def test_audio_qa_failure(self, mock_transcribe, aliyun_toolkit):
         """Test audio Q&A failure."""
@@ -229,6 +236,7 @@ class TestAudioAliyunToolkit:
 class TestAudioAliyunToolkitIntegration:
     """Integration tests for AudioAliyunToolkit with mocked Aliyun services."""
 
+    @pytest.mark.asyncio
     @patch("aliyunsdkcore.client.AcsClient")
     async def test_transcribe_file_aliyun_success(self, mock_acs_client, aliyun_toolkit):
         """Test successful Aliyun NLS transcription with mocked client."""
@@ -262,6 +270,7 @@ class TestAudioAliyunToolkitIntegration:
         assert len(result["Sentences"]) == 1
         assert result["Sentences"][0]["Text"] == "这是测试音频转录结果。"
 
+    @pytest.mark.asyncio
     @patch("aliyunsdkcore.client.AcsClient")
     async def test_transcribe_file_aliyun_submit_failure(self, mock_acs_client, aliyun_toolkit):
         """Test Aliyun NLS transcription submit failure."""
@@ -278,6 +287,7 @@ class TestAudioAliyunToolkitIntegration:
 
         assert result is None
 
+    @pytest.mark.asyncio
     @patch("aliyunsdkcore.client.AcsClient")
     async def test_transcribe_file_aliyun_polling_timeout(self, mock_acs_client, aliyun_toolkit):
         """Test Aliyun NLS transcription polling timeout."""
@@ -308,6 +318,7 @@ class TestAudioAliyunToolkitIntegration:
 
             assert result is None
 
+    @pytest.mark.asyncio
     @patch("aliyunsdkcore.client.AcsClient")
     async def test_full_transcription_workflow(self, mock_acs_client, aliyun_toolkit, mock_audio_file):
         """Test complete transcription workflow from file to result."""
@@ -355,6 +366,7 @@ class TestAudioAliyunToolkitRealIntegration:
         ),
         reason="Aliyun credentials not available",
     )
+    @pytest.mark.asyncio
     async def test_real_aliyun_transcription(self):
         """Test real Aliyun NLS transcription with actual credentials."""
         config = ToolkitConfig(
@@ -388,6 +400,7 @@ class TestAudioAliyunToolkitRealIntegration:
         ),
         reason="Aliyun and OpenAI credentials not available",
     )
+    @pytest.mark.asyncio
     async def test_real_audio_qa_workflow(self):
         """Test real audio Q&A workflow with actual services."""
         config = ToolkitConfig(

@@ -110,6 +110,7 @@ class TestGmailService:
         assert service.config_dir == Path("/custom/config").expanduser().resolve()
         mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.build")
     @patch("noesium.toolkits.gmail_toolkit.Credentials")
     async def test_authenticate_with_access_token_success(self, mock_credentials, mock_build):
@@ -130,6 +131,7 @@ class TestGmailService:
         assert service.service == mock_service
         mock_credentials.assert_called_once_with(token="test_token", scopes=service.SCOPES)
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.build")
     @patch("noesium.toolkits.gmail_toolkit.Credentials")
     async def test_authenticate_with_access_token_failure(self, mock_credentials, mock_build):
@@ -145,6 +147,7 @@ class TestGmailService:
         assert result is False
         assert not service.is_authenticated()
 
+    @pytest.mark.asyncio
     @patch("os.path.exists")
     @patch("noesium.toolkits.gmail_toolkit.Credentials.from_authorized_user_file")
     @patch("noesium.toolkits.gmail_toolkit.build")
@@ -166,6 +169,7 @@ class TestGmailService:
         assert result is True
         assert service.is_authenticated()
 
+    @pytest.mark.asyncio
     async def test_get_recent_emails_not_authenticated(self):
         """Test getting emails when not authenticated."""
         from noesium.toolkits.gmail_toolkit import GmailService
@@ -175,6 +179,7 @@ class TestGmailService:
 
         assert emails == []
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     async def test_get_recent_emails_success(self, mock_is_auth, mock_gmail_service):
         """Test successful email retrieval."""
@@ -254,6 +259,7 @@ class TestGmailService:
 class TestGmailToolkit:
     """Test cases for GmailToolkit."""
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization(self, gmail_toolkit):
         """Test that GmailToolkit initializes correctly."""
         assert gmail_toolkit is not None
@@ -262,12 +268,14 @@ class TestGmailToolkit:
         assert hasattr(gmail_toolkit, "search_emails")
         assert hasattr(gmail_toolkit, "get_verification_codes")
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization_with_env_vars(self):
         """Test initialization with environment variables."""
         with patch.dict(os.environ, {"GMAIL_ACCESS_TOKEN": "env_token", "GMAIL_CREDENTIALS_PATH": "/env/creds.json"}):
             toolkit = get_toolkit("gmail", ToolkitConfig(name="gmail"))
             assert toolkit.gmail_service.access_token == "env_token"
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, gmail_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await gmail_toolkit.get_tools_map()
@@ -277,6 +285,7 @@ class TestGmailToolkit:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.authenticate")
     async def test_authenticate_gmail_success(self, mock_auth, gmail_toolkit):
         """Test successful Gmail authentication."""
@@ -287,6 +296,7 @@ class TestGmailToolkit:
         assert "✅ Successfully authenticated" in result
         mock_auth.assert_called_once()
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.authenticate")
     async def test_authenticate_gmail_failure(self, mock_auth, gmail_toolkit):
         """Test Gmail authentication failure."""
@@ -296,6 +306,7 @@ class TestGmailToolkit:
 
         assert "❌ Failed to authenticate" in result
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.authenticate")
     async def test_authenticate_gmail_exception(self, mock_auth, gmail_toolkit):
         """Test Gmail authentication with exception."""
@@ -306,6 +317,7 @@ class TestGmailToolkit:
         assert "❌ Gmail authentication error" in result
         assert "Connection error" in result
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.get_recent_emails")
     async def test_get_recent_emails_success(self, mock_get_emails, mock_is_auth, gmail_toolkit):
@@ -328,6 +340,7 @@ class TestGmailToolkit:
         assert "test@example.com" in result
         mock_get_emails.assert_called_once_with(max_results=5, query="newer_than:1h test", time_filter="1h")
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.authenticate")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.get_recent_emails")
@@ -342,6 +355,7 @@ class TestGmailToolkit:
         mock_auth.assert_called_once()
         mock_get_emails.assert_called_once()
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.authenticate")
     async def test_get_recent_emails_auth_failure(self, mock_auth, mock_is_auth, gmail_toolkit):
@@ -353,6 +367,7 @@ class TestGmailToolkit:
 
         assert "❌ Failed to authenticate with Gmail" in result
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.get_recent_emails")
     async def test_get_recent_emails_no_results(self, mock_get_emails, mock_is_auth, gmail_toolkit):
@@ -373,6 +388,7 @@ class TestGmailToolkit:
             (100, 50),  # Should clamp to maximum 50
         ],
     )
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.get_recent_emails")
     async def test_get_recent_emails_parameter_validation(
@@ -388,6 +404,7 @@ class TestGmailToolkit:
         call_args = mock_get_emails.call_args[1]
         assert call_args["max_results"] == expected
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.get_recent_emails")
     async def test_search_emails_success(self, mock_get_emails, mock_is_auth, gmail_toolkit):
@@ -408,6 +425,7 @@ class TestGmailToolkit:
         assert "Security Alert" in result
         mock_get_emails.assert_called_once_with(max_results=10, query="from:security@example.com", time_filter="30d")
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.get_recent_emails")
     async def test_search_emails_with_time_filter(self, mock_get_emails, mock_is_auth, gmail_toolkit):
@@ -421,6 +439,7 @@ class TestGmailToolkit:
         assert call_args["query"] == "newer_than:1h subject:verification"
         assert call_args["time_filter"] == "1h"
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.get_recent_emails")
     async def test_get_verification_codes_success(self, mock_get_emails, mock_is_auth, gmail_toolkit):
@@ -448,6 +467,7 @@ class TestGmailToolkit:
         # Both emails should be processed since they contain verification keywords
         assert "GitHub verification code" in result
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.get_recent_emails")
     async def test_get_verification_codes_no_codes_found(self, mock_get_emails, mock_is_auth, gmail_toolkit):
@@ -467,6 +487,7 @@ class TestGmailToolkit:
         # This email contains security keywords but no extractable codes
         assert "Found 1 verification emails but no codes could be extracted" in result
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.gmail_toolkit.GmailService.is_authenticated")
     @patch("noesium.toolkits.gmail_toolkit.GmailService.get_recent_emails")
     async def test_get_verification_codes_filters_common_numbers(self, mock_get_emails, mock_is_auth, gmail_toolkit):
@@ -487,6 +508,7 @@ class TestGmailToolkit:
         assert "567890" in result
         assert "2024" not in result.split("Code 1:")[1].split("\n")[0] if "Code 1:" in result else True
 
+    @pytest.mark.asyncio
     async def test_toolkit_error_handling(self, gmail_toolkit):
         """Test error handling in toolkit methods."""
         with patch.object(gmail_toolkit.gmail_service, "authenticate", side_effect=Exception("Network error")):
@@ -499,6 +521,7 @@ class TestGmailToolkit:
 class TestGmailToolkitIntegration:
     """Integration tests for GmailToolkit (require Gmail API access)."""
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_real_gmail_authentication(self):
         """Test with real Gmail credentials (requires setup)."""
@@ -509,6 +532,7 @@ class TestGmailToolkitIntegration:
         result = await toolkit.authenticate_gmail()
         assert "✅ Successfully authenticated" in result
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_real_email_retrieval(self):
         """Test with real email retrieval (requires Gmail access)."""
@@ -525,6 +549,7 @@ class TestGmailToolkitIntegration:
         # Should either find emails or indicate no emails found
         assert ("Found" in result) or ("No recent emails" in result)
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_real_verification_code_extraction(self):
         """Test real verification code extraction (requires Gmail access)."""

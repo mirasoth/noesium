@@ -3,7 +3,15 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from noesium.core.vector_store.pgvector import PGVectorStore
+try:
+    import psycopg2
+    from noesium.core.vector_store.pgvector import PGVectorStore
+except ImportError as e:
+    pytest.skip(
+        f"Skipping PGVector tests: {e}\n"
+        "Install optional dependencies with: pip install noesium[postgres] or pip install psycopg2-binary",
+        allow_module_level=True,
+    )
 
 
 class TestPGVectorStoreUnit:

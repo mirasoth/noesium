@@ -40,6 +40,7 @@ def file_memory_toolkit(file_memory_config):
 class TestMemoryToolkit:
     """Test cases for MemoryToolkit."""
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization(self, memory_toolkit):
         """Test that MemoryToolkit initializes correctly."""
         assert memory_toolkit is not None
@@ -47,6 +48,7 @@ class TestMemoryToolkit:
         assert hasattr(memory_toolkit, "write_memory")
         assert hasattr(memory_toolkit, "edit_memory")
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, memory_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await memory_toolkit.get_tools_map()
@@ -65,6 +67,7 @@ class TestMemoryToolkit:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
 
+    @pytest.mark.asyncio
     async def test_write_and_read_memory(self, memory_toolkit):
         """Test basic write and read operations."""
         # Write to memory
@@ -79,6 +82,7 @@ class TestMemoryToolkit:
 
         assert read_result == content
 
+    @pytest.mark.asyncio
     async def test_read_empty_slot(self, memory_toolkit):
         """Test reading from empty memory slot."""
         result = await memory_toolkit.read_memory("nonexistent_slot")
@@ -86,6 +90,7 @@ class TestMemoryToolkit:
         assert isinstance(result, str)
         assert "empty or does not exist" in result
 
+    @pytest.mark.asyncio
     async def test_overwrite_warning(self, memory_toolkit):
         """Test overwrite warning when replacing content."""
         # Write initial content
@@ -102,6 +107,7 @@ class TestMemoryToolkit:
         read_result = await memory_toolkit.read_memory("test_slot")
         assert read_result == "New content"
 
+    @pytest.mark.asyncio
     async def test_edit_memory_success(self, memory_toolkit):
         """Test successful memory editing."""
         # Write initial content
@@ -117,6 +123,7 @@ class TestMemoryToolkit:
         read_result = await memory_toolkit.read_memory("test_slot")
         assert read_result == "Hello universe, this is a test."
 
+    @pytest.mark.asyncio
     async def test_edit_memory_not_found(self, memory_toolkit):
         """Test editing with string not found."""
         await memory_toolkit.write_memory("Hello world", "test_slot")
@@ -126,6 +133,7 @@ class TestMemoryToolkit:
         assert isinstance(result, str)
         assert "not found in memory slot" in result
 
+    @pytest.mark.asyncio
     async def test_edit_memory_multiple_occurrences(self, memory_toolkit):
         """Test editing with multiple occurrences warning."""
         await memory_toolkit.write_memory("test test test", "test_slot")
@@ -136,6 +144,7 @@ class TestMemoryToolkit:
         assert "Found 3 occurrences" in result
         assert "more specific context" in result
 
+    @pytest.mark.asyncio
     async def test_append_to_memory(self, memory_toolkit):
         """Test appending content to memory."""
         # Write initial content
@@ -151,6 +160,7 @@ class TestMemoryToolkit:
         read_result = await memory_toolkit.read_memory("test_slot")
         assert read_result == "Initial content\nAppended content"
 
+    @pytest.mark.asyncio
     async def test_append_to_empty_slot(self, memory_toolkit):
         """Test appending to empty memory slot."""
         result = await memory_toolkit.append_to_memory("First content", "new_slot")
@@ -161,6 +171,7 @@ class TestMemoryToolkit:
         read_result = await memory_toolkit.read_memory("new_slot")
         assert read_result == "First content"
 
+    @pytest.mark.asyncio
     async def test_clear_memory(self, memory_toolkit):
         """Test clearing memory slot."""
         # Write content
@@ -176,6 +187,7 @@ class TestMemoryToolkit:
         read_result = await memory_toolkit.read_memory("test_slot")
         assert "empty or does not exist" in read_result
 
+    @pytest.mark.asyncio
     async def test_list_memory_slots(self, memory_toolkit):
         """Test listing memory slots."""
         # Add some content to different slots
@@ -189,6 +201,7 @@ class TestMemoryToolkit:
         assert "slot2" in result
         assert "9 chars" in result  # Length of "Content 1"
 
+    @pytest.mark.asyncio
     async def test_list_empty_memory(self, memory_toolkit):
         """Test listing when no memory slots exist."""
         result = await memory_toolkit.list_memory_slots()
@@ -196,6 +209,7 @@ class TestMemoryToolkit:
         assert isinstance(result, str)
         assert "No memory slots exist" in result
 
+    @pytest.mark.asyncio
     async def test_search_memory(self, memory_toolkit):
         """Test searching within memory slots."""
         # Add content to search
@@ -210,6 +224,7 @@ class TestMemoryToolkit:
         assert "ml" in result
         assert "Python" in result
 
+    @pytest.mark.asyncio
     async def test_search_memory_no_results(self, memory_toolkit):
         """Test searching with no matches."""
         await memory_toolkit.write_memory("Some content", "test_slot")
@@ -219,6 +234,7 @@ class TestMemoryToolkit:
         assert isinstance(result, str)
         assert "No matches found" in result
 
+    @pytest.mark.asyncio
     async def test_search_memory_specific_slot(self, memory_toolkit):
         """Test searching in specific memory slot."""
         await memory_toolkit.write_memory("Python programming", "slot1")
@@ -230,6 +246,7 @@ class TestMemoryToolkit:
         assert "slot1" in result
         assert "slot2" not in result
 
+    @pytest.mark.asyncio
     async def test_get_memory_stats(self, memory_toolkit):
         """Test getting memory statistics."""
         # Add some content
@@ -244,6 +261,7 @@ class TestMemoryToolkit:
         assert "Average slot size:" in result
         assert "Largest slot:" in result
 
+    @pytest.mark.asyncio
     async def test_get_memory_stats_empty(self, memory_toolkit):
         """Test getting stats when no memory exists."""
         result = await memory_toolkit.get_memory_stats()
@@ -251,6 +269,7 @@ class TestMemoryToolkit:
         assert isinstance(result, str)
         assert "No memory slots exist" in result
 
+    @pytest.mark.asyncio
     async def test_content_size_limit(self, memory_toolkit):
         """Test content size validation."""
         # Try to write content larger than limit (1000 chars)
@@ -261,6 +280,7 @@ class TestMemoryToolkit:
         assert isinstance(result, str)
         assert "Content too large" in result
 
+    @pytest.mark.asyncio
     async def test_default_slot_name(self, memory_toolkit):
         """Test using default slot name."""
         await memory_toolkit.write_memory("Default slot content")
@@ -273,6 +293,7 @@ class TestMemoryToolkit:
 class TestFileBasedMemoryToolkit:
     """Test cases for file-based MemoryToolkit."""
 
+    @pytest.mark.asyncio
     async def test_file_persistence(self, file_memory_toolkit):
         """Test that memory persists to files."""
         # Write content
@@ -287,6 +308,7 @@ class TestFileBasedMemoryToolkit:
             file_content = f.read()
         assert file_content == "Persistent content"
 
+    @pytest.mark.asyncio
     async def test_load_from_existing_files(self, file_memory_config):
         """Test loading memory from existing files."""
         # Create a file manually
@@ -302,6 +324,7 @@ class TestFileBasedMemoryToolkit:
         result = await toolkit.read_memory("existing_slot")
         assert result == "Pre-existing content"
 
+    @pytest.mark.asyncio
     async def test_file_cleanup_on_clear(self, file_memory_toolkit):
         """Test that files are removed when memory is cleared."""
         # Write content
@@ -321,6 +344,7 @@ class TestFileBasedMemoryToolkit:
 class TestMemoryToolkitEdgeCases:
     """Test edge cases and error conditions."""
 
+    @pytest.mark.asyncio
     async def test_edit_nonexistent_slot(self, memory_toolkit):
         """Test editing non-existent memory slot."""
         result = await memory_toolkit.edit_memory("old", "new", "nonexistent")
@@ -328,6 +352,7 @@ class TestMemoryToolkitEdgeCases:
         assert isinstance(result, str)
         assert "does not exist" in result
 
+    @pytest.mark.asyncio
     async def test_filename_sanitization(self, file_memory_toolkit):
         """Test that slot names are sanitized for filenames."""
         # Use slot name with special characters
@@ -346,6 +371,7 @@ class TestMemoryToolkitEdgeCases:
         assert "*" not in filename
         assert "?" not in filename
 
+    @pytest.mark.asyncio
     async def test_concurrent_operations(self, memory_toolkit):
         """Test concurrent memory operations."""
         import asyncio

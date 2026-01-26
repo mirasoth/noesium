@@ -24,6 +24,7 @@ def arxiv_toolkit(arxiv_config):
 class TestArxivToolkit:
     """Test cases for ArxivToolkit."""
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization(self, arxiv_toolkit):
         """Test that ArxivToolkit initializes correctly."""
         assert arxiv_toolkit is not None
@@ -31,6 +32,7 @@ class TestArxivToolkit:
         assert hasattr(arxiv_toolkit, "download_papers")
         assert hasattr(arxiv_toolkit, "get_paper_details")
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, arxiv_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await arxiv_toolkit.get_tools_map()
@@ -40,6 +42,7 @@ class TestArxivToolkit:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.arxiv_toolkit.arxiv")
     async def test_search_papers_success(self, mock_arxiv, arxiv_toolkit):
         """Test successful paper search."""
@@ -85,6 +88,7 @@ class TestArxivToolkit:
         assert result[0]["authors"] == ["Test Author"]
         assert "cs.AI" in result[0]["categories"]
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.arxiv_toolkit.arxiv")
     async def test_search_papers_with_filters(self, mock_arxiv, arxiv_toolkit):
         """Test paper search with advanced filters."""
@@ -125,6 +129,7 @@ class TestArxivToolkit:
         assert len(result) == 1
         assert result[0]["title"] == "Filtered Paper"
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.arxiv_toolkit.arxiv")
     async def test_search_papers_error_handling(self, mock_arxiv, arxiv_toolkit):
         """Test error handling in paper search."""
@@ -134,6 +139,7 @@ class TestArxivToolkit:
         with pytest.raises(Exception):
             await arxiv_toolkit.search_papers("test query")
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.arxiv_toolkit.arxiv")
     @patch("os.makedirs")
     @patch("re.sub")
@@ -167,6 +173,7 @@ class TestArxivToolkit:
         assert "Successfully downloaded 1 papers" in result
         mock_paper.download_pdf.assert_called_once()
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.arxiv_toolkit.arxiv")
     async def test_download_papers_with_failures(self, mock_arxiv, arxiv_toolkit):
         """Test paper download with some failures."""
@@ -200,6 +207,7 @@ class TestArxivToolkit:
             assert "Successfully downloaded 1 papers" in result
             assert "Failed downloads (1)" in result
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.arxiv_toolkit.arxiv")
     async def test_get_paper_details_success(self, mock_arxiv, arxiv_toolkit):
         """Test successful paper details retrieval."""
@@ -244,6 +252,7 @@ class TestArxivToolkit:
         assert result["primary_category"] == "cs.AI"
         assert len(result["links"]) == 1
 
+    @pytest.mark.asyncio
     @patch("noesium.toolkits.arxiv_toolkit.arxiv")
     async def test_get_paper_details_not_found(self, mock_arxiv, arxiv_toolkit):
         """Test paper details for non-existent paper."""
@@ -267,6 +276,7 @@ class TestArxivToolkit:
         assert "error" in result
         assert "not found" in result["error"]
 
+    @pytest.mark.asyncio
     async def test_paper_id_cleaning(self, arxiv_toolkit):
         """Test that paper IDs are cleaned correctly."""
         with patch("noesium.toolkits.arxiv_toolkit.arxiv") as mock_arxiv:
@@ -300,6 +310,7 @@ class TestArxivToolkit:
             ("cat:cs.AI", list),
         ],
     )
+    @pytest.mark.asyncio
     async def test_search_query_types(self, arxiv_toolkit, query, expected_type):
         """Test different types of search queries."""
         with patch("noesium.toolkits.arxiv_toolkit.arxiv") as mock_arxiv:
@@ -327,6 +338,7 @@ class TestArxivToolkit:
 class TestArxivToolkitIntegration:
     """Integration tests for ArxivToolkit (require network access)."""
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_real_arxiv_search(self):
         """Test with real arXiv API."""
@@ -341,6 +353,7 @@ class TestArxivToolkitIntegration:
             assert "authors" in paper
             assert "entry_id" in paper
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_real_paper_details(self):
         """Test with real paper details retrieval."""

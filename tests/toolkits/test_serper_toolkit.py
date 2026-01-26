@@ -37,6 +37,7 @@ def serper_toolkit(serper_config):
 class TestSerperToolkit:
     """Test cases for SerperToolkit."""
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization(self, serper_toolkit):
         """Test that SerperToolkit initializes correctly."""
         assert serper_toolkit is not None
@@ -54,6 +55,7 @@ class TestSerperToolkit:
             with pytest.raises(ValueError, match="SERPER_API_KEY is required"):
                 get_toolkit("serper", config)
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, serper_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await serper_toolkit.get_tools_map()
@@ -73,6 +75,7 @@ class TestSerperToolkit:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_google_search_success(self, mock_post, serper_toolkit):
@@ -97,6 +100,7 @@ class TestSerperToolkit:
         assert len(result["results"]) == 2
         assert result["results"][0]["title"] == "Test Result 1"
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_google_search_with_filters(self, mock_post, serper_toolkit):
@@ -115,6 +119,7 @@ class TestSerperToolkit:
         assert result["status"] == "success"
         assert result["date_range"] == "d"
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_google_search_error(self, mock_post, serper_toolkit):
@@ -129,6 +134,7 @@ class TestSerperToolkit:
         assert result["status"] == "error"
         assert "rate limit" in result["error"].lower()
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_image_search_success(self, mock_post, serper_toolkit):
@@ -150,6 +156,7 @@ class TestSerperToolkit:
         assert len(result["results"]) == 2
         assert result["results"][0]["title"] == "Test Image 1"
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_news_search_success(self, mock_post, serper_toolkit):
@@ -176,6 +183,7 @@ class TestSerperToolkit:
         assert len(result["results"]) == 1
         assert result["results"][0]["title"] == "Breaking News 1"
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_scholar_search_success(self, mock_post, serper_toolkit):
@@ -201,6 +209,7 @@ class TestSerperToolkit:
         assert len(result["results"]) == 1
         assert result["results"][0]["title"] == "Academic Paper 1"
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_maps_search_success(self, mock_post, serper_toolkit):
@@ -219,6 +228,7 @@ class TestSerperToolkit:
         assert len(result["results"]) == 1
         assert result["results"][0]["title"] == "Test Restaurant"
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_maps_search_with_coordinates(self, mock_post, serper_toolkit):
@@ -235,6 +245,7 @@ class TestSerperToolkit:
         assert result["longitude"] == -74.0060
         assert result["zoom"] == 15
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_video_search_success(self, mock_post, serper_toolkit):
@@ -260,6 +271,7 @@ class TestSerperToolkit:
         assert len(result["results"]) == 1
         assert result["results"][0]["title"] == "Test Video 1"
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_autocomplete_success(self, mock_post, serper_toolkit):
@@ -276,6 +288,7 @@ class TestSerperToolkit:
         assert len(result["suggestions"]) == 3
         assert "python programming" in result["suggestions"]
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_google_lens_success(self, mock_post, serper_toolkit):
@@ -300,6 +313,7 @@ class TestSerperToolkit:
         assert result["url"] == "https://example.com/image.jpg"
         assert len(result["results"]) == 1
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_places_search_success(self, mock_post, serper_toolkit):
@@ -318,6 +332,7 @@ class TestSerperToolkit:
         assert len(result["results"]) == 1
         assert result["results"][0]["title"] == "Test Place"
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_num_results_validation(self, serper_toolkit):
         """Test that num_results is properly validated."""
@@ -336,6 +351,7 @@ class TestSerperToolkit:
             # Both calls should succeed without error
             assert mock_post.call_count == 2
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_timeout_handling(self, mock_post, serper_toolkit):
@@ -363,6 +379,7 @@ class TestSerperToolkit:
             ("video_search", "videos"),
         ],
     )
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_different_search_endpoints(self, serper_toolkit, search_method, expected_endpoint):
         """Test that different search methods use correct endpoints."""
@@ -427,6 +444,7 @@ class TestSerperToolkitErrorHandling:
         """Test that API key can be loaded from environment."""
         assert serper_toolkit_with_env.api_key == "env_test_key"
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("aiohttp.ClientSession.post")
     async def test_api_error_responses(self, mock_post, serper_toolkit):

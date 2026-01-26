@@ -24,6 +24,7 @@ def github_toolkit(github_config):
 class TestGitHubToolkit:
     """Test cases for GitHubToolkit."""
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization(self, github_toolkit):
         """Test that GitHubToolkit initializes correctly."""
         assert github_toolkit is not None
@@ -31,6 +32,7 @@ class TestGitHubToolkit:
         assert hasattr(github_toolkit, "get_repo_contents")
         assert hasattr(github_toolkit, "search_repositories")
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, github_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await github_toolkit.get_tools_map()
@@ -56,6 +58,7 @@ class TestGitHubToolkit:
         result = github_toolkit._parse_github_url("https://github.com/owner")
         assert result is None
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_get_repo_info_success(self, mock_get, github_toolkit):
         """Test successful repository information retrieval."""
@@ -101,6 +104,7 @@ class TestGitHubToolkit:
         assert result["language"] == "Python"
         assert result["license"] == "MIT License"
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_get_repo_info_not_found(self, mock_get, github_toolkit):
         """Test repository not found error."""
@@ -114,6 +118,7 @@ class TestGitHubToolkit:
         assert "error" in result
         assert "not found" in result["error"]
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_get_repo_contents_directory(self, mock_get, github_toolkit):
         """Test getting repository directory contents."""
@@ -147,6 +152,7 @@ class TestGitHubToolkit:
         assert result["items"][0]["name"] == "README.md"
         assert result["items"][1]["type"] == "dir"
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_search_repositories(self, mock_get, github_toolkit):
         """Test repository search functionality."""
@@ -191,6 +197,7 @@ class TestGitHubToolkit:
         assert result["repositories"][0]["name"] == "awesome-python"
         assert result["repositories"][0]["stars"] == 50000
 
+    @pytest.mark.asyncio
     async def test_invalid_github_url(self, github_toolkit):
         """Test handling of invalid GitHub URLs."""
         result = await github_toolkit.get_repo_info("not-a-github-url")
@@ -223,12 +230,14 @@ class TestGitHubToolkitWithoutToken:
         config = ToolkitConfig(name="github", config={})
         return get_toolkit("github", config)
 
+    @pytest.mark.asyncio
     async def test_initialization_without_token(self, github_toolkit_no_token):
         """Test initialization without GitHub token."""
         # Should initialize but with warning
         assert github_toolkit_no_token is not None
         assert github_toolkit_no_token.github_token is None
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_api_request_without_token(self, mock_get, github_toolkit_no_token):
         """Test API request without authentication."""

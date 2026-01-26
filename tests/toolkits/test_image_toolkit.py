@@ -27,6 +27,7 @@ def image_toolkit(image_config):
 class TestImageToolkit:
     """Test cases for ImageToolkit."""
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization(self, image_toolkit):
         """Test that ImageToolkit initializes correctly."""
         assert image_toolkit is not None
@@ -34,6 +35,7 @@ class TestImageToolkit:
         assert hasattr(image_toolkit, "describe_image")
         assert hasattr(image_toolkit, "extract_text_from_image")
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, image_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await image_toolkit.get_tools_map()
@@ -67,6 +69,7 @@ class TestImageToolkit:
         assert result == mock_image
         mock_image_open.assert_called_once_with("/path/to/image.jpg")
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_load_image_from_url(self, mock_get, image_toolkit):
         """Test loading image from URL."""
@@ -88,6 +91,7 @@ class TestImageToolkit:
             assert result == mock_image
             mock_image_open.assert_called_once()
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_load_image_from_url_error(self, mock_get, image_toolkit):
         """Test error handling when loading image from URL."""
@@ -145,6 +149,7 @@ class TestImageToolkit:
             expected = base64.b64encode(b"fake_image_bytes").decode("utf-8")
             assert result == expected
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_analyze_image_success(self, mock_openai, image_toolkit):
@@ -169,6 +174,7 @@ class TestImageToolkit:
 
                 assert "cat sitting on a table" in result
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_describe_image_success(self, mock_openai, image_toolkit):
@@ -190,6 +196,7 @@ class TestImageToolkit:
 
                 assert "detailed description" in result
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_extract_text_from_image_success(self, mock_openai, image_toolkit):
@@ -211,6 +218,7 @@ class TestImageToolkit:
 
                 assert "Hello World" in result
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_analyze_image_load_error(self, image_toolkit):
         """Test error handling when image cannot be loaded."""
@@ -221,6 +229,7 @@ class TestImageToolkit:
 
             assert "Failed to load image" in result
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_analyze_image_api_error(self, mock_openai, image_toolkit):
@@ -240,6 +249,7 @@ class TestImageToolkit:
 
                 assert "API Error" in result
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_compare_images_success(self, mock_openai, image_toolkit):
@@ -263,6 +273,7 @@ class TestImageToolkit:
 
                 assert "similar in composition" in result
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_compare_images_load_error(self, image_toolkit):
         """Test error handling when one image cannot be loaded."""
@@ -274,6 +285,7 @@ class TestImageToolkit:
 
             assert "Failed to load" in result
 
+    @pytest.mark.asyncio
     async def test_get_image_info_success(self, image_toolkit):
         """Test getting image information."""
         with patch.object(image_toolkit, "_load_image") as mock_load:
@@ -291,6 +303,7 @@ class TestImageToolkit:
             assert result["mode"] == "RGB"
             assert result["format"] == "JPEG"
 
+    @pytest.mark.asyncio
     async def test_get_image_info_load_error(self, image_toolkit):
         """Test error handling when getting image info fails."""
         with patch.object(image_toolkit, "_load_image") as mock_load:
@@ -302,6 +315,7 @@ class TestImageToolkit:
             assert "error" in result
             assert "Failed to load image" in result["error"]
 
+    @pytest.mark.asyncio
     async def test_load_image_file_vs_url(self, image_toolkit):
         """Test that _load_image correctly routes to file or URL loading."""
         with patch.object(image_toolkit, "_load_image_from_file") as mock_file:
@@ -329,11 +343,13 @@ class TestImageToolkitWithoutOpenAI:
         config = ToolkitConfig(name="image", config={})
         return get_toolkit("image", config)
 
+    @pytest.mark.asyncio
     async def test_initialization_without_openai_key(self, image_toolkit_no_openai):
         """Test initialization without OpenAI API key."""
         # Should initialize but with warning
         assert image_toolkit_no_openai is not None
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_analyze_without_openai_key(self, image_toolkit_no_openai):
         """Test analysis without OpenAI API key."""
@@ -347,6 +363,7 @@ class TestImageToolkitWithoutOpenAI:
 class TestImageToolkitEdgeCases:
     """Test edge cases and error conditions."""
 
+    @pytest.mark.asyncio
     async def test_very_large_image_handling(self, image_toolkit):
         """Test handling of very large images."""
         with patch.object(image_toolkit, "_load_image") as mock_load:
@@ -371,6 +388,7 @@ class TestImageToolkitEdgeCases:
             "https://example.com/image.webp",
         ],
     )
+    @pytest.mark.asyncio
     async def test_different_image_formats(self, image_toolkit, image_url):
         """Test handling of different image formats."""
         with patch.object(image_toolkit, "_load_image") as mock_load:
@@ -385,6 +403,7 @@ class TestImageToolkitEdgeCases:
             assert result["width"] == 800
             assert result["height"] == 600
 
+    @pytest.mark.asyncio
     async def test_concurrent_image_operations(self, image_toolkit):
         """Test concurrent image operations."""
         import asyncio

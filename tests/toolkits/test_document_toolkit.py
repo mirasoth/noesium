@@ -28,12 +28,14 @@ def document_toolkit(document_config):
 class TestDocumentToolkit:
     """Test cases for DocumentToolkit."""
 
+    @pytest.mark.asyncio
     async def test_toolkit_initialization(self, document_toolkit):
         """Test that DocumentToolkit initializes correctly."""
         assert document_toolkit is not None
         assert hasattr(document_toolkit, "document_qa")
         assert hasattr(document_toolkit, "get_document_info")
 
+    @pytest.mark.asyncio
     async def test_get_tools_map(self, document_toolkit):
         """Test that tools map is correctly defined."""
         tools_map = await document_toolkit.get_tools_map()
@@ -69,6 +71,7 @@ class TestDocumentToolkit:
             md5_hash = document_toolkit._get_file_md5(temp_file.name)
             assert md5_hash == expected_md5
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_download_document_success(self, mock_get, document_toolkit):
         """Test successful document download."""
@@ -91,6 +94,7 @@ class TestDocumentToolkit:
             assert result.exists()
             assert result.suffix == ".pdf"
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_download_document_error(self, mock_get, document_toolkit):
         """Test document download error handling."""
@@ -104,6 +108,7 @@ class TestDocumentToolkit:
             with pytest.raises(Exception):
                 await document_toolkit._download_document("https://example.com/nonexistent.pdf", output_path)
 
+    @pytest.mark.asyncio
     async def test_handle_document_path_local_file(self, document_toolkit):
         """Test handling local file path."""
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
@@ -121,11 +126,13 @@ class TestDocumentToolkit:
             finally:
                 Path(temp_file.name).unlink()
 
+    @pytest.mark.asyncio
     async def test_handle_document_path_nonexistent_file(self, document_toolkit):
         """Test handling non-existent local file."""
         with pytest.raises(FileNotFoundError):
             await document_toolkit._handle_document_path("/nonexistent/file.pdf")
 
+    @pytest.mark.asyncio
     @patch("aiohttp.ClientSession.get")
     async def test_handle_document_path_url(self, mock_get, document_toolkit):
         """Test handling URL document path."""
@@ -148,6 +155,7 @@ class TestDocumentToolkit:
         # Verify the file path is cached
         assert result in document_toolkit.md5_to_path
 
+    @pytest.mark.asyncio
     async def test_parse_document_pdf_success(self, document_toolkit):
         """Test successful PDF parsing with cached content."""
         # Test with cached content (simpler approach)
@@ -167,6 +175,7 @@ class TestDocumentToolkit:
             if cache_file.exists():
                 cache_file.unlink()
 
+    @pytest.mark.asyncio
     async def test_parse_document_pdf_error(self, document_toolkit):
         """Test PDF parsing error handling."""
         # Test with invalid MD5 hash (simpler approach)
@@ -175,18 +184,21 @@ class TestDocumentToolkit:
         with pytest.raises(ValueError, match="not found in cache"):
             await document_toolkit._parse_document(invalid_md5_hash)
 
+    @pytest.mark.asyncio
     async def test_parse_document_unsupported_format(self, document_toolkit):
         """Test parsing unsupported document format."""
         # This should fail because the method expects an MD5 hash, not a file path
         with pytest.raises(ValueError, match="not found in cache"):
             await document_toolkit._parse_document("invalid_md5_hash")
 
+    @pytest.mark.asyncio
     async def test_parse_document_text_file(self, document_toolkit):
         """Test parsing plain text file."""
         # This should fail because the method expects an MD5 hash, not a file path
         with pytest.raises(ValueError, match="not found in cache"):
             await document_toolkit._parse_document("invalid_md5_hash")
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_document_qa_success(self, mock_openai, document_toolkit):
@@ -210,6 +222,7 @@ class TestDocumentToolkit:
 
                 assert "machine learning algorithms" in result
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_document_qa_file_not_found(self, document_toolkit):
         """Test document Q&A with file not found."""
@@ -218,6 +231,7 @@ class TestDocumentToolkit:
         assert isinstance(result, str)
         assert "failed" in result.lower() or "not found" in result.lower()
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_document_qa_parse_error(self, document_toolkit):
         """Test document Q&A with parsing error."""
@@ -232,6 +246,7 @@ class TestDocumentToolkit:
                 assert isinstance(result, str)
                 assert "Failed to parse document" in result
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     @patch("openai.AsyncOpenAI")
     async def test_document_qa_openai_error(self, mock_openai, document_toolkit):
@@ -251,6 +266,7 @@ class TestDocumentToolkit:
                 assert isinstance(result, str)
                 assert "API Error" in result
 
+    @pytest.mark.asyncio
     async def test_get_document_info_success(self, document_toolkit):
         """Test successful document info retrieval."""
         with patch.object(document_toolkit, "_handle_document_path") as mock_handle:
@@ -271,6 +287,7 @@ class TestDocumentToolkit:
                     assert result["content_length"] > 0
                     assert "md5_hash" in result
 
+    @pytest.mark.asyncio
     async def test_get_document_info_file_not_found(self, document_toolkit):
         """Test document info with file not found."""
         result = await document_toolkit.get_document_info("/nonexistent/document.pdf")
@@ -279,6 +296,7 @@ class TestDocumentToolkit:
         assert "error" in result
         assert "not found" in result["error"].lower() or "failed" in result["error"].lower()
 
+    @pytest.mark.asyncio
     async def test_get_document_info_parse_error(self, document_toolkit):
         """Test document info with parsing error."""
         with patch.object(document_toolkit, "_handle_document_path") as mock_handle:
@@ -307,10 +325,12 @@ class TestDocumentToolkitWithoutOpenAI:
         config = ToolkitConfig(name="document", config={})
         return get_toolkit("document", config)
 
+    @pytest.mark.asyncio
     async def test_initialization_without_openai_key(self, document_toolkit_no_openai):
         """Test initialization without OpenAI API key."""
         assert document_toolkit_no_openai is not None
 
+    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_document_qa_without_openai_key(self, document_toolkit_no_openai):
         """Test document Q&A without OpenAI API key."""
@@ -323,6 +343,7 @@ class TestDocumentToolkitWithoutOpenAI:
 class TestDocumentToolkitEdgeCases:
     """Test edge cases and error conditions."""
 
+    @pytest.mark.asyncio
     async def test_very_large_document_handling(self, document_toolkit):
         """Test handling of very large documents."""
         # This should fail because the method expects an MD5 hash, not a file path
@@ -343,6 +364,7 @@ class TestDocumentToolkitEdgeCases:
         filename = f"test{file_extension}"
         assert document_toolkit._get_file_extension(filename) == expected_type
 
+    @pytest.mark.asyncio
     async def test_concurrent_document_operations(self, document_toolkit):
         """Test concurrent document operations."""
         import asyncio
@@ -372,6 +394,7 @@ class TestDocumentToolkitEdgeCases:
             for file_path in test_files:
                 Path(file_path).unlink()
 
+    @pytest.mark.asyncio
     async def test_document_with_special_characters(self, document_toolkit):
         """Test handling documents with special characters."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as temp_file:
