@@ -5,8 +5,16 @@ Enhanced for use with instructor library.
 
 from typing import List
 
-from instructor import OpenAISchema
-from pydantic import Field
+from pydantic import BaseModel, Field
+
+try:
+    from instructor import OpenAISchema
+
+    INSTRUCTOR_AVAILABLE = True
+except ImportError:
+    # Fallback: use BaseModel if instructor is not available
+    OpenAISchema = BaseModel
+    INSTRUCTOR_AVAILABLE = False
 
 
 class SearchQueryList(OpenAISchema):

@@ -6,10 +6,23 @@ Enhanced base class designed for extensibility.
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
-from langchain_core.runnables import RunnableConfig
-from langgraph.graph import END, START, StateGraph
-from langgraph.types import Send
+try:
+    from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+    from langchain_core.runnables import RunnableConfig
+    from langgraph.graph import END, START, StateGraph
+    from langgraph.types import Send
+
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    AIMessage = None
+    AnyMessage = None
+    HumanMessage = None
+    RunnableConfig = None
+    StateGraph = None
+    END = None
+    START = None
+    Send = None
+    LANGCHAIN_AVAILABLE = False
 
 from noesium.core.agent import BaseResearcher, ResearchOutput
 from noesium.core.llm import BaseLLMClient

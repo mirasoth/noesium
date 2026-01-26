@@ -1,8 +1,22 @@
 from typing import TypedDict
 
-from langgraph.graph import add_messages
+try:
+    from langgraph.graph import add_messages
+
+    LANGGRAPH_AVAILABLE = True
+except ImportError:
+    add_messages = None
+    LANGGRAPH_AVAILABLE = False
+
 from typing_extensions import Annotated
-from wizsearch import SearchResult
+
+try:
+    from wizsearch import SearchResult
+
+    WIZSEARCH_AVAILABLE = True
+except ImportError:
+    SearchResult = None
+    WIZSEARCH_AVAILABLE = False
 
 
 class SearchState(TypedDict):

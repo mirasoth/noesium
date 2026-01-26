@@ -5,8 +5,15 @@ Schemas for AskuraAgent - Flexible data structures for dynamic conversations.
 from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Type, Union
 
-from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
+
+try:
+    from langchain_core.messages import BaseMessage
+
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    BaseMessage = None
+    LANGCHAIN_AVAILABLE = False
 
 from noesium.core.consts import GEMINI_FLASH
 

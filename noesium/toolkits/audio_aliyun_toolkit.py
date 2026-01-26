@@ -11,9 +11,18 @@ import json
 import os
 from typing import Any, Callable, Dict, Optional
 
-from aliyunsdkcore.acs_exception.exceptions import ClientException, ServerException
-from aliyunsdkcore.client import AcsClient
-from aliyunsdkcore.request import CommonRequest
+try:
+    from aliyunsdkcore.acs_exception.exceptions import ClientException, ServerException
+    from aliyunsdkcore.client import AcsClient
+    from aliyunsdkcore.request import CommonRequest
+
+    ALIYUN_AVAILABLE = True
+except ImportError:
+    ClientException = None
+    ServerException = None
+    AcsClient = None
+    CommonRequest = None
+    ALIYUN_AVAILABLE = False
 
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
@@ -53,6 +62,9 @@ class AudioAliyunToolkit(AsyncBaseToolkit):
         Args:
             config: Toolkit configuration containing API keys and settings
         """
+        if not ALIYUN_AVAILABLE:
+            raise ImportError("Aliyun packages are not installed. Install them with: pip install 'noesium[aliyun]'")
+
         super().__init__(config)
 
         # Aliyun credentials

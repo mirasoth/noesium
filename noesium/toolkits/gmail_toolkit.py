@@ -12,11 +12,22 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import aiofiles
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+
+try:
+    from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
+    from googleapiclient.errors import HttpError
+
+    GOOGLE_AVAILABLE = True
+except ImportError:
+    Request = None
+    Credentials = None
+    InstalledAppFlow = None
+    build = None
+    HttpError = None
+    GOOGLE_AVAILABLE = False
 
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
@@ -53,6 +64,9 @@ class GmailService:
             config_dir: Directory to store config files (defaults to ~/.noesium)
             access_token: Direct access token (skips file-based auth if provided)
         """
+        if not GOOGLE_AVAILABLE:
+            raise ImportError("Google packages are not installed. Install them with: pip install 'noesium[google]'")
+
         # Set up configuration directory
         if config_dir is None:
             self.config_dir = Path.home() / ".noesium"

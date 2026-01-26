@@ -3,8 +3,21 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
-from huggingface_hub import snapshot_download
-from llama_cpp import Llama
+try:
+    from huggingface_hub import snapshot_download
+
+    HUGGINGFACE_HUB_AVAILABLE = True
+except ImportError:
+    snapshot_download = None
+    HUGGINGFACE_HUB_AVAILABLE = False
+
+try:
+    from llama_cpp import Llama
+
+    LLAMA_CPP_AVAILABLE = True
+except ImportError:
+    Llama = None
+    LLAMA_CPP_AVAILABLE = False
 
 from noesium.core.llm.base import BaseLLMClient
 from noesium.core.tracing import estimate_token_usage, get_token_tracker
@@ -39,6 +52,9 @@ def _download_default_model() -> str:
     Returns:
         Path to the downloaded model file
     """
+    if not HUGGINGFACE_HUB_AVAILABLE:
+        raise ImportError("huggingface-hub package is not installed. Install it with: pip install 'noesium[local-llm]'")
+
     try:
         logger.info(f"No model path provided, downloading default model: {DEFAULT_MODEL_REPO}")
 
@@ -101,6 +117,11 @@ class LLMClient(BaseLLMClient):
             n_gpu_layers: Number of layers to offload to GPU (-1 for all)
             **kwargs: Additional arguments to pass to Llama constructor
         """
+        if not LLAMA_CPP_AVAILABLE:
+            raise ImportError(
+                "llama-cpp-python package is not installed. Install it with: pip install 'noesium[local-llm]'"
+            )
+
         super().__init__(**kwargs)
         # Configure Opik tracing for observability only if enabled
         if OPIK_AVAILABLE:

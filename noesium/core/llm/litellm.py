@@ -16,8 +16,23 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
-import litellm
-from instructor import Instructor, Mode, patch
+try:
+    import litellm
+
+    LITELLM_AVAILABLE = True
+except ImportError:
+    litellm = None
+    LITELLM_AVAILABLE = False
+
+try:
+    from instructor import Instructor, Mode, patch
+
+    INSTRUCTOR_AVAILABLE = True
+except ImportError:
+    Instructor = None
+    Mode = None
+    patch = None
+    INSTRUCTOR_AVAILABLE = False
 
 from noesium.core.llm.base import BaseLLMClient
 from noesium.core.tracing import configure_opik, estimate_token_usage, get_token_tracker, is_opik_enabled
@@ -64,6 +79,9 @@ class LLMClient(BaseLLMClient):
             vision_model: Model to use for vision tasks (e.g., "gpt-4-vision-preview", "claude-3-sonnet")
             **kwargs: Additional arguments
         """
+        if not LITELLM_AVAILABLE:
+            raise ImportError("LiteLLM package is not installed. Install it with: pip install 'noesium[litellm]'")
+
         super().__init__(**kwargs)
         # Configure Opik tracing for observability only if enabled
         if OPIK_AVAILABLE:
@@ -90,22 +108,25 @@ class LLMClient(BaseLLMClient):
         # Initialize instructor if requested
         self.instructor = None
         if instructor:
-            try:
-                from openai import OpenAI
+            if not INSTRUCTOR_AVAILABLE:
+                logger.warning("Instructor package not available, structured completion will not work")
+            else:
+                try:
+                    from openai import OpenAI
 
-                # Create a mock client for instructor
-                mock_client = OpenAI(
-                    api_key="litellm",
-                    base_url="http://localhost:8000",  # LiteLLM proxy default
-                )
-                patched_client = patch(mock_client, mode=Mode.JSON)
-                self.instructor = Instructor(
-                    client=patched_client,
-                    create=patched_client.chat.completions.create,
-                    mode=Mode.JSON,
-                )
-            except ImportError:
-                logger.warning("OpenAI package not available, structured completion will not work")
+                    # Create a mock client for instructor
+                    mock_client = OpenAI(
+                        api_key="litellm",
+                        base_url="http://localhost:8000",  # LiteLLM proxy default
+                    )
+                    patched_client = patch(mock_client, mode=Mode.JSON)
+                    self.instructor = Instructor(
+                        client=patched_client,
+                        create=patched_client.chat.completions.create,
+                        mode=Mode.JSON,
+                    )
+                except ImportError:
+                    logger.warning("OpenAI package not available, structured completion will not work")
 
         # Configure LiteLLM settings
         litellm.drop_params = True  # Drop unsupported parameters

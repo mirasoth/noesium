@@ -14,10 +14,17 @@ import os
 import re
 from typing import Any, Callable, Dict
 
-import matplotlib
+try:
+    import matplotlib
 
-matplotlib.use("Agg")  # Use non-interactive backend
-import matplotlib.pyplot as plt
+    matplotlib.use("Agg")  # Use non-interactive backend
+    import matplotlib.pyplot as plt
+
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    matplotlib = None
+    plt = None
+    MATPLOTLIB_AVAILABLE = False
 
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
@@ -44,6 +51,13 @@ def _execute_python_code_sync(code: str, workdir: str) -> Dict[str, Any]:
     Returns:
         Dictionary containing execution results
     """
+    try:
+        from IPython.core.interactiveshell import InteractiveShell
+        from traitlets.config.loader import Config
+
+    except ImportError:
+        pass
+
     original_dir = os.getcwd()
 
     try:

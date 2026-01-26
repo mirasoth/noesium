@@ -58,27 +58,6 @@ Noesium offers a comprehensive set of modules for creating intelligent agent-bas
 - **Opik integration**: Production-ready observability
 - **LangGraph hooks**: Workflow tracing and debugging
 
-## Project Structure
-
-```
-noesium/core/
-├── agent/           # Base agent classes and models
-├── goalith/         # Goal management and planning system
-│   ├── decomposer/  # Goal decomposition strategies
-│   ├── goalgraph/   # Graph data structures
-│   ├── conflict/    # Conflict detection
-│   └── replanner/   # Dynamic replanning
-├── llm/             # LLM provider implementations
-├── memory/          # Memory management system
-│   └── memu/        # MemU memory agent integration
-├── toolify/         # Tool management and execution
-├── vector_store/    # Vector database integrations
-├── msgbus/          # Message bus system
-├── routing/         # LLM routing strategies
-├── tracing/         # Token tracking and observability
-└── utils/           # Utilities and logging
-```
-
 ## Quick Start
 
 ### 1. LLM Client Usage

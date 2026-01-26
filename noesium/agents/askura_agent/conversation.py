@@ -4,7 +4,13 @@ Conversation Manager for AskuraAgent - Handles dynamic conversation analysis and
 
 from typing import List, Optional
 
-from langchain_core.messages import HumanMessage
+try:
+    from langchain_core.messages import HumanMessage
+
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    HumanMessage = None
+    LANGCHAIN_AVAILABLE = False
 
 from noesium.core.llm import BaseLLMClient
 from noesium.core.utils.logging import get_logger

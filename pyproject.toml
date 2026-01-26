@@ -50,6 +50,7 @@ google = [
     "google-auth-oauthlib>=1.2.2", 
     "google-auth>=2.40.3"
 ]
+aliyun = ["aliyun-python-sdk-core>=2.13.1,<3.0.0"]
 litellm = ["litellm>=1.0.0"]
 local-llm = ["ollama>=0.5.3", "llama-cpp-python>=0.3.16", "huggingface-hub>=0.34.4"]
 
@@ -65,10 +66,13 @@ langchain = [
 postgres = ["psycopg2-binary>=2.9.0", "psycopg2>=2.9.10"] # Use binary for easier install
 weaviate = ["weaviate-client>=4,<5", "protobuf>=5,<6"]
 
+# Data Science Tools
+datascience = ["matplotlib>=3.8.0", "pexpect>=4.9.0", "ipython>=8.18.0", "pandas>=2.0.0"]
+
 # MCP Support
 mcp = ["mcp>=1.0.0"]
 
-# Existing Tools & Groups
+# Toolkits
 tools = [
     "noesium[google,aliyun,datascience,mcp]",
     "wizsearch>=1.0.1,<2.0.0",
@@ -78,9 +82,6 @@ tools = [
     "openpyxl>=3.1.5",
     "wikipedia-api>=0.6.0",
 ]
-
-aliyun = ["aliyun-python-sdk-core>=2.13.1,<3.0.0"]
-datascience = ["matplotlib>=3.8.0", "pexpect>=4.9.0", "ipython>=8.18.0", "pandas>=2.0.0"]
 
 # Full installation for power users
 all = [
@@ -93,7 +94,7 @@ dev = [
     "pytest-asyncio>=1.1.0",
     "black>=23.0.0",
     "isort>=5.12.0",
-    "mypy>=1.10.0", # Highly recommended for robustness
+    "mypy>=1.10.0",
 ]
 
 [project.urls]

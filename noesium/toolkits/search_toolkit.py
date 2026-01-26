@@ -10,7 +10,14 @@ import re
 from typing import Callable, Dict, Optional
 
 import aiohttp
-from wizsearch import SearchResult
+
+try:
+    from wizsearch import SearchResult
+
+    WIZSEARCH_AVAILABLE = True
+except ImportError:
+    SearchResult = None
+    WIZSEARCH_AVAILABLE = False
 
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
@@ -333,6 +340,9 @@ Please list any URLs, links, or references mentioned in the content that could p
             - Quick fact-checking: Use "basic" depth with max_results=5
             - Comprehensive research: Use "advanced" depth with max_results=20 and include_raw_content=True
         """
+        if not WIZSEARCH_AVAILABLE:
+            raise ImportError("wizsearch package is not installed. Install it with: pip install 'noesium[tools]'")
+
         self.logger.info(f"Performing Tavily search for query: {query}")
 
         try:

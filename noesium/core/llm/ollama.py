@@ -13,8 +13,23 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
-import ollama
-from instructor import Instructor, Mode, patch
+try:
+    import ollama
+
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    ollama = None
+    OLLAMA_AVAILABLE = False
+
+try:
+    from instructor import Instructor, Mode, patch
+
+    INSTRUCTOR_AVAILABLE = True
+except ImportError:
+    Instructor = None
+    Mode = None
+    patch = None
+    INSTRUCTOR_AVAILABLE = False
 
 from noesium.core.llm.base import BaseLLMClient
 from noesium.core.tracing import estimate_token_usage, get_token_tracker
@@ -62,6 +77,9 @@ class LLMClient(BaseLLMClient):
             vision_model: Model to use for vision tasks (defaults to gemma3:4b)
             **kwargs: Additional arguments
         """
+        if not OLLAMA_AVAILABLE:
+            raise ImportError("Ollama package is not installed. Install it with: pip install 'noesium[local-llm]'")
+
         super().__init__(**kwargs)
         # Configure Opik tracing for observability only if enabled
         if OPIK_AVAILABLE:
@@ -84,23 +102,26 @@ class LLMClient(BaseLLMClient):
         # Initialize instructor if requested
         self.instructor = None
         if instructor:
-            # Create a mock OpenAI-compatible client for instructor
-            try:
-                from openai import OpenAI
+            if not INSTRUCTOR_AVAILABLE:
+                logger.warning("Instructor package not available, structured completion will not work")
+            else:
+                # Create a mock OpenAI-compatible client for instructor
+                try:
+                    from openai import OpenAI
 
-                # Create a mock client that uses Ollama through OpenAI-compatible API
-                mock_client = OpenAI(
-                    base_url=f"{self.base_url}/v1",
-                    api_key="ollama",  # Ollama doesn't require real API key
-                )
-                patched_client = patch(mock_client, mode=Mode.JSON)
-                self.instructor = Instructor(
-                    client=patched_client,
-                    create=patched_client.chat.completions.create,
-                    mode=Mode.JSON,
-                )
-            except ImportError:
-                logger.warning("OpenAI package not available, structured completion will not work")
+                    # Create a mock client that uses Ollama through OpenAI-compatible API
+                    mock_client = OpenAI(
+                        base_url=f"{self.base_url}/v1",
+                        api_key="ollama",  # Ollama doesn't require real API key
+                    )
+                    patched_client = patch(mock_client, mode=Mode.JSON)
+                    self.instructor = Instructor(
+                        client=patched_client,
+                        create=patched_client.chat.completions.create,
+                        mode=Mode.JSON,
+                    )
+                except ImportError:
+                    logger.warning("OpenAI package not available, structured completion will not work")
 
     @track
     def completion(

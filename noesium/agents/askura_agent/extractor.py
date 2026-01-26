@@ -4,7 +4,13 @@ Information Extractor for AskuraAgent - Handles multi-topic information extracti
 
 from typing import Any, Dict, Optional
 
-from langchain_core.tools import BaseTool
+try:
+    from langchain_core.tools import BaseTool
+
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    BaseTool = None
+    LANGCHAIN_AVAILABLE = False
 
 from noesium.core.llm import BaseLLMClient
 from noesium.core.utils.logging import get_logger

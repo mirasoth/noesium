@@ -9,12 +9,19 @@ import abc
 import asyncio
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from langchain_core.tools import BaseTool, tool
-
 from noesium.core.llm import BaseLLMClient
 from noesium.core.utils.logging import get_logger
 
 from .config import ToolkitConfig
+
+try:
+    from langchain_core.tools import BaseTool, tool
+
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    BaseTool = None
+    tool = None
+    LANGCHAIN_AVAILABLE = False
 
 try:
     import mcp.types as mcp_types

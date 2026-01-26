@@ -9,11 +9,24 @@ collect required information through natural conversation flow.
 import uuid
 from typing import Any, Dict, List, Optional
 
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.graph import END, START, StateGraph
-from langgraph.graph.message import add_messages
+try:
+    from langchain_core.messages import AIMessage, HumanMessage
+    from langchain_core.runnables import RunnableConfig
+    from langgraph.checkpoint.memory import InMemorySaver
+    from langgraph.graph import END, START, StateGraph
+    from langgraph.graph.message import add_messages
+
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    AIMessage = None
+    HumanMessage = None
+    RunnableConfig = None
+    InMemorySaver = None
+    StateGraph = None
+    END = None
+    START = None
+    add_messages = None
+    LANGCHAIN_AVAILABLE = False
 
 from noesium.core.agent import BaseConversationAgent
 from noesium.core.tracing import NodeLoggingCallback, TokenUsageCallback

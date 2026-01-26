@@ -1,8 +1,26 @@
 from typing import Dict, List, Optional, Type, override
 
-from langchain_core.runnables import RunnableConfig
-from langgraph.graph import END, START, StateGraph
-from wizsearch import PageCrawler, WizSearch, WizSearchConfig
+try:
+    from langchain_core.runnables import RunnableConfig
+    from langgraph.graph import END, START, StateGraph
+
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    RunnableConfig = None
+    StateGraph = None
+    END = None
+    START = None
+    LANGCHAIN_AVAILABLE = False
+
+try:
+    from wizsearch import PageCrawler, WizSearch, WizSearchConfig
+
+    WIZSEARCH_AVAILABLE = True
+except ImportError:
+    PageCrawler = None
+    WizSearch = None
+    WizSearchConfig = None
+    WIZSEARCH_AVAILABLE = False
 
 from noesium.core.agent import BaseGraphicAgent
 from noesium.core.llm import BaseLLMClient

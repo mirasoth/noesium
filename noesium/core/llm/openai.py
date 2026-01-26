@@ -16,8 +16,23 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 # Import instructor for structured output
-from instructor import Instructor, Mode, patch
-from openai import OpenAI
+try:
+    from instructor import Instructor, Mode, patch
+
+    INSTRUCTOR_AVAILABLE = True
+except ImportError:
+    Instructor = None
+    Mode = None
+    patch = None
+    INSTRUCTOR_AVAILABLE = False
+
+try:
+    from openai import OpenAI
+
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OpenAI = None
+    OPENAI_AVAILABLE = False
 
 from noesium.core.llm.base import BaseLLMClient
 from noesium.core.tracing import (
@@ -73,6 +88,9 @@ class LLMClient(BaseLLMClient):
             embed_model: Model to use for embeddings (defaults to text-embedding-3-small)
             **kwargs: Additional arguments to pass to the LLM client
         """
+        if not OPENAI_AVAILABLE:
+            raise ImportError("OpenAI package is not installed. Install it with: pip install 'noesium[openai]'")
+
         super().__init__(**kwargs)
         # Configure Opik tracing for observability only if enabled
         if OPIK_AVAILABLE:
@@ -109,6 +127,8 @@ class LLMClient(BaseLLMClient):
         # Initialize instructor if requested
         self.instructor = None
         if instructor:
+            if not INSTRUCTOR_AVAILABLE:
+                raise ImportError("Instructor package is not installed. Install it with: pip install 'noesium[openai]'")
             # Create instructor instance for structured output
             patched_client = patch(self.client, mode=Mode.JSON)
             self.instructor = Instructor(

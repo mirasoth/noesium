@@ -188,10 +188,21 @@ def _discover_builtin_toolkits():
     import pkgutil
     from pathlib import Path
 
-    # Get the toolkits directory
-    toolkits_dir = Path(__file__).parent / "toolkits"
+    # Get the toolkits directory - look in noesium.toolkits
+    # Try multiple possible locations
+    possible_toolkits_dirs = [
+        Path(__file__).parent.parent.parent / "toolkits",  # noesium/toolkits
+        Path(__file__).parent / "toolkits",  # noesium/core/toolify/toolkits
+    ]
 
-    if not toolkits_dir.exists():
+    toolkits_dir = None
+    for dir_path in possible_toolkits_dirs:
+        if dir_path.exists() and (dir_path / "__init__.py").exists():
+            toolkits_dir = dir_path
+            break
+
+    if not toolkits_dir:
+        logger.warning("No toolkits directory found")
         return
 
     # Import all toolkit modules
@@ -199,8 +210,13 @@ def _discover_builtin_toolkits():
         if module_info.name.startswith("_"):
             continue
 
-        try:
+        # Determine the correct module name based on the location
+        if "core/toolify/toolkits" in str(toolkits_dir):
             module_name = f"noesium.core.toolify.toolkits.{module_info.name}"
+        else:
+            module_name = f"noesium.toolkits.{module_info.name}"
+
+        try:
             importlib.import_module(module_name)
             logger.debug(f"Discovered toolkit module: {module_name}")
         except ImportError as e:

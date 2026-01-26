@@ -3,9 +3,17 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
-from langchain_core.runnables import RunnableConfig
-from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
+
+try:
+    from langchain_core.runnables import RunnableConfig
+    from langgraph.graph import StateGraph
+
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    RunnableConfig = None
+    StateGraph = None
+    LANGCHAIN_AVAILABLE = False
 
 from noesium.core.llm import get_llm_client
 from noesium.core.tracing import get_token_tracker
