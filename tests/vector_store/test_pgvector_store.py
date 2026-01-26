@@ -4,7 +4,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 try:
-    import psycopg2
     from noesium.core.vector_store.pgvector import PGVectorStore
 except ImportError as e:
     pytest.skip(

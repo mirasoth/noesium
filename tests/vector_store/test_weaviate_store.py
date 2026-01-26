@@ -4,7 +4,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 try:
-    import weaviate
     from noesium.core.vector_store.weaviate import BaseVectorStore, WeaviateVectorStore
 except ImportError as e:
     pytest.skip(
