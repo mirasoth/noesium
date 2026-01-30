@@ -1,4 +1,4 @@
-# Noesium-core
+# Noesium
 
 [![CI](https://github.com/mirasoth/noesium/actions/workflows/ci.yml/badge.svg)](https://github.com/mirasoth/noesium/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/noesium.svg)](https://pypi.org/project/noesium/)
