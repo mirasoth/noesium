@@ -28,22 +28,14 @@ requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0.0",
     "requests>=2.31.0",
-    "httpx>=0.28.1",
     "aiohttp>=3.12.15",
-    "aiofiles>=24.1.0",
-    "anyio>=4.9.0",
     "python-dotenv>=1.1.1",
     "colorlog>=6.8.0",
     "typing-extensions>=4.8.0",
-    "deprecated>=1.2.18",
-    "psutil>=7.0.0",
-    "networkx>=3.5",
-    "bubus>=1.5.6",
 ]
 
 [project.optional-dependencies]
 # AI Providers
-openai = ["openai>=1.0.0", "instructor>=1.10.0"]
 google = [
     "google-genai>=1.5.0", 
     "google-api-python-client>=2.174.0", 
@@ -51,8 +43,9 @@ google = [
     "google-auth>=2.40.3"
 ]
 aliyun = ["aliyun-python-sdk-core>=2.13.1,<3.0.0"]
-litellm = ["litellm>=1.0.0"]
+llm = ["litellm>=1.0.0", "openai>=1.0.0", "instructor>=1.10.0"]
 local-llm = ["ollama>=0.5.3", "llama-cpp-python>=0.3.16", "huggingface-hub>=0.34.4"]
+ai-providers-all = ["noesium[google,aliyun,llm,local-llm]"]
 
 # Frameworks
 langchain = [
@@ -61,13 +54,14 @@ langchain = [
     "langchain-ollama>=0.2.0",
     "langgraph>=0.5.4",
 ]
+agents = ["noesium[langchain]", "bubus>=1.5.6"]
 
 # Database & Vector Stores
 postgres = ["psycopg2-binary>=2.9.0", "psycopg2>=2.9.10"] # Use binary for easier install
 weaviate = ["weaviate-client>=4,<5", "protobuf>=5,<6"]
 
 # Data Science Tools
-datascience = ["matplotlib>=3.8.0", "pexpect>=4.9.0", "ipython>=8.18.0", "pandas>=2.0.0"]
+datascience = ["networkx>=3.5", "matplotlib>=3.8.0", "pexpect>=4.9.0", "ipython>=8.18.0", "pandas>=2.0.0"]
 
 # MCP Support
 mcp = ["mcp>=1.0.0"]
@@ -81,11 +75,12 @@ tools = [
     "pymupdf>=1.23.0",
     "openpyxl>=3.1.5",
     "wikipedia-api>=0.6.0",
+    "aiofiles>=24.1.0",
 ]
 
 # Full installation for power users
 all = [
-    "noesium[openai,google,local-llm,langchain,postgres,weaviate,tools]"
+    "noesium[ai-providers-all,agents,postgres,weaviate,tools]"
 ]
 
 dev = [
