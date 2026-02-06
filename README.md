@@ -32,6 +32,30 @@ pip install -U noesium
 - **DeepResearchAgent** - Iterative research with LLM-powered reflection and citation generation
 - **MemoryAgent** - Memory management with categorization, embedding search, and memory linking
 
+## Built-in Toolkits
+
+Tool management (`noesium.core.toolify`) ships with 17+ toolkits. Full details and tool lists are in [AGENTS.md](AGENTS.md).
+
+| Toolkit | Registration | Description |
+|---------|--------------|-------------|
+| **Search** | `search` | Google/Serper search, web content fetch, Tavily/Google AI search, LLM Q&A on pages |
+| **Bash** | `bash` | Run shell commands, get cwd, list directory (workspace-isolated, secure) |
+| **Memory** | `memory` | Read/write/edit/append/clear named slots, list slots, search, stats |
+| **Python Executor** | `python_executor` | Execute Python code (IPython, timeout, plot capture) |
+| **ArXiv** | `arxiv` | Search and download papers, get paper details (arXiv API) |
+| **Audio** | `audio` | Transcribe audio (Whisper), audio Q&A; local/URL, caching |
+| **Audio Aliyun** | `audio_aliyun` | Transcribe and Q&A via Aliyun NLS (Lingjie); URL input |
+| **Document** | `document` | Parse PDF/Office, extract text, document Q&A (Chunkr/PyMuPDF) |
+| **File Edit** | `file_edit` | Create/read/write/delete files, list/search, backups, sanitized paths |
+| **GitHub** | `github` | Repo info, contents, releases, repository search |
+| **Gmail** | `gmail` | Authenticate, recent/search emails, extract verification codes |
+| **Image** | `image` | Analyze/describe/compare images, OCR, info (URL or local) |
+| **Serper** | `serper` | Google search, images, news, scholar, maps, video, places, autocomplete, Lens |
+| **Tabular Data** | `tabular_data` | Column info, summaries, data quality checks for CSV/Excel |
+| **User Interaction** | `user_interaction` | Ask user, confirm, choices, display message, final answer, interaction history |
+| **Video** | `video` | Analyze video and Q&A (Gemini), video metadata |
+| **Wikipedia** | `wikipedia` | Search, get page/summary, random page, categories, page views |
+
 ## Quick Start
 
 ### LLM Client
