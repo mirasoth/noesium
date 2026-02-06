@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "noesium"
-version = "0.2.1"
+version = "0.2.1.1"
 description = "Towards a cognitive agentic framework"
 readme = "README.md"
 license = "MIT"
