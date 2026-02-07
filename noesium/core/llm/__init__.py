@@ -3,6 +3,16 @@ from typing import Optional
 
 from .base import BaseLLMClient
 
+# Automatically load .env file on module import
+# load_dotenv searches for .env in current directory and parent directories
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(override=True)
+except ImportError:
+    # python-dotenv not installed, silently skip
+    pass
+
 # Deprecated imports
 from .litellm import LLMClient as LitellmClient
 from .litellm import LLMClient as LitellmLLMClient
