@@ -365,8 +365,10 @@ class TestModelRouter:
         assert "custom" in ModelRouter.get_available_strategies()
 
         # Should be able to use it
-        router = ModelRouter(strategy="custom")
-        assert isinstance(router.strategy, CustomStrategy)
+        with patch("noesium.core.routing.router.get_llm_client") as mock_get_client:
+            mock_get_client.side_effect = Exception("Should not be called")
+            router = ModelRouter(strategy="custom")
+            assert isinstance(router.strategy, CustomStrategy)
 
     def test_register_strategy_invalid_class(self):
         """Test registering invalid strategy class."""
