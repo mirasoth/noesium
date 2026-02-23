@@ -5,9 +5,6 @@ from typing import TYPE_CHECKING
 
 from noesium.agents.browser_use.logging_config import setup_logging
 
-# Import BrowserUseAgent directly (not lazy)
-from .agent import BrowserUseAgent
-
 # Only set up logging if not in MCP mode or if explicitly requested
 if os.environ.get("BROWSER_USE_SETUP_LOGGING", "true").lower() != "false":
     from noesium.agents.browser_use.config import CONFIG
@@ -46,6 +43,7 @@ asyncio.base_subprocess.BaseSubprocessTransport.__del__ = _patched_del
 
 # Type stubs for lazy imports - fixes linter warnings
 if TYPE_CHECKING:
+    from noesium.agents.browser_use.agent import BrowserUseAgent
     from noesium.agents.browser_use.agent.prompts import SystemPrompt
     from noesium.agents.browser_use.agent.service import Agent
     from noesium.agents.browser_use.agent.views import ActionModel, ActionResult, AgentHistoryList
@@ -58,6 +56,8 @@ if TYPE_CHECKING:
 
 # Lazy imports mapping - only import when actually accessed
 _LAZY_IMPORTS = {
+    # Noesium wrapper
+    "BrowserUseAgent": ("noesium.agents.browser_use.agent", "BrowserUseAgent"),
     # Agent service (heavy due to dependencies)
     "Agent": ("noesium.agents.browser_use.agent.service", "Agent"),
     # System prompt (moderate weight due to agent.views imports)
@@ -100,6 +100,7 @@ def __getattr__(name: str):
 
 
 __all__ = [
+    "BrowserUseAgent",  # Noesium wrapper (lazy-imported)
     "Agent",
     "BrowserSession",
     "Browser",  # Alias for BrowserSession
@@ -112,5 +113,4 @@ __all__ = [
     "AgentHistoryList",
     "Tools",
     "Controller",
-    "BrowserUseAgent",  # Noesium wrapper
 ]

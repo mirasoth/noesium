@@ -214,3 +214,4 @@ document_downloads/
 .DS_Store
 .python-version
 *.diff
+.agents

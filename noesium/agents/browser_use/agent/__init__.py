@@ -56,10 +56,19 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         self._llm_client = llm
         self._underlying_agent: Agent | None = None
 
+    _logger: logging.Logger | None = None
+
     @property
     def logger(self) -> logging.Logger:
         """Get the logger instance."""
-        return get_logger(self.__class__.__name__)
+        if self._logger is None:
+            self._logger = get_logger(self.__class__.__name__)
+        return self._logger
+
+    @logger.setter
+    def logger(self, value: logging.Logger) -> None:
+        """Set the logger instance (for parent class compatibility)."""
+        self._logger = value
 
     async def run(
         self,

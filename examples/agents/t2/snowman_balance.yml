@@ -1,0 +1,43 @@
+task: StructuredExtraction
+metadata:
+  name: 公司财报关键指标解析
+data_models:
+  - name: StockMetric
+    fields:
+    - name: metric_name
+      type: str
+      desc: 指标名称，如营业收入、营业收入同比增长、净利润
+    - name: report_time
+      type: str
+      desc: 报告时间，如2024中报、2024三季报
+    - name: value
+      type: str
+      desc: 指标值，如100亿
+    - name: yoy_growth
+      type: str
+      desc: 同比增长，如-10%
+  - name: StockKeyMetricsAll
+    fields:
+    - name: stock_name
+      type: str
+      desc: 股票名称，如雪人股份
+    - name: stock_code
+      type: str
+      desc: 股票代码，如002639
+    - name: key_measures
+      type: List[StockMetric]
+      desc: 关键指标
+    - name: per_stock_measures
+      type: List[StockMetric]
+      desc: 每股指标
+    - name: profitability
+      type: List[StockMetric]
+      desc: 盈利能力指标
+    - name: financial_risks
+      type: List[StockMetric]
+      desc: 财务风险指标
+    - name: opertional_capacity
+      type: List[StockMetric]
+      desc: 运营能力指标
+instruction: 页面加载完成后，选择【同比】按钮，解析【关键指标】、【每股指标】、【盈利能力】、【财务风险】、【运营能力】五类指标，并格式化输出到指定数据结构
+output_model: StockKeyMetricsAll

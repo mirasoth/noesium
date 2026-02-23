@@ -12,6 +12,45 @@ Project Noesium is an initiative to develop a computation-driven, cognitive agen
 pip install -U noesium
 ```
 
+### Optional Dependencies
+
+Noesium provides optional dependency groups for different usage scenarios:
+
+```bash
+# AI Providers
+pip install noesium[google]          # Google GenAI, API Client, Auth
+pip install noesium[aliyun]          # Aliyun Python SDK
+pip install noesium[llm]             # LiteLLM, OpenAI, Instructor
+pip install noesium[local-llm]       # Ollama, LlamaCPP, HuggingFace Hub
+pip install noesium[ai-providers-all] # All AI providers above
+
+# Frameworks
+pip install noesium[langchain]       # LangChain Core, Text Splitters, Ollama, LangGraph
+pip install noesium[agents]          # LangChain + Bubus for agent frameworks
+
+# Database & Vector Stores
+pip install noesium[postgres]        # PostgreSQL with psycopg2
+pip install noesium[weaviate]        # Weaviate vector database
+
+# Data Science Tools
+pip install noesium[datascience]     # NetworkX, Matplotlib, Pandas, IPython, pexpect
+
+# Browser Automation
+pip install noesium[browser-use]     # Screen info, CDP client, PDF/HTML processing, PIL
+
+# MCP Support
+pip install noesium[mcp]             # Model Context Protocol
+
+# Toolkits
+pip install noesium[tools]           # All toolkits (search, arxiv, document, image, etc.)
+
+# Full installation (recommended for most users)
+pip install noesium[all]             # All optional dependencies except dev
+
+# Development
+pip install noesium[dev]             # pytest, black, isort, mypy, etc.
+```
+
 ## Core Modules
 
 | Module | Description |
