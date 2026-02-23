@@ -143,18 +143,21 @@ class BaseWatchdog(BaseModel):
 
                     # attempt to repair potentially crashed CDP session
                     try:
-                        if browser_session.agent_focus and browser_session.agent_focus.target_id:
+                        if browser_session.agent_focus_target_id:
                             # Common issue with CDP, some calls need the target to be active/foreground to succeed:
                             #   screenshot, scroll, Page.handleJavaScriptDialog, and some others
                             browser_session.logger.debug(
-                                f"{yellow}🚌 {watchdog_and_handler_str} ⚠️ Re-foregrounding target to try and recover crashed CDP session\n\t{browser_session.agent_focus}{reset}"
+                                f"{yellow}🚌 {watchdog_and_handler_str} ⚠️ Re-foregrounding target to try and recover crashed CDP session\n\t{browser_session.agent_focus_target_id}{reset}"
                             )
-                            del browser_session._cdp_session_pool[browser_session.agent_focus.target_id]
-                            browser_session.agent_focus = await browser_session.get_or_create_cdp_session(
-                                target_id=browser_session.agent_focus.target_id, new_socket=True
+                            del browser_session._cdp_session_pool[browser_session.agent_focus_target_id]
+                            _ = await browser_session.get_or_create_cdp_session(
+                                target_id=browser_session.agent_focus_target_id, new_socket=True
                             )
-                            await browser_session.agent_focus.cdp_client.send.Target.activateTarget(
-                                params={"targetId": browser_session.agent_focus.target_id}
+                            cdp_session = await browser_session.get_or_create_cdp_session(
+                                target_id=browser_session.agent_focus_target_id, new_socket=True
+                            )
+                            await cdp_session.cdp_client.send.Target.activateTarget(
+                                params={"targetId": browser_session.agent_focus_target_id}
                             )
                         else:
                             await browser_session.get_or_create_cdp_session(target_id=None, new_socket=True, focus=True)

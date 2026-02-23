@@ -85,11 +85,13 @@ browser-use = [
     "uuid7>=0.1.0",
     "authlib>=1.6.0",
     "pypdf>=5.7.0",
-    "cdp-use>=1.4.0",
-    "markdown-pdf>=1.5",
+    "cdp-use>=1.4.4",
     "html2text>=2025.4.15",
     "psutil>=7.0.0",
     "pillow>=11.3.0",
+    "anyio>=4.9.0",
+    "httpx>=0.28.1",
+    "cloudpickle>=3.1.1",
 ]
 
 # Full installation for power users
@@ -118,6 +120,12 @@ CXX = "g++"
 
 [tool.setuptools.packages.find]
 include = ["noesium*"]
+
+[tool.setuptools.package-data]
+noesium = [
+    "agents/browser_use/**/*.md",
+    "agents/browser_use/**/*.json",
+]
 
 [tool.black]
 line-length = 120

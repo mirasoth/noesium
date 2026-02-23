@@ -10,9 +10,9 @@ from typing import Any, Generic, Optional, TypeVar, Union, get_args, get_origin
 
 from pydantic import BaseModel, Field, RootModel, create_model
 
+from ...adapters.llm_adapter import BaseChatModel
 from ...browser import BrowserSession
 from ...filesystem.file_system import FileSystem
-from ...llm_adapter import BaseChatModel
 from ...observability import observe_debug
 from ...utils import is_new_tab_page, match_url_with_domain_pattern, time_execution_async
 from .views import (

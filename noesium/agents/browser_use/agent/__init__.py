@@ -89,7 +89,7 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         Returns:
             AgentHistoryList containing the execution history and results.
         """
-        from ..llm_adapter import BaseChatModel
+        from ..adapters.llm_adapter import BaseChatModel
 
         if self._underlying_agent is None:
             self._underlying_agent = Agent(

@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
+from ...adapters.llm_adapter import BaseMessage, ContentImage, ContentText, SystemMessage
 from ...browser.views import BrowserStateSummary
 from ...filesystem.file_system import FileSystem
-from ...llm_adapter import BaseMessage, ContentImage, ContentText, SystemMessage
 from ...observability import observe_debug
 from ...utils import match_url_with_domain_pattern, time_execution_sync
 from ..prompts import AgentMessagePrompt
@@ -119,6 +119,7 @@ class MessageManager:
         self.include_attributes = include_attributes or []
         self.sensitive_data = sensitive_data
         self.last_input_messages = []
+        self.last_state_message_text: str | None = None
         # Only initialize messages if state is empty
         if len(self.state.history.get_messages()) == 0:
             self._set_message_with_type(self.system_prompt, "system")
@@ -308,6 +309,7 @@ class MessageManager:
 
         # Set the state message with caching enabled
         self._set_message_with_type(state_message, "state")
+        self.last_state_message_text = state_message.text
 
     def _log_history_lines(self) -> str:
         """Generate a formatted log string of message history for debugging / printing to terminal"""
@@ -417,3 +419,17 @@ class MessageManager:
                     item.text = replace_sensitive(item.text)
                     message.content[i] = item
         return message
+
+    async def maybe_compact_messages(
+        self,
+        llm: BaseChatModel | None,
+        settings: "MessageCompactionSettings | None" = None,
+        step_info: "AgentStepInfo | None" = None,
+    ) -> bool:
+        """Summarize older history into a compact memory block.
+
+        Step interval is the primary trigger; char count is a minimum floor.
+        """
+        # Message compaction not supported in current version
+        # This is a placeholder for future implementation
+        return False

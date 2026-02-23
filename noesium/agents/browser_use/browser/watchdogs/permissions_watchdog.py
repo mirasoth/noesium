@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from bubus import BaseEvent
 
-from ..events import BrowserConnectedEvent
-from ..watchdog_base import BaseWatchdog
+from noesium.agents.browser_use.browser.events import BrowserConnectedEvent
+from noesium.agents.browser_use.browser.watchdog_base import BaseWatchdog
 
 if TYPE_CHECKING:
     pass

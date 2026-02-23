@@ -11,6 +11,7 @@ except ImportError:
     Laminar = None  # type: ignore
 from pydantic import BaseModel
 
+from ..adapters.llm_adapter import BaseChatModel, SystemMessage, UserMessage
 from ..agent.views import ActionModel, ActionResult
 from ..browser import BrowserSession
 from ..browser.events import (
@@ -29,7 +30,6 @@ from ..browser.events import (
 from ..browser.views import BrowserError
 from ..dom.service import EnhancedDOMTreeNode
 from ..filesystem.file_system import FileSystem
-from ..llm_adapter import BaseChatModel, SystemMessage, UserMessage
 from ..observability import observe_debug
 from ..utils import _log_pretty_url, time_execution_sync
 from .registry.service import Registry
@@ -185,10 +185,10 @@ class Tools(Generic[Context]):
                 return ActionResult(error=f'Failed to search Google for "{params.query}": {str(e)}')
 
         @self.registry.action(
-            "Navigate to URL, set new_tab=True to open in new tab, False to navigate in current tab",
+            "",
             param_model=GoToUrlAction,
         )
-        async def go_to_url(params: GoToUrlAction, browser_session: BrowserSession):
+        async def navigate(params: GoToUrlAction, browser_session: BrowserSession):
             try:
                 # Dispatch navigation event
                 event = browser_session.event_bus.dispatch(NavigateToUrlEvent(url=params.url, new_tab=params.new_tab))
@@ -1086,6 +1086,20 @@ You will be given a query and the markdown of a webpage that has been filtered t
         """
         return self.registry.action(description, **kwargs)
 
+    def exclude_action(self, action_name: str) -> None:
+        """Exclude an action from being available to the agent."""
+        if action_name not in self.registry.exclude_actions:
+            self.registry.exclude_actions.append(action_name)
+
+    def set_coordinate_clicking(self, enabled: bool) -> None:
+        """Enable or disable coordinate clicking for actions."""
+        # This feature may be implemented in the future
+        # For now, it's a placeholder for compatibility
+
+    def get_output_model(self) -> type[BaseModel] | None:
+        """Get the output model for structured output, if any."""
+        return None
+
     # Act --------------------------------------------------------------------
     @observe_debug(ignore_input=True, ignore_output=True, name="act")
     @time_execution_sync("--act")
@@ -1098,6 +1112,7 @@ You will be given a query and the markdown of a webpage that has been filtered t
         sensitive_data: dict[str, str | dict[str, str]] | None = None,
         available_file_paths: list[str] | None = None,
         file_system: FileSystem | None = None,
+        extraction_schema: dict | None = None,
     ) -> ActionResult:
         """Execute an action"""
 

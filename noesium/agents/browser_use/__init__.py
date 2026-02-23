@@ -1,5 +1,3 @@
-import asyncio
-import logging
 import os
 from typing import TYPE_CHECKING
 
@@ -16,14 +14,18 @@ if os.environ.get("BROWSER_USE_SETUP_LOGGING", "true").lower() != "false":
     # Set up logging with file handlers if specified
     logger = setup_logging(debug_log_file=debug_log_file, info_log_file=info_log_file)
 else:
+    import logging
+
     logger = logging.getLogger("browser_use")
 
 # Monkeypatch BaseSubprocessTransport.__del__ to handle closed event loops gracefully
-_original_del = asyncio.base_subprocess.BaseSubprocessTransport.__del__
+from asyncio import base_subprocess
+
+_original_del = base_subprocess.BaseSubprocessTransport.__del__
 
 
 def _patched_del(self):
-    """Patched __del__ handling closed event loops gracefully"""
+    """Patched __del__ that handles closed event loops without throwing noisy red-herring errors like RuntimeError: Event loop is closed"""
     try:
         # Check if the event loop is closed before calling the original
         if hasattr(self, "_loop") and self._loop and self._loop.is_closed():
@@ -38,11 +40,12 @@ def _patched_del(self):
             raise
 
 
-asyncio.base_subprocess.BaseSubprocessTransport.__del__ = _patched_del
+base_subprocess.BaseSubprocessTransport.__del__ = _patched_del
 
 
 # Type stubs for lazy imports - fixes linter warnings
 if TYPE_CHECKING:
+    from noesium.agents.browser_use.adapters.llm_adapter import BaseChatModel
     from noesium.agents.browser_use.agent import BrowserUseAgent
     from noesium.agents.browser_use.agent.prompts import SystemPrompt
     from noesium.agents.browser_use.agent.service import Agent
@@ -50,16 +53,18 @@ if TYPE_CHECKING:
     from noesium.agents.browser_use.browser import BrowserProfile
     from noesium.agents.browser_use.browser import BrowserSession
     from noesium.agents.browser_use.browser import BrowserSession as Browser
+    from noesium.agents.browser_use.code_use.service import CodeAgent
     from noesium.agents.browser_use.dom.service import DomService
     from noesium.agents.browser_use.tools.service import Controller, Tools
 
-
-# Lazy imports mapping - only import when actually accessed
+    # Lazy imports mapping - only import when actually accessed
 _LAZY_IMPORTS = {
     # Noesium wrapper
     "BrowserUseAgent": ("noesium.agents.browser_use.agent", "BrowserUseAgent"),
     # Agent service (heavy due to dependencies)
     "Agent": ("noesium.agents.browser_use.agent.service", "Agent"),
+    # Code-use agent (Jupyter notebook-like execution)
+    "CodeAgent": ("noesium.agents.browser_use.code_use.service", "CodeAgent"),
     # System prompt (moderate weight due to agent.views imports)
     "SystemPrompt": ("noesium.agents.browser_use.agent.prompts", "SystemPrompt"),
     # Agent views (very heavy - over 1 second!)
@@ -74,6 +79,10 @@ _LAZY_IMPORTS = {
     "Controller": ("noesium.agents.browser_use.tools.service", "Controller"),  # alias
     # DOM service (moderate weight)
     "DomService": ("noesium.agents.browser_use.dom.service", "DomService"),
+    # LLM adapter
+    "BaseChatModel": ("noesium.agents.browser_use.adapters.llm_adapter", "BaseChatModel"),
+    # Sandbox execution
+    "sandbox": ("noesium.agents.browser_use.sandbox", "sandbox"),
 }
 
 
@@ -102,6 +111,7 @@ def __getattr__(name: str):
 __all__ = [
     "BrowserUseAgent",  # Noesium wrapper (lazy-imported)
     "Agent",
+    "CodeAgent",
     "BrowserSession",
     "Browser",  # Alias for BrowserSession
     "BrowserProfile",
@@ -113,4 +123,6 @@ __all__ = [
     "AgentHistoryList",
     "Tools",
     "Controller",
+    "BaseChatModel",  # LLM adapter
+    "sandbox",
 ]

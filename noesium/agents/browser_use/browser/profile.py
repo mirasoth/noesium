@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 from collections.abc import Iterable
@@ -9,10 +10,21 @@ from urllib.parse import urlparse
 
 from pydantic import AfterValidator, AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from ..config import CONFIG
-from ..utils import _log_pretty_path, logger
+from noesium.agents.browser_use.config import CONFIG
+from noesium.agents.browser_use.utils import _log_pretty_path, logger
+
+
+def _get_enable_default_extensions_default() -> bool:
+    """Get the default value for enable_default_extensions from env var or True."""
+    env_val = os.getenv("BROWSER_USE_DISABLE_EXTENSIONS")
+    if env_val is not None:
+        # If DISABLE_EXTENSIONS is truthy, return False (extensions disabled)
+        return env_val.lower() in ("0", "false", "no", "off", "")
+    return True
+
 
 CHROME_DEBUG_PORT = 9242  # use a non-default port to avoid conflicts with other tools / devs using 9222
+DOMAIN_OPTIMIZATION_THRESHOLD = 100  # Convert domain lists to sets for O(1) lookup when >= this size
 CHROME_DISABLED_COMPONENTS = [
     # Playwright defaults: https://github.com/microsoft/playwright/blob/41008eeddd020e2dee1c540f7c0cdfa337e99637/packages/playwright-core/src/server/chromium/chromiumSwitches.ts#L76
     # AcceptCHFrame,AutoExpandDetailsElement,AvoidUnnecessaryBeforeUnloadCheckSync,CertificateTransparencyComponentUpdater,DeferRendererTasksAfterInput,DestroyProfileOnBrowserClose,DialMediaRouteProvider,ExtensionManifestV2Disabled,GlobalMediaControls,HttpsUpgrades,ImprovedCookieControls,LazyFrameLoading,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate
@@ -127,8 +139,6 @@ CHROME_DEFAULT_ARGS = [
     # '--force-color-profile=srgb',  # moved to CHROME_DETERMINISTIC_RENDERING_ARGS
     "--metrics-recording-only",
     "--no-first-run",
-    "--password-store=basic",
-    "--use-mock-keychain",
     # // See https://chromium-review.googlesource.com/c/chromium/src/+/2436773
     "--no-service-autorun",
     "--export-tagged-pdf",
@@ -276,7 +286,7 @@ class BrowserChannel(str, Enum):
     MSEDGE_CANARY = "msedge-canary"
 
 
-# Using constants from central location in noesium.agents.browser_use.config
+# Using constants from central location in browser_use.config
 BROWSERUSE_DEFAULT_CHANNEL = BrowserChannel.CHROMIUM
 
 
@@ -485,16 +495,16 @@ class BrowserNewContextArgs(BrowserContextArgs):
 
     # @field_validator('storage_state', mode='after')
     # def load_storage_state_from_file(self) -> Self:
-    #   """Load storage_state from file if it's a path."""
-    #   if isinstance(self.storage_state, (str, Path)):
-    #       storage_state_file = Path(self.storage_state)
-    #       try:
-    #           parsed_storage_state = json.loads(storage_state_file.read_text())
-    #           validated_storage_state = StorageState(**parsed_storage_state)
-    #           self.storage_state = validated_storage_state
-    #       except Exception as e:
-    #           raise ValueError(f'Failed to load storage state file {self.storage_state}: {e}') from e
-    #   return self
+    # 	"""Load storage_state from file if it's a path."""
+    # 	if isinstance(self.storage_state, (str, Path)):
+    # 		storage_state_file = Path(self.storage_state)
+    # 		try:
+    # 			parsed_storage_state = json.loads(storage_state_file.read_text())
+    # 			validated_storage_state = StorageState(**parsed_storage_state)
+    # 			self.storage_state = validated_storage_state
+    # 		except Exception as e:
+    # 			raise ValueError(f'Failed to load storage state file {self.storage_state}: {e}') from e
+    # 	return self
 
 
 class BrowserLaunchPersistentContextArgs(BrowserLaunchArgs, BrowserContextArgs):
@@ -565,14 +575,35 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
     # Session/connection configuration
     cdp_url: str | None = Field(default=None, description="CDP URL for connecting to existing browser instance")
     is_local: bool = Field(default=False, description="Whether this is a local browser instance")
-    # label: str = 'default'
+    use_cloud: bool = Field(
+        default=False,
+        description="Use browser-use cloud browser service instead of local browser (disabled in noesium)",
+    )
+
+    @property
+    def cloud_browser(self) -> bool:
+        """Alias for use_cloud field for compatibility (disabled in noesium)."""
+        return False  # Always disabled in noesium
+
+    # Cloud browser params disabled in noesium
+    # cloud_browser_params: CloudBrowserParams | None = Field(
+    # 	default=None, description='Parameters for creating a cloud browser instance'
+    # )
 
     # custom options we provide that aren't native playwright kwargs
     disable_security: bool = Field(default=False, description="Disable browser security features.")
     deterministic_rendering: bool = Field(default=False, description="Enable deterministic rendering flags.")
-    allowed_domains: list[str] | None = Field(
+    allowed_domains: list[str] | set[str] | None = Field(
         default=None,
-        description='List of allowed domains for navigation e.g. ["*.google.com", "https://example.com", "chrome-extension://*"]',
+        description='List of allowed domains for navigation e.g. ["*.google.com", "https://example.com", "chrome-extension://*"]. Lists with 100+ items are auto-optimized to sets (no pattern matching).',
+    )
+    prohibited_domains: list[str] | set[str] | None = Field(
+        default=None,
+        description='List of prohibited domains for navigation e.g. ["*.google.com", "https://example.com", "chrome-extension://*"]. Allowed domains take precedence over prohibited domains. Lists with 100+ items are auto-optimized to sets (no pattern matching).',
+    )
+    block_ip_addresses: bool = Field(
+        default=False,
+        description="Block navigation to URLs containing IP addresses (both IPv4 and IPv6). When True, blocks all IP-based URLs including localhost and private networks.",
     )
     keep_alive: bool | None = Field(default=None, description="Keep browser alive after agent run.")
 
@@ -580,11 +611,15 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
     # New consolidated proxy config (typed)
     proxy: ProxySettings | None = Field(
         default=None,
-        description="Proxy settings. Use noesium.agents.browser_use.browser.profile.ProxySettings(server, bypass, username, password)",
+        description="Proxy settings. Use browser_use.browser.profile.ProxySettings(server, bypass, username, password)",
     )
     enable_default_extensions: bool = Field(
-        default=True,
-        description="Enable automation-optimized extensions: ad blocking (uBlock Origin), cookie handling (I still don't care about cookies), and URL cleaning (ClearURLs). All extensions work automatically without manual intervention. Extensions are automatically downloaded and loaded when enabled.",
+        default_factory=_get_enable_default_extensions_default,
+        description="Enable automation-optimized extensions: ad blocking (uBlock Origin), cookie handling (I still don't care about cookies), and URL cleaning (ClearURLs). All extensions work automatically without manual intervention. Extensions are automatically downloaded and loaded when enabled. Can be disabled via BROWSER_USE_DISABLE_EXTENSIONS=1 environment variable.",
+    )
+    demo_mode: bool = Field(
+        default=False,
+        description="Enable demo mode side panel that streams agent logs directly inside the browser window (requires headless=False).",
     )
     cookie_whitelist_domains: list[str] = Field(
         default_factory=lambda: ["nature.com", "qatarairways.com"],
@@ -606,8 +641,17 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
         description="Window position to use for the browser x,y from the top left when headless=False.",
     )
     cross_origin_iframes: bool = Field(
-        default=False,
-        description="Enable cross-origin iframe support (OOPIF/Out-of-Process iframes). When False (default), only same-origin frames are processed to avoid complexity and hanging.",
+        default=True,
+        description="Enable cross-origin iframe support (OOPIF/Out-of-Process iframes). When False, only same-origin frames are processed to avoid complexity and hanging.",
+    )
+    max_iframes: int = Field(
+        default=100,
+        description="Maximum number of iframe documents to process to prevent crashes.",
+    )
+    max_iframe_depth: int = Field(
+        ge=0,
+        default=5,
+        description="Maximum depth for cross-origin iframe recursion (default: 5 levels deep).",
     )
 
     # --- Page load/wait timings ---
@@ -617,14 +661,26 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
     )
     wait_for_network_idle_page_load_time: float = Field(default=0.5, description="Time to wait for network idle.")
 
-    wait_between_actions: float = Field(default=0.5, description="Time to wait between actions.")
+    wait_between_actions: float = Field(default=0.1, description="Time to wait between actions.")
 
     # --- UI/viewport/DOM ---
-
     highlight_elements: bool = Field(default=True, description="Highlight interactive elements on the page.")
+    dom_highlight_elements: bool = Field(
+        default=False, description="Highlight interactive elements in the DOM (only for debugging purposes)."
+    )
     filter_highlight_ids: bool = Field(
         default=True,
         description="Only show element IDs in highlights if llm_representation is less than 10 characters.",
+    )
+    paint_order_filtering: bool = Field(
+        default=True, description="Enable paint order filtering. Slightly experimental."
+    )
+    interaction_highlight_color: str = Field(
+        default="rgb(255, 127, 39)",
+        description="Color to use for highlighting elements during interactions (CSS color string).",
+    )
+    interaction_highlight_duration: float = Field(
+        default=1.0, description="Duration in seconds to show interaction highlights."
     )
 
     # --- Downloads ---
@@ -639,13 +695,25 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
     # save_har_path: alias of record_har_path
     # trace_path: alias of traces_dir
 
+    # these shadow the old playwright args on BrowserContextArgs, but it's ok
+    # because we handle them ourselves in a watchdog and we no longer use playwright, so they should live in the scope for our own config in BrowserProfile long-term
+    record_video_dir: Path | None = Field(
+        default=None,
+        description="Directory to save video recordings. If set, a video of the session will be recorded.",
+        validation_alias=AliasChoices("save_recording_path", "record_video_dir"),
+    )
+    record_video_size: ViewportSize | None = Field(
+        default=None, description="Video frame size. If not set, it will use the viewport size."
+    )
+    record_video_framerate: int = Field(default=30, description="The framerate to use for the video recording.")
+
     # TODO: finish implementing extension support in extensions.py
     # extension_ids_to_preinstall: list[str] = Field(
-    #   default_factory=list, description='List of Chrome extension IDs to preinstall.'
+    # 	default_factory=list, description='List of Chrome extension IDs to preinstall.'
     # )
     # extensions_dir: Path = Field(
-    #   default_factory=lambda: Path('~/.config/browseruse/cache/extensions').expanduser(),
-    #   description='Directory containing .crx extension files.',
+    # 	default_factory=lambda: Path('~/.config/browseruse/cache/extensions').expanduser(),
+    # 	description='Directory containing .crx extension files.',
     # )
 
     def __repr__(self) -> str:
@@ -654,6 +722,23 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
 
     def __str__(self) -> str:
         return "BrowserProfile"
+
+    @field_validator("allowed_domains", "prohibited_domains", mode="after")
+    @classmethod
+    def optimize_large_domain_lists(cls, v: list[str] | set[str] | None) -> list[str] | set[str] | None:
+        """Convert large domain lists (>=100 items) to sets for O(1) lookup performance."""
+        if v is None or isinstance(v, set):
+            return v
+
+        if len(v) >= DOMAIN_OPTIMIZATION_THRESHOLD:
+            logger.warning(
+                f"🔧 Optimizing domain list with {len(v)} items to set for O(1) lookup. "
+                f"Note: Pattern matching (*.domain.com, etc.) is not supported for lists >= {DOMAIN_OPTIMIZATION_THRESHOLD} items. "
+                f"Use exact domains only or keep list size < {DOMAIN_OPTIMIZATION_THRESHOLD} for pattern support."
+            )
+            return set(v)
+
+        return v
 
     @model_validator(mode="after")
     def copy_old_config_names_to_new(self) -> Self:
@@ -720,9 +805,68 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
             logger.warning("BrowserProfile.proxy.bypass provided but proxy has no server; bypass will be ignored.")
         return self
 
+    @model_validator(mode="after")
+    def validate_highlight_elements_conflict(self) -> Self:
+        """Ensure highlight_elements and dom_highlight_elements are not both enabled, with dom_highlight_elements taking priority."""
+        if self.highlight_elements and self.dom_highlight_elements:
+            logger.warning(
+                "⚠️ Both highlight_elements and dom_highlight_elements are enabled. "
+                "dom_highlight_elements takes priority. Setting highlight_elements=False."
+            )
+            self.highlight_elements = False
+        return self
+
     def model_post_init(self, __context: Any) -> None:
         """Called after model initialization to set up display configuration."""
         self.detect_display_configuration()
+        self._copy_profile()
+
+    def _copy_profile(self) -> None:
+        """Copy profile to temp directory if user_data_dir is not None and not already a temp dir."""
+        if self.user_data_dir is None:
+            return
+
+        user_data_str = str(self.user_data_dir)
+        if "browser-use-user-data-dir-" in user_data_str.lower():
+            # Already using a temp directory, no need to copy
+            return
+
+        is_chrome = (
+            "chrome" in user_data_str.lower()
+            or ("chrome" in str(self.executable_path).lower())
+            or self.channel
+            in (
+                BrowserChannel.CHROME,
+                BrowserChannel.CHROME_BETA,
+                BrowserChannel.CHROME_DEV,
+                BrowserChannel.CHROME_CANARY,
+            )
+        )
+
+        if not is_chrome:
+            return
+
+        temp_dir = tempfile.mkdtemp(prefix="browser-use-user-data-dir-")
+        path_original_user_data = Path(self.user_data_dir)
+        path_original_profile = path_original_user_data / self.profile_directory
+        path_temp_profile = Path(temp_dir) / self.profile_directory
+
+        if path_original_profile.exists():
+            import shutil
+
+            shutil.copytree(path_original_profile, path_temp_profile)
+            local_state_src = path_original_user_data / "Local State"
+            local_state_dst = Path(temp_dir) / "Local State"
+            if local_state_src.exists():
+                shutil.copy(local_state_src, local_state_dst)
+            logger.info(f"Copied profile ({self.profile_directory}) and Local State to temp directory: {temp_dir}")
+
+        else:
+            Path(temp_dir).mkdir(parents=True, exist_ok=True)
+            path_temp_profile.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created new profile ({self.profile_directory}) in temp directory: {temp_dir}")
+
+        self.user_data_dir = temp_dir
 
     def get_args(self) -> list[str]:
         """Get the list of all Chrome CLI launch args for this profile (compiled from defaults, user-provided, and system-specific)."""
@@ -768,8 +912,40 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
             if proxy_bypass:
                 pre_conversion_args.append(f"--proxy-bypass-list={proxy_bypass}")
 
-        # convert to dict and back to dedupe and merge duplicate args
-        final_args_list = BrowserLaunchArgs.args_as_list(BrowserLaunchArgs.args_as_dict(pre_conversion_args))
+        # User agent flag
+        if self.user_agent:
+            pre_conversion_args.append(f"--user-agent={self.user_agent}")
+
+        # Special handling for --disable-features to merge values instead of overwriting
+        # This prevents disable_security=True from breaking extensions by ensuring
+        # both default features (including extension-related) and security features are preserved
+        disable_features_values = []
+        non_disable_features_args = []
+
+        # Extract and merge all --disable-features values
+        for arg in pre_conversion_args:
+            if arg.startswith("--disable-features="):
+                features = arg.split("=", 1)[1]
+                disable_features_values.extend(features.split(","))
+            else:
+                non_disable_features_args.append(arg)
+
+        # Remove duplicates while preserving order
+        if disable_features_values:
+            unique_features = []
+            seen = set()
+            for feature in disable_features_values:
+                feature = feature.strip()
+                if feature and feature not in seen:
+                    unique_features.append(feature)
+                    seen.add(feature)
+
+            # Add merged disable-features back
+            non_disable_features_args.append(f'--disable-features={",".join(unique_features)}')
+
+        # convert to dict and back to dedupe and merge other duplicate args
+        final_args_list = BrowserLaunchArgs.args_as_list(BrowserLaunchArgs.args_as_dict(non_disable_features_args))
+
         return final_args_list
 
     def _get_extension_args(self) -> list[str]:
@@ -812,21 +988,26 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
                 "id": "lckanjgmijmafbedllaakclkaicjfmnk",
                 "url": "https://clients2.google.com/service/update2/crx?response=redirect&prodversion=133&acceptformat=crx3&x=id%3Dlckanjgmijmafbedllaakclkaicjfmnk%26uc",
             },
+            {
+                "name": "Force Background Tab",
+                "id": "gidlfommnbibbmegmgajdbikelkdcmcl",
+                "url": "https://clients2.google.com/service/update2/crx?response=redirect&prodversion=133&acceptformat=crx3&x=id%3Dgidlfommnbibbmegmgajdbikelkdcmcl%26uc",
+            },
             # {
-            #   'name': 'Captcha Solver: Auto captcha solving service',
-            #   'id': 'pgojnojmmhpofjgdmaebadhbocahppod',
-            #   'url': 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130&acceptformat=crx3&x=id%3Dpgojnojmmhpofjgdmaebadhbocahppod%26uc',
+            # 	'name': 'Captcha Solver: Auto captcha solving service',
+            # 	'id': 'pgojnojmmhpofjgdmaebadhbocahppod',
+            # 	'url': 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130&acceptformat=crx3&x=id%3Dpgojnojmmhpofjgdmaebadhbocahppod%26uc',
             # },
             # Consent-O-Matic disabled - using uBlock Origin's cookie lists instead for simplicity
             # {
-            #   'name': 'Consent-O-Matic',
-            #   'id': 'mdjildafknihdffpkfmmpnpoiajfjnjd',
-            #   'url': 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130&acceptformat=crx3&x=id%3Dmdjildafknihdffpkfmmpnpoiajfjnjd%26uc',
+            # 	'name': 'Consent-O-Matic',
+            # 	'id': 'mdjildafknihdffpkfmmpnpoiajfjnjd',
+            # 	'url': 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130&acceptformat=crx3&x=id%3Dmdjildafknihdffpkfmmpnpoiajfjnjd%26uc',
             # },
             # {
-            #   'name': 'Privacy | Protect Your Payments',
-            #   'id': 'hmgpakheknboplhmlicfkkgjipfabmhp',
-            #   'url': 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130&acceptformat=crx3&x=id%3Dhmgpakheknboplhmlicfkkgjipfabmhp%26uc',
+            # 	'name': 'Privacy | Protect Your Payments',
+            # 	'id': 'hmgpakheknboplhmlicfkkgjipfabmhp',
+            # 	'url': 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130&acceptformat=crx3&x=id%3Dhmgpakheknboplhmlicfkkgjipfabmhp%26uc',
             # },
         ]
 
@@ -1026,37 +1207,44 @@ async function initialize(checkInitialized, magic) {{
         if self.headless is None:
             self.headless = not has_screen_available
 
-        # set up window size and position if headful
+        # Determine viewport behavior based on mode and user preferences
+        user_provided_viewport = self.viewport is not None
+
         if self.headless:
-            # headless mode: no window available, use viewport instead to constrain content size
+            # Headless mode: always use viewport for content size control
             self.viewport = self.viewport or self.window_size or self.screen
-            self.window_position = None  # no windows to position in headless mode
+            self.window_position = None
             self.window_size = None
-            self.no_viewport = False  # viewport is always enabled in headless mode
+            self.no_viewport = False
         else:
-            # headful mode: use window, disable viewport by default, content fits to size of window
+            # Headful mode: respect user's viewport preference
             self.window_size = self.window_size or self.screen
-            self.no_viewport = True if self.no_viewport is None else self.no_viewport
-            self.viewport = None if self.no_viewport else self.viewport
 
-        # automatically setup viewport if any config requires it
-        use_viewport = self.headless or self.viewport or self.device_scale_factor
-        self.no_viewport = not use_viewport if self.no_viewport is None else self.no_viewport
-        use_viewport = not self.no_viewport
+            if user_provided_viewport:
+                # User explicitly set viewport - enable viewport mode
+                self.no_viewport = False
+            else:
+                # Default headful: content fits to window (no viewport)
+                self.no_viewport = True if self.no_viewport is None else self.no_viewport
 
-        if use_viewport:
-            # if we are using viewport, make device_scale_factor and screen are set to real values to avoid easy fingerprinting
+        # Handle special requirements (device_scale_factor forces viewport mode)
+        if self.device_scale_factor and self.no_viewport is None:
+            self.no_viewport = False
+
+        # Finalize configuration
+        if self.no_viewport:
+            # No viewport mode: content adapts to window
+            self.viewport = None
+            self.device_scale_factor = None
+            self.screen = None
+            assert self.viewport is None
+            assert self.no_viewport is True
+        else:
+            # Viewport mode: ensure viewport is set
             self.viewport = self.viewport or self.screen
             self.device_scale_factor = self.device_scale_factor or 1.0
             assert self.viewport is not None
             assert self.no_viewport is False
-        else:
-            # device_scale_factor and screen are not supported non-viewport mode, the system monitor determines these
-            self.viewport = None
-            self.device_scale_factor = None  # only supported in viewport mode
-            self.screen = None  # only supported in viewport mode
-            assert self.viewport is None
-            assert self.no_viewport is True
 
         assert not (
             self.headless and self.no_viewport

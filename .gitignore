@@ -215,3 +215,6 @@ document_downloads/
 .python-version
 *.diff
 .agents
+file_workspace
+run_workdir
+tabular_cache

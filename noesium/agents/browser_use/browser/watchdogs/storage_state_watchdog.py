@@ -10,14 +10,16 @@ from bubus import BaseEvent
 from cdp_use.cdp.network import Cookie
 from pydantic import Field, PrivateAttr
 
-from ..events import (
+from noesium.agents.browser_use.browser.events import (
     BrowserConnectedEvent,
+    BrowserStopEvent,
     LoadStorageStateEvent,
     SaveStorageStateEvent,
     StorageStateLoadedEvent,
     StorageStateSavedEvent,
 )
-from ..watchdog_base import BaseWatchdog
+from noesium.agents.browser_use.browser.watchdog_base import BaseWatchdog
+from noesium.agents.browser_use.utils import create_task_with_error_handling
 
 
 class StorageStateWatchdog(BaseWatchdog):
@@ -26,6 +28,7 @@ class StorageStateWatchdog(BaseWatchdog):
     # Event contracts
     LISTENS_TO: ClassVar[list[type[BaseEvent]]] = [
         BrowserConnectedEvent,
+        BrowserStopEvent,
         SaveStorageStateEvent,
         LoadStorageStateEvent,
     ]
@@ -51,7 +54,12 @@ class StorageStateWatchdog(BaseWatchdog):
         await self._start_monitoring()
 
         # Automatically load storage state after browser start
-        self.event_bus.dispatch(LoadStorageStateEvent())
+        await self.event_bus.dispatch(LoadStorageStateEvent())
+
+    async def on_BrowserStopEvent(self, event: BrowserStopEvent) -> None:
+        """Stop monitoring when browser stops."""
+        self.logger.debug("[StorageStateWatchdog] Stopping storage_state monitoring")
+        await self._stop_monitoring()
 
     async def on_SaveStorageStateEvent(self, event: SaveStorageStateEvent) -> None:
         """Handle storage state save request."""
@@ -84,7 +92,12 @@ class StorageStateWatchdog(BaseWatchdog):
 
         assert self.browser_session.cdp_client is not None
 
-        self._monitoring_task = asyncio.create_task(self._monitor_storage_changes())
+        self._monitoring_task = create_task_with_error_handling(
+            self._monitor_storage_changes(),
+            name="monitor_storage_changes",
+            logger_instance=self.logger,
+            suppress_exceptions=True,
+        )
         # self.logger'[StorageStateWatchdog] Started storage monitoring task')
 
     async def _stop_monitoring(self) -> None:
@@ -159,7 +172,7 @@ class StorageStateWatchdog(BaseWatchdog):
         """Save browser storage state to file."""
         async with self._save_lock:
             # Check if CDP client is available
-            assert await self.browser_session.get_or_create_cdp_session(target_id=None, new_socket=False)
+            assert await self.browser_session.get_or_create_cdp_session(target_id=None)
 
             save_path = path or self.browser_session.browser_profile.storage_state
             if not save_path:
@@ -250,14 +263,14 @@ class StorageStateWatchdog(BaseWatchdog):
                     if "localStorage" in origin:
                         for item in origin["localStorage"]:
                             script = f"""
-                                window.localStorage.setItem({json.dumps(item['name'])}, {json.dumps(item['value'])});
-                            """
+								window.localStorage.setItem({json.dumps(item['name'])}, {json.dumps(item['value'])});
+							"""
                             await self.browser_session._cdp_add_init_script(script)
                     if "sessionStorage" in origin:
                         for item in origin["sessionStorage"]:
                             script = f"""
-                                window.sessionStorage.setItem({json.dumps(item['name'])}, {json.dumps(item['value'])});
-                            """
+								window.sessionStorage.setItem({json.dumps(item['name'])}, {json.dumps(item['value'])});
+							"""
                             await self.browser_session._cdp_add_init_script(script)
                 self.logger.debug(
                     f'[StorageStateWatchdog] Applied localStorage/sessionStorage from {len(storage["origins"])} origins'

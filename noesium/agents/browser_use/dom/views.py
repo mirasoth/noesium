@@ -11,14 +11,16 @@ from cdp_use.cdp.domsnapshot.commands import CaptureSnapshotReturns
 from cdp_use.cdp.target.types import SessionID, TargetID, TargetInfo
 from uuid_extensions import uuid7str
 
-from ..observability import observe_debug
-from .utils import cap_text_length
+from noesium.agents.browser_use.dom.utils import cap_text_length
+from noesium.agents.browser_use.observability import observe_debug
 
 # Serializer types
 DEFAULT_INCLUDE_ATTRIBUTES = [
     "title",
     "type",
     "checked",
+    # 'class',
+    "id",
     "name",
     "role",
     "value",
@@ -29,13 +31,41 @@ DEFAULT_INCLUDE_ATTRIBUTES = [
     "aria-expanded",
     "data-state",
     "aria-checked",
+    # ARIA value attributes for datetime/range inputs
+    "aria-valuemin",
+    "aria-valuemax",
+    "aria-valuenow",
+    "aria-placeholder",
+    # Validation attributes - help agents avoid brute force attempts
+    "pattern",
+    "min",
+    "max",
+    "minlength",
+    "maxlength",
+    "step",
+    "accept",  # File input types (e.g., accept="image/*" or accept=".pdf")
+    "multiple",  # Whether multiple files/selections are allowed
+    "inputmode",  # Virtual keyboard hint (numeric, tel, email, url, etc.)
+    "autocomplete",  # Autocomplete behavior hint
+    "aria-autocomplete",  # ARIA autocomplete type (list, inline, both)
+    "list",  # Associated datalist element ID
+    "data-mask",  # Input mask format (e.g., phone numbers, credit cards)
+    "data-inputmask",  # Alternative input mask attribute
+    "data-datepicker",  # jQuery datepicker indicator
+    "format",  # Synthetic attribute for date/time input format (e.g., MM/dd/yyyy)
+    "expected_format",  # Synthetic attribute for explicit expected format (e.g., AngularJS datepickers)
+    "contenteditable",  # Rich text editor detection
+    # Webkit shadow DOM identifiers
+    "pseudo",
     # Accessibility properties from ax_node (ordered by importance for automation)
     "checked",
     "selected",
     "expanded",
     "pressed",
     "disabled",
-    # 'invalid',
+    "invalid",  # Current validation state from AX node
+    "valuemin",  # Min value from AX node (for datetime/range)
+    "valuemax",  # Max value from AX node (for datetime/range)
     "valuenow",
     "keyshortcuts",
     "haspopup",
@@ -51,14 +81,116 @@ DEFAULT_INCLUDE_ATTRIBUTES = [
     "ax_name",
 ]
 
+STATIC_ATTRIBUTES = {
+    "class",
+    "id",
+    "name",
+    "type",
+    "placeholder",
+    "aria-label",
+    "title",
+    # 'aria-expanded',
+    "role",
+    "data-testid",
+    "data-test",
+    "data-cy",
+    "data-selenium",
+    "for",
+    "required",
+    "disabled",
+    "readonly",
+    "checked",
+    "selected",
+    "multiple",
+    "accept",
+    "href",
+    "target",
+    "rel",
+    "aria-describedby",
+    "aria-labelledby",
+    "aria-controls",
+    "aria-owns",
+    "aria-live",
+    "aria-atomic",
+    "aria-busy",
+    "aria-disabled",
+    "aria-hidden",
+    "aria-pressed",
+    "aria-autocomplete",
+    "aria-checked",
+    "aria-selected",
+    "list",
+    "tabindex",
+    "alt",
+    "src",
+    "lang",
+    "itemscope",
+    "itemtype",
+    "itemprop",
+    # Webkit shadow DOM attributes
+    "pseudo",
+    "aria-valuemin",
+    "aria-valuemax",
+    "aria-valuenow",
+    "aria-placeholder",
+}
+
+# Class patterns that indicate dynamic/transient UI state - excluded from stable hash
+DYNAMIC_CLASS_PATTERNS = frozenset(
+    {
+        "focus",
+        "hover",
+        "active",
+        "selected",
+        "disabled",
+        "animation",
+        "transition",
+        "loading",
+        "open",
+        "closed",
+        "expanded",
+        "collapsed",
+        "visible",
+        "hidden",
+        "pressed",
+        "checked",
+        "highlighted",
+        "current",
+        "entering",
+        "leaving",
+    }
+)
+
+
+class MatchLevel(Enum):
+    """Element matching strictness levels for history replay."""
+
+    EXACT = 1  # Full hash with all attributes (current behavior)
+    STABLE = 2  # Hash with dynamic classes filtered out
+    XPATH = 3  # XPath string comparison
+    AX_NAME = 4  # Accessible name (ax_name) from accessibility tree
+    ATTRIBUTE = 5  # Unique attribute match (name, id, aria-label)
+
+
+def filter_dynamic_classes(class_str: str | None) -> str:
+    """
+    Remove dynamic state classes, keep semantic/identifying ones.
+    Returns sorted classes for deterministic hashing.
+    """
+    if not class_str:
+        return ""
+    classes = class_str.split()
+    stable = [c for c in classes if not any(pattern in c.lower() for pattern in DYNAMIC_CLASS_PATTERNS)]
+    return " ".join(sorted(stable))
+
 
 @dataclass
 class CurrentPageTargets:
     page_session: TargetInfo
     iframe_sessions: list[TargetInfo]
     """
-    Iframe sessions are ALL the iframes sessions of all the pages (not just the current page)
-    """
+	Iframe sessions are ALL the iframes sessions of all the pages (not just the current page)
+	"""
 
 
 @dataclass
@@ -68,6 +200,8 @@ class TargetAllTrees:
     ax_tree: GetFullAXTreeReturns
     device_pixel_ratio: float
     cdp_timing: dict[str, float]
+    js_click_listener_backend_ids: set[int] | None = None
+    """Backend node IDs of elements with JS click/mouse event listeners (detected via CDP getEventListeners)."""
 
 
 @dataclass(slots=True)
@@ -87,10 +221,15 @@ class SimplifiedNode:
     original_node: "EnhancedDOMTreeNode"
     children: list["SimplifiedNode"]
     should_display: bool = True
-    interactive_index: int | None = None
+    is_interactive: bool = False  # True if element is in selector_map
 
     is_new: bool = False
+    interactive_index: int | None = None  # Index for interactive elements
+
+    ignored_by_paint_order: bool = False  # More info in dom/serializer/paint_order.py
     excluded_by_parent: bool = False  # New field for bbox filtering
+    is_shadow_host: bool = False  # New field for shadow DOM hosts
+    is_compound_component: bool = False  # True for virtual components of compound controls
 
     def _clean_original_node_json(self, node_json: dict) -> dict:
         """Recursively remove children_nodes and shadow_roots from original_node JSON."""
@@ -112,7 +251,9 @@ class SimplifiedNode:
         cleaned_original_node_json = self._clean_original_node_json(original_node_json)
         return {
             "should_display": self.should_display,
-            "interactive_index": self.interactive_index,
+            "is_interactive": self.is_interactive,
+            "ignored_by_paint_order": self.ignored_by_paint_order,
+            "excluded_by_parent": self.excluded_by_parent,
             "original_node": cleaned_original_node_json,
             "children": [c.__json__() for c in self.children],
         }
@@ -142,6 +283,17 @@ class DOMRect:
     width: float
     height: float
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "x": self.x,
+            "y": self.y,
+            "width": self.width,
+            "height": self.height,
+        }
+
+    def __json__(self) -> dict:
+        return self.to_dict()
+
 
 @dataclass(slots=True)
 class EnhancedAXProperty:
@@ -166,6 +318,7 @@ class EnhancedAXNode:
     description: str | None
 
     properties: list[EnhancedAXProperty] | None
+    child_ids: list[str] | None
 
 
 @dataclass(slots=True)
@@ -176,22 +329,22 @@ class EnhancedSnapshotNode:
     cursor_style: str | None
     bounds: DOMRect | None
     """
-    Document coordinates (origin = top-left of the page, ignores current scroll).
-    Equivalent JS API: layoutNode.boundingBox in the older API.
-    Typical use: Quick hit-test that doesn't care about scroll position.
-    """
+	Document coordinates (origin = top-left of the page, ignores current scroll).
+	Equivalent JS API: layoutNode.boundingBox in the older API.
+	Typical use: Quick hit-test that doesn't care about scroll position.
+	"""
 
     clientRects: DOMRect | None
     """
-    Viewport coordinates (origin = top-left of the visible scrollport).
-    Equivalent JS API: element.getClientRects() / getBoundingClientRect().
-    Typical use: Pixel-perfect hit-testing on screen, taking current scroll into account.
-    """
+	Viewport coordinates (origin = top-left of the visible scrollport).
+	Equivalent JS API: element.getClientRects() / getBoundingClientRect().
+	Typical use: Pixel-perfect hit-testing on screen, taking current scroll into account.
+	"""
 
     scrollRects: DOMRect | None
     """
-    Scrollable area of the element.
-    """
+	Scrollable area of the element.
+	"""
 
     computed_styles: dict[str, str] | None
     """Computed styles from the layout tree"""
@@ -203,18 +356,18 @@ class EnhancedSnapshotNode:
 
 # @dataclass(slots=True)
 # class SuperSelector:
-#   node_id: int
-#   backend_node_id: int
-#   frame_id: str | None
-#   target_id: TargetID
+# 	node_id: int
+# 	backend_node_id: int
+# 	frame_id: str | None
+# 	target_id: TargetID
 
-#   node_type: NodeType
-#   node_name: str
+# 	node_type: NodeType
+# 	node_name: str
 
-#   # is_visible: bool | None
-#   # is_scrollable: bool | None
+# 	# is_visible: bool | None
+# 	# is_scrollable: bool | None
 
-#   element_index: int | None
+# 	element_index: int | None
 
 
 @dataclass(slots=True)
@@ -245,17 +398,17 @@ class EnhancedDOMTreeNode:
     """slightly changed from the original attributes to be more readable"""
     is_scrollable: bool | None
     """
-    Whether the node is scrollable.
-    """
+	Whether the node is scrollable.
+	"""
     is_visible: bool | None
     """
-    Whether the node is visible according to the upper most frame node.
-    """
+	Whether the node is visible according to the upper most frame node.
+	"""
 
     absolute_position: DOMRect | None
     """
-    Absolute position of the node in the document according to the top-left of the page.
-    """
+	Absolute position of the node in the document according to the top-left of the page.
+	"""
 
     # frames
     target_id: TargetID
@@ -263,14 +416,14 @@ class EnhancedDOMTreeNode:
     session_id: SessionID | None
     content_document: "EnhancedDOMTreeNode | None"
     """
-    Content document is the document inside a new iframe.
-    """
+	Content document is the document inside a new iframe.
+	"""
     # Shadow DOM
     shadow_root_type: ShadowRootType | None
     shadow_roots: list["EnhancedDOMTreeNode"] | None
     """
-    Shadow roots are the shadow DOMs of the element.
-    """
+	Shadow roots are the shadow DOMs of the element.
+	"""
 
     # Navigation
     parent_node: "EnhancedDOMTreeNode | None"
@@ -288,10 +441,29 @@ class EnhancedDOMTreeNode:
 
     # endregion - Snapshot Node data
 
-    # Interactive element index
-    element_index: int | None = None
+    # Compound control child components information
+    _compound_children: list[dict[str, Any]] = field(default_factory=list)
+
+    has_js_click_listener: bool = False
+    """
+	Whether this element has JS click/mouse event listeners attached (detected via CDP getEventListeners)
+	Used to identify clicks that don't use native interactive HTML tags
+	"""
+
+    hidden_elements_info: list[dict[str, Any]] = field(default_factory=list)
+    """
+	Details of interactive elements hidden due to viewport threshold (for iframes).
+	Each dict contains: tag, text, pages (scroll distance in viewport pages).
+	Used to show specific element info in the LLM representation.
+	"""
+
+    has_hidden_content: bool = False
+    """
+	Whether this iframe has hidden non-interactive content below the viewport threshold.
+	"""
 
     uuid: str = field(default_factory=uuid7str)
+    element_index: int | None = None  # Index for interactive elements
 
     @property
     def parent(self) -> "EnhancedDOMTreeNode | None":
@@ -306,7 +478,8 @@ class EnhancedDOMTreeNode:
         """
         Returns all children nodes, including shadow roots
         """
-        children = self.children_nodes or []
+        # IMPORTANT: Make a copy to avoid mutating the original children_nodes list!
+        children = list(self.children_nodes) if self.children_nodes else []
         if self.shadow_roots:
             children.extend(self.shadow_roots)
         return children
@@ -373,6 +546,7 @@ class EnhancedDOMTreeNode:
             "node_type": self.node_type.name,
             "node_name": self.node_name,
             "node_value": self.node_value,
+            "is_visible": self.is_visible,
             "attributes": self.attributes,
             "is_scrollable": self.is_scrollable,
             "session_id": self.session_id,
@@ -398,7 +572,7 @@ class EnhancedDOMTreeNode:
             # TODO: think whether if makese sense to add text until the next clickable element or everything from children
             # if node.node_type == NodeType.ELEMENT_NODE
             # if isinstance(node, DOMElementNode) and node != self and node.highlight_index is not None:
-            #   return
+            # 	return
 
             if node.node_type == NodeType.TEXT_NODE:
                 text_parts.append(node.node_value)
@@ -654,12 +828,42 @@ class EnhancedDOMTreeNode:
     def element_hash(self) -> int:
         return hash(self)
 
+    def compute_stable_hash(self) -> int:
+        """
+        Compute hash with dynamic classes filtered out.
+        More stable across sessions than element_hash since it excludes
+        transient CSS state classes like focus, hover, animation, etc.
+        """
+        parent_branch_path = self._get_parent_branch_path()
+        parent_branch_path_string = "/".join(parent_branch_path)
+
+        # Filter dynamic classes before building attributes string
+        filtered_attrs: dict[str, str] = {}
+        for k, v in self.attributes.items():
+            if k not in STATIC_ATTRIBUTES:
+                continue
+            if k == "class":
+                v = filter_dynamic_classes(v)
+                if not v:  # Skip empty class after filtering
+                    continue
+            filtered_attrs[k] = v
+
+        attributes_string = "".join(f"{k}={v}" for k, v in sorted(filtered_attrs.items()))
+
+        ax_name = ""
+        if self.ax_node and self.ax_node.name:
+            ax_name = f"|ax_name={self.ax_node.name}"
+
+        combined_string = f"{parent_branch_path_string}|{attributes_string}{ax_name}"
+        hash_hex = hashlib.sha256(combined_string.encode()).hexdigest()
+        return int(hash_hex[:16], 16)
+
     def __str__(self) -> str:
-        return f'[<{self.tag_name}>#{self.frame_id[-4:] if self.frame_id else "?"}:{self.element_index}]'
+        return f'[<{self.tag_name}>#{self.frame_id[-4:] if self.frame_id else "?"}:{self.backend_node_id}]'
 
     def __hash__(self) -> int:
         """
-        Hash the element based on its parent branch path and attributes.
+        Hash the element based on its parent branch path, attributes, and accessibility name.
 
         TODO: migrate this to use only backendNodeId + current SessionId
         """
@@ -668,11 +872,18 @@ class EnhancedDOMTreeNode:
         parent_branch_path = self._get_parent_branch_path()
         parent_branch_path_string = "/".join(parent_branch_path)
 
-        # Get attributes hash
-        attributes_string = "".join(f"{key}={value}" for key, value in self.attributes.items())
+        attributes_string = "".join(
+            f"{k}={v}" for k, v in sorted((k, v) for k, v in self.attributes.items() if k in STATIC_ATTRIBUTES)
+        )
 
-        # Combine both for final hash
-        combined_string = f"{parent_branch_path_string}|{attributes_string}"
+        # Include accessibility name (ax_name) if available - this helps distinguish
+        # elements that have identical structure and attributes but different visible text
+        ax_name = ""
+        if self.ax_node and self.ax_node.name:
+            ax_name = f"|ax_name={self.ax_node.name}"
+
+        # Combine all for final hash
+        combined_string = f"{parent_branch_path_string}|{attributes_string}{ax_name}"
         element_hash = hashlib.sha256(combined_string.encode()).hexdigest()
 
         # Convert to int for __hash__ return type - use first 16 chars and convert from hex to int
@@ -705,6 +916,19 @@ class EnhancedDOMTreeNode:
 DOMSelectorMap = dict[int, EnhancedDOMTreeNode]
 
 
+@dataclass(slots=True)
+class MarkdownChunk:
+    """A structure-aware chunk of markdown content."""
+
+    content: str
+    chunk_index: int
+    total_chunks: int
+    char_offset_start: int  # in original content
+    char_offset_end: int  # in original content
+    overlap_prefix: str  # context from prev chunk (e.g. table headers)
+    has_more: bool
+
+
 @dataclass
 class SerializedDOMState:
     _root: SimplifiedNode | None
@@ -718,7 +942,7 @@ class SerializedDOMState:
         include_attributes: list[str] | None = None,
     ) -> str:
         """Kinda ugly, but leaving this as an internal method because include_attributes are a parameter on the agent, so we need to leave it as a 2 step process"""
-        from .serializer.serializer import DOMTreeSerializer
+        from noesium.agents.browser_use.dom.serializer.serializer import DOMTreeSerializer
 
         if not self._root:
             return "Empty DOM tree (you might have to wait for the page to load)"
@@ -726,6 +950,29 @@ class SerializedDOMState:
         include_attributes = include_attributes or DEFAULT_INCLUDE_ATTRIBUTES
 
         return DOMTreeSerializer.serialize_tree(self._root, include_attributes)
+
+    @observe_debug(ignore_input=True, ignore_output=True, name="eval_representation")
+    def eval_representation(
+        self,
+        include_attributes: list[str] | None = None,
+    ) -> str:
+        """
+        Evaluation-focused DOM representation without interactive indexes.
+
+        This serializer is designed for evaluation/judge contexts where:
+        - No interactive indexes are needed (we're not clicking)
+        - Full HTML structure should be preserved for context
+        - More attribute information is helpful
+        - Text content is important for understanding page structure
+        """
+        from noesium.agents.browser_use.dom.serializer.eval_serializer import DOMEvalSerializer
+
+        if not self._root:
+            return "Empty DOM tree (you might have to wait for the page to load)"
+
+        include_attributes = include_attributes or DEFAULT_INCLUDE_ATTRIBUTES
+
+        return DOMEvalSerializer.serialize_tree(self._root, include_attributes)
 
 
 @dataclass
@@ -752,17 +999,35 @@ class DOMInteractedElement:
 
     element_hash: int
 
+    # Stable hash with dynamic classes filtered - computed at save time for consistent matching
+    stable_hash: int | None = None
+
+    # Accessibility name (visible text) - used for fallback matching when hash/xpath fail
+    ax_name: str | None = None
+
     def to_dict(self) -> dict[str, Any]:
         return {
+            "node_id": self.node_id,
+            "backend_node_id": self.backend_node_id,
+            "frame_id": self.frame_id,
             "node_type": self.node_type.value,
             "node_value": self.node_value,
             "node_name": self.node_name,
             "attributes": self.attributes,
             "x_path": self.x_path,
+            "element_hash": self.element_hash,
+            "stable_hash": self.stable_hash,
+            "bounds": self.bounds.to_dict() if self.bounds else None,
+            "ax_name": self.ax_name,
         }
 
     @classmethod
     def load_from_enhanced_dom_tree(cls, enhanced_dom_tree: EnhancedDOMTreeNode) -> "DOMInteractedElement":
+        # Extract accessibility name if available
+        ax_name = None
+        if enhanced_dom_tree.ax_node and enhanced_dom_tree.ax_node.name:
+            ax_name = enhanced_dom_tree.ax_node.name
+
         return cls(
             node_id=enhanced_dom_tree.node_id,
             backend_node_id=enhanced_dom_tree.backend_node_id,
@@ -774,4 +1039,6 @@ class DOMInteractedElement:
             bounds=enhanced_dom_tree.snapshot_node.bounds if enhanced_dom_tree.snapshot_node else None,
             x_path=enhanced_dom_tree.xpath,
             element_hash=hash(enhanced_dom_tree),
+            stable_hash=enhanced_dom_tree.compute_stable_hash(),  # Compute from source for single source of truth
+            ax_name=ax_name,
         )

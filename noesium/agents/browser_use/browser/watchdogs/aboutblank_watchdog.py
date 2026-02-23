@@ -6,7 +6,7 @@ from bubus import BaseEvent
 from cdp_use.cdp.target import TargetID
 from pydantic import PrivateAttr
 
-from ..events import (
+from noesium.agents.browser_use.browser.events import (
     AboutBlankDVDScreensaverShownEvent,
     BrowserStopEvent,
     BrowserStoppedEvent,
@@ -15,7 +15,7 @@ from ..events import (
     TabClosedEvent,
     TabCreatedEvent,
 )
-from ..watchdog_base import BaseWatchdog
+from noesium.agents.browser_use.browser.watchdog_base import BaseWatchdog
 
 if TYPE_CHECKING:
     pass
@@ -59,17 +59,20 @@ class AboutBlankWatchdog(BaseWatchdog):
 
     async def on_TabClosedEvent(self, event: TabClosedEvent) -> None:
         """Check tabs when a tab is closed and proactively create about:blank if needed."""
-        # logger.debug('[AboutBlankWatchdog] Tab closing, checking if we need to create about:blank tab')
-
         # Don't create new tabs if browser is shutting down
         if self._stopping:
-            # logger.debug('[AboutBlankWatchdog] Browser is stopping, not creating new tabs')
+            return
+
+        # Don't attempt CDP operations if the WebSocket is dead — dispatching
+        # NavigateToUrlEvent on a broken connection will hang until timeout
+        if not self.browser_session.is_cdp_connected:
+            self.logger.debug("[AboutBlankWatchdog] CDP not connected, skipping tab recovery")
             return
 
         # Check if we're about to close the last tab (event happens BEFORE tab closes)
         # Use _cdp_get_all_pages for quick check without fetching titles
         page_targets = await self.browser_session._cdp_get_all_pages()
-        if len(page_targets) <= 1:
+        if len(page_targets) < 1:
             self.logger.debug(
                 "[AboutBlankWatchdog] Last tab closing, creating new about:blank tab to avoid closing entire browser"
             )
@@ -88,6 +91,9 @@ class AboutBlankWatchdog(BaseWatchdog):
     async def _check_and_ensure_about_blank_tab(self) -> None:
         """Check current tabs and ensure exactly one about:blank tab with animation exists."""
         try:
+            if not self.browser_session.is_cdp_connected:
+                return
+
             # For quick checks, just get page targets without titles to reduce noise
             page_targets = await self.browser_session._cdp_get_all_pages()
 
@@ -135,113 +141,113 @@ class AboutBlankWatchdog(BaseWatchdog):
 
             # Inject the DVD screensaver script (from main branch with idempotency added)
             script = f"""
-                (function(browser_session_label) {{
-                    // Idempotency check
-                    if (window.__dvdAnimationRunning) {{
-                        return; // Already running, don't add another
-                    }}
-                    window.__dvdAnimationRunning = true;
+				(function(browser_session_label) {{
+					// Idempotency check
+					if (window.__dvdAnimationRunning) {{
+						return; // Already running, don't add another
+					}}
+					window.__dvdAnimationRunning = true;
+					
+					// Ensure document.body exists before proceeding
+					if (!document.body) {{
+						// Try again after DOM is ready
+						window.__dvdAnimationRunning = false; // Reset flag to retry
+						if (document.readyState === 'loading') {{
+							document.addEventListener('DOMContentLoaded', () => arguments.callee(browser_session_label));
+						}}
+						return;
+					}}
+					
+					const animated_title = `Starting agent ${{browser_session_label}}...`;
+					if (document.title === animated_title) {{
+						return;      // already run on this tab, dont run again
+					}}
+					document.title = animated_title;
 
-                    // Ensure document.body exists before proceeding
-                    if (!document.body) {{
-                        // Try again after DOM is ready
-                        window.__dvdAnimationRunning = false; // Reset flag to retry
-                        if (document.readyState === 'loading') {{
-                            document.addEventListener('DOMContentLoaded', () => arguments.callee(browser_session_label));
-                        }}
-                        return;
-                    }}
+					// Create the main overlay
+					const loadingOverlay = document.createElement('div');
+					loadingOverlay.id = 'pretty-loading-animation';
+					loadingOverlay.style.position = 'fixed';
+					loadingOverlay.style.top = '0';
+					loadingOverlay.style.left = '0';
+					loadingOverlay.style.width = '100vw';
+					loadingOverlay.style.height = '100vh';
+					loadingOverlay.style.background = '#000';
+					loadingOverlay.style.zIndex = '99999';
+					loadingOverlay.style.overflow = 'hidden';
 
-                    const animated_title = `Starting agent ${{browser_session_label}}...`;
-                    if (document.title === animated_title) {{
-                        return;      // already run on this tab, dont run again
-                    }}
-                    document.title = animated_title;
+					// Create the image element
+					const img = document.createElement('img');
+					img.src = 'https://cf.browser-use.com/logo.svg';
+					img.alt = 'Browser-Use';
+					img.style.width = '200px';
+					img.style.height = 'auto';
+					img.style.position = 'absolute';
+					img.style.left = '0px';
+					img.style.top = '0px';
+					img.style.zIndex = '2';
+					img.style.opacity = '0.8';
 
-                    // Create the main overlay
-                    const loadingOverlay = document.createElement('div');
-                    loadingOverlay.id = 'pretty-loading-animation';
-                    loadingOverlay.style.position = 'fixed';
-                    loadingOverlay.style.top = '0';
-                    loadingOverlay.style.left = '0';
-                    loadingOverlay.style.width = '100vw';
-                    loadingOverlay.style.height = '100vh';
-                    loadingOverlay.style.background = '#000';
-                    loadingOverlay.style.zIndex = '99999';
-                    loadingOverlay.style.overflow = 'hidden';
+					loadingOverlay.appendChild(img);
+					document.body.appendChild(loadingOverlay);
 
-                    // Create the image element
-                    const img = document.createElement('img');
-                    img.src = 'https://cf.browser-use.com/logo.svg';
-                    img.alt = 'Browser-Use';
-                    img.style.width = '200px';
-                    img.style.height = 'auto';
-                    img.style.position = 'absolute';
-                    img.style.left = '0px';
-                    img.style.top = '0px';
-                    img.style.zIndex = '2';
-                    img.style.opacity = '0.8';
+					// DVD screensaver bounce logic
+					let x = Math.random() * (window.innerWidth - 300);
+					let y = Math.random() * (window.innerHeight - 300);
+					let dx = 1.2 + Math.random() * 0.4; // px per frame
+					let dy = 1.2 + Math.random() * 0.4;
+					// Randomize direction
+					if (Math.random() > 0.5) dx = -dx;
+					if (Math.random() > 0.5) dy = -dy;
 
-                    loadingOverlay.appendChild(img);
-                    document.body.appendChild(loadingOverlay);
+					function animate() {{
+						const imgWidth = img.offsetWidth || 300;
+						const imgHeight = img.offsetHeight || 300;
+						x += dx;
+						y += dy;
 
-                    // DVD screensaver bounce logic
-                    let x = Math.random() * (window.innerWidth - 300);
-                    let y = Math.random() * (window.innerHeight - 300);
-                    let dx = 1.2 + Math.random() * 0.4; // px per frame
-                    let dy = 1.2 + Math.random() * 0.4;
-                    // Randomize direction
-                    if (Math.random() > 0.5) dx = -dx;
-                    if (Math.random() > 0.5) dy = -dy;
+						if (x <= 0) {{
+							x = 0;
+							dx = Math.abs(dx);
+						}} else if (x + imgWidth >= window.innerWidth) {{
+							x = window.innerWidth - imgWidth;
+							dx = -Math.abs(dx);
+						}}
+						if (y <= 0) {{
+							y = 0;
+							dy = Math.abs(dy);
+						}} else if (y + imgHeight >= window.innerHeight) {{
+							y = window.innerHeight - imgHeight;
+							dy = -Math.abs(dy);
+						}}
 
-                    function animate() {{
-                        const imgWidth = img.offsetWidth || 300;
-                        const imgHeight = img.offsetHeight || 300;
-                        x += dx;
-                        y += dy;
+						img.style.left = `${{x}}px`;
+						img.style.top = `${{y}}px`;
 
-                        if (x <= 0) {{
-                            x = 0;
-                            dx = Math.abs(dx);
-                        }} else if (x + imgWidth >= window.innerWidth) {{
-                            x = window.innerWidth - imgWidth;
-                            dx = -Math.abs(dx);
-                        }}
-                        if (y <= 0) {{
-                            y = 0;
-                            dy = Math.abs(dy);
-                        }} else if (y + imgHeight >= window.innerHeight) {{
-                            y = window.innerHeight - imgHeight;
-                            dy = -Math.abs(dy);
-                        }}
+						requestAnimationFrame(animate);
+					}}
+					animate();
 
-                        img.style.left = `${{x}}px`;
-                        img.style.top = `${{y}}px`;
+					// Responsive: update bounds on resize
+					window.addEventListener('resize', () => {{
+						x = Math.min(x, window.innerWidth - img.offsetWidth);
+						y = Math.min(y, window.innerHeight - img.offsetHeight);
+					}});
 
-                        requestAnimationFrame(animate);
-                    }}
-                    animate();
-
-                    // Responsive: update bounds on resize
-                    window.addEventListener('resize', () => {{
-                        x = Math.min(x, window.innerWidth - img.offsetWidth);
-                        y = Math.min(y, window.innerHeight - img.offsetHeight);
-                    }});
-
-                    // Add a little CSS for smoothness
-                    const style = document.createElement('style');
-                    style.textContent = `
-                        #pretty-loading-animation {{
-                            /*backdrop-filter: blur(2px) brightness(0.9);*/
-                        }}
-                        #pretty-loading-animation img {{
-                            user-select: none;
-                            pointer-events: none;
-                        }}
-                    `;
-                    document.head.appendChild(style);
-                }})('{browser_session_label}');
-            """
+					// Add a little CSS for smoothness
+					const style = document.createElement('style');
+					style.textContent = `
+						#pretty-loading-animation {{
+							/*backdrop-filter: blur(2px) brightness(0.9);*/
+						}}
+						#pretty-loading-animation img {{
+							user-select: none;
+							pointer-events: none;
+						}}
+					`;
+					document.head.appendChild(style);
+				}})('{browser_session_label}');
+			"""
 
             await temp_session.cdp_client.send.Runtime.evaluate(
                 params={"expression": script}, session_id=temp_session.session_id

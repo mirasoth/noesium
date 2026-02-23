@@ -76,10 +76,10 @@ _configure_mcp_server_logging()
 
 # Import browser_use modules (must come after logging config)
 from .. import ActionModel, Agent  # noqa: E402
+from ..adapters.llm_adapter import BaseChatModel  # noqa: E402
 from ..browser import BrowserProfile, BrowserSession  # noqa: E402
 from ..config import get_default_llm, get_default_profile, load_browser_use_config  # noqa: E402
 from ..filesystem.file_system import FileSystem  # noqa: E402
-from ..llm_adapter import BaseChatModel  # noqa: E402
 from ..tools.service import Tools  # noqa: E402
 
 logger = logging.getLogger(__name__)

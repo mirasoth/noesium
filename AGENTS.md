@@ -365,6 +365,23 @@ class MyCustomToolkit(AsyncBaseToolkit):
 
 ## Configuration
 
+### Development Guidelines
+
+**Important:** This project requires Python 3.11+. Always use `uv run` to execute Python scripts or install packages:
+
+```bash
+# Run Python scripts
+uv run python examples/agents/search_agent_demo.py
+
+# Install packages
+uv run pip install package-name
+
+# Run tests
+uv run pytest
+```
+
+Do not use `python`, `python3`, or `pip` directly - use `uv run` instead.
+
 ### Environment Variables
 
 ```bash

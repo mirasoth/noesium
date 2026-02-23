@@ -41,10 +41,18 @@ class DomService:
         browser_session: "BrowserSession",
         logger: logging.Logger | None = None,
         cross_origin_iframes: bool = False,
+        paint_order_filtering: bool = True,
+        max_iframes: int = 100,
+        max_iframe_depth: int = 5,
+        viewport_threshold: int | None = 1000,
     ):
         self.browser_session = browser_session
         self.logger = logger or browser_session.logger
         self.cross_origin_iframes = cross_origin_iframes
+        self.paint_order_filtering = paint_order_filtering
+        self.max_iframes = max_iframes
+        self.max_iframe_depth = max_iframe_depth
+        self.viewport_threshold = viewport_threshold
 
     async def __aenter__(self):
         return self
@@ -119,6 +127,7 @@ class DomService:
             name=ax_node.get("name", {}).get("value", None),
             description=ax_node.get("description", {}).get("value", None),
             properties=properties,
+            child_ids=ax_node.get("childIds", None),
         )
         return enhanced_ax_node
 
@@ -525,7 +534,7 @@ class DomService:
                 attributes=attributes or {},
                 is_scrollable=node.get("isScrollable", None),
                 frame_id=node.get("frameId", None),
-                session_id=self.browser_session.agent_focus.session_id if self.browser_session.agent_focus else None,
+                session_id=None,  # agent_focus not available in local version
                 target_id=target_id,
                 content_document=None,
                 shadow_root_type=shadow_root_type,
@@ -536,7 +545,6 @@ class DomService:
                 snapshot_node=snapshot_data,
                 is_visible=None,
                 absolute_position=absolute_position,
-                element_index=None,
             )
 
             enhanced_dom_tree_node_lookup[node["nodeId"]] = dom_tree_node
@@ -677,8 +685,8 @@ class DomService:
         """
 
         # Use current target (None means use current)
-        assert self.browser_session.current_target_id is not None
-        enhanced_dom_tree = await self.get_dom_tree(target_id=self.browser_session.current_target_id)
+        assert self.browser_session.agent_focus_target_id is not None
+        enhanced_dom_tree = await self.get_dom_tree(target_id=self.browser_session.agent_focus_target_id)
 
         start = time.time()
         serialized_dom_state, serializer_timing = DOMTreeSerializer(
@@ -692,3 +700,79 @@ class DomService:
         all_timing = {**serializer_timing, **serialize_total_timing}
 
         return serialized_dom_state, enhanced_dom_tree, all_timing
+
+    @staticmethod
+    def detect_pagination_buttons(selector_map: dict[int, "EnhancedDOMTreeNode"]) -> list[dict[str, str | int | bool]]:
+        """Detect pagination buttons from the selector map.
+
+        Args:
+            selector_map: Map of element indices to EnhancedDOMTreeNode
+
+        Returns:
+            List of pagination button information dicts with:
+            - button_type: 'next', 'prev', 'first', 'last', 'page_number'
+            - backend_node_id: Backend node ID for clicking
+            - text: Button text/label
+            - selector: XPath selector
+            - is_disabled: Whether the button appears disabled
+        """
+        pagination_buttons: list[dict[str, str | int | bool]] = []
+
+        # Common pagination patterns to look for
+        next_patterns = ["next", ">", "»", "→", "siguiente", "suivant", "weiter", "volgende"]
+        prev_patterns = ["prev", "previous", "<", "«", "←", "anterior", "précédent", "zurück", "vorige"]
+        first_patterns = ["first", "⇤", "«", "primera", "première", "erste", "eerste"]
+        last_patterns = ["last", "⇥", "»", "última", "dernier", "letzte", "laatste"]
+
+        for index, node in selector_map.items():
+            # Skip non-clickable elements
+            if not node.snapshot_node or not node.snapshot_node.is_clickable:
+                continue
+
+            # Get element text and attributes
+            text = node.get_all_children_text().lower().strip()
+            aria_label = node.attributes.get("aria-label", "").lower()
+            title = node.attributes.get("title", "").lower()
+            class_name = node.attributes.get("class", "").lower()
+            role = node.attributes.get("role", "").lower()
+
+            # Combine all text sources for pattern matching
+            all_text = f"{text} {aria_label} {title} {class_name}".strip()
+
+            # Check if it's disabled
+            is_disabled = (
+                node.attributes.get("disabled") == "true"
+                or node.attributes.get("aria-disabled") == "true"
+                or "disabled" in class_name
+            )
+
+            button_type: str | None = None
+
+            # Check for next button
+            if any(pattern in all_text for pattern in next_patterns):
+                button_type = "next"
+            # Check for previous button
+            elif any(pattern in all_text for pattern in prev_patterns):
+                button_type = "prev"
+            # Check for first button
+            elif any(pattern in all_text for pattern in first_patterns):
+                button_type = "first"
+            # Check for last button
+            elif any(pattern in all_text for pattern in last_patterns):
+                button_type = "last"
+            # Check for numeric page buttons (single or double digit)
+            elif text.isdigit() and len(text) <= 2 and role in ["button", "link", ""]:
+                button_type = "page_number"
+
+            if button_type:
+                pagination_buttons.append(
+                    {
+                        "button_type": button_type,
+                        "backend_node_id": index,
+                        "text": node.get_all_children_text().strip() or aria_label or title,
+                        "selector": node.xpath,
+                        "is_disabled": is_disabled,
+                    }
+                )
+
+        return pagination_buttons

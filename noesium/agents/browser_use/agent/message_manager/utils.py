@@ -7,7 +7,7 @@ from typing import Any
 
 import anyio
 
-from ...llm_adapter import BaseMessage
+from ...adapters.llm_adapter import BaseMessage
 
 logger = logging.getLogger(__name__)
 
