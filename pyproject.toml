@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "noesium"
-version = "0.2.1.1"
+version = "0.2.2"
 description = "Towards a cognitive agentic framework"
 readme = "README.md"
 license = "MIT"
@@ -78,9 +78,22 @@ tools = [
     "aiofiles>=24.1.0",
 ]
 
+# Browser Automation
+browser-use = [
+    "screeninfo>=0.8.1",
+    "uuid7>=0.1.0",
+    "authlib>=1.6.0",
+    "pypdf>=5.7.0",
+    "cdp-use>=1.4.0",
+    "markdown-pdf>=1.5",
+    "html2text>=2025.4.15",
+    "psutil>=7.0.0",
+    "pillow>=11.3.0",
+]
+
 # Full installation for power users
 all = [
-    "noesium[ai-providers-all,agents,postgres,weaviate,tools]"
+    "noesium[ai-providers-all,agents,postgres,weaviate,tools,browser-use]"
 ]
 
 dev = [

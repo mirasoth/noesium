@@ -210,3 +210,7 @@ uv.lock
 
 document_cache/
 document_downloads/
+
+.DS_Store
+.python-version
+*.diff
