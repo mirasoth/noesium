@@ -21,6 +21,9 @@ class RegisteredAction(BaseModel):
     # filters: provide specific domains to determine whether the action should be available on the given URL or not
     domains: list[str] | None = None  # e.g. ['*.google.com', 'www.bing.com', 'yahoo.*]
 
+    # Whether this action changes the page and should terminate the action sequence
+    terminates_sequence: bool = False
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def prompt_description(self) -> str:

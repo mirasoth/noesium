@@ -99,6 +99,7 @@ class Tools(Generic[Context]):
         @self.registry.action(
             "Search the query in Google, the query should be a search query like humans search in Google, concrete and not vague or super long.",
             param_model=SearchGoogleAction,
+            terminates_sequence=True,
         )
         async def search_google(params: SearchGoogleAction, browser_session: BrowserSession):
             search_url = f"https://www.google.com/search?q={params.query}&udm=14"
@@ -187,6 +188,7 @@ class Tools(Generic[Context]):
         @self.registry.action(
             "",
             param_model=GoToUrlAction,
+            terminates_sequence=True,
         )
         async def navigate(params: GoToUrlAction, browser_session: BrowserSession):
             try:
@@ -231,7 +233,7 @@ class Tools(Generic[Context]):
                     # Return error in ActionResult instead of re-raising
                     return ActionResult(error=f"Navigation failed: {str(e)}")
 
-        @self.registry.action("Go back", param_model=NoParamsAction)
+        @self.registry.action("Go back", param_model=NoParamsAction, terminates_sequence=True)
         async def go_back(_: NoParamsAction, browser_session: BrowserSession):
             try:
                 event = browser_session.event_bus.dispatch(GoBackEvent())
@@ -506,7 +508,7 @@ class Tools(Generic[Context]):
 
         # Tab Management Actions
 
-        @self.registry.action("Switch tab", param_model=SwitchTabAction)
+        @self.registry.action("Switch tab", param_model=SwitchTabAction, terminates_sequence=True)
         async def switch_tab(params: SwitchTabAction, browser_session: BrowserSession):
             # Dispatch switch tab event
             try:
