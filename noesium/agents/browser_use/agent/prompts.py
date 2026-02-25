@@ -1,4 +1,5 @@
 import importlib.resources
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Literal, Optional
 
@@ -12,6 +13,8 @@ from noesium.agents.browser_use.adapters.llm_adapter import (
 from noesium.agents.browser_use.dom.views import NodeType, SimplifiedNode
 from noesium.agents.browser_use.observability import observe_debug
 from noesium.agents.browser_use.utils import is_new_tab_page, sanitize_surrogates
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from noesium.agents.browser_use.agent.views import AgentStepInfo
@@ -424,6 +427,46 @@ Available tabs:
         # Sanitize surrogates from all text content
         state_description = sanitize_surrogates(state_description)
 
+        # Global character limit to prevent exceeding model token limits
+        # 600k chars = ~150k tokens, leaving room for system prompt and output
+        # Images are handled separately in the LLM adapter
+        MAX_TOTAL_CHARS = 600000
+        logger.info(f"state_description size before truncation check: {len(state_description)} chars")
+        if len(state_description) > MAX_TOTAL_CHARS:
+            # Truncate browser_state first since it's usually the largest part
+            browser_state_start = state_description.find("<browser_state>")
+            browser_state_end = state_description.find("</browser_state>")
+
+            if browser_state_start >= 0 and browser_state_end >= 0:
+                before_browser = state_description[:browser_state_start]
+                after_browser = state_description[browser_state_end + len("</browser_state>") :]
+                browser_state_content = state_description[
+                    browser_state_start : browser_state_end + len("</browser_state>")
+                ]
+
+                # Calculate how much we can keep
+                available_chars = MAX_TOTAL_CHARS - len(before_browser) - len(after_browser)
+
+                if available_chars > 1000:  # Keep at least some browser state
+                    # Truncate browser_state
+                    browser_state_content = browser_state_content[:available_chars]
+                    # Try to find a clean break point
+                    last_tag = browser_state_content.rfind(">")
+                    if last_tag > 0:
+                        browser_state_content = browser_state_content[: last_tag + 1]
+                    browser_state_content += "\n... [Browser state truncated at 200k chars total]"
+
+                    state_description = before_browser + browser_state_content + after_browser
+                else:
+                    # Not enough space, just truncate everything
+                    state_description = state_description[:MAX_TOTAL_CHARS] + "\n... [Content truncated at 200k chars]"
+            else:
+                state_description = state_description[:MAX_TOTAL_CHARS] + "\n... [Content truncated at 200k chars]"
+
+            logger.warning(
+                f"Total state_description truncated from {len(state_description)} to {MAX_TOTAL_CHARS} chars"
+            )
+
         # Check if we have images to include (from read_file action)
         has_images = bool(self.read_state_images)
 
@@ -490,6 +533,27 @@ Available tabs:
                 )
 
             return UserMessage(content=content_parts, cache=True)
+
+        # Calculate estimated total size including images
+        total_size = len(state_description)
+        if use_vision and self.screenshots:
+            # Estimate screenshot size (base64 encoded)
+            total_size += len(self.screenshots) * 500000  # Estimate 500k per screenshot
+        total_size += len(self.read_state_images) * 500000  # Estimate for read_state images
+
+        # Apply a hard limit to prevent exceeding 73728 tokens (~295k chars)
+        # Leave room for system prompt and schema
+        MAX_TOTAL_SIZE = 250000  # ~62.5k tokens, leaving room for system prompt and schema
+        if total_size > MAX_TOTAL_SIZE:
+            # Disable vision or reduce screenshot count
+            if use_vision and len(self.screenshots) > 0:
+                logger.warning(f"Disabling vision to reduce message size from {total_size} to {MAX_TOTAL_SIZE} chars")
+                return UserMessage(content=state_description, cache=True)
+            logger.warning(f"Message size {total_size} chars exceeds limit {MAX_TOTAL_CHARS}, truncating")
+            # Just return text-only message
+            return UserMessage(
+                content=state_description[:MAX_TOTAL_SIZE] + "\n... [Message truncated at 250k chars]", cache=True
+            )
 
         return UserMessage(content=state_description, cache=True)
 

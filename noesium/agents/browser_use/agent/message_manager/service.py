@@ -127,15 +127,45 @@ class MessageManager:
     @property
     def agent_history_description(self) -> str:
         """Build agent history description from list of items, respecting max_history_items limit"""
+        compacted_prefix = ""
+        if self.state.compacted_memory:
+            compacted_prefix = f"<compacted_memory>\n{self.state.compacted_memory}\n</compacted_memory>\n"
+
+        # Safety limit to prevent excessive history size (50k chars)
+        MAX_HISTORY_CHARS = 50000
+
         if self.max_history_items is None:
-            # Include all items
-            return "\n".join(item.to_string() for item in self.state.agent_history_items)
+            # Include all items but with character limit as safety
+            full_history = "\n".join(item.to_string() for item in self.state.agent_history_items)
+            if len(full_history) > MAX_HISTORY_CHARS:
+                # Truncate with ellipsis
+                truncated = full_history[:MAX_HISTORY_CHARS]
+                # Find the last complete step boundary
+                last_step_end = truncated.rfind("</step>")
+                if last_step_end > 0:
+                    truncated = truncated[: last_step_end + len("</step>")]
+                full_history = truncated + "\n... [History truncated at 50k characters]"
+                logger.warning(
+                    f"Truncated agent_history_description from {len(full_history)} to {MAX_HISTORY_CHARS} chars"
+                )
+            return compacted_prefix + full_history
 
         total_items = len(self.state.agent_history_items)
 
         # If we have fewer items than the limit, just return all items
         if total_items <= self.max_history_items:
-            return "\n".join(item.to_string() for item in self.state.agent_history_items)
+            full_history = "\n".join(item.to_string() for item in self.state.agent_history_items)
+            if len(full_history) > MAX_HISTORY_CHARS:
+                # Truncate with ellipsis
+                truncated = full_history[:MAX_HISTORY_CHARS]
+                last_step_end = truncated.rfind("</step>")
+                if last_step_end > 0:
+                    truncated = truncated[: last_step_end + len("</step>")]
+                full_history = truncated + "\n... [History truncated at 50k characters]"
+                logger.warning(
+                    f"Truncated agent_history_description from {len(full_history)} to {MAX_HISTORY_CHARS} chars"
+                )
+            return compacted_prefix + full_history
 
         # We have more items than the limit, so we need to omit some
         omitted_count = total_items - self.max_history_items
@@ -151,7 +181,17 @@ class MessageManager:
         # Add most recent items
         items_to_include.extend([item.to_string() for item in self.state.agent_history_items[-recent_items_count:]])
 
-        return "\n".join(items_to_include)
+        full_history = "\n".join(items_to_include)
+        if len(full_history) > MAX_HISTORY_CHARS:
+            # Truncate with ellipsis
+            truncated = full_history[:MAX_HISTORY_CHARS]
+            last_step_end = truncated.rfind("</step>")
+            if last_step_end > 0:
+                truncated = truncated[: last_step_end + len("</step>")]
+            full_history = truncated + "\n... [History truncated at 50k characters]"
+            logger.warning(f"Truncated agent_history_description from {len(full_history)} to {MAX_HISTORY_CHARS} chars")
+
+        return compacted_prefix + full_history
 
     def add_new_task(self, new_task: str) -> None:
         self.task = new_task
@@ -171,6 +211,7 @@ class MessageManager:
         step_number = step_info.step_number if step_info else None
 
         self.state.read_state_description = ""
+        self.state.read_state_images = []  # Clear images from previous step
 
         action_results = ""
         len(result)
@@ -178,12 +219,17 @@ class MessageManager:
         for idx, action_result in enumerate(result):
             if action_result.include_extracted_content_only_once and action_result.extracted_content:
                 self.state.read_state_description += (
-                    f"<read_state_{read_state_idx}>\\n"
-                    f"{action_result.extracted_content}\\n"
-                    f"</read_state_{read_state_idx}>\\n"
+                    f"<read_state_{read_state_idx}>\n"
+                    f"{action_result.extracted_content}\n"
+                    f"</read_state_{read_state_idx}>\n"
                 )
                 read_state_idx += 1
                 logger.debug(f"Added extracted_content to read_state_description: {action_result.extracted_content}")
+
+            # Store images for one-time inclusion in the next message
+            if action_result.images:
+                self.state.read_state_images.extend(action_result.images)
+                logger.debug(f"Added {len(action_result.images)} image(s) to read_state_images")
 
             if action_result.long_term_memory:
                 action_results += f"{action_result.long_term_memory}\n"
@@ -200,11 +246,24 @@ class MessageManager:
                 action_results += f"{error_text}\n"
                 logger.debug(f"Added error to action_results: {error_text}")
 
+        # Simple 60k character limit for read_state_description
+        MAX_CONTENT_SIZE = 60000
+        if len(self.state.read_state_description) > MAX_CONTENT_SIZE:
+            self.state.read_state_description = (
+                self.state.read_state_description[:MAX_CONTENT_SIZE] + "\n... [Content truncated at 60k characters]"
+            )
+            logger.debug(f"Truncated read_state_description to {MAX_CONTENT_SIZE} characters")
+
         self.state.read_state_description = self.state.read_state_description.strip("\n")
 
         if action_results:
-            action_results = f"Result:\n{action_results}"
+            action_results = f"Result\n{action_results}"
         action_results = action_results.strip("\n") if action_results else None
+
+        # Simple 60k character limit for action_results
+        if action_results and len(action_results) > MAX_CONTENT_SIZE:
+            action_results = action_results[:MAX_CONTENT_SIZE] + "\n... [Content truncated at 60k characters]"
+            logger.debug(f"Truncated action_results to {MAX_CONTENT_SIZE} characters")
 
         # Build the history item
         if model_output is None:
@@ -430,6 +489,83 @@ class MessageManager:
 
         Step interval is the primary trigger; char count is a minimum floor.
         """
-        # Message compaction not supported in current version
-        # This is a placeholder for future implementation
-        return False
+        if not settings or not settings.enabled:
+            return False
+        if llm is None:
+            return False
+        if step_info is None:
+            return False
+
+        # Step cadence gate
+        steps_since = step_info.step_number - (self.state.last_compaction_step or 0)
+        if steps_since < settings.compact_every_n_steps:
+            return False
+
+        # Char floor gate
+        history_items = self.state.agent_history_items
+        full_history_text = "\n".join(item.to_string() for item in history_items).strip()
+        trigger_char_count = settings.trigger_char_count or 40000
+        if len(full_history_text) < trigger_char_count:
+            return False
+
+        logger.debug(f"Compacting message history (items={len(history_items)}, chars={len(full_history_text)})")
+
+        # Build compaction input
+        compaction_sections = []
+        if self.state.compacted_memory:
+            compaction_sections.append(
+                f"<previous_compacted_memory>\n{self.state.compacted_memory}\n</previous_compacted_memory>"
+            )
+        compaction_sections.append(f"<agent_history>\n{full_history_text}\n</agent_history>")
+        if settings.include_read_state and self.state.read_state_description:
+            compaction_sections.append(f"<read_state>\n{self.state.read_state_description}\n</read_state>")
+        compaction_input = "\n\n".join(compaction_sections)
+
+        if self.sensitive_data:
+            from ...adapters.llm_adapter import UserMessage
+
+            filtered = self._filter_sensitive_data(UserMessage(content=compaction_input))
+            compaction_input = filtered.text
+
+        system_prompt = (
+            "You are summarizing an agent run for prompt compaction.\n"
+            "Capture task requirements, key facts, decisions, partial progress, errors, and next steps.\n"
+            "Preserve important entities, values, URLs, and file paths.\n"
+            "Return plain text only. Do not include tool calls or JSON."
+        )
+        if settings.summary_max_chars:
+            system_prompt += f" Keep under {settings.summary_max_chars} characters if possible."
+
+        from ...adapters.llm_adapter import SystemMessage
+
+        messages = [SystemMessage(content=system_prompt), UserMessage(content=compaction_input)]
+        try:
+            response = await llm.ainvoke(messages)
+            summary = (response.completion or "").strip()
+        except Exception as e:
+            logger.warning(f"Failed to compact messages: {e}")
+            return False
+
+        if not summary:
+            return False
+
+        if settings.summary_max_chars and len(summary) > settings.summary_max_chars:
+            summary = summary[: settings.summary_max_chars].rstrip() + "…"
+
+        self.state.compacted_memory = summary
+        self.state.compaction_count += 1
+        self.state.last_compaction_step = step_info.step_number
+
+        # Keep first item + most recent items
+        keep_last = max(0, settings.keep_last_items)
+        if len(history_items) > keep_last + 1:
+            if keep_last == 0:
+                self.state.agent_history_items = [history_items[0]]
+            else:
+                self.state.agent_history_items = [history_items[0]] + history_items[-keep_last:]
+
+        logger.debug(
+            f"Compaction complete (summary_chars={len(summary)}, history_items={len(self.state.agent_history_items)})"
+        )
+
+        return True

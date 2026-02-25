@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -92,5 +92,10 @@ class MessageManagerState(BaseModel):
         default_factory=lambda: [HistoryItem(step_number=0, system_message="Agent initialized")]
     )
     read_state_description: str = ""
+    read_state_images: list[dict[str, Any]] = Field(default_factory=list)
+    # Compaction state
+    compacted_memory: str = ""
+    compaction_count: int = 0
+    last_compaction_step: int | None = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

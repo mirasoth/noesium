@@ -107,7 +107,7 @@ class UserMessage(_MessageBase):
 
     @property
     def text(self) -> str:
-        """Get text content from message."""
+        """Get text content from message (excluding image URLs for size calculation)."""
         if isinstance(self.content, str):
             return self.content
         elif isinstance(self.content, list):
@@ -116,11 +116,8 @@ class UserMessage(_MessageBase):
                 if isinstance(part, ContentPartTextParam):
                     text_parts.append(part.text)
                 elif isinstance(part, ContentPartImageParam):
-                    # For images, return the URL
-                    if isinstance(part.image_url, str):
-                        text_parts.append(part.image_url)
-                    elif isinstance(part.image_url, ImageURL):
-                        text_parts.append(part.image_url.url)
+                    # Skip images - they are handled separately
+                    continue
             return "\n".join(text_parts)
         return str(self.content)
 
@@ -187,10 +184,15 @@ class BaseChatModel:
         try:
             # Convert browser-use messages to noesium format
             noesium_messages = []
+            total_chars = 0
+            image_count = 0
+
             for msg in messages:
                 if hasattr(msg, "role"):
                     # Extract text content properly from browser-use message objects
                     content_text = ""
+                    has_images = False
+
                     if hasattr(msg, "text"):
                         # Use the convenient .text property that handles both string and list formats
                         content_text = msg.text
@@ -199,24 +201,77 @@ class BaseChatModel:
                         if isinstance(msg.content, str):
                             content_text = msg.content
                         elif isinstance(msg.content, list):
-                            # Extract text from content parts
+                            # Extract text from content parts and count images
                             text_parts = []
                             for part in msg.content:
-                                if hasattr(part, "text") and hasattr(part, "type") and part.type == "text":
-                                    text_parts.append(part.text)
+                                if hasattr(part, "type"):
+                                    if part.type == "text":
+                                        text_parts.append(part.text)
+                                    elif part.type == "image_url":
+                                        has_images = True
+                                        image_count += 1
+                                        # Estimate image size (base64 encoded ~500k chars typical)
+                                        total_chars += 500000
                             content_text = "\n".join(text_parts)
                         else:
                             content_text = str(msg.content)
                     else:
                         content_text = str(msg)
 
-                    noesium_messages.append({"role": msg.role, "content": content_text})
+                    total_chars += len(content_text)
+                    noesium_messages.append({"role": msg.role, "content": content_text, "has_images": has_images})
                 elif isinstance(msg, dict):
                     # Already in the right format
+                    if "content" in msg:
+                        total_chars += len(str(msg["content"]))
                     noesium_messages.append(msg)
                 else:
                     # Handle other message formats
-                    noesium_messages.append({"role": "user", "content": str(msg)})
+                    content = str(msg)
+                    total_chars += len(content)
+                    noesium_messages.append({"role": "user", "content": content})
+
+            # Log message size for debugging
+            logger.info(
+                f"LLM request: {len(noesium_messages)} messages, {image_count} images, "
+                f"~{total_chars} characters (~{total_chars // 4} tokens)"
+            )
+
+            # Apply hard limit to prevent exceeding 200k tokens (~800k chars)
+            # Use 700k to leave room for system prompt and schema
+            MAX_REQUEST_SIZE = 700000  # ~175k tokens
+            if total_chars > MAX_REQUEST_SIZE:
+                logger.warning(
+                    f"Large message size {total_chars} chars exceeds limit {MAX_REQUEST_SIZE}, "
+                    f"removing images and truncating text"
+                )
+                # Remove all images first to save space
+                for msg in noesium_messages:
+                    msg.pop("has_images", None)
+
+                # Recalculate without images
+                total_chars = sum(len(str(msg.get("content", ""))) for msg in noesium_messages)
+
+                # If still too large, truncate text
+                if total_chars > MAX_REQUEST_SIZE:
+                    truncated_messages = []
+                    current_size = 0
+                    for msg in noesium_messages:
+                        msg_str = str(msg.get("content", ""))
+                        if current_size + len(msg_str) > MAX_REQUEST_SIZE:
+                            truncated = (MAX_REQUEST_SIZE - current_size - 20) // 2
+                            msg_str = msg_str[:truncated]
+                            msg_str += "... [Truncated...]"
+                        truncated_messages.append(msg)
+                        current_size += len(msg_str)
+                        if current_size >= MAX_REQUEST_SIZE:
+                            break
+                    noesium_messages = truncated_messages
+                    logger.warning(
+                        f"Truncated from {len(noesium_messages)} to {len(truncated_messages)} messages to fit"
+                    )
+
+            # Choose completion method based on output_format
 
             # Choose completion method based on output_format
             if output_format is not None:
