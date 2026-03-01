@@ -12,6 +12,29 @@
 
 **Noesium** is a computation-driven cognitive agentic framework providing foundational abstractions for building autonomous AI agents with planning, memory, tools, and orchestration capabilities.
 
+## Design Philosophy
+
+Noesium is built on an **Event-Sourced Multi-Agent Kernel Architecture** that prioritizes durability, replayability, and distributed coordination. The core principles include:
+
+### Single Execution Authority
+Each agent contains exactly one execution authority: the Agent Kernel. All reasoning, planning, branching, retries, tool invocation, and delegation logic occur inside this kernel. No external orchestration layer is permitted to mutate agent state.
+
+### Event-Sourced State
+State is not stored as mutable objects. Instead, every state transition emits an event, the event log is the source of truth, and current state is a projection derived from event history. This ensures replayability, deterministic reconstruction, auditable cognition, and crash recovery.
+
+### Delegation via Events
+Delegation is modeled as event emission, not direct invocation. An agent expresses intent by publishing a task event to a capability topic. Any agent subscribed to that topic may process the task, enforcing loose coupling and capability-based coordination.
+
+### Separation of Concerns
+- **Cognition** → Agent Kernel
+- **Transport** → Event Bus
+- **Persistence** → Event Store
+- **Memory Projection** → Projection Layer
+- **Capability Routing** → Topic Subscriptions
+
+### Architectural Goals
+The system supports long-running autonomous agents, infinite reasoning loops, durable/resumable execution, distributed multi-agent collaboration, deterministic replayability, horizontal scalability, and explicit separation of cognition, transport, and persistence.
+
 ## Installation
 
 ```bash
@@ -110,6 +133,7 @@ files = await bash.list_directory(".")
 
 - **AlithiaAgent** - Autonomous research assistant with planning, execution, reflection cycles
 - **BrowserUseAgent** - Web automation with DOM interaction and code execution
+- **TacitusAgent** - Advanced research agent with iterative query generation, web search, reflection, and answer synthesis
 
 ## Built-in Toolkits
 

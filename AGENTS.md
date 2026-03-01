@@ -7,6 +7,7 @@ Comprehensive documentation of available agents, toolkits, and architecture in t
 - [Agents](#agents)
   - [AlithiaAgent](#alithiaagent)
   - [BrowserUseAgent](#browseruseagent)
+  - [TacitusAgent](#tacitusagent)
 - [Toolkits](#toolkits)
   - [Search Toolkit](#search-toolkit)
   - [Bash Toolkit](#bash-toolkit)
@@ -61,6 +62,43 @@ START → task_planner → tool_executor → reflection → [conditional]
 - DOM interaction and element manipulation
 - Code execution in browser context
 - Page navigation and scraping
+
+---
+
+### TacitusAgent
+
+**Location:** `noesium/agents/tacitus/`
+
+**Purpose:** Advanced autonomous research agent with iterative query generation, web search, reflection, and answer synthesis using LangGraph and structured LLM output.
+
+**Key Features:**
+- Multi-loop research workflow with reflection-based quality control
+- Structured LLM output using Instructor for precise query generation and evaluation
+- Multi-engine web search support (Tavily, DuckDuckGo, etc.)
+- Automatic citation handling and source tracking
+- Configurable research depth and breadth parameters
+- LangGraph stateful workflow with conditional branching
+
+**Components:**
+- `agent.py` - Main agent implementation with LangGraph workflow
+- `schemas.py` - Pydantic schemas for structured LLM output (SearchQueryList, Reflection)
+- `prompts.py` - Prompt templates for query generation, reflection, and answer synthesis
+- `state.py` - State classes for research workflow management
+
+**Graph Workflow:**
+```
+START → generate_query → [web_research nodes] → reflection → [conditional]
+    → (loop for more research if needed) OR finalize_answer → END
+```
+
+**Research Loop:**
+1. **Query Generation**: Generate focused search queries based on user request
+2. **Web Research**: Execute parallel searches across multiple engines
+3. **Reflection**: Evaluate results for sufficiency and identify knowledge gaps
+4. **Iteration**: Generate follow-up queries if needed (up to max_research_loops)
+5. **Finalization**: Synthesize comprehensive answer with citations
+
+**Demo:** `examples/agents/tacitus_demo.py`
 
 ---
 
