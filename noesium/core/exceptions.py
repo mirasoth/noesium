@@ -103,20 +103,20 @@ class SkillNotFoundError(ToolError):
     """Skill not found in registry."""
 
 
-# --- AlithiaAgent ---
+# --- Noet ---
 
 
-class AlithiaError(NoesiumError):
-    """Base AlithiaAgent error."""
+class Noer(NoesiumError):
+    """Base Noet error."""
 
 
-class PlanningError(AlithiaError):
+class PlanningError(Noer):
     """Task planning or revision failed."""
 
 
-class ModeError(AlithiaError):
+class ModeError(Noer):
     """Invalid mode or mode-specific constraint violation."""
 
 
-class IterationLimitError(AlithiaError):
+class IterationLimitError(Noer):
     """Max iterations exceeded."""

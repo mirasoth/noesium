@@ -1,4 +1,4 @@
-"""AlithiaAgent -- autonomous research assistant (impl guide §5.1)."""
+"""Noet -- autonomous research assistant (impl guide §5.1)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ try:
     from langgraph.graph import END, START, StateGraph
 except ImportError:
     raise ImportError(
-        "AlithiaAgent requires langchain-core and langgraph. "
+        "Noet requires langchain-core and langgraph. "
         "Install them with: uv run pip install langchain-core langgraph"
     )
 
@@ -30,14 +30,14 @@ from noesium.core.toolify.executor import ToolExecutor
 from noesium.core.toolify.tool_registry import ToolRegistry
 
 from . import nodes
-from .config import AlithiaConfig, AlithiaMode
+from .config import NoeConfig, NoeMode
 from .planner import TaskPlanner
 from .state import AgentState, AskState
 
 logger = logging.getLogger(__name__)
 
 
-class AlithiaAgent(BaseGraphicAgent):
+class NoeAgent(BaseGraphicAgent):
     """Long-running autonomous research assistant.
 
     Operates in two modes:
@@ -46,13 +46,13 @@ class AlithiaAgent(BaseGraphicAgent):
         reflection, and memory persistence.
     """
 
-    def __init__(self, config: AlithiaConfig | None = None) -> None:
-        self.config = (config or AlithiaConfig()).effective()
+    def __init__(self, config: NoeConfig | None = None) -> None:
+        self.config = (config or NoeConfig()).effective()
         super().__init__(
             llm_provider=self.config.llm_provider,
             model_name=self.config.model_name,
         )
-        self._agent_id = f"alithia-{id(self)}"
+        self._agent_id = f"noe-{id(self)}"
         self._memory_manager: ProviderMemoryManager | None = None
         self._tool_executor: ToolExecutor | None = None
         self._tool_registry: ToolRegistry | None = None
@@ -66,7 +66,7 @@ class AlithiaAgent(BaseGraphicAgent):
     async def initialize(self) -> None:
         """Set up memory, tools, and event infrastructure."""
         await self._setup_memory()
-        if self.config.mode == AlithiaMode.AGENT:
+        if self.config.mode == NoeMode.AGENT:
             await self._setup_tools()
             self._planner = TaskPlanner(self.llm)
 
@@ -75,7 +75,7 @@ class AlithiaAgent(BaseGraphicAgent):
         if "working" in self.config.memory_providers:
             providers.append(WorkingMemoryProvider())
         if "event_sourced" in self.config.memory_providers:
-            producer = AgentRef(agent_id=self._agent_id, agent_type="alithia")
+            producer = AgentRef(agent_id=self._agent_id, agent_type="noe")
             providers.append(EventSourcedProvider(self._event_store, producer))
         self._memory_manager = ProviderMemoryManager(providers)
 
@@ -98,7 +98,7 @@ class AlithiaAgent(BaseGraphicAgent):
 
         self._tool_executor = ToolExecutor(
             event_store=self._event_store,
-            producer=AgentRef(agent_id=self._agent_id, agent_type="alithia"),
+            producer=AgentRef(agent_id=self._agent_id, agent_type="noe"),
         )
 
     # ------------------------------------------------------------------
@@ -106,12 +106,12 @@ class AlithiaAgent(BaseGraphicAgent):
     # ------------------------------------------------------------------
 
     def get_state_class(self) -> Type:
-        if self.config.mode == AlithiaMode.ASK:
+        if self.config.mode == NoeMode.ASK:
             return AskState
         return AgentState
 
     def _build_graph(self) -> StateGraph:
-        if self.config.mode == AlithiaMode.ASK:
+        if self.config.mode == NoeMode.ASK:
             return self._build_ask_graph()
         return self._build_agent_graph()
 
@@ -244,7 +244,7 @@ class AlithiaAgent(BaseGraphicAgent):
         self.graph = compiled
 
         initial: dict[str, Any]
-        if self.config.mode == AlithiaMode.ASK:
+        if self.config.mode == NoeMode.ASK:
             initial = {
                 "messages": [HumanMessage(content=user_message)],
                 "memory_context": [],
@@ -285,7 +285,7 @@ class AlithiaAgent(BaseGraphicAgent):
         self.graph = compiled
 
         initial: dict[str, Any]
-        if self.config.mode == AlithiaMode.ASK:
+        if self.config.mode == NoeMode.ASK:
             initial = {
                 "messages": [HumanMessage(content=user_message)],
                 "memory_context": [],

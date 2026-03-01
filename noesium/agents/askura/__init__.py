@@ -6,7 +6,7 @@ conversations that adapt to different user communication styles and dynamically
 collect required information through natural conversation flow.
 """
 
-from .askura_agent import AskuraAgent
+from .agent import AskuraAgent
 from .conversation import ConversationManager
 from .extractor import InformationExtractor
 from .models import AskuraConfig, AskuraResponse, AskuraState, InformationSlot

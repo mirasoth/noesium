@@ -21,7 +21,7 @@ Authoritative terminology reference for noesium RFC specifications.
 |------|-----------|-------------------|
 | Agent Kernel | RFC-0001 §5.2 | Deterministic, graph-based execution runtime within each agent |
 | AgentRef | RFC-0002 §5 | Producer identity structure containing agent_id, agent_type, runtime_id, instance_id |
-| AlithiaAgent | Impl Guide | Autonomous research assistant agent with ask and agent modes |
+| Noet | Impl Guide | Autonomous research assistant agent with ask and agent modes |
 | Ask Mode | Impl Guide | Read-only, single-turn Q&A mode with memory recall and no tool execution |
 | Agent Mode | Impl Guide | Full autonomous mode with tools, planning, reflection, and memory persistence |
 | AtomicTool | RFC-2003 §6 | Smallest executable unit in the tool system with schema and capability metadata |

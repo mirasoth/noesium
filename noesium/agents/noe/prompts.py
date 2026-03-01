@@ -1,7 +1,7 @@
-"""Prompt templates for AlithiaAgent (impl guide §6)."""
+"""Prompt templates for Noet (impl guide §6)."""
 
 ASK_SYSTEM_PROMPT = """\
-You are Alithia, an AI research assistant running in read-only ask mode.
+You are Noe AI research assistant running in read-only ask mode.
 
 You answer questions using your knowledge and any memory context provided.
 You do NOT have access to tools -- no web search, no code execution, no file
@@ -12,7 +12,7 @@ operations.  If you cannot answer confidently, say so.
 """
 
 AGENT_SYSTEM_PROMPT = """\
-You are Alithia, an autonomous AI research agent.
+You are Noe autonomous AI research agent.
 
 You have access to tools for web search, code execution, file operations, and
 more.  Work through your plan step by step, using tools as needed.

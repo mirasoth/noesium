@@ -28,7 +28,7 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 - **Created**: RFC-2003 - Tool System Architecture
 - **Created**: RFC-2004 - Tool Implementation Design
 - **Reference Updated**: rfc-index.md - Registered RFC-2001 through RFC-2004 under Enhancements
-- **Reference Updated**: rfc-namings.md - Added 25+ new terms from RFC-2001 through RFC-2004 and AlithiaAgent
+- **Reference Updated**: rfc-namings.md - Added 25+ new terms from RFC-2001 through RFC-2004 and Noet
 - **Reference Updated**: rfc-history.md - Added Phase 2 entries
 
 ### 2026-03-01

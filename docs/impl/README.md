@@ -45,7 +45,7 @@ Use the **platonic-impl-guide** skill which includes its own template for genera
 |-------|-------------|-------------|
 | [core-framework-impl.md](core-framework-impl.md) | RFC-1001 | Core framework modules: event, kernel, projection, capability, memory |
 | [agent-framework-impl.md](agent-framework-impl.md) | RFC-1002 | LangGraph-based agent design and base classes |
-| [alithia-agent-impl.md](alithia-agent-impl.md) | RFC-1002, RFC-2001–2004 | AlithiaAgent research assistant with ask/agent modes |
+| [noe-agent-impl.md](noe-agent-impl.md) | RFC-1002, RFC-2001–2004 | NoeAgentNoech assistant with ask/agent modes |
 | [goalith-deprecation-impl.md](goalith-deprecation-impl.md) | Assessment | Goalith module deprecation plan and migration |
 | [gap-analysis.md](gap-analysis.md) | All RFCs | Gap analysis between specs and current codebase |
 

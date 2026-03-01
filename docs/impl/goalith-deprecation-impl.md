@@ -41,7 +41,7 @@ The Goalith module (`noesium/core/goalith/`) was designed as a standalone DAG-ba
 
 ### 1.4 Recommendation
 
-**Deprecate the entire `noesium/core/goalith/` module.** Extract the LLM-based goal decomposition concept into `TaskPlanner` within AlithiaAgent (see `docs/impl/alithia-agent-impl.md` §5.2).
+**Deprecate the entire `noesium/core/goalith/` module.** Extract the LLM-based goal decomposition concept into `TaskPlanner` within Noet (see `docs/impl/noe-agent-impl.md` §5.2).
 
 ---
 
@@ -49,14 +49,14 @@ The Goalith module (`noesium/core/goalith/`) was designed as a standalone DAG-ba
 
 ### 2.1 Goal Decomposition → TaskPlanner
 
-The only Goalith capability not covered by the new architecture is LLM-based goal decomposition. This is migrated to `TaskPlanner` in AlithiaAgent:
+The only Goalith capability not covered by the new architecture is LLM-based goal decomposition. This is migrated to `TaskPlanner` in Noet:
 
 **From Goalith (LLMDecomposer)**:
 - Takes a goal description
 - Uses LLM structured output to produce sub-goals
 - Returns ordered list of sub-goals with dependencies
 
-**To AlithiaAgent (TaskPlanner)** (defined in `alithia-agent-impl.md` §5.2):
+**To Noet (TaskPlanner)** (defined in `noe-agent-impl.md` §5.2):
 - Takes a goal string + context
 - Uses LLM to produce a `TaskPlan` with ordered `TaskStep` items
 - Supports plan revision based on reflection feedback
@@ -79,14 +79,14 @@ The abstract `GoalDecomposer` hierarchy (`SimpleListDecomposer`, `CallableDecomp
 """
 .. deprecated::
     The goalith module is deprecated and will be removed in a future release.
-    Use TaskPlanner from noesium.agents.alithia.planner for goal decomposition.
+    Use TaskPlanner from noesium.agents.noe.planner for goal decomposition.
     Use LangGraph StateGraph for workflow DAGs.
     Use ExecutionProjection for task state tracking.
 """
 import warnings
 warnings.warn(
     "noesium.core.goalith is deprecated. "
-    "Use AlithiaAgent's TaskPlanner for goal decomposition.",
+    "Use Noet's TaskPlanner for goal decomposition.",
     DeprecationWarning,
     stacklevel=2,
 )
@@ -137,10 +137,10 @@ warnings.warn(
 
 | Concept | Destination |
 |---------|-------------|
-| LLM goal decomposition | `noesium/agents/alithia/planner.py` (TaskPlanner) |
+| LLM goal decomposition | `noesium/agents/noe/planner.py` (TaskPlanner) |
 | Goal node lifecycle | `noesium/core/projection/execution.py` (ExecutionProjection) |
 | DAG-based workflows | LangGraph StateGraph (already exists) |
-| Task replanning | AlithiaAgent reflection + revise_plan nodes |
+| Task replanning | Noet reflection + revise_plan nodes |
 
 ---
 
@@ -160,8 +160,8 @@ warnings.warn(
 ### 5.2 Replacement Coverage
 
 The extracted functionality (goal decomposition) will be tested in:
-- `tests/agents/alithia/test_planner.py` -- TaskPlanner unit tests
-- `tests/agents/alithia/test_agent.py` -- AlithiaAgent integration tests
+- `tests/agents/noe/test_planner.py` -- TaskPlanner unit tests
+- `tests/agents/noe/test_agent.py` -- NoeANoetegration tests
 
 ---
 

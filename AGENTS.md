@@ -5,7 +5,7 @@ Comprehensive documentation of available agents, toolkits, and architecture in t
 ## Table of Contents
 
 - [Agents](#agents)
-  - [AlithiaAgent](#alithiaagent)
+  - [NoeAgent](#noeagent)
   - [BrowserUseAgent](#browseruseagent)
   - [TacitusAgent](#tacitusagent)
 - [Toolkits](#toolkits)
@@ -22,9 +22,9 @@ Comprehensive documentation of available agents, toolkits, and architecture in t
 
 ## Agents
 
-### AlithiaAgent
+### NoeAgent
 
-**Location:** `noesium/agents/alithia/`
+**Location:** `noesium/agents/noe/`
 
 **Purpose:** Autonomous research assistant with dual modes (Ask/Agent) featuring planning, execution, and reflection cycles using LangGraph.
 
@@ -47,7 +47,7 @@ START → task_planner → tool_executor → reflection → [conditional]
     → (loop for more actions if needed) OR finalize_answer → END
 ```
 
-**Demo:** `examples/agents/alithia_demo.py`
+**Demo:** `examples/agents/noe_demo.py`
 
 ---
 
@@ -308,7 +308,7 @@ class MyCustomToolkit(AsyncBaseToolkit):
 
 ```bash
 # Run Python scripts
-uv run python examples/agents/alithia_demo.py
+uv run python examples/agents/noe_demo.py
 
 # Install packages
 uv run pip install package-name
@@ -372,7 +372,7 @@ config = ToolkitConfig(
 noesium/
 ├── noesium/
 │   ├── agents/              # Agent implementations
-│   │   ├── alithia/         # Research agent with planning
+│   │   ├── noe/         # Research agent with planning
 │   │   └── browser_use/     # Browser automation
 │   ├── core/
 │   │   ├── agent/           # Base agent classes

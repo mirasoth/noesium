@@ -1,8 +1,8 @@
-# AlithiaAgent Implementation Architecture
+# NoeAgent Implementation Architecture
 
-> Implementation guide for the AlithiaAgent research assistant in Noesium.
+> Implementation guide for the NoeAgent research assistant in Noesium.
 >
-> **Module**: `noesium/agents/alithia/`
+> **Module**: `noesium/agents/noe/`
 > **Source**: Derived from [RFC-1002](../../specs/RFC-1002.md) (LangGraph Agent Design), [RFC-2001](../../specs/RFC-2001.md), [RFC-2002](../../specs/RFC-2002.md), [RFC-2003](../../specs/RFC-2003.md), [RFC-2004](../../specs/RFC-2004.md)
 > **Related RFCs**: [RFC-0001](../../specs/RFC-0001.md), [RFC-0002](../../specs/RFC-0002.md), [RFC-0003](../../specs/RFC-0003.md), [RFC-0004](../../specs/RFC-0004.md), [RFC-0005](../../specs/RFC-0005.md), [RFC-1001](../../specs/RFC-1001.md)
 > **Language**: Python 3.11+
@@ -12,7 +12,7 @@
 
 ## 1. Overview
 
-AlithiaAgent is a long-running autonomous research assistant built on the Noesium framework. It operates in two modes:
+NoeAgent is a long-running autonomous research assistant built on the Noesium framework. It operates in two modes:
 
 - **Ask Mode**: Single-turn, read-only question answering. No tool execution, no file writes, no side effects. Uses memory recall and LLM reasoning to answer queries. Analogous to Cursor's "Ask" mode.
 
@@ -20,7 +20,7 @@ AlithiaAgent is a long-running autonomous research assistant built on the Noesiu
 
 ### 1.1 Purpose
 
-This document specifies the implementation architecture for AlithiaAgent. It provides:
+This document specifies the implementation architecture for NoeAgent. It provides:
 
 - Module structure and file layout
 - State model and LangGraph graph design
@@ -33,7 +33,7 @@ This document specifies the implementation architecture for AlithiaAgent. It pro
 ### 1.2 Scope
 
 **In Scope**:
-- AlithiaAgent class hierarchy and state model
+- NoeAgent class hierarchy and state model
 - LangGraph graph for both ask and agent modes
 - Tool binding and execution flow
 - Memory read/write integration
@@ -58,7 +58,7 @@ This guide MUST NOT contradict RFC-1002 (agent archetypes), RFC-2001/2002 (memor
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│                     AlithiaAgent                               │
+│                     NoeAgent                               │
 │  ┌─────────────┐  ┌───────────────┐  ┌─────────────────────┐ │
 │  │  Ask Graph   │  │  Agent Graph   │  │   Task Planner      │ │
 │  │  (read-only) │  │  (autonomous)  │  │   (goal decompose)  │ │
@@ -74,7 +74,7 @@ This guide MUST NOT contradict RFC-1002 (agent archetypes), RFC-2001/2002 (memor
 ### 2.2 Dependency Graph
 
 ```
-AlithiaAgent
+NoeAgent
 ├── noesium.core.agent.base.BaseGraphicAgent
 ├── noesium.core.memory.manager.MemoryManager (RFC-2002)
 ├── noesium.core.toolify.executor.ToolExecutor (RFC-2004)
@@ -90,7 +90,7 @@ AlithiaAgent
 
 | Module | Responsibility | Dependencies |
 |--------|----------------|--------------|
-| `agent.py` | Main AlithiaAgent class, graph building, mode dispatch | All below |
+| `agent.py` | Main NoeAgent class, graph building, mode dispatch | All below |
 | `state.py` | Pydantic state models for ask and agent graphs | pydantic |
 | `planner.py` | Task decomposition and planning | LLM client |
 | `nodes.py` | Graph node implementations | state, tools, memory |
@@ -102,9 +102,9 @@ AlithiaAgent
 ## 3. Module Structure
 
 ```
-noesium/agents/alithia/
-├── __init__.py          # Exports AlithiaAgent, AlithiaConfig
-├── agent.py             # AlithiaAgent class
+noesium/agents/noe/
+├── __init__.py          # Exports NoeAgent, AlithiaConfig
+├── agent.py             # NoeAgent class
 ├── state.py             # AlithiaState, AskState, AgentState, TaskPlan
 ├── planner.py           # TaskPlanner for goal decomposition
 ├── nodes.py             # Graph node functions
@@ -188,10 +188,10 @@ class AskState(TypedDict):
 
 ## 5. Key Interfaces
 
-### 5.1 AlithiaAgent
+### 5.1 NoeAgent
 
 ```python
-class AlithiaAgent(BaseGraphicAgent):
+class NoeAgent(BaseGraphicAgent):
     def __init__(self, config: AlithiaConfig | None = None) -> None:
         self.config = config or AlithiaConfig()
         super().__init__(
@@ -313,7 +313,7 @@ def _route_after_reflect(state: AgentState) -> str:
 
 ### 6.3 Tool Integration
 
-AlithiaAgent initializes tools via the ToolRegistry (RFC-2004):
+NoeAgent initializes tools via the ToolRegistry (RFC-2004):
 
 ```python
 async def _setup_tools(self) -> None:
@@ -341,7 +341,7 @@ async def _setup_tools(self) -> None:
     # Create ToolExecutor
     self._tool_executor = ToolExecutor(
         event_store=self._event_store,
-        producer=AgentRef(agent_id=self._agent_id, agent_type="alithia"),
+        producer=AgentRef(agent_id=self._agent_id, agent_type="noe"),
     )
 ```
 
@@ -372,7 +372,7 @@ async def _tool_node(self, state: AgentState) -> dict:
 
 ### 6.4 Memory Integration
 
-AlithiaAgent uses MemoryManager (RFC-2002) for both modes:
+NoeAgent uses MemoryManager (RFC-2002) for both modes:
 
 **Ask Mode**: recall only (read)
 ```python
@@ -414,7 +414,7 @@ def _should_continue(self, state: AgentState) -> bool:
 
 ```python
 class AlithiaError(NoesiumError):
-    """Base AlithiaAgent error."""
+    """Base NoeAgent error."""
 
 class PlanningError(AlithiaError):
     """Task planning or revision failed."""
@@ -506,11 +506,11 @@ class MockMemoryManager:
 
 ### 10.1 Relationship to Existing Agents
 
-AlithiaAgent does NOT replace existing agents (AskuraAgent, SearchAgent, DeepResearchAgent). It is a new agent that leverages the unified tool and memory systems.
+NoeAgent does NOT replace existing agents (AskuraAgent, SearchAgent, DeepResearchAgent). It is a new agent that leverages the unified tool and memory systems.
 
 ### 10.2 Incremental Adoption
 
-1. **Phase 1**: AlithiaAgent with ask mode using existing LLM client and basic memory.
+1. **Phase 1**: NoeAgent with ask mode using existing LLM client and basic memory.
 2. **Phase 2**: Agent mode with built-in toolkits and TaskPlanner.
 3. **Phase 3**: MCP tool integration and memory persistence.
 4. **Phase 4**: Streaming output and advanced reflection.

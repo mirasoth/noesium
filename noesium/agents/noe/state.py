@@ -1,4 +1,4 @@
-"""State models for AlithiaAgent graphs (impl guide §4.2-4.3)."""
+"""State models for Noet graphs (impl guide §4.2-4.3)."""
 
 from __future__ import annotations
 

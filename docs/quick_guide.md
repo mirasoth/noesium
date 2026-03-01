@@ -73,14 +73,14 @@ result = client.structured_completion(messages, Answer)
 
 ### Using Built-in Agents
 
-#### AlithiaAgent
+#### Noet
 
 Autonomous research assistant with planning capabilities:
 
 ```python
-from noesium.agents.alithia.agent import AlithiaAgent
+from noesium.agents.noe.agent import NoeANoe
 
-agent = AlithiaAgent()
+agent = Noet()
 result = await agent.run("Research quantum computing applications")
 ```
 

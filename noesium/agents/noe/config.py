@@ -1,4 +1,4 @@
-"""AlithiaAgent configuration (impl guide §4.1)."""
+"""Noet configuration (impl guide §4.1)."""
 
 from __future__ import annotations
 
@@ -8,19 +8,19 @@ from typing import Any, Callable
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class AlithiaMode(str, Enum):
+class NoeMode(str, Enum):
     ASK = "ask"
     AGENT = "agent"
 
 
-class AlithiaConfig(BaseModel):
-    """Configuration for AlithiaAgent.
+class NoeConfig(BaseModel):
+    """Configuration for Noet.
 
     In ask mode the following are forced:
       max_iterations=1, enabled_toolkits=[], permissions=[], persist_memory=False
     """
 
-    mode: AlithiaMode = AlithiaMode.AGENT
+    mode: NoeMode = NoeMode.AGENT
     llm_provider: str = "openrouter"
     model_name: str | None = None
     planning_model: str | None = None
@@ -47,9 +47,9 @@ class AlithiaConfig(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def effective(self) -> AlithiaConfig:
+    def effective(self) -> NoeConfig:
         """Return config with ask-mode overrides applied."""
-        if self.mode == AlithiaMode.ASK:
+        if self.mode == NoeMode.ASK:
             return self.model_copy(
                 update={
                     "max_iterations": 1,

@@ -1,4 +1,4 @@
-"""Graph node implementations for AlithiaAgent (impl guide §6)."""
+"""Graph node implementations for Noet (impl guide §6)."""
 
 from __future__ import annotations
 

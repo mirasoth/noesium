@@ -131,7 +131,7 @@ files = await bash.list_directory(".")
 
 ## Built-in Agents
 
-- **AlithiaAgent** - Autonomous research assistant with planning, execution, reflection cycles
+- **Noet** - Autonomous research assistant with planning, execution, reflection cycles
 - **BrowserUseAgent** - Web automation with DOM interaction and code execution
 - **TacitusAgent** - Advanced research agent with iterative query generation, web search, reflection, and answer synthesis
 
