@@ -427,7 +427,14 @@ class TestGitHubToolkitIntegration:
 
         # Verify successful response
         assert isinstance(result, dict)
-        assert "error" not in result
+
+        # Skip if rate limited
+        if "error" in result:
+            error_msg = result["error"].lower()
+            if "rate limit" in error_msg:
+                pytest.skip(f"GitHub API rate limit exceeded: {result['error']}")
+            assert "error" not in result
+
         assert "releases" in result
         assert isinstance(result["releases"], list)
 
@@ -714,10 +721,12 @@ class TestGitHubToolkitIntegrationErrorHandling:
         assert isinstance(result, dict)
         # If it fails, it should be due to network issues, not code errors
         if "error" in result:
+            error_msg = result["error"].lower()
             assert (
-                "timeout" in result["error"].lower()
-                or "network" in result["error"].lower()
-                or "not found" in result["error"].lower()
+                "timeout" in error_msg
+                or "network" in error_msg
+                or "not found" in error_msg
+                or "rate limit" in error_msg
             )
 
     @pytest.mark.asyncio

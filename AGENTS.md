@@ -1,14 +1,12 @@
 # Agents and Tools in Noesium
 
-This document provides an overview of all available agents and tools in the Noesium framework.
+Comprehensive documentation of available agents, toolkits, and architecture in the Noesium cognitive agentic framework.
 
 ## Table of Contents
 
 - [Agents](#agents)
-  - [AskuraAgent](#askuraagent)
-  - [SearchAgent](#searchagent)
-  - [DeepResearchAgent](#deepresearchagent)
-  - [MemoryAgent](#memoryagent)
+  - [AlithiaAgent](#alithiaagent)
+  - [BrowserUseAgent](#browseruseagent)
 - [Toolkits](#toolkits)
   - [Search Toolkit](#search-toolkit)
   - [Bash Toolkit](#bash-toolkit)
@@ -18,150 +16,51 @@ This document provides an overview of all available agents and tools in the Noes
 - [Agent Architecture](#agent-architecture)
 - [Tool System Architecture](#tool-system-architecture)
 - [Configuration](#configuration)
-- [Examples](#examples)
 
 ---
 
 ## Agents
 
-### AskuraAgent
+### AlithiaAgent
 
-**Location:** `noesium/agents/askura_agent/`
+**Location:** `noesium/agents/alithia/`
 
-**Purpose:** A dynamic agent designed to collect target semi-structured information via conversation. The agent adapts to user communication styles and maintains conversation purpose alignment through human-in-the-loop workflows.
+**Purpose:** Autonomous research assistant with dual modes (Ask/Agent) featuring planning, execution, and reflection cycles using LangGraph.
 
 **Key Features:**
-- Human-in-the-loop (HITL) conversation flow
-- LLM-enhanced context analysis and message routing
-- Information extraction with configurable slots
-- Memory retrieval and retention
-- Reflection-based knowledge gap analysis
-- Automatic summarization when conversation completes
-- Session management with persistence
+- Dual operation modes: Ask (Q&A) and Agent (autonomous)
+- LLM-powered task planning and decomposition
+- Tool usage with permission system
+- Reflection-based quality control
+- LangGraph stateful workflow
 
 **Components:**
-- `askura_agent.py` - Main agent implementation
-- `conversation.py` - Conversation management
-- `extractor.py` - Information extraction
-- `reflection.py` - Knowledge reflection
-- `summarizer.py` - Conversation summarization
-- `memory.py` - Memory management
-- `models.py` - Data models (AskuraConfig, InformationSlot, etc.)
+- `agent.py` - Main agent implementation with LangGraph workflow
+- `task_planner.py` - Task decomposition and planning
+- `schemas.py` - State classes (AskState, AgentState)
 - `prompts.py` - Prompt templates
 
 **Graph Workflow:**
 ```
-START → context_analysis → message_dispatcher → [conditional routing]
-    → start_deep_thinking → information_extractor → memory_retrival
-    → reflection → memory_retention → next_action → [conditional routing]
-    → response_generator → human_review → summarizer → END
+START → task_planner → tool_executor → reflection → [conditional]
+    → (loop for more actions if needed) OR finalize_answer → END
 ```
 
-**Demo:** `examples/agents/askura_agent_demo.py`
+**Demo:** `examples/agents/alithia_demo.py`
 
 ---
 
-### SearchAgent
+### BrowserUseAgent
 
-**Location:** `noesium/agents/search/`
+**Location:** `noesium/agents/browser_use/`
 
-**Purpose:** Web search agent with optional AI crawling capabilities for finding and processing web content.
-
-**Key Features:**
-- Query polishing using LLM for better search effectiveness
-- Multi-engine search support (Tavily, DuckDuckGo)
-- Optional web content crawling
-- Result reranking using LLM
-- Configurable search depth and timeout
-- Support for adaptive crawling
-
-**Graph Workflow:**
-```
-START → polish_query → web_search → crawl_web → [conditional routing]
-    → rank_results → finalize_search → END
-```
-
-**Configuration Options:**
-- `polish_query` - Enable/disable query polishing
-- `rerank_results` - Enable/disable result reranking
-- `search_engines` - List of search engines to use
-- `max_results_per_engine` - Maximum results per engine
-- `crawl_content` - Enable content crawling
-- `content_format` - Output format (markdown, html, text)
-- `adaptive_crawl` - Enable adaptive crawling
-- `crawl_depth` - Maximum crawl depth
-
-**Demo:** `examples/agents/search_agent_demo.py`
-
----
-
-### DeepResearchAgent
-
-**Location:** `noesium/agents/deep_research/`
-
-**Purpose:** Advanced research agent using LangGraph and LLM integration for comprehensive, iterative research tasks with citations.
+**Purpose:** Web automation agent for browser interaction, DOM manipulation, and code execution.
 
 **Key Features:**
-- Iterative query generation with structured output
-- Multi-source web research with citations
-- LLM-powered reflection and knowledge gap analysis
-- Automatic follow-up query generation
-- Configurable research loops and temperature settings
-- Comprehensive final answer generation
-
-**Components:**
-- `agent.py` - Main agent implementation
-- `state.py` - State classes (QueryState, ResearchState, WebSearchState, ReflectionState)
-- `schemas.py` - Pydantic schemas (Reflection, SearchQueryList)
-- `prompts.py` - Prompt templates
-
-**Graph Workflow:**
-```
-START → generate_query → web_research → reflection → [conditional evaluation]
-    → web_research (if more research needed) OR finalize_answer → END
-```
-
-**Configuration Options:**
-- `number_of_initial_queries` - Number of initial search queries (default: 3)
-- `max_research_loops` - Maximum research iterations (default: 3)
-- `query_generation_temperature` - Temperature for query generation
-- `web_search_temperature` - Temperature for web search
-- `reflection_temperature` - Temperature for reflection analysis
-- `answer_temperature` - Temperature for final answer
-- `search_engines` - List of search engines
-- `web_search_citation_enabled` - Enable citation generation
-
-**Demo:** `examples/agents/deep_research_demo.py`
-
----
-
-### MemoryAgent
-
-**Location:** `noesium/core/memory/memu/memory/memory_agent.py`
-
-**Purpose:** Memory management agent with action-based architecture for storing, categorizing, and retrieving memories.
-
-**Key Features:**
-- Action-based architecture with independent modules
-- Function calling interface for LLM integration
-- Multiple memory categories (activity, event, profile, etc.)
-- Embedding-based semantic search and linking
-- Memory clustering and categorization
-- Theory of mind analysis
-- Iterative conversation processing
-
-**Available Actions:**
-- `add_activity_memory` - Store activity memories
-- `get_available_categories` - Get available memory categories
-- `link_related_memories` - Link related memories using embeddings
-- `generate_memory_suggestions` - Generate memory suggestions
-- `update_memory_with_suggestions` - Update categories with suggestions
-- `run_theory_of_mind` - Analyze theory of mind
-- `cluster_memories` - Cluster memories into categories
-
-**Demos:**
-- `examples/memory/memu/basic_memory_agent.py`
-- `examples/memory/memu/advanced_memory_agent.py`
+- Browser session management with CDP
+- DOM interaction and element manipulation
+- Code execution in browser context
+- Page navigation and scraping
 
 ---
 
@@ -203,7 +102,6 @@ All toolkits are located in `noesium/toolkits/` and managed through the Toolify 
 - Persistent shell session
 - Command filtering and security checks
 - ANSI escape sequence cleaning
-- Automatic shell recovery
 - Workspace isolation
 
 ---
@@ -270,7 +168,7 @@ All toolkits are located in `noesium/toolkits/` and managed through the Toolify 
 
 ## Agent Architecture
 
-The agent system is built on a hierarchical class structure located in `noesium/core/agent/base.py`:
+The agent system is built on a hierarchical class structure located in `noesium/core/agent/`:
 
 ```
 BaseAgent (abstract)
@@ -315,6 +213,7 @@ The tool system (**Toolify**) is located in `noesium/core/toolify/` and provides
 - **LangChain Integration**: Seamless conversion to LangChain `BaseTool` format
 - **MCP Support**: Integration with Model Context Protocol servers
 - **Registry System**: Automatic discovery and registration of toolkits
+- **Permission System**: Secure tool execution with permission checking
 
 ### Base Classes
 
@@ -371,7 +270,7 @@ class MyCustomToolkit(AsyncBaseToolkit):
 
 ```bash
 # Run Python scripts
-uv run python examples/agents/search_agent_demo.py
+uv run python examples/agents/alithia_demo.py
 
 # Install packages
 uv run pip install package-name
@@ -429,49 +328,14 @@ config = ToolkitConfig(
 
 ---
 
-## Examples
-
-### Agent Examples
-
-Located in `examples/agents/`:
-- `askura_agent_demo.py` - Interactive trip planning demo
-- `search_agent_demo.py` - Web search demo
-- `deep_research_demo.py` - Deep research demo
-
-### Tool Examples
-
-Located in `examples/tools/tools_demo.py` - Comprehensive tool system demonstration.
-
-### Memory Examples
-
-Located in `examples/memory/memu/`:
-- `basic_memory_agent.py` - Basic memory operations
-- `advanced_memory_agent.py` - Advanced memory with embeddings
-
----
-
-## Additional Documentation
-
-- **Design Specifications (RFCs):** Located in `specs/` directory
-  - [rfc-index.md](specs/rfc-index.md) - Index of all RFCs
-  - [RFC-0001](specs/rfc-0001.md) - System overview
-  - [RFC-0002](specs/rfc-0002.md) - Goalith (goal management)
-  - [RFC-0003](specs/rfc-0003.md) - Toolify (tool management)
-  - [RFC-0004](specs/rfc-0004.md) - Orchestrix (orchestration)
-- **Toolify README:** `noesium/core/toolify/README.md`
-- **Askura Agent README:** `noesium/agents/askura_agent/README.md`
-
----
-
 ## Project Structure
 
 ```
 noesium/
 ├── noesium/
 │   ├── agents/              # Agent implementations
-│   │   ├── askura_agent/    # Conversation agent
-│   │   ├── search/          # Search agent
-│   │   └── deep_research/   # Research agent
+│   │   ├── alithia/         # Research agent with planning
+│   │   └── browser_use/     # Browser automation
 │   ├── core/
 │   │   ├── agent/           # Base agent classes
 │   │   ├── toolify/         # Tool system
@@ -480,9 +344,7 @@ noesium/
 │   │   ├── goalith/         # Goal management
 │   │   ├── vector_store/    # Vector storage
 │   │   ├── msgbus/          # Message bus
-│   │   ├── routing/         # Model routing
-│   │   └── tracing/         # Token tracking
-│   └── toolkits/            # 17+ built-in toolkits
+│   ├── toolkits/            # 17+ built-in toolkits
 ├── examples/                # Usage examples
 ├── specs/                   # Design specifications
 └── tests/                   # Test suites

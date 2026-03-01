@@ -1,10 +1,16 @@
-# Noesium
+<div align="center">
+  <img src="docs/logos/noesium-logo.jpg" alt="Noesium Logo" width="200" />
 
-[![CI](https://github.com/mirasoth/noesium/actions/workflows/ci.yml/badge.svg)](https://github.com/mirasoth/noesium/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/noesium.svg)](https://pypi.org/project/noesium/)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mirasoth/noesium)
+  #
 
-Project Noesium is an initiative to develop a computation-driven, cognitive agentic system. This repo contains the foundational abstractions (Agent, Memory, Tool, Goal, Orchestration, and more) along with essential modules such as LLM clients, logging, message buses, model routing, and observability. For the underlying philosophy, refer to my talk on MAS ([link](https://github.com/caesar0301/mas-talk-2508/blob/master/mas-talk-xmingc.pdf)).
+  ![Python](https://img.shields.io/pypi/pyversions/noesium)
+  ![PyPI version](https://img.shields.io/pypi/v/noesium)
+  ![License](https://img.shields.io/github/license/mirasoth/noesium)
+  ![GitHub Stars](https://img.shields.io/github/stars/mirasoth/noesium)
+
+</div>
+
+**Noesium** is a computation-driven cognitive agentic framework providing foundational abstractions for building autonomous AI agents with planning, memory, tools, and orchestration capabilities.
 
 ## Installation
 
@@ -14,86 +20,23 @@ pip install -U noesium
 
 ### Optional Dependencies
 
-Noesium provides optional dependency groups for different usage scenarios:
-
 ```bash
-# AI Providers
-pip install noesium[google]          # Google GenAI, API Client, Auth
-pip install noesium[aliyun]          # Aliyun Python SDK
-pip install noesium[llm]             # LiteLLM, OpenAI, Instructor
-pip install noesium[local-llm]       # Ollama, LlamaCPP, HuggingFace Hub
-pip install noesium[ai-providers-all] # All AI providers above
+# Recommended: all features
+pip install noesium[all]
+
+# AI providers
+pip install noesium[llm]             # OpenAI, LiteLLM, Instructor
+pip install noesium[local-llm]       # Ollama, LlamaCPP
+pip install noesium[ai-providers-all] # All AI providers
 
 # Frameworks
-pip install noesium[langchain]       # LangChain Core, Text Splitters, Ollama, LangGraph
-pip install noesium[agents]          # LangChain + Bubus for agent frameworks
+pip install noesium[agents]          # LangChain + Bubus
 
-# Database & Vector Stores
-pip install noesium[postgres]        # PostgreSQL with psycopg2
-pip install noesium[weaviate]        # Weaviate vector database
-
-# Data Science Tools
-pip install noesium[datascience]     # NetworkX, Matplotlib, Pandas, IPython, pexpect
-
-# Browser Automation
-pip install noesium[browser-use]     # Screen info, CDP client, PDF/HTML processing, PIL
-
-# MCP Support
-pip install noesium[mcp]             # Model Context Protocol
-
-# Toolkits
-pip install noesium[tools]           # All toolkits (search, arxiv, document, image, etc.)
-
-# Full installation (recommended for most users)
-pip install noesium[all]             # All optional dependencies except dev
-
-# Development
-pip install noesium[dev]             # pytest, black, isort, mypy, etc.
+# Tools & data
+pip install noesium[tools]           # 17+ toolkits
+pip install noesium[datascience]     # Pandas, NetworkX
+pip install noesium[browser-use]     # Browser automation
 ```
-
-## Core Modules
-
-| Module | Description |
-|--------|-------------|
-| **LLM Integration** (`noesium.core.llm`) | Multi-provider support (OpenAI, OpenRouter, Ollama, LlamaCPP, LiteLLM), dynamic routing, token tracking |
-| **Goal Management** (`noesium.core.goalith`) | LLM-based goal decomposition, DAG-based goal graph, dependency tracking |
-| **Tool Management** (`noesium.core.toolify`) | Tool registry, MCP integration, 17+ built-in toolkits |
-| **Memory** (`noesium.core.memory`) | MemU integration, embedding-based retrieval, multi-category storage |
-| **Vector Store** (`noesium.core.vector_store`) | PGVector and Weaviate support, semantic search |
-| **Message Bus** (`noesium.core.msgbus`) | Event-driven architecture, watchdog patterns |
-| **Routing** (`noesium.core.routing`) | Dynamic complexity-based model selection |
-| **Tracing** (`noesium.core.tracing`) | Token usage monitoring, Opik integration |
-
-## Built-in Agents
-
-- **AskuraAgent** - Conversational agent for collecting semi-structured information via human-in-the-loop workflows
-- **SearchAgent** - Web search with query polishing, multi-engine support, and optional content crawling
-- **DeepResearchAgent** - Iterative research with LLM-powered reflection and citation generation
-- **MemoryAgent** - Memory management with categorization, embedding search, and memory linking
-
-## Built-in Toolkits
-
-Tool management (`noesium.core.toolify`) ships with 17+ toolkits. Full details and tool lists are in [AGENTS.md](AGENTS.md).
-
-| Toolkit | Registration | Description |
-|---------|--------------|-------------|
-| **Search** | `search` | Google/Serper search, web content fetch, Tavily/Google AI search, LLM Q&A on pages |
-| **Bash** | `bash` | Run shell commands, get cwd, list directory (workspace-isolated, secure) |
-| **Memory** | `memory` | Read/write/edit/append/clear named slots, list slots, search, stats |
-| **Python Executor** | `python_executor` | Execute Python code (IPython, timeout, plot capture) |
-| **ArXiv** | `arxiv` | Search and download papers, get paper details (arXiv API) |
-| **Audio** | `audio` | Transcribe audio (Whisper), audio Q&A; local/URL, caching |
-| **Audio Aliyun** | `audio_aliyun` | Transcribe and Q&A via Aliyun NLS (Lingjie); URL input |
-| **Document** | `document` | Parse PDF/Office, extract text, document Q&A (Chunkr/PyMuPDF) |
-| **File Edit** | `file_edit` | Create/read/write/delete files, list/search, backups, sanitized paths |
-| **GitHub** | `github` | Repo info, contents, releases, repository search |
-| **Gmail** | `gmail` | Authenticate, recent/search emails, extract verification codes |
-| **Image** | `image` | Analyze/describe/compare images, OCR, info (URL or local) |
-| **Serper** | `serper` | Google search, images, news, scholar, maps, video, places, autocomplete, Lens |
-| **Tabular Data** | `tabular_data` | Column info, summaries, data quality checks for CSV/Excel |
-| **User Interaction** | `user_interaction` | Ask user, confirm, choices, display message, final answer, interaction history |
-| **Video** | `video` | Analyze video and Q&A (Gemini), video metadata |
-| **Wikipedia** | `wikipedia` | Search, get page/summary, random page, categories, page views |
 
 ## Quick Start
 
@@ -119,111 +62,78 @@ client = get_llm_client(provider="openai", structured_output=True)
 result = client.structured_completion(messages, Answer)
 ```
 
-### Tool Management
+### Build an Agent
 
 ```python
-from noesium.core.toolify import BaseToolkit, ToolkitConfig, ToolkitRegistry, register_toolkit
+from noesium.core.agent.base import BaseGraphicAgent
+from noesium.core.llm import get_llm_client
 
-@register_toolkit("calculator")
-class CalculatorToolkit(BaseToolkit):
-    def get_tools_map(self):
-        return {"add": self.add, "multiply": self.multiply}
+class MyAgent(BaseGraphicAgent):
+    def __init__(self, llm_client=None):
+        super().__init__(llm_client or get_llm_client())
 
-    def add(self, a: float, b: float) -> float:
-        return a + b
+    def build_graph(self):
+        # Define your agent's workflow graph
+        pass
 
-    def multiply(self, a: float, b: float) -> float:
-        return a * b
-
-# Use toolkit
-config = ToolkitConfig(name="calculator")
-calc = ToolkitRegistry.create_toolkit("calculator", config)
-result = calc.call_tool("add", a=5, b=3)
+agent = MyAgent()
+result = await agent.run("What is the meaning of life?")
 ```
 
-### Goal Decomposition
+### Use Toolkits
 
 ```python
-from noesium.core.goalith.goalgraph.node import GoalNode
-from noesium.core.goalith.goalgraph.graph import GoalGraph
-from noesium.core.goalith.decomposer import LLMDecomposer
+from noesium.core.toolify import get_toolkit, ToolkitConfig
 
-# Create and decompose a goal
-goal = GoalNode(description="Plan a product launch", priority=8.0)
-graph = GoalGraph()
-graph.add_node(goal)
+# Search toolkit
+search_config = ToolkitConfig(name="search", config={"SERPER_API_KEY": "..."})
+search = get_toolkit("search", search_config)
+results = await search.search_google_api("Python async programming")
 
-decomposer = LLMDecomposer()
-subgoals = decomposer.decompose(goal, context={"budget": "$50,000"})
+# Bash toolkit
+bash = get_toolkit("bash")
+files = await bash.list_directory(".")
 ```
 
-### Search Agent
+## Core Modules
 
-```python
-from noesium.agents.search import SearchAgent, SearchConfig
+| Module | Description |
+|--------|-------------|
+| **Agents** (`noesium.core.agent`) | BaseAgent, BaseGraphicAgent, BaseHitlAgent, BaseResearcher |
+| **LLM** (`noesium.core.llm`) | Multi-provider support, structured output, token tracking |
+| **Toolify** (`noesium.core.toolify`) | Unified tool system with 17+ built-in toolkits |
+| **Memory** (`noesium.core.memory`) | Multi-tier memory with semantic search |
+| **Event** (`noesium.core.event`) | Domain events, message bus, tracing |
+| **Vector Store** (`noesium.core.vector_store`) | PGVector, Weaviate support |
 
-config = SearchConfig(
-    polish_query=True,
-    search_engines=["tavily"],
-    max_results_per_engine=5
-)
-agent = SearchAgent(config=config)
-results = await agent.search("latest developments in quantum computing")
-```
+## Built-in Agents
 
-### Deep Research Agent
+- **AlithiaAgent** - Autonomous research assistant with planning, execution, reflection cycles
+- **BrowserUseAgent** - Web automation with DOM interaction and code execution
 
-```python
-from noesium.agents.deep_research import DeepResearchAgent, DeepResearchConfig
+## Built-in Toolkits
 
-config = DeepResearchConfig(
-    number_of_initial_queries=3,
-    max_research_loops=3,
-    web_search_citation_enabled=True
-)
-agent = DeepResearchAgent(config=config)
-result = await agent.research("What are the implications of AI on healthcare?")
-```
+Search, Bash, Memory, Python Executor, ArXiv, Audio, Document, File Edit, GitHub, Gmail, Image, Tabular Data, Video, Wikipedia, and more.
+
+See [AGENTS.md](AGENTS.md) for detailed documentation.
 
 ## Environment Variables
 
 ```bash
-# LLM Providers
+# LLM Provider
 export NOESIUM_LLM_PROVIDER="openai"
 export OPENAI_API_KEY="sk-..."
-export OPENROUTER_API_KEY="sk-..."
-export OLLAMA_BASE_URL="http://localhost:11434"
-export LLAMACPP_MODEL_PATH="/path/to/model.gguf"
 
-# Vector Store (PostgreSQL)
-export POSTGRES_HOST="localhost"
-export POSTGRES_PORT="5432"
-export POSTGRES_DB="vectordb"
-export POSTGRES_USER="postgres"
-export POSTGRES_PASSWORD="postgres"
-
-# Search Tools
+# Search
 export SERPER_API_KEY="..."
-export JINA_API_KEY="..."
 ```
-
-## Examples
-
-See the `examples/` directory for comprehensive usage examples:
-
-- `examples/agents/` - Agent demos (Askura, Search, DeepResearch)
-- `examples/llm/` - LLM provider examples and token tracking
-- `examples/goals/` - Goal decomposition patterns
-- `examples/memory/` - Memory agent operations
-- `examples/tools/` - Toolkit demonstrations
-- `examples/vector_store/` - PGVector and Weaviate usage
 
 ## Documentation
 
-- **Design Specifications**: `specs/` directory contains RFCs for system architecture
-- **Agent Details**: See `AGENTS.md` for comprehensive agent and toolkit documentation
-- **Toolify System**: `noesium/core/toolify/README.md`
+- **[AGENTS.md](AGENTS.md)** - Detailed agent and toolkit documentation
+- **`specs/`** - Design specifications (RFCs)
+- **`examples/`** - Usage examples
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License
