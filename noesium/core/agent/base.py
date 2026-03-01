@@ -138,7 +138,7 @@ class BaseGraphicAgent(BaseAgent):
         return datetime.now(timezone.utc).isoformat()
 
 
-class BaseConversationAgent(BaseGraphicAgent):
+class BaseHitlAgent(BaseGraphicAgent):
     """
     Abstract base class for conversation-style agents like AskuraAgent.
 

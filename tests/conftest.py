@@ -292,7 +292,7 @@ def ensure_toolkits_available():
             _discover_builtin_toolkits()
 
         print(f"Session toolkits available: {ToolkitRegistry.list_toolkits()}")
-    except ImportError as e:
+    except Exception as e:
         print(f"Warning: Could not import toolkits at session start: {e}")
 
     yield

@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 
-from .base import BaseAgent, BaseConversationAgent, BaseGraphicAgent, BaseResearcher, ResearchOutput
+from .base import BaseAgent, BaseGraphicAgent, BaseHitlAgent, BaseResearcher, ResearchOutput
 
 # Load environment variables
 load_dotenv()
@@ -9,6 +9,6 @@ __all__ = [
     "BaseAgent",
     "BaseGraphicAgent",
     "BaseResearcher",
-    "BaseConversationAgent",
+    "BaseHitlAgent",
     "ResearchOutput",
 ]

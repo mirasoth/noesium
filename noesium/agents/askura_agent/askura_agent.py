@@ -28,7 +28,7 @@ except ImportError:
     add_messages = None
     LANGCHAIN_AVAILABLE = False
 
-from noesium.core.agent import BaseConversationAgent
+from noesium.core.agent import BaseHitlAgent
 from noesium.core.tracing import NodeLoggingCallback, TokenUsageCallback
 from noesium.core.utils.logging import get_logger
 from noesium.core.utils.typing import override
@@ -44,7 +44,7 @@ from .summarizer import Summarizer
 logger = get_logger(__name__)
 
 
-class AskuraAgent(BaseConversationAgent):
+class AskuraAgent(BaseHitlAgent):
     """
     A general-purpose dynamic conversation agent.
 
@@ -85,7 +85,7 @@ class AskuraAgent(BaseConversationAgent):
 
     @override
     def start_conversation(self, user_id: str, initial_message: Optional[str] = None) -> AskuraResponse:
-        """Start a new conversation with a user. Required by BaseConversationAgent."""
+        """Start a new conversation with a user. Required by BaseHitlAgent."""
         session_id = str(uuid.uuid4())
         now = self._now_iso()
 
@@ -124,7 +124,7 @@ class AskuraAgent(BaseConversationAgent):
 
     @override
     def process_user_message(self, user_id: str, session_id: str, message: str) -> AskuraResponse:
-        """Process a user message and return the agent's response. Required by BaseConversationAgent."""
+        """Process a user message and return the agent's response. Required by BaseHitlAgent."""
 
         # Get the current state
         state = self._session_states.get(session_id)
@@ -236,7 +236,7 @@ class AskuraAgent(BaseConversationAgent):
         return builder.compile(checkpointer=self.checkpointer, interrupt_before=["human_review"])
 
     def _create_response(self, state: AskuraState) -> AskuraResponse:
-        """Create response from final state. Required by BaseConversationAgent."""
+        """Create response from final state. Required by BaseHitlAgent."""
         # Get last assistant message
         last_message = None
         for msg in reversed(state.messages):

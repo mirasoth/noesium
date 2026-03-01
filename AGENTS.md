@@ -275,7 +275,7 @@ The agent system is built on a hierarchical class structure located in `noesium/
 ```
 BaseAgent (abstract)
 ├── BaseGraphicAgent (LangGraph-based)
-│   ├── BaseConversationAgent (conversation-style agents)
+│   ├── BaseHitlAgent (conversation-style agents)
 │   └── BaseResearcher (research-style agents)
 ```
 
@@ -293,7 +293,7 @@ BaseAgent (abstract)
 - Graph building abstractions
 - Graph export functionality (PNG/Mermaid formats)
 
-**BaseConversationAgent** - For conversation-style agents:
+**BaseHitlAgent** - For conversation-style agents:
 - Session management patterns
 - Message handling abstractions
 - Conversation state management

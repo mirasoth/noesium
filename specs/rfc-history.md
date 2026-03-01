@@ -2,6 +2,8 @@
 
 This document tracks all RFC lifecycle events in chronological order (newest first).
 
+**Last Updated**: 2026-03-01
+
 ---
 
 ## Event Types
@@ -19,7 +21,25 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 
 ## Change History
 
-_No events recorded yet. Events will be added as RFCs are created and modified._
+### 2026-03-01
+
+- **Created**: RFC-1001 - Core Framework Implementation Design
+- **Created**: RFC-1002 - LangGraph-Based Agent Implementation Design
+- **Reference Updated**: rfc-index.md - Added classification scheme and registered all RFCs
+- **Reference Updated**: rfc-namings.md - Populated terminology from all active RFCs
+- **Updated**: RFC-0001 - Fixed metadata compliance (added Authors, Created, Last Updated, Kind)
+- **Updated**: RFC-0002 - Fixed metadata compliance (added Created, Last Updated, Kind)
+- **Updated**: RFC-0003 - Fixed metadata compliance (added Created, Last Updated, Kind)
+- **Updated**: RFC-0004 - Fixed metadata compliance (replaced Related with Depends on, added dates, Kind)
+- **Updated**: RFC-0005 - Fixed metadata compliance (replaced Related with Depends on, added dates, Kind)
+
+### 2025-03-01
+
+- **Created**: RFC-0001 - Event-Sourced Multi-Agent Kernel Architecture
+- **Created**: RFC-0002 - Event Schema and Envelope Specification
+- **Created**: RFC-0003 - Deterministic Kernel Execution Constraints
+- **Created**: RFC-0004 - Projection and Memory Formal Model
+- **Created**: RFC-0005 - Capability Registry and Discovery Protocol
 
 ---
 

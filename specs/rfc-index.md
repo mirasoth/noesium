@@ -2,9 +2,47 @@
 
 Master index of all RFC specifications.
 
+**Last Updated**: 2026-03-01
+
+---
+
+## Classification Scheme
+
+| Range | Category | Description |
+|-------|----------|-------------|
+| **RFC-0xxx** | Global Architecture | System-wide architectural design and abstract principles |
+| **RFC-1xxx** | Core Framework | Core framework implementation design |
+| **RFC-2xxx** | Enhancements | Memory, tools, MCP, CLI, and other subsystem enhancements |
+| **RFC-9xxx** | Experimental | Extra and experimental features |
+
 ---
 
 ## Active RFCs
+
+### RFC-0xxx: Global Architecture Design
+
+| RFC | Title | Kind | Status | Created | Last Updated |
+|-----|-------|------|--------|---------|--------------|
+| [RFC-0001](RFC-0001.md) | Event-Sourced Multi-Agent Kernel Architecture | Conceptual Design | Draft | 2025-03-01 | 2025-03-01 |
+| [RFC-0002](RFC-0002.md) | Event Schema and Envelope Specification | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
+| [RFC-0003](RFC-0003.md) | Deterministic Kernel Execution Constraints | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
+| [RFC-0004](RFC-0004.md) | Projection and Memory Formal Model | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
+| [RFC-0005](RFC-0005.md) | Capability Registry and Discovery Protocol | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
+
+### RFC-1xxx: Core Framework Implementation Design
+
+| RFC | Title | Kind | Status | Created | Last Updated |
+|-----|-------|------|--------|---------|--------------|
+| [RFC-1001](RFC-1001.md) | Core Framework Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 |
+| [RFC-1002](RFC-1002.md) | LangGraph-Based Agent Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 |
+
+### RFC-2xxx: Enhancements
+
+| RFC | Title | Kind | Status | Created | Last Updated |
+|-----|-------|------|--------|---------|--------------|
+| _None yet_ | | | | | |
+
+### RFC-9xxx: Experimental
 
 | RFC | Title | Kind | Status | Created | Last Updated |
 |-----|-------|------|--------|---------|--------------|
@@ -20,6 +58,7 @@ Master index of all RFC specifications.
 | [rfc-namings.md](rfc-namings.md) | Terminology reference |
 | [rfc-history.md](rfc-history.md) | Change history |
 | [rfc-index.md](rfc-index.md) | This document |
+| [noesium-deepagents-openagents.md](noesium-deepagents-openagents.md) | Comparative analysis |
 
 ---
 
@@ -38,15 +77,20 @@ Master index of all RFC specifications.
 
 ### By Kind
 
-- **Conceptual Design**: _None yet_
-- **Architecture Design**: _None yet_
-- **Implementation Interface Design**: _None yet_
+- **Conceptual Design**: [RFC-0001](RFC-0001.md)
+- **Architecture Design**: [RFC-0002](RFC-0002.md), [RFC-0003](RFC-0003.md), [RFC-0004](RFC-0004.md), [RFC-0005](RFC-0005.md)
+- **Implementation Interface Design**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md)
 
 ### By Status
 
-- **Draft**: _None yet_
+- **Draft**: RFC-0001, RFC-0002, RFC-0003, RFC-0004, RFC-0005, RFC-1001, RFC-1002
 - **Review**: _None yet_
 - **Frozen**: _None yet_
+
+### By Category
+
+- **Global Architecture (0xxx)**: [RFC-0001](RFC-0001.md), [RFC-0002](RFC-0002.md), [RFC-0003](RFC-0003.md), [RFC-0004](RFC-0004.md), [RFC-0005](RFC-0005.md)
+- **Core Framework (1xxx)**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md)
 
 ---
 
