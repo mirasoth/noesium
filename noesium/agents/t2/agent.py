@@ -95,9 +95,9 @@ class T2Agent:
             ResearchOutput: The research output.
         """
         try:
-            from noesium.agents.deep_research import DeepResearchAgent
+            from noesium.agents.tacitus import TacitusAgent
 
-            researcher = DeepResearchAgent(
+            researcher = TacitusAgent(
                 search_engines=search_engines,
                 max_results_per_engine=max_results_per_engine,
                 search_timeout=search_timeout,

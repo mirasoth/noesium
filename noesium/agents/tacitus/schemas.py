@@ -1,5 +1,5 @@
 """
-Pydantic schemas for structured LLM output in the DeepResearchAgent module.
+Pydantic schemas for structured LLM output in the TacitusAgent module.
 Enhanced for use with instructor library.
 """
 

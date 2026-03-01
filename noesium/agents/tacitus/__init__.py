@@ -1,13 +1,13 @@
 """
-DeepResearchAgent Module
+TacitusAgent Module
 
 This module provides advanced research capabilities using LangGraph and LLM integration.
 """
 
-from .agent import DeepResearchAgent
+from .agent import TacitusAgent
 from .state import ResearchState
 
 __all__ = [
-    "DeepResearchAgent",
+    "TacitusAgent",
     "ResearchState",
 ]

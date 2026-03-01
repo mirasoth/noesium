@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-Simplified DeepResearchAgent Example
+Simplified TacitusAgent Example
 
-This script demonstrates the core functionality of the DeepResearchAgent agent.
+This script demonstrates the core functionality of the TacitusAgent agent.
 The main logic is: initialize → research → display results → save to file
 """
 
 import asyncio
 
-from noesium.agents.deep_research.agent import DeepResearchAgent
+from noesium.agents.tacitus.agent import TacitusAgent
 
 
 async def main():
-    """Simple example of DeepResearchAgent core functionality with file output."""
+    """Simple example of TacitusAgent core functionality with file output."""
 
-    researcher = DeepResearchAgent(max_research_loops=2, number_of_initial_queries=1)
+    researcher = TacitusAgent(max_research_loops=2, number_of_initial_queries=1)
 
     topic = "a leisure trip from Seattle to San Francisco via Yellowstone in late September"
     print(f"🔍 Researching: {topic}")

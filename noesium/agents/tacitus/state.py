@@ -1,5 +1,5 @@
 """
-State definitions for the DeepResearchAgent agent.
+State definitions for the TacitusAgent agent.
 """
 
 from __future__ import annotations

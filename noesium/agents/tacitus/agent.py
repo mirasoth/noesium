@@ -1,5 +1,5 @@
 """
-DeepResearchAgent implementation using LangGraph and LLM integration.
+TacitusAgent implementation using LangGraph and LLM integration.
 Enhanced base class designed for extensibility.
 """
 
@@ -42,7 +42,7 @@ def get_current_date() -> str:
     return datetime.now().strftime("%B %d, %Y")
 
 
-class DeepResearchAgent(BaseResearcher):
+class TacitusAgent(BaseResearcher):
     """
     Advanced research agent using LangGraph and LLM integration.
     """
@@ -68,7 +68,7 @@ class DeepResearchAgent(BaseResearcher):
         search_timeout: int = 30,
     ):
         """
-        Initialize the DeepResearchAgent.
+        Initialize the TacitusAgent.
         """
         # Initialize base class
         super().__init__(llm_provider=llm_provider)

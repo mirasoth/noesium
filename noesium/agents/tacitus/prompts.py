@@ -1,5 +1,5 @@
 """
-Prompts for the DeepResearchAgent agent.
+Prompts for the TacitusAgent agent.
 """
 
 query_writer_instructions = """Your goal is to generate sophisticated and diverse web search queries for research. These queries are intended for an advanced automated web research tool capable of analyzing complex results, following links, and synthesizing information.
