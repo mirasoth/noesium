@@ -1,4 +1,4 @@
-"""Noet -- autonomous research assistant.
+"""Noe -- autonomous research assistant.
 
 Two modes:
   * **Ask**: Single-turn Q&A, read-only, no tools.

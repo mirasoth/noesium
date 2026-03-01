@@ -1,4 +1,4 @@
-"""Noet -- autonomous research assistant (impl guide §5.1)."""
+"""Noe -- autonomous research assistant (impl guide §5.1)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ try:
     from langgraph.graph import END, START, StateGraph
 except ImportError:
     raise ImportError(
-        "Noet requires langchain-core and langgraph. "
+        "Noe requires langchain-core and langgraph. "
         "Install them with: uv run pip install langchain-core langgraph"
     )
 

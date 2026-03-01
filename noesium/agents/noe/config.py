@@ -1,4 +1,4 @@
-"""Noet configuration (impl guide §4.1)."""
+"""Noe configuration (impl guide §4.1)."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ class NoeMode(str, Enum):
 
 
 class NoeConfig(BaseModel):
-    """Configuration for Noet.
+    """Configuration for Noe.
 
     In ask mode the following are forced:
       max_iterations=1, enabled_toolkits=[], permissions=[], persist_memory=False

@@ -21,6 +21,14 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 
 ## Change History
 
+### 2026-03-01 (Phase 3)
+
+- **Created**: RFC-0006 - Agent Kernel and Sandboxed Subagent Model
+- **Created**: RFC-1003 - OpenSandbox-Based Multi-User Agent Isolation Architecture
+- **Reference Updated**: rfc-index.md - Registered RFC-0006 and RFC-1003
+- **Reference Updated**: rfc-namings.md - Added new terms from RFC-0006 and RFC-1003
+- **Reference Updated**: rfc-history.md - Added Phase 3 entries
+
 ### 2026-03-01 (Phase 2)
 
 - **Created**: RFC-2001 - Memory Management Architecture
@@ -28,7 +36,7 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 - **Created**: RFC-2003 - Tool System Architecture
 - **Created**: RFC-2004 - Tool Implementation Design
 - **Reference Updated**: rfc-index.md - Registered RFC-2001 through RFC-2004 under Enhancements
-- **Reference Updated**: rfc-namings.md - Added 25+ new terms from RFC-2001 through RFC-2004 and Noet
+- **Reference Updated**: rfc-namings.md - Added 25+ new terms from RFC-2001 through RFC-2004 and Noe
 - **Reference Updated**: rfc-history.md - Added Phase 2 entries
 
 ### 2026-03-01

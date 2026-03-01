@@ -20,8 +20,9 @@ Authoritative terminology reference for noesium RFC specifications.
 | Term | Source RFC | Brief Description |
 |------|-----------|-------------------|
 | Agent Kernel | RFC-0001 §5.2 | Deterministic, graph-based execution runtime within each agent |
+| Agent Kernel Pod | RFC-1003 §5.1 | Control plane pod responsible for ToolCall generation, capability validation, and subagent dispatch |
 | AgentRef | RFC-0002 §5 | Producer identity structure containing agent_id, agent_type, runtime_id, instance_id |
-| Noet | Impl Guide | Autonomous research assistant agent with ask and agent modes |
+| Noe | Impl Guide | Autonomous research assistant agent with ask and agent modes |
 | Ask Mode | Impl Guide | Read-only, single-turn Q&A mode with memory recall and no tool execution |
 | Agent Mode | Impl Guide | Full autonomous mode with tools, planning, reflection, and memory persistence |
 | AtomicTool | RFC-2003 §6 | Smallest executable unit in the tool system with schema and capability metadata |
@@ -40,6 +41,9 @@ Authoritative terminology reference for noesium RFC specifications.
 | Determinism Class | RFC-0005 §4.1 | Classification: deterministic or nondeterministic |
 | Deterministic Kernel | RFC-0003 §3 | Execution substrate enforcing reproducibility via graph-based state transitions |
 | Domain Event | RFC-1001 §6.2 | Typed business-level event that produces an EventEnvelope |
+| Effect Node | RFC-0006 §10 | Record of external tool execution with input hash, tool spec, metadata, output, and exit status |
+| Effect Result | RFC-0006 §7 | Structured result returned from sandboxed tool execution containing tool_id, exit_code, output, and metadata |
+| Envelope Bridge | RFC-1001 §6.4 | Bidirectional adapter between bubus BaseEvent and EventEnvelope |
 | Durable Memory | RFC-0004 §5.2 | Event-sourced canonical memory layer (task history, structured knowledge) |
 | Envelope Bridge | RFC-1001 §6.4 | Bidirectional adapter between bubus BaseEvent and EventEnvelope |
 | Ephemeral Memory | RFC-0004 §5.1 | Session-scoped working memory, cleared on restart |
@@ -70,7 +74,9 @@ Authoritative terminology reference for noesium RFC specifications.
 | Research Agent | RFC-1002 §5.3 | Agent archetype for iterative multi-step research |
 | Semantic Memory | RFC-0004 §5.3 | Indexed retrieval layer derived from durable memory via embeddings |
 | Semantic Projection | RFC-0004 §4.3.3 | Index-based projection constructed from deterministic projection output |
+| Session Worker | RFC-1003 §5.2 | Logical worker representing a user session with memory namespace, execution stack, and capability scope |
 | Side-Effect Class | RFC-0005 §4.1 | Classification: pure, idempotent, or external |
+| Subagent | RFC-0006 §5.2 | Isolated execution unit running inside sandbox runtime for external tool execution |
 | Signature Block | RFC-0002 §11 | Optional cryptographic signature covering the canonicalized envelope |
 | Skill | RFC-2003 §9 | Named composition of AtomicTools with input/output contract and orchestration logic |
 | Skill Registry | RFC-2004 §9 | Registry for skill discovery and management |
@@ -78,6 +84,8 @@ Authoritative terminology reference for noesium RFC specifications.
 | Task Agent | RFC-1002 §5.4 | Agent archetype for linear or branching task execution |
 | Task Planner | Impl Guide | LLM-based goal decomposition producing ordered TaskPlan steps |
 | Tool Context | RFC-2004 §4.2 | Execution context with agent identity, permissions, and trace |
+| Tool Call | RFC-0006 §6 | Specification for tool execution with tool_id, capability, input, timeout, and resource limits |
+| OpenSandbox Executor | RFC-1003 §5.3 | Data plane component providing hardened container isolation for tool execution |
 | Tool Executor | RFC-2004 §5 | Event-wrapping execution engine for AtomicTools with permission checking |
 | Tool Permission | RFC-2003 §10 | Declared permission requirement: fs:read, shell:execute, net:outbound, etc. |
 | Tool Registry | RFC-2004 §8 | Capability-based registry for AtomicTool discovery and lookup |

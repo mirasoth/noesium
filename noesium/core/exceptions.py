@@ -103,11 +103,11 @@ class SkillNotFoundError(ToolError):
     """Skill not found in registry."""
 
 
-# --- Noet ---
+# --- Noe ---
 
 
 class Noer(NoesiumError):
-    """Base Noet error."""
+    """Base Noe error."""
 
 
 class PlanningError(Noer):

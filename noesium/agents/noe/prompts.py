@@ -1,4 +1,4 @@
-"""Prompt templates for Noet (impl guide §6)."""
+"""Prompt templates for Noe (impl guide §6)."""
 
 ASK_SYSTEM_PROMPT = """\
 You are Noe AI research assistant running in read-only ask mode.
