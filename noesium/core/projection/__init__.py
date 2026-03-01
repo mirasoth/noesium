@@ -3,12 +3,10 @@
 from .base import BaseProjection, ProjectionEngine
 from .cognitive import CognitiveProjection
 from .execution import ExecutionProjection
-from .semantic import SemanticProjection
 
 __all__ = [
     "BaseProjection",
     "CognitiveProjection",
     "ExecutionProjection",
     "ProjectionEngine",
-    "SemanticProjection",
 ]

@@ -379,7 +379,6 @@ noesium/
 │   │   ├── toolify/         # Tool system
 │   │   ├── llm/             # LLM integration
 │   │   ├── memory/          # Memory system
-│   │   ├── goalith/         # Goal management
 │   │   ├── vector_store/    # Vector storage
 │   │   ├── msgbus/          # Message bus
 │   ├── toolkits/            # 17+ built-in toolkits

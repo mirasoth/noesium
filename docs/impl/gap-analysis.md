@@ -201,11 +201,11 @@ The Noesium codebase provides a functional agent framework with LangGraph integr
 
 ---
 
-### 5.4 Goal Management (Goalith) — PARTIALLY IMPLEMENTED, NOT IN RFCs
+### 5.4 Goal Management (Goalith) — REMOVED
 
-**Current State**: `GoalithService` (stub), `GoalDecomposer`, `GoalGraph`, `ConflictResolver`, `Replanner`. Not referenced in current RFCs.
+**Current State**: The entire Goalith module (`noesium/core/goalith/`) has been removed as it was deprecated and superseded by the TaskPlanner in `noesium/agents/noe/planner.py`.
 
-**Recommendation**: Consider RFC-2xxx for goal management enhancement specification.
+**Replacement**: Use `TaskPlanner` from `noesium.agents.noe.planner` for goal decomposition functionality.
 
 ---
 

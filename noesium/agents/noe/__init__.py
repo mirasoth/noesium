@@ -5,11 +5,11 @@ Two modes:
   * **Agent**: Iterative planning, tool execution, reflection, memory persistence.
 """
 
-from .agent import Noet
+from .agent import NoeAgent
 from .config import NoeConfig, NoeMode
 
 __all__ = [
-    "Noet",
+    "NoeAgent",
     "NoeConfig",
     "NoeMode",
 ]
