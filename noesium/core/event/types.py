@@ -121,6 +121,8 @@ class MemoryWritten(DomainEvent):
     key: str
     value_type: str
     value: Any = None
+    content_type: str = "fact"
+    provider_id: str = ""
 
     def event_type(self) -> str:
         return "memory.written"

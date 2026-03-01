@@ -4,6 +4,7 @@ Tests for TabularDataToolkit functionality.
 
 import tempfile
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pandas as pd
 import pytest
@@ -15,7 +16,9 @@ from noesium.core.toolify import ToolkitConfig, get_toolkit
 def tabular_config():
     """Create a test configuration for TabularDataToolkit."""
     return ToolkitConfig(
-        name="tabular_data", config={"max_file_size": 50 * 1024 * 1024, "max_rows_display": 100}  # 50MB
+        name="tabular_data",
+        config={"max_file_size": 50 * 1024 * 1024, "max_rows_display": 100},  # 50MB
+        llm_config={"api_key": "test_openai_key"},
     )
 
 
@@ -157,28 +160,37 @@ class TestTabularDataToolkit:
     @pytest.mark.integration
     async def test_get_column_info_success(self, tabular_toolkit, sample_csv_file):
         """Test successful column info retrieval."""
-        result = await tabular_toolkit.get_column_info(sample_csv_file)
+        with patch.object(tabular_toolkit.llm_client, "completion", new_callable=AsyncMock) as mock_completion:
+            mock_completion.return_value = "Column 'name': string type, contains names of people."
 
-        assert isinstance(result, str)
-        assert "Column" in result  # Should contain column information
+            result = await tabular_toolkit.get_column_info(sample_csv_file)
+
+            assert isinstance(result, str)
+            assert "Column" in result  # Should contain column information
 
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_get_column_info_string_column(self, tabular_toolkit, sample_csv_file):
         """Test column info for string column."""
-        result = await tabular_toolkit.get_column_info(sample_csv_file)
+        with patch.object(tabular_toolkit.llm_client, "completion", new_callable=AsyncMock) as mock_completion:
+            mock_completion.return_value = "Column 'name': string type, contains names."
 
-        assert isinstance(result, str)
-        assert "Column" in result  # Should contain column information
+            result = await tabular_toolkit.get_column_info(sample_csv_file)
+
+            assert isinstance(result, str)
+            assert "Column" in result  # Should contain column information
 
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_get_column_info_nonexistent_column(self, tabular_toolkit, sample_csv_file):
         """Test column info for non-existent column."""
-        result = await tabular_toolkit.get_column_info(sample_csv_file)
+        with patch.object(tabular_toolkit.llm_client, "completion", new_callable=AsyncMock) as mock_completion:
+            mock_completion.return_value = "Column 'name': string type, contains names."
 
-        assert isinstance(result, str)
-        assert "Column" in result  # Should contain column information
+            result = await tabular_toolkit.get_column_info(sample_csv_file)
+
+            assert isinstance(result, str)
+            assert "Column" in result  # Should contain column information
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -245,10 +257,13 @@ class TestTabularDataToolkitEdgeCases:
 
             try:
                 # Test column info with missing values
-                result = await tabular_toolkit.get_column_info(f.name)
+                with patch.object(tabular_toolkit.llm_client, "completion", new_callable=AsyncMock) as mock_completion:
+                    mock_completion.return_value = "Column 'name': string type, contains names."
 
-                assert isinstance(result, str)
-                assert "Column" in result
+                    result = await tabular_toolkit.get_column_info(f.name)
+
+                    assert isinstance(result, str)
+                    assert "Column" in result
 
             finally:
                 Path(f.name).unlink()

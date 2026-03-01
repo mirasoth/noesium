@@ -40,7 +40,10 @@ Master index of all RFC specifications.
 
 | RFC | Title | Kind | Status | Created | Last Updated |
 |-----|-------|------|--------|---------|--------------|
-| _None yet_ | | | | | |
+| [RFC-2001](RFC-2001.md) | Memory Management Architecture | Architecture Design | Draft | 2026-03-01 | 2026-03-01 |
+| [RFC-2002](RFC-2002.md) | Memory Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 |
+| [RFC-2003](RFC-2003.md) | Tool System Architecture | Architecture Design | Draft | 2026-03-01 | 2026-03-01 |
+| [RFC-2004](RFC-2004.md) | Tool Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 |
 
 ### RFC-9xxx: Experimental
 
@@ -78,12 +81,12 @@ Master index of all RFC specifications.
 ### By Kind
 
 - **Conceptual Design**: [RFC-0001](RFC-0001.md)
-- **Architecture Design**: [RFC-0002](RFC-0002.md), [RFC-0003](RFC-0003.md), [RFC-0004](RFC-0004.md), [RFC-0005](RFC-0005.md)
-- **Implementation Interface Design**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md)
+- **Architecture Design**: [RFC-0002](RFC-0002.md), [RFC-0003](RFC-0003.md), [RFC-0004](RFC-0004.md), [RFC-0005](RFC-0005.md), [RFC-2001](RFC-2001.md), [RFC-2003](RFC-2003.md)
+- **Implementation Interface Design**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md), [RFC-2002](RFC-2002.md), [RFC-2004](RFC-2004.md)
 
 ### By Status
 
-- **Draft**: RFC-0001, RFC-0002, RFC-0003, RFC-0004, RFC-0005, RFC-1001, RFC-1002
+- **Draft**: RFC-0001, RFC-0002, RFC-0003, RFC-0004, RFC-0005, RFC-1001, RFC-1002, RFC-2001, RFC-2002, RFC-2003, RFC-2004
 - **Review**: _None yet_
 - **Frozen**: _None yet_
 
@@ -91,6 +94,7 @@ Master index of all RFC specifications.
 
 - **Global Architecture (0xxx)**: [RFC-0001](RFC-0001.md), [RFC-0002](RFC-0002.md), [RFC-0003](RFC-0003.md), [RFC-0004](RFC-0004.md), [RFC-0005](RFC-0005.md)
 - **Core Framework (1xxx)**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md)
+- **Enhancements (2xxx)**: [RFC-2001](RFC-2001.md), [RFC-2002](RFC-2002.md), [RFC-2003](RFC-2003.md), [RFC-2004](RFC-2004.md)
 
 ---
 

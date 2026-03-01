@@ -357,7 +357,7 @@ class TabularDataToolkit(AsyncBaseToolkit):
             # Use LLM for intelligent analysis
             prompt = COLUMN_ANALYSIS_TEMPLATE.format(column_info=column_info_str)
 
-            response = self.llm_client.completion(
+            response = await self.llm_client.completion(
                 messages=[
                     {
                         "role": "system",

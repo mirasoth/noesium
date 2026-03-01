@@ -15,7 +15,9 @@ from noesium.core.toolify import ToolkitConfig, get_toolkit
 def document_config():
     """Create a test configuration for DocumentToolkit."""
     return ToolkitConfig(
-        name="document", config={"OPENAI_API_KEY": "test_openai_key", "max_file_size": 10 * 1024 * 1024}  # 10MB
+        name="document",
+        config={"max_file_size": 10 * 1024 * 1024},  # 10MB - no OPENAI_API_KEY here, it goes in llm_config
+        llm_config={"api_key": "test_openai_key"},
     )
 
 
@@ -200,27 +202,21 @@ class TestDocumentToolkit:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    @patch("openai.AsyncOpenAI")
-    async def test_document_qa_success(self, mock_openai, document_toolkit):
+    async def test_document_qa_success(self, document_toolkit):
         """Test successful document Q&A."""
-        # Mock OpenAI client
-        mock_client = AsyncMock()
-        mock_response = AsyncMock()
-        mock_response.choices = [
-            MagicMock(message=MagicMock(content="The document discusses machine learning algorithms."))
-        ]
-        mock_client.chat.completions.create.return_value = mock_response
-        mock_openai.return_value = mock_client
-
+        # Mock the LLM client completion method
         with patch.object(document_toolkit, "_handle_document_path") as mock_handle:
             mock_handle.return_value = "test_md5_hash"
 
             with patch.object(document_toolkit, "_parse_document") as mock_parse:
                 mock_parse.return_value = "This document contains information about machine learning."
 
-                result = await document_toolkit.document_qa("document.pdf", "What does this document discuss?")
+                with patch.object(document_toolkit.llm_client, "completion", new_callable=AsyncMock) as mock_completion:
+                    mock_completion.return_value = "The document discusses machine learning algorithms."
 
-                assert "machine learning algorithms" in result
+                    result = await document_toolkit.document_qa("document.pdf", "What does this document discuss?")
+
+                    assert "machine learning algorithms" in result
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -248,23 +244,21 @@ class TestDocumentToolkit:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    @patch("openai.AsyncOpenAI")
-    async def test_document_qa_openai_error(self, mock_openai, document_toolkit):
+    async def test_document_qa_openai_error(self, document_toolkit):
         """Test document Q&A with OpenAI API error."""
-        mock_client = AsyncMock()
-        mock_client.chat.completions.create.side_effect = Exception("API Error")
-        mock_openai.return_value = mock_client
-
         with patch.object(document_toolkit, "_handle_document_path") as mock_handle:
             mock_handle.return_value = "test_md5_hash"
 
             with patch.object(document_toolkit, "_parse_document") as mock_parse:
                 mock_parse.return_value = "Document content"
 
-                result = await document_toolkit.document_qa("document.pdf", "What is this about?")
+                with patch.object(document_toolkit.llm_client, "completion", new_callable=AsyncMock) as mock_completion:
+                    mock_completion.side_effect = Exception("API Error")
 
-                assert isinstance(result, str)
-                assert "API Error" in result
+                    result = await document_toolkit.document_qa("document.pdf", "What is this about?")
+
+                    assert isinstance(result, str)
+                    assert "API Error" in result
 
     @pytest.mark.asyncio
     async def test_get_document_info_success(self, document_toolkit):

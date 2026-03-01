@@ -62,3 +62,61 @@ class CapabilityNotFoundError(CapabilityError):
 
 class MemoryError(NoesiumError):
     """Memory subsystem errors."""
+
+
+class ProviderNotFoundError(MemoryError):
+    """Requested provider_id is not registered."""
+
+
+class ProviderReadOnlyError(MemoryError):
+    """Write attempted on a read-only provider."""
+
+
+class RecallError(MemoryError):
+    """Recall query failed across all providers."""
+
+
+# --- Tools ---
+
+
+class ToolError(NoesiumError):
+    """Base tool exception."""
+
+
+class ToolNotFoundError(ToolError):
+    """Tool not found in registry."""
+
+
+class ToolExecutionError(ToolError):
+    """Tool execution failed."""
+
+
+class ToolTimeoutError(ToolError):
+    """Tool execution timed out."""
+
+
+class ToolPermissionError(ToolError):
+    """Insufficient permissions for tool."""
+
+
+class SkillNotFoundError(ToolError):
+    """Skill not found in registry."""
+
+
+# --- AlithiaAgent ---
+
+
+class AlithiaError(NoesiumError):
+    """Base AlithiaAgent error."""
+
+
+class PlanningError(AlithiaError):
+    """Task planning or revision failed."""
+
+
+class ModeError(AlithiaError):
+    """Invalid mode or mode-specific constraint violation."""
+
+
+class IterationLimitError(AlithiaError):
+    """Max iterations exceeded."""
