@@ -30,6 +30,11 @@ class NoeConfig(BaseModel):
     reflection_interval: int = 3
     interface_mode: str = "library"  # library | tui
 
+    # Progress reporting (impl guide §5.5, §5.9)
+    progress_callbacks: list[Callable] = Field(default_factory=list)
+    session_log_dir: str = ".noe_sessions"
+    enable_session_logging: bool = True
+
     enabled_toolkits: list[str] = Field(
         default_factory=lambda: [
             "wizsearch",

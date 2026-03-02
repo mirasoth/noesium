@@ -16,6 +16,8 @@ except ImportError:
         "Noe requires langchain-core and langgraph. " "Install them with: uv run pip install langchain-core langgraph"
     )
 
+from uuid_extensions import uuid7str
+
 from noesium.core.agent.base import BaseGraphicAgent
 from noesium.core.event.envelope import AgentRef
 from noesium.core.event.store import InMemoryEventStore
@@ -33,6 +35,7 @@ from noesium.core.toolify.tool_registry import ToolRegistry
 from . import nodes
 from .config import NoeConfig, NoeMode
 from .planner import TaskPlanner
+from .progress import ProgressEvent, ProgressEventType
 from .state import AgentState, AskState
 
 logger = logging.getLogger(__name__)
@@ -291,6 +294,35 @@ class NoeAgent(BaseGraphicAgent):
         return "finalize" if plan and plan.is_complete else "execute_step"
 
     # ------------------------------------------------------------------
+    # Progress helpers
+    # ------------------------------------------------------------------
+
+    def _make_session_id(self) -> str:
+        return uuid7str()
+
+    async def _fire_callbacks(self, event: ProgressEvent) -> None:
+        """Invoke all registered progress callbacks, swallowing errors."""
+        for cb in self.config.progress_callbacks:
+            try:
+                if hasattr(cb, "on_progress"):
+                    await cb.on_progress(event)
+                else:
+                    await cb(event)
+            except Exception as exc:
+                logger.debug("Progress callback error: %s", exc)
+
+    def _build_initial_state(self) -> dict[str, Any]:
+        initial: dict[str, Any] = {
+            "messages": [HumanMessage(content="")],
+            "final_answer": "",
+        }
+        if self.config.mode == NoeMode.ASK:
+            initial["memory_context"] = []
+        else:
+            initial.update({"plan": None, "iteration": 0, "tool_results": [], "reflection": ""})
+        return initial
+
+    # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
@@ -312,73 +344,40 @@ class NoeAgent(BaseGraphicAgent):
         user_message: str,
         context: Dict[str, Any] | None = None,
     ) -> str:
-        """Async entry point."""
-        await self.initialize()
-        compiled = self._build_graph().compile()
-        self.graph = compiled
+        """Async entry point.  Fires progress callbacks when registered."""
+        final_answer = ""
+        async for event in self.astream_progress(user_message, context):
+            if event.type == ProgressEventType.FINAL_ANSWER:
+                final_answer = event.text or ""
 
-        initial: dict[str, Any] = {
-            "messages": [HumanMessage(content=user_message)],
-            "final_answer": "",
-        }
-        if self.config.mode == NoeMode.ASK:
-            initial["memory_context"] = []
-        else:
-            initial.update({"plan": None, "iteration": 0, "tool_results": [], "reflection": ""})
-
-        result = await compiled.ainvoke(initial)
-
-        if self.config.persist_memory and self._memory_manager:
-            answer = result.get("final_answer", "")
-            if answer:
-                await self._memory_manager.store(
-                    key=f"research:{user_message[:60]}",
-                    value=answer[:1000],
-                    content_type="research",
-                    tier=MemoryTier.PERSISTENT,
-                )
-        return result.get("final_answer", "")
+        if self.config.persist_memory and self._memory_manager and final_answer:
+            await self._memory_manager.store(
+                key=f"research:{user_message[:60]}",
+                value=final_answer[:1000],
+                content_type="research",
+                tier=MemoryTier.PERSISTENT,
+            )
+        return final_answer
 
     async def stream(
         self,
         user_message: str,
         context: Dict[str, Any] | None = None,
     ) -> AsyncGenerator[str, None]:
-        """Streaming entry point for incremental output."""
-        await self.initialize()
-        compiled = self._build_graph().compile()
-        self.graph = compiled
+        """Streaming entry point -- yields final_answer text chunks only."""
+        async for event in self.astream_progress(user_message, context):
+            if event.type == ProgressEventType.FINAL_ANSWER and event.text:
+                yield event.text
 
-        initial: dict[str, Any] = {
-            "messages": [HumanMessage(content=user_message)],
-            "final_answer": "",
-        }
-        if self.config.mode == NoeMode.ASK:
-            initial["memory_context"] = []
-        else:
-            initial.update({"plan": None, "iteration": 0, "tool_results": [], "reflection": ""})
-
-        async for event in compiled.astream(initial):
-            for node_output in event.values():
-                if "final_answer" in node_output and node_output["final_answer"]:
-                    yield node_output["final_answer"]
-
-    async def astream_events(
+    async def astream_progress(
         self,
         user_message: str,
         context: Dict[str, Any] | None = None,
-    ) -> AsyncGenerator[Dict[str, Any], None]:
-        """Yield structured UI events during graph execution.
+    ) -> AsyncGenerator[ProgressEvent, None]:
+        """Canonical typed progress stream (impl guide §5.5).
 
-        Event types:
-            plan_created      -- {"type": "plan_created", "plan": TaskPlan}
-            step_started      -- {"type": "step_started", "step": str, "index": int}
-            tool_call_started -- {"type": "tool_call_started", "name": str, "args": dict}
-            tool_call_completed -- {"type": "tool_call_completed", "name": str, "result": str}
-            thinking          -- {"type": "thinking", "thought": str}
-            text_chunk        -- {"type": "text_chunk", "text": str}
-            reflection        -- {"type": "reflection", "text": str}
-            final_answer      -- {"type": "final_answer", "text": str}
+        Yields ``ProgressEvent`` objects covering the full agent lifecycle.
+        Also fires all ``progress_callbacks`` registered in ``NoeConfig``.
         """
         from .state import TaskPlan
 
@@ -386,76 +385,178 @@ class NoeAgent(BaseGraphicAgent):
         compiled = self._build_graph().compile()
         self.graph = compiled
 
-        initial: dict[str, Any] = {
-            "messages": [HumanMessage(content=user_message)],
-            "final_answer": "",
-        }
-        if self.config.mode == NoeMode.ASK:
-            initial["memory_context"] = []
-        else:
-            initial.update({"plan": None, "iteration": 0, "tool_results": [], "reflection": ""})
+        session_id = self._make_session_id()
+        seq = 0
+
+        def _next_seq() -> int:
+            nonlocal seq
+            seq += 1
+            return seq
+
+        def _evt(tp: ProgressEventType, **kw: Any) -> ProgressEvent:
+            return ProgressEvent(type=tp, session_id=session_id, sequence=_next_seq(), **kw)
+
+        async def _emit(evt: ProgressEvent) -> None:
+            await self._fire_callbacks(evt)
+
+        initial = self._build_initial_state()
+        initial["messages"] = [HumanMessage(content=user_message)]
+
+        start_evt = _evt(ProgressEventType.SESSION_START, summary=f"Session started: {user_message[:80]}")
+        await _emit(start_evt)
+        yield start_evt
 
         _prev_plan_id: int | None = None
         _prev_tool_count = 0
 
-        async for event in compiled.astream(initial):
-            for node_name, node_output in event.items():
-                if not isinstance(node_output, dict):
-                    continue
+        try:
+            async for raw_event in compiled.astream(initial):
+                for node_name, node_output in raw_event.items():
+                    if not isinstance(node_output, dict):
+                        continue
 
-                plan = node_output.get("plan")
-                if plan is not None and isinstance(plan, TaskPlan):
-                    plan_id = id(plan)
-                    if plan_id != _prev_plan_id:
-                        _prev_plan_id = plan_id
-                        yield {"type": "plan_created", "plan": plan}
-                    if plan.current_step:
-                        yield {
-                            "type": "step_started",
-                            "step": plan.current_step.description,
-                            "index": plan.current_step_index,
-                        }
+                    # --- Plan created / revised ---
+                    plan = node_output.get("plan")
+                    if plan is not None and isinstance(plan, TaskPlan):
+                        plan_id = id(plan)
+                        if plan_id != _prev_plan_id:
+                            is_revision = _prev_plan_id is not None
+                            _prev_plan_id = plan_id
+                            tp = ProgressEventType.PLAN_REVISED if is_revision else ProgressEventType.PLAN_CREATED
+                            evt = _evt(
+                                tp,
+                                node=node_name,
+                                summary=f"Plan: {plan.goal}",
+                                detail=plan.to_todo_markdown(),
+                                plan_snapshot=plan.model_dump(),
+                            )
+                            await _emit(evt)
+                            yield evt
+                        if plan.current_step:
+                            evt = _evt(
+                                ProgressEventType.STEP_START,
+                                node=node_name,
+                                step_index=plan.current_step_index,
+                                step_desc=plan.current_step.description,
+                                summary=f"Step {plan.current_step_index + 1}/{len(plan.steps)}: {plan.current_step.description}",
+                            )
+                            await _emit(evt)
+                            yield evt
 
-                tool_results = node_output.get("tool_results")
-                if tool_results and isinstance(tool_results, list):
-                    new_results = tool_results[_prev_tool_count:]
-                    _prev_tool_count = len(tool_results)
-                    for tr in new_results:
-                        yield {
-                            "type": "tool_call_completed",
-                            "name": tr.get("tool", "?"),
-                            "result": str(tr.get("result", ""))[:2000],
-                        }
+                    # --- Tool results ---
+                    tool_results = node_output.get("tool_results")
+                    if tool_results and isinstance(tool_results, list):
+                        new_results = tool_results[_prev_tool_count:]
+                        _prev_tool_count = len(tool_results)
+                        for tr in new_results:
+                            tname = tr.get("tool", "?")
+                            raw_result = str(tr.get("result", ""))
+                            evt = _evt(
+                                ProgressEventType.TOOL_END,
+                                node=node_name,
+                                tool_name=tname,
+                                tool_result=raw_result[:200],
+                                summary=f"Completed: {tname}",
+                                detail=raw_result[:5000],
+                            )
+                            await _emit(evt)
+                            yield evt
 
-                msgs = node_output.get("messages")
-                if msgs and isinstance(msgs, list):
-                    for msg in msgs:
-                        tc = getattr(msg, "tool_calls", None)
-                        if tc:
-                            for call in tc:
-                                yield {
-                                    "type": "tool_call_started",
-                                    "name": call.get("name", "?"),
-                                    "args": call.get("args", {}),
-                                }
-                        content = getattr(msg, "content", "")
-                        if content and not tc:
-                            sa = getattr(msg, "additional_kwargs", {}).get("subagent_action")
-                            if sa:
-                                yield {
-                                    "type": "thinking",
-                                    "thought": f"Delegating to subagent: {sa.get('name', '?')}",
-                                }
-                            else:
-                                yield {"type": "text_chunk", "text": content}
+                    # --- Messages (tool calls, subagent delegation, text) ---
+                    msgs = node_output.get("messages")
+                    if msgs and isinstance(msgs, list):
+                        for msg in msgs:
+                            tc = getattr(msg, "tool_calls", None)
+                            if tc:
+                                for call in tc:
+                                    cname = call.get("name", "?")
+                                    cargs = call.get("args", {})
+                                    evt = _evt(
+                                        ProgressEventType.TOOL_START,
+                                        node=node_name,
+                                        tool_name=cname,
+                                        tool_args=cargs,
+                                        summary=f"Using {cname}",
+                                        detail=str(cargs)[:2000],
+                                    )
+                                    await _emit(evt)
+                                    yield evt
+                            content = getattr(msg, "content", "")
+                            if content and not tc:
+                                sa = getattr(msg, "additional_kwargs", {}).get("subagent_action")
+                                if sa:
+                                    sa_name = sa.get("name", "?")
+                                    evt = _evt(
+                                        ProgressEventType.SUBAGENT_START,
+                                        node=node_name,
+                                        subagent_id=sa_name,
+                                        summary=f"Delegating to subagent: {sa_name}",
+                                        detail=str(sa),
+                                    )
+                                    await _emit(evt)
+                                    yield evt
+                                else:
+                                    evt = _evt(
+                                        ProgressEventType.TEXT_CHUNK,
+                                        node=node_name,
+                                        text=content,
+                                        summary=content[:120],
+                                    )
+                                    await _emit(evt)
+                                    yield evt
 
-                reflection = node_output.get("reflection")
-                if reflection and isinstance(reflection, str):
-                    yield {"type": "reflection", "text": reflection}
+                    # --- Reflection ---
+                    reflection = node_output.get("reflection")
+                    if reflection and isinstance(reflection, str):
+                        evt = _evt(
+                            ProgressEventType.REFLECTION,
+                            node=node_name,
+                            text=reflection,
+                            summary="Reflecting on progress",
+                            detail=reflection,
+                        )
+                        await _emit(evt)
+                        yield evt
 
-                final = node_output.get("final_answer")
-                if final and isinstance(final, str):
-                    yield {"type": "final_answer", "text": final}
+                    # --- Final answer ---
+                    final = node_output.get("final_answer")
+                    if final and isinstance(final, str):
+                        evt = _evt(
+                            ProgressEventType.FINAL_ANSWER,
+                            node=node_name,
+                            text=final,
+                            summary="Final answer ready",
+                            detail=final,
+                        )
+                        await _emit(evt)
+                        yield evt
+        except Exception as exc:
+            err_evt = _evt(
+                ProgressEventType.ERROR,
+                error=str(exc),
+                summary=f"Error: {str(exc)[:100]}",
+                detail=str(exc),
+            )
+            await _emit(err_evt)
+            yield err_evt
+            raise
+        finally:
+            end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended")
+            await _emit(end_evt)
+            yield end_evt
+
+    async def astream_events(
+        self,
+        user_message: str,
+        context: Dict[str, Any] | None = None,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Backward-compatible dict-based event stream.
+
+        Wraps ``astream_progress()`` and converts each ``ProgressEvent`` to a
+        plain dict.  New code should prefer ``astream_progress()`` directly.
+        """
+        async for event in self.astream_progress(user_message, context):
+            yield event.model_dump()
 
     def run_tui(self) -> None:
         """Launch interactive Rich TUI loop."""

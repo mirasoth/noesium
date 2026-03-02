@@ -26,8 +26,11 @@ NoeAgent is a long-running autonomous research assistant built on the Noesium fr
 - Task decomposition, todo-list rendering, and plan persistence
 - Memory integration: Working, EventSourced, Memu providers
 - Subagent spawn/interact as both runtime API and graph node
-- Rich TUI with streaming events, spinner, tool panels, markdown rendering
-- Library API: `run()`, `arun()`, `stream()`, `astream_events()`
+- Typed progress event protocol (`ProgressEvent`, `ProgressEventType`, `ProgressCallback`)
+- Rich TUI with compact Claude Code-style progress display
+- Session-level JSONL logging via `SessionLogger`
+- Library integration: pull-style (`astream_progress()`) and push-style (`progress_callbacks`)
+- Library API: `run()`, `arun()`, `stream()`, `astream_progress()`, `astream_events()` (compat)
 
 **Out of Scope**:
 - Individual toolkit implementations (they live in `noesium/toolkits/`)
@@ -59,8 +62,10 @@ This guide MUST NOT contradict RFC-1002 (agent archetypes), RFC-2001/2002 (memor
 │                                                                  │
 │  ┌─────────────────────────────────────────────────────────────┐ │
 │  │               Interface Layer                               │ │
-│  │  Library API (.run/.arun/.stream/.astream_events)           │ │
-│  │  Rich TUI (spinner, panels, markdown, plan table)           │ │
+│  │  Library API (.run/.arun/.stream/.astream_progress)         │ │
+│  │  ProgressEvent protocol + ProgressCallback (push/pull)      │ │
+│  │  Rich TUI (compact progress, plan table, markdown)          │ │
+│  │  SessionLogger (JSONL offline logging)                      │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 └────────────────────────────────────────────────────────────────┘
 ```
@@ -87,15 +92,17 @@ NoeAgent
 
 ```
 noesium/agents/noe/
-├── __init__.py          # Exports NoeAgent, NoeConfig, schemas
-├── agent.py             # NoeAgent class, graph building, astream_events, subagent API
+├── __init__.py          # Exports NoeAgent, NoeConfig, schemas, progress types
+├── agent.py             # NoeAgent class, graph building, astream_progress, subagent API
 ├── state.py             # AskState, AgentState, TaskPlan, TaskStep
 ├── schemas.py           # AgentAction, ToolCallAction (structured output)
 ├── planner.py           # TaskPlanner for goal decomposition
 ├── nodes.py             # Graph node functions
-├── config.py            # NoeConfig
+├── config.py            # NoeConfig (incl. progress_callbacks, session_log_dir)
 ├── prompts.py           # Prompt templates
-└── tui.py               # Rich TUI (spinner, panels, markdown, slash commands)
+├── progress.py          # ProgressEvent, ProgressEventType, ProgressCallback
+├── session_log.py       # SessionLogger (JSONL per-session writer)
+└── tui.py               # Rich TUI (compact progress, plan table, markdown)
 ```
 
 ---
@@ -133,6 +140,11 @@ class NoeConfig(BaseModel):
     permissions: list[str]            # fs:read, fs:write, net:outbound, shell:execute
     enable_subagents: bool = True
     subagent_max_depth: int = 2
+
+    # Progress reporting (§5.5, §5.9)
+    progress_callbacks: list[Callable] = []
+    session_log_dir: str = ".noe_sessions"
+    enable_session_logging: bool = True
 ```
 
 Ask-mode overrides: `max_iterations=1`, `enabled_toolkits=[]`, `permissions=[]`, `persist_memory=False`.
@@ -272,73 +284,124 @@ await memory_manager.store(key="current_plan", value=plan.to_todo_markdown(), ..
 - `subagent_node` in the graph handles spawn/interact via `AgentAction.subagent`
 - Interaction is async
 
-### 5.5 Event Streaming Protocol
+### 5.5 Progress Event Protocol
 
-The `astream_events()` async generator bridges LangGraph node outputs and the TUI. It iterates over `compiled.astream(initial)` and translates node outputs into typed event dicts:
+**File:** `progress.py`
 
-| Event Type | Fields | Emitted By |
-|------------|--------|------------|
-| `plan_created` | `plan: TaskPlan` | `plan_node`, `revise_plan_node` |
-| `step_started` | `step: str`, `index: int` | when plan step advances |
-| `tool_call_started` | `name: str`, `args: dict` | `execute_step_node` (from `AIMessage.tool_calls`) |
-| `tool_call_completed` | `name: str`, `result: str` | `tool_node` (from `tool_results`) |
-| `thinking` | `thought: str` | subagent delegation |
-| `text_chunk` | `text: str` | intermediate text from LLM |
-| `reflection` | `text: str` | `reflect_node` |
-| `final_answer` | `text: str` | `finalize_node` |
+The canonical typed progress stream replaces the former ad-hoc dict events. A single flat `ProgressEvent` Pydantic model covers the full agent lifecycle. Every event carries a short `summary` (suitable for TUI one-liners) and a verbose `detail` (for session logging).
 
 ```python
-async def astream_events(self, user_message: str) -> AsyncGenerator[dict, None]:
-    # ... initialize graph ...
-    async for event in compiled.astream(initial):
-        for node_name, node_output in event.items():
-            # inspect plan, tool_results, messages, reflection, final_answer
-            # yield typed event dicts
+class ProgressEventType(str, Enum):
+    SESSION_START = "session.start"
+    SESSION_END = "session.end"
+    PLAN_CREATED = "plan.created"
+    PLAN_REVISED = "plan.revised"
+    STEP_START = "step.start"
+    STEP_COMPLETE = "step.complete"
+    TOOL_START = "tool.start"
+    TOOL_END = "tool.end"
+    SUBAGENT_START = "subagent.start"
+    SUBAGENT_PROGRESS = "subagent.progress"
+    SUBAGENT_END = "subagent.end"
+    THINKING = "thinking"
+    TEXT_CHUNK = "text.chunk"
+    PARTIAL_RESULT = "partial.result"
+    REFLECTION = "reflection"
+    FINAL_ANSWER = "final.answer"
+    ERROR = "error"
+
+class ProgressEvent(BaseModel):
+    type: ProgressEventType
+    timestamp: datetime          # UTC
+    session_id: str
+    sequence: int                # monotonic ordering counter
+
+    node: str | None             # graph node name
+    step_index: int | None
+    step_desc: str | None
+    tool_name: str | None
+    tool_args: dict | None
+    tool_result: str | None
+    subagent_id: str | None
+    text: str | None
+    summary: str | None          # compact one-liner for TUI
+    detail: str | None           # verbose content for offline logging
+    plan_snapshot: dict | None   # serialised TaskPlan
+    error: str | None
+    metadata: dict = {}
 ```
 
-### 5.6 Rich TUI
-
-The TUI (`tui.py`) consumes events from `astream_events()` and renders them using Rich components:
+**Event lifecycle per query:**
 
 ```
-┌───────────────────────────────────────────────────┐
-│  NoeAgent — Autonomous Research Assistant          │
-│  Mode: agent  |  /help for commands, /exit to quit │
-└───────────────────────────────────────────────────┘
-
-noe> How does the memory system work?
-
-⠋ Thinking...
-
-┌── Plan: Analyze memory system ────────────────────┐
-│ #  │ Status │ Step                                 │
-│ 1  │ [x]    │ Read memory provider code            │
-│ 2  │ [>]    │ Analyze provider manager              │
-│ 3  │ [ ]    │ Summarize architecture                │
-└───────────────────────────────────────────────────┘
-
-┌── Tool: bash.run_bash ───────────────────────────┐
-│ {"command": "cat noesium/core/memory/..."}       │
-│ --- result ---                                    │
-│ (file contents)                                   │
-└──────────────────────────────────────────────────┘
-
-## Memory System Architecture
-The memory system uses a provider-based approach...
+SESSION_START → PLAN_CREATED → STEP_START → TOOL_START → TOOL_END → ...
+  → STEP_COMPLETE → STEP_START → ... → REFLECTION → ... → FINAL_ANSWER → SESSION_END
 ```
 
-**Rich Components Used:**
+**Push-style callback protocol** for library consumers:
 
-| Component | Purpose |
-|-----------|---------|
-| `Console` | Primary output handle |
-| `Live` | Live-updating display for spinner during processing |
-| `Spinner` | Shows "Thinking...", "Executing tool: X", step status |
-| `Panel` | Wraps tool calls, errors, reflections |
-| `Markdown` | Renders final answers and text chunks |
-| `Table` | Todo/plan checklist rendering |
-| `Prompt` | Styled `noe>` input with multiline (backslash continuation) |
-| `Text` | Styled status markers and fragments |
+```python
+class ProgressCallback(Protocol):
+    async def on_progress(self, event: ProgressEvent) -> None: ...
+```
+
+Callbacks are registered via `NoeConfig.progress_callbacks`. Both objects implementing the `ProgressCallback` protocol and bare async callables `(ProgressEvent) -> None` are supported.
+
+**`astream_progress()` is the canonical public API.** The former `astream_events()` is preserved as a backward-compatible shim that yields `event.model_dump()` dicts.
+
+### 5.6 Rich TUI (Compact Progress Display)
+
+The TUI (`tui.py`) consumes `ProgressEvent` objects from `astream_progress()` and renders a compact, Claude Code-style display. Detailed information (tool args, full results, reflection text) is NOT shown in the terminal -- it goes to the session log only.
+
+```
+┌─ NoeAgent ─────────────────────────────────────────────┐
+│  Mode: agent  |  /help  |  /exit                       │
+│  Session log: .noe_sessions/01905b8a-....jsonl          │
+└────────────────────────────────────────────────────────┘
+
+noe|agent> Analyze the memory system architecture
+
+  Plan: Analyze the memory system architecture
+    1  [x]  Read memory provider source code
+    2  [>]  Analyze ProviderMemoryManager interface
+    3  [ ]  Synthesize architecture summary
+
+  Step 2/3: Analyze ProviderMemoryManager interface
+    . Using bash.run_bash
+    > bash.run_bash  (file contents truncated)
+    . Using python_executor
+    > python_executor  Found 3 providers
+
+  ────────────────────────────────────────
+
+  ## Final Answer
+  The memory system uses a three-tier provider architecture...
+```
+
+**Rendering Rules:**
+
+| Event Type | TUI Display |
+|------------|-------------|
+| `PLAN_CREATED` / `PLAN_REVISED` | Live-updating plan checklist table |
+| `STEP_START` | Bold step indicator: `Step 2/3: ...` |
+| `TOOL_START` | Dim one-liner: `. Using <tool_name>` |
+| `TOOL_END` | Green one-liner: `> <tool_name>  <brief result>` |
+| `SUBAGENT_START/PROGRESS/END` | Bracketed: `[subagent:name] status` |
+| `THINKING` | Dim italic: `. Thinking...` |
+| `REFLECTION` | Dim one-liner: `. Reflected on progress` (detail in session log) |
+| `PARTIAL_RESULT` | Markdown block after separator rule |
+| `FINAL_ANSWER` | Full markdown rendering |
+| `ERROR` | Red one-liner: `! error message` |
+
+**Multi-Subagent Progress:**
+
+```
+  Step 2/3: Research in parallel
+    [web-search-1] Searching for "memory architecture patterns"
+    [code-analyzer-1] Analyzing provider_manager.py
+    [web-search-1] done
+    [code-analyzer-1] done
+```
 
 **Slash Commands:**
 
@@ -348,17 +411,18 @@ The memory system uses a provider-based approach...
 | `/mode ask\|agent` | Switch mode at runtime |
 | `/plan` | Show current task plan |
 | `/memory` | Show memory statistics |
+| `/session` | Show current session log path |
 | `/clear` | Clear the screen |
 | `/help` | List available commands |
 
 **TUI Architecture:**
 
-1. `run_agent_tui(agent)` — main loop, reads input, dispatches slash commands or queries
-2. `_process_query(agent, input, console)` — async, calls `agent.astream_events()`, renders events with `Live` context
-3. `render_plan_table(plan)` — converts `TaskPlan` to `rich.table.Table`
-4. `render_tool_call_panel(name, args, result)` — creates `rich.panel.Panel` for tool calls
-5. `handle_slash_command(cmd, agent, console)` — parses and executes slash commands
-6. `read_user_input(console)` — multiline input with `\` continuation
+1. `run_agent_tui(agent)` -- main loop; auto-registers `SessionLogger` callback; reads input, dispatches slash commands or queries
+2. `_process_query(agent, input, console, session_logger)` -- async, calls `agent.astream_progress()`, builds a `Group` renderable inside `Live` context
+3. `render_plan_table(plan)` -- converts `TaskPlan` to compact `rich.table.Table`
+4. `_activity_line(event)` -- converts a `ProgressEvent` to a compact `rich.text.Text` one-liner
+5. `handle_slash_command(cmd, agent, console)` -- parses and executes slash commands
+6. `read_user_input(console)` -- multiline input with `\` continuation
 
 ### 5.7 MCP Server Loading
 
@@ -367,6 +431,66 @@ for mcp_config in self.config.mcp_servers:
     session = await MCPSession.connect(**mcp_config)
     await self._tool_registry.load_mcp_server(session)
 ```
+
+### 5.8 Session Logging
+
+**File:** `session_log.py`
+
+`SessionLogger` is a built-in `ProgressCallback` implementation that writes every `ProgressEvent` as a JSON line into a per-session `.jsonl` file. This captures ALL detail (full tool args/results, complete reflection text, plan snapshots) for offline replay and audit.
+
+```python
+class SessionLogger:
+    def __init__(self, log_dir: str = ".noe_sessions", session_id: str | None = None)
+    async def on_progress(self, event: ProgressEvent) -> None
+```
+
+**JSONL format** (one JSON object per line):
+
+```json
+{"type":"session.start","timestamp":"2026-03-02T10:00:00Z","session_id":"01905b8a-...","sequence":1,"summary":"Session started: analyze X",...}
+{"type":"tool.start","timestamp":"...","session_id":"...","sequence":5,"tool_name":"bash.run_bash","tool_args":{"command":"ls"},"summary":"Using bash.run_bash",...}
+{"type":"tool.end","timestamp":"...","session_id":"...","sequence":6,"tool_name":"bash.run_bash","tool_result":"file1 file2","summary":"Completed: bash.run_bash","detail":"file1\nfile2\n...",...}
+```
+
+**Auto-registration:** In TUI mode, `run_agent_tui()` automatically creates and registers a `SessionLogger` to the agent's `progress_callbacks`. In library mode, users register their own if desired:
+
+```python
+from noesium.agents.noe import SessionLogger
+logger = SessionLogger(log_dir="/tmp/my_logs")
+agent = NoeAgent(NoeConfig(progress_callbacks=[logger]))
+```
+
+### 5.9 Library Integration Protocol
+
+The `ProgressEvent` Pydantic model IS the integration protocol. No separate protocol document is needed -- the model is self-describing, JSON-serializable, and versioned via `ProgressEventType`.
+
+**Pull-style** (async generator -- recommended):
+
+```python
+from noesium.agents.noe import NoeAgent, NoeConfig, ProgressEventType
+
+agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
+async for event in agent.astream_progress("analyze the memory system"):
+    if event.type == ProgressEventType.TOOL_START:
+        my_ui.show_activity(event.summary)
+    elif event.type == ProgressEventType.FINAL_ANSWER:
+        my_ui.show_result(event.text)
+    # event.model_dump_json() for wire serialization
+```
+
+**Push-style** (callback):
+
+```python
+async def my_handler(event: ProgressEvent):
+    await websocket.send(event.model_dump_json())
+
+agent = NoeAgent(NoeConfig(progress_callbacks=[my_handler]))
+result = await agent.arun("analyze the memory system")
+```
+
+**Both patterns work simultaneously:** `arun()` internally consumes `astream_progress()` and fires callbacks. Registering callbacks does not prevent using `astream_progress()` directly.
+
+**Backward compatibility:** `astream_events()` remains available as a thin wrapper that calls `astream_progress()` and yields `event.model_dump()` dicts.
 
 ---
 
@@ -397,6 +521,9 @@ for mcp_config in self.config.mcp_servers:
 | `reflection_interval` | `3` | Steps between reflections |
 | `enabled_toolkits` | `[bash, python_executor, file_edit, search, memory, document, image, tabular_data, video, user_interaction]` | Active toolkits |
 | `persist_memory` | `true` | Persist agent results to durable memory |
+| `progress_callbacks` | `[]` | List of async callables / `ProgressCallback` instances |
+| `session_log_dir` | `.noe_sessions` | Directory for session JSONL logs |
+| `enable_session_logging` | `true` | Auto-register `SessionLogger` in TUI mode |
 
 ---
 
@@ -405,15 +532,21 @@ for mcp_config in self.config.mcp_servers:
 | Component | Test Focus |
 |-----------|------------|
 | `AgentAction` schema | Structured output parsing, tool_call and subagent fields |
-| `NoeConfig` | Defaults, validation, ask mode overrides |
+| `NoeConfig` | Defaults, validation, ask mode overrides, progress fields |
 | `TaskPlanner` | Plan creation, revision (with mocked LLM) |
 | `execute_step_node` | Structured completion returns tool calls |
 | `tool_node` | Tool execution with mocked ToolExecutor |
 | `subagent_node` | Spawn and interaction |
-| `astream_events` | Event types emitted for plan, tool, text, final answer |
+| `ProgressEvent` | Serialization, deserialization, all event types |
+| `ProgressEventType` | Enum coverage, string representation |
+| `astream_progress` | Typed event stream: SESSION_START, PLAN_CREATED, TOOL_START/END, FINAL_ANSWER, SESSION_END |
+| `astream_events` | Backward-compat dict output matches `ProgressEvent.model_dump()` |
+| `SessionLogger` | JSONL write, directory creation, concurrent writes |
+| `ProgressCallback` | Push-style callback invocation from `arun()` and `astream_progress()` |
 | `_route_after_execute` | Conditional routing logic |
-| `render_plan_table` | Plan → Rich Table conversion |
-| `handle_slash_command` | Slash command parsing and dispatch |
+| `render_plan_table` | Plan to Rich Table conversion |
+| `_activity_line` | Compact one-liner rendering for each event type |
+| `handle_slash_command` | Slash command parsing and dispatch (incl. `/session`) |
 | Todo persistence | Plan stored/recalled from working memory |
 
 ---
@@ -440,3 +573,4 @@ for mcp_config in self.config.mcp_servers:
 | 2026-03-01 | Initial guide based on RFC-1002, RFC-2001-2004 |
 | 2026-03-02 | Unified with evolution guide: added structured tool calling, subagent graph node, todo persistence |
 | 2026-03-02 | Removed ACP/Toad mode; added Rich TUI with event streaming protocol, slash commands, spinner, tool panels, markdown rendering |
+| 2026-03-02 | Progress Event Protocol: replaced ad-hoc dict events with typed `ProgressEvent`/`ProgressEventType`; added `astream_progress()` as canonical API, `astream_events()` as compat shim; compact Claude Code-style TUI; `SessionLogger` JSONL offline logging; `ProgressCallback` push-style protocol; library integration protocol (§5.5, §5.6, §5.8, §5.9) |

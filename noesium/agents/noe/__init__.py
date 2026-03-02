@@ -16,7 +16,9 @@ except ImportError:
 
 from .agent import NoeAgent
 from .config import NoeConfig, NoeMode
+from .progress import ProgressCallback, ProgressEvent, ProgressEventType
 from .schemas import AgentAction, SubagentAction, ToolCallAction
+from .session_log import SessionLogger
 from .state import TaskPlan, TaskStep
 
 __all__ = [
@@ -28,4 +30,8 @@ __all__ = [
     "ToolCallAction",
     "TaskPlan",
     "TaskStep",
+    "ProgressEvent",
+    "ProgressEventType",
+    "ProgressCallback",
+    "SessionLogger",
 ]
