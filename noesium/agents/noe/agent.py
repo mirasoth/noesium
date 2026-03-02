@@ -94,12 +94,26 @@ class NoeAgent(BaseGraphicAgent):
 
     async def _setup_tools(self) -> None:
         self._tool_registry = ToolRegistry()
+        import os
+
         from noesium.core.toolify.base import AsyncBaseToolkit
+        from noesium.core.toolify.config import ToolkitConfig
         from noesium.core.toolify.registry import ToolkitRegistry
+
+        # Determine working directory for toolkits
+        work_dir = self.config.working_directory or os.getcwd()
 
         for toolkit_name in self.config.enabled_toolkits:
             try:
-                toolkit = ToolkitRegistry.create_toolkit(toolkit_name)
+                # Create toolkit config with working directory
+                toolkit_config = ToolkitConfig(
+                    name=toolkit_name,
+                    config={
+                        "workspace_root": work_dir,
+                        "work_dir": work_dir,
+                    },
+                )
+                toolkit = ToolkitRegistry.create_toolkit(toolkit_name, toolkit_config)
                 # Initialize async toolkits
                 if isinstance(toolkit, AsyncBaseToolkit):
                     await toolkit.build()

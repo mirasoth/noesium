@@ -33,16 +33,25 @@ class TestLiteLLMIntegration:
         api_keys = {
             "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
             "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY"),
+            "ANTHROPIC_AUTH_TOKEN": os.getenv("ANTHROPIC_AUTH_TOKEN"),
             "COHERE_API_KEY": os.getenv("COHERE_API_KEY"),
         }
 
         if not any(api_keys.values()):
             pytest.skip("No API keys found for LiteLLM providers")
 
-        # Use OpenAI as default if available, otherwise use the first available provider
+        # Use OpenAI-compatible provider if available, with environment model configuration
         if api_keys["OPENAI_API_KEY"]:
-            self.client = LLMClient(chat_model="gpt-3.5-turbo")
-        elif api_keys["ANTHROPIC_API_KEY"]:
+            # Use model from environment or fallback to default
+            # LiteLLM requires "openai/" prefix for OpenAI-compatible APIs
+            model = os.getenv("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
+            # Add openai/ prefix if not already present
+            if not model.startswith("openai/"):
+                chat_model = f"openai/{model}"
+            else:
+                chat_model = model
+            self.client = LLMClient(chat_model=chat_model)
+        elif api_keys["ANTHROPIC_API_KEY"] or api_keys["ANTHROPIC_AUTH_TOKEN"]:
             self.client = LLMClient(chat_model="claude-3-haiku-20240307")
         elif api_keys["COHERE_API_KEY"]:
             self.client = LLMClient(chat_model="command-r")
@@ -81,8 +90,16 @@ class TestLiteLLMIntegration:
 
     def test_structured_completion(self):
         """Test structured output with LiteLLM."""
+        # Use model from environment or fallback to default
+        model = os.getenv("OPENAI_CHAT_MODEL", "gpt-4")
+        # Add openai/ prefix if not already present for LiteLLM
+        if not model.startswith("openai/"):
+            chat_model = f"openai/{model}"
+        else:
+            chat_model = model
+
         try:
-            client = LLMClient(chat_model="gpt-4", instructor=True)
+            client = LLMClient(chat_model=chat_model, instructor=True)
         except Exception:
             pytest.skip("Instructor not available or model not supported")
 
@@ -233,8 +250,16 @@ class TestLiteLLMIntegration:
 
     def test_vision_image_from_url(self):
         """Test image understanding from URL."""
+        # Use vision model from environment or fallback to default
+        model = os.getenv("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
+        # Add openai/ prefix if not already present for LiteLLM
+        if not model.startswith("openai/"):
+            vision_model = f"openai/{model}"
+        else:
+            vision_model = model
+
         try:
-            client = LLMClient(vision_model="gpt-4-vision-preview")
+            client = LLMClient(vision_model=vision_model)
         except Exception:
             pytest.skip("Vision model not available")
 
@@ -263,9 +288,17 @@ class TestLiteLLMIntegration:
         providers_to_test = []
 
         if os.getenv("OPENAI_API_KEY"):
-            providers_to_test.append(("OpenAI", "gpt-3.5-turbo"))
+            # Use model from environment for OpenAI-compatible providers
+            model = os.getenv("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
+            # Add openai/ prefix if not already present for LiteLLM
+            if not model.startswith("openai/"):
+                model = f"openai/{model}"
+            providers_to_test.append(("OpenAI-compatible", model))
+
+        # Note: LiteLLM requires ANTHROPIC_API_KEY, not ANTHROPIC_AUTH_TOKEN
         if os.getenv("ANTHROPIC_API_KEY"):
             providers_to_test.append(("Anthropic", "claude-3-haiku-20240307"))
+
         if os.getenv("COHERE_API_KEY"):
             providers_to_test.append(("Cohere", "command-r"))
 
