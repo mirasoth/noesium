@@ -3,10 +3,10 @@
 
   #
 
-  ![Python](https://img.shields.io/pypi/pyversions/noesium)
-  ![PyPI version](https://img.shields.io/pypi/v/noesium)
-  ![License](https://img.shields.io/github/license/mirasoth/noesium)
-  ![GitHub Stars](https://img.shields.io/github/stars/mirasoth/noesium)
+  [![Python](https://img.shields.io/pypi/pyversions/noesium)](https://pypi.org/project/noesium/)
+  [![PyPI Version](https://img.shields.io/pypi/v/noesium)](https://pypi.org/project/noesium/)
+  [![License](https://img.shields.io/github/license/mirasoth/noesium)](https://github.com/mirasoth/noesium/blob/main/LICENSE)
+  [![GitHub Stars](https://img.shields.io/github/stars/mirasoth/noesium)](https://github.com/mirasoth/noesium)
 
 </div>
 
