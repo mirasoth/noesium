@@ -15,7 +15,7 @@ except ImportError:
     pass
 
 from .agent import NoeAgent
-from .config import NoeConfig, NoeMode
+from .config import CliSubagentConfig, NoeConfig, NoeMode
 from .progress import ProgressCallback, ProgressEvent, ProgressEventType
 from .schemas import AgentAction, SubagentAction, ToolCallAction
 from .session_log import SessionLogger
@@ -25,6 +25,7 @@ __all__ = [
     "NoeAgent",
     "NoeConfig",
     "NoeMode",
+    "CliSubagentConfig",
     "AgentAction",
     "SubagentAction",
     "ToolCallAction",

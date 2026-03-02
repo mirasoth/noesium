@@ -1,6 +1,6 @@
 """Unit tests for Noe task planning helpers and Rich TUI components."""
 
-from noesium.agents.noe.state import TaskPlan, TaskStep
+from noesium.noe.state import TaskPlan, TaskStep
 
 
 def test_taskplan_todo_markdown_marks_completed_steps():
@@ -39,7 +39,7 @@ def test_taskplan_advance():
 
 
 def test_render_plan_table_columns():
-    from noesium.agents.noe.tui import render_plan_table
+    from noesium.noe.tui import render_plan_table
 
     plan = TaskPlan(
         goal="Build app",
@@ -54,7 +54,7 @@ def test_render_plan_table_columns():
 
 
 def test_slash_commands_constant():
-    from noesium.agents.noe.tui import SLASH_COMMANDS
+    from noesium.noe.tui import SLASH_COMMANDS
 
     assert "/exit" in SLASH_COMMANDS
     assert "/quit" in SLASH_COMMANDS
@@ -63,3 +63,4 @@ def test_slash_commands_constant():
     assert "/help" in SLASH_COMMANDS
     assert "/clear" in SLASH_COMMANDS
     assert "/memory" in SLASH_COMMANDS
+    assert "/session" in SLASH_COMMANDS

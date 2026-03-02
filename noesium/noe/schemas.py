@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ToolCallAction(BaseModel):
@@ -18,10 +18,13 @@ class ToolCallAction(BaseModel):
 
 
 class SubagentAction(BaseModel):
-    """Request to spawn or interact with a child NoeAgent."""
+    """Request to spawn or interact with a child agent or external CLI daemon."""
 
-    action: Literal["spawn", "interact"] = Field(
-        description="Whether to create a new subagent or send a message to an existing one",
+    action: Literal["spawn", "interact", "spawn_cli", "interact_cli", "terminate_cli"] = Field(
+        description=(
+            "'spawn'/'interact' for in-process child agents; "
+            "'spawn_cli'/'interact_cli'/'terminate_cli' for external CLI daemon subagents"
+        ),
     )
     name: str = Field(description="Subagent name (used as identifier)")
     message: str = Field(default="", description="Message/task to send to the subagent")
@@ -31,7 +34,7 @@ class SubagentAction(BaseModel):
 class AgentAction(BaseModel):
     """Structured decision produced by execute_step_node via structured_completion.
 
-    Exactly one of ``tool_calls``, ``subagent``, or ``text_response`` should be
+    Exactly one of ``tool_calls``, ``subagent``, or ``text_response`` must be
     populated per invocation.
     """
 
@@ -54,3 +57,16 @@ class AgentAction(BaseModel):
         default=False,
         description="Whether the current plan step is finished after this action.",
     )
+
+    @model_validator(mode="after")
+    def exactly_one_action(self) -> AgentAction:
+        actions = sum(
+            [
+                self.tool_calls is not None and len(self.tool_calls) > 0,
+                self.subagent is not None,
+                self.text_response is not None and len(self.text_response) > 0,
+            ]
+        )
+        if actions == 0:
+            self.text_response = self.thought
+        return self

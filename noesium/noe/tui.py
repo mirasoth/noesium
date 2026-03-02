@@ -75,8 +75,8 @@ def _activity_line(event: ProgressEvent) -> Text | None:
     etype = event.type
 
     if etype == ProgressEventType.TOOL_START:
-        label = event.tool_name or "tool"
-        return Text.assemble(("  . ", "dim"), (f"Using {label}", "blue"))
+        label = event.summary or f"Using {event.tool_name or 'tool'}"
+        return Text.assemble(("  . ", "dim"), (label, "blue"))
 
     if etype == ProgressEventType.TOOL_END:
         label = event.tool_name or "tool"
@@ -89,7 +89,10 @@ def _activity_line(event: ProgressEvent) -> Text | None:
 
     if etype == ProgressEventType.SUBAGENT_START:
         tag = event.subagent_id or "subagent"
-        return Text.assemble(("  ", ""), (f"[{tag}] ", "bold magenta"), (event.summary or "started", ""))
+        msg = event.summary or "spawned"
+        if msg.startswith(f"[{tag}]"):
+            return Text.assemble(("  ", ""), (f"[{tag}] ", "bold magenta"), (msg[len(f"[{tag}]") :].strip(), ""))
+        return Text.assemble(("  ", ""), (f"[{tag}] ", "bold magenta"), (msg, ""))
 
     if etype == ProgressEventType.SUBAGENT_PROGRESS:
         tag = event.subagent_id or "subagent"

@@ -1,6 +1,7 @@
-"""Task planner for goal decomposition (impl guide §5.2).
+"""Task planner for goal decomposition (impl guide §5.2, §5.11).
 
 Replaces the deprecated Goalith LLMDecomposer with a simpler flat-plan model.
+Supports execution hints for intelligent tool-vs-subagent routing.
 """
 
 from __future__ import annotations
@@ -17,15 +18,34 @@ from .state import TaskPlan, TaskStep
 
 logger = logging.getLogger(__name__)
 
+_VALID_HINTS = {"tool", "subagent", "cli_subagent", "auto"}
+
 
 class TaskPlanner:
     """Decomposes a goal into a flat TaskPlan via LLM structured output."""
 
-    def __init__(self, llm_client: BaseLLMClient) -> None:
-        self._llm = llm_client
+    def __init__(
+        self,
+        llm_client: BaseLLMClient,
+        *,
+        planning_llm: BaseLLMClient | None = None,
+        cli_subagent_names: list[str] | None = None,
+    ) -> None:
+        self._llm = planning_llm or llm_client
+        self._cli_subagent_names = cli_subagent_names or []
+
+    def _cli_info(self) -> str:
+        if not self._cli_subagent_names:
+            return ""
+        names = ", ".join(self._cli_subagent_names)
+        return f" (available: {names})"
 
     async def create_plan(self, goal: str, context: str = "") -> TaskPlan:
-        prompt = PLANNING_PROMPT.format(goal=goal, context=context)
+        prompt = PLANNING_PROMPT.format(
+            goal=goal,
+            context=context,
+            cli_subagent_info=self._cli_info(),
+        )
         try:
             raw = self._llm.completion(
                 messages=[{"role": "user", "content": prompt}],
@@ -73,4 +93,14 @@ class TaskPlanner:
             lines = [l.strip().lstrip("0123456789.-) ") for l in text.splitlines() if l.strip()]
             return [TaskStep(description=line) for line in lines if line]
         steps_raw = data.get("steps", [])
-        return [TaskStep(description=s["description"] if isinstance(s, dict) else str(s)) for s in steps_raw]
+        result: list[TaskStep] = []
+        for s in steps_raw:
+            if isinstance(s, dict):
+                desc = s.get("description", str(s))
+                hint = s.get("execution_hint", "auto")
+                if hint not in _VALID_HINTS:
+                    hint = "auto"
+                result.append(TaskStep(description=desc, execution_hint=hint))
+            else:
+                result.append(TaskStep(description=str(s)))
+        return result

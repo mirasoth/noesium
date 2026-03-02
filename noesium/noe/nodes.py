@@ -139,6 +139,7 @@ async def execute_step_node(
     llm: Any,
     tool_registry: Any,
     memory_manager: Any = None,
+    max_tool_calls: int = 5,
 ) -> dict[str, Any]:
     """Execute current plan step via structured LLM output with tool access.
 
@@ -148,12 +149,22 @@ async def execute_step_node(
     from langchain_core.messages import AIMessage
 
     plan: TaskPlan | None = state.get("plan")
-    step_desc = plan.current_step.description if plan and plan.current_step else "Answer the question."
+    current_step = plan.current_step if plan else None
+    step_desc = current_step.description if current_step else "Answer the question."
+    hint = current_step.execution_hint if current_step else "auto"
+    hint_text = {
+        "tool": "Prefer using a tool for this step (atomic operation).",
+        "subagent": "Consider delegating to a child agent for this step (multi-step reasoning).",
+        "cli_subagent": "Consider delegating to an external CLI agent for this step.",
+        "auto": "Choose the best approach (tool, subagent, or direct answer).",
+    }.get(hint, "Choose the best approach.")
+
     completed = "\n".join(f"- {r['tool']}: {str(r['result'])[:200]}" for r in state.get("tool_results", []))
     tool_desc = _build_tool_descriptions(tool_registry)
 
     system = AGENT_SYSTEM_PROMPT.format(
         plan=step_desc,
+        execution_hint=hint_text,
         completed_results=completed or "None yet.",
         tool_descriptions=tool_desc,
     )
@@ -184,6 +195,13 @@ async def execute_step_node(
         await _persist_plan_to_memory(plan, memory_manager)
 
     if action.tool_calls:
+        calls = action.tool_calls[:max_tool_calls]
+        if len(action.tool_calls) > max_tool_calls:
+            logger.warning(
+                "LLM requested %d tool calls, truncating to %d",
+                len(action.tool_calls),
+                max_tool_calls,
+            )
         tool_calls_data = [
             {
                 "name": tc.tool_name,
@@ -191,7 +209,7 @@ async def execute_step_node(
                 "id": f"call_{i}",
                 "type": "tool_call",
             }
-            for i, tc in enumerate(action.tool_calls)
+            for i, tc in enumerate(calls)
         ]
         msg = AIMessage(
             content=action.thought,
@@ -200,11 +218,40 @@ async def execute_step_node(
         return {"messages": [msg]}
 
     if action.subagent:
-        msg = AIMessage(content=action.thought)
-        msg.additional_kwargs["subagent_action"] = action.subagent.model_dump()
+        msg = AIMessage(
+            content=action.thought,
+            additional_kwargs={"subagent_action": action.subagent.model_dump()},
+        )
         return {"messages": [msg]}
 
     return {"messages": [AIMessage(content=action.text_response or action.thought)]}
+
+
+def _coerce_tool_args(args: dict[str, Any], tool: Any) -> dict[str, Any]:
+    """Best-effort type coercion of tool arguments against the tool's input_schema."""
+    schema = getattr(tool, "input_schema", None) or {}
+    props = schema.get("properties", {})
+    if not props:
+        return args
+    coerced = dict(args)
+    for key, value in coerced.items():
+        expected = props.get(key, {})
+        expected_type = expected.get("type")
+        if expected_type == "array" and isinstance(value, str):
+            coerced[key] = [value]
+        elif expected_type == "integer" and isinstance(value, str):
+            try:
+                coerced[key] = int(value)
+            except ValueError:
+                pass
+        elif expected_type == "number" and isinstance(value, str):
+            try:
+                coerced[key] = float(value)
+            except ValueError:
+                pass
+        elif expected_type == "boolean" and isinstance(value, str):
+            coerced[key] = value.lower() in ("true", "1", "yes")
+    return coerced
 
 
 async def tool_node(
@@ -213,8 +260,9 @@ async def tool_node(
     tool_registry: Any,
     tool_executor: Any,
     context: Any,
+    max_tool_calls: int = 5,
 ) -> dict[str, Any]:
-    """Execute tool calls via ToolExecutor."""
+    """Execute tool calls via ToolExecutor with arg validation and call limit."""
     from langchain_core.messages import ToolMessage
 
     last_msg = state["messages"][-1]
@@ -222,15 +270,39 @@ async def tool_node(
     results: list[dict[str, Any]] = []
     messages = []
 
+    if len(tool_calls) > max_tool_calls:
+        logger.warning(
+            "Truncating tool calls from %d to %d (max_tool_calls_per_step)",
+            len(tool_calls),
+            max_tool_calls,
+        )
+        tool_calls = tool_calls[:max_tool_calls]
+
     for call in tool_calls:
+        tool_name = call.get("name", "?")
         try:
-            tool = tool_registry.get_by_name(call["name"])
-            result = await tool_executor.run(tool, context, **call["args"])
-            results.append({"tool": call["name"], "result": result})
+            if tool_name == "subagent":
+                args = call.get("args", {})
+                redirect_name = "spawn_subagent"
+                tool = tool_registry.get_by_name(redirect_name)
+                sa_args = {
+                    "name": args.get("name", "subagent"),
+                    "task": args.get("message", args.get("task", str(args))),
+                    "mode": args.get("mode", "agent"),
+                }
+                result = await tool_executor.run(tool, context, **sa_args)
+                results.append({"tool": f"subagent:{sa_args['name']}", "result": result})
+                messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
+                continue
+
+            tool = tool_registry.get_by_name(tool_name)
+            coerced_args = _coerce_tool_args(call.get("args", {}), tool)
+            result = await tool_executor.run(tool, context, **coerced_args)
+            results.append({"tool": tool_name, "result": result})
             messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
         except Exception as exc:
-            logger.warning("Tool %s failed: %s", call.get("name", "?"), exc)
-            results.append({"tool": call.get("name", "?"), "result": f"Error: {exc}"})
+            logger.warning("Tool %s failed: %s", tool_name, exc)
+            results.append({"tool": tool_name, "result": f"Error: {exc}"})
             messages.append(
                 ToolMessage(
                     content=f"Error: {exc}",
@@ -250,11 +322,11 @@ async def subagent_node(
     *,
     agent: Any,
 ) -> dict[str, Any]:
-    """Handle subagent spawn/interact requests."""
+    """Handle subagent spawn/interact requests (in-process and CLI daemons)."""
     from langchain_core.messages import AIMessage
 
     last_msg = state["messages"][-1]
-    sa_data = last_msg.additional_kwargs.get("subagent_action")
+    sa_data = getattr(last_msg, "additional_kwargs", {}).get("subagent_action")
     if not sa_data:
         return {"messages": [AIMessage(content="No subagent action found.")]}
 
@@ -271,12 +343,32 @@ async def subagent_node(
                 result = await agent.interact_with_subagent(subagent_id, sa.message)
             else:
                 result = f"Subagent '{subagent_id}' spawned successfully."
-        else:
+        elif sa.action == "interact":
             matching = [sid for sid in agent._subagents if sa.name in sid]
             if not matching:
                 result = f"No subagent matching '{sa.name}' found."
             else:
                 result = await agent.interact_with_subagent(matching[0], sa.message)
+        elif sa.action == "spawn_cli":
+            cli_adapter = getattr(agent, "_cli_adapter", None)
+            if cli_adapter is None:
+                result = "CLI subagent adapter not configured."
+            else:
+                result = await cli_adapter.spawn(sa.name, sa.message)
+        elif sa.action == "interact_cli":
+            cli_adapter = getattr(agent, "_cli_adapter", None)
+            if cli_adapter is None:
+                result = "CLI subagent adapter not configured."
+            else:
+                result = await cli_adapter.interact(sa.name, sa.message)
+        elif sa.action == "terminate_cli":
+            cli_adapter = getattr(agent, "_cli_adapter", None)
+            if cli_adapter is None:
+                result = "CLI subagent adapter not configured."
+            else:
+                result = await cli_adapter.terminate(sa.name)
+        else:
+            result = f"Unknown subagent action: {sa.action}"
     except Exception as exc:
         logger.warning("Subagent operation failed: %s", exc)
         result = f"Subagent error: {exc}"

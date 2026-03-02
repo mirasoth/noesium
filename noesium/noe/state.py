@@ -1,4 +1,4 @@
-"""State models for Noe graphs (impl guide §4.2-4.3)."""
+"""State models for Noe graphs (impl guide §3.2, §4.2-4.3)."""
 
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ class TaskStep(BaseModel):
     description: str
     status: Literal["pending", "in_progress", "completed", "failed"] = "pending"
     result: str | None = None
+    execution_hint: Literal["tool", "subagent", "cli_subagent", "auto"] = "auto"
 
     def to_todo_line(self, index: int) -> str:
         marker = "x" if self.status == "completed" else " "

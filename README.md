@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/logos/noesium-logo.jpg" alt="Noesium Logo" width="350" />
+  <img src="docs/logos/noesium-logo-light.png" alt="Noesium Logo" width="350" />
 
   #
 

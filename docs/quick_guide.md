@@ -78,7 +78,7 @@ result = client.structured_completion(messages, Answer)
 Autonomous research assistant with planning capabilities:
 
 ```python
-from noesium.agents.noe.agent import NoeANoe
+from noesium.noe.agent import NoeAgent
 
 agent = Noet()
 result = await agent.run("Research quantum computing applications")

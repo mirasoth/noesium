@@ -131,7 +131,7 @@ RFC classification:
 
 ### NoeAgent
 
-**Location:** `noesium/agents/noe/`
+**Location:** `noesium/noe/`
 
 **Purpose:** Autonomous research assistant with dual modes (Ask/Agent) featuring planning, execution, and reflection cycles using LangGraph.
 

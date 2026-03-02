@@ -149,7 +149,7 @@ class BaseHitlAgent(BaseGraphicAgent):
     - Response generation patterns
     """
 
-    def __init__(self, llm_provider: str = "openrouter", model_name: Optional[str] = None):
+    def __init__(self, llm_provider: str = "openai", model_name: Optional[str] = None):
         """Initialize conversation agent."""
         super().__init__(llm_provider, model_name)
         self._session_states: Dict[str, Any] = {}

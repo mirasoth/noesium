@@ -7,6 +7,7 @@ NoeAgent is an autonomous research assistant built on the Noesium framework. It 
 - [NoeAgent User Guide](#noeagent-user-guide)
   - [Table of Contents](#table-of-contents)
   - [Quick Start](#quick-start)
+    - [Installation](#installation)
     - [Library Mode](#library-mode)
     - [TUI Mode](#tui-mode)
   - [Modes of Operation](#modes-of-operation)
@@ -19,6 +20,12 @@ NoeAgent is an autonomous research assistant built on the Noesium framework. It 
       - [Default Toolkits](#default-toolkits)
       - [Default Permissions](#default-permissions)
     - [Streaming Output](#streaming-output)
+      - [`astream_progress()` — Canonical Typed Event Stream](#astream_progress--canonical-typed-event-stream)
+      - [`astream_events()` — Dict-Based Event Stream](#astream_events--dict-based-event-stream)
+      - [ProgressEvent Fields](#progressevent-fields)
+      - [ProgressEventType Values](#progresseventtype-values)
+      - [ProgressCallback Protocol](#progresscallback-protocol)
+      - [SessionLogger](#sessionlogger)
     - [Custom Tools](#custom-tools)
     - [MCP Server Integration](#mcp-server-integration)
   - [TUI Mode](#tui-mode-1)
@@ -31,6 +38,9 @@ NoeAgent is an autonomous research assistant built on the Noesium framework. It 
       - [Ask Mode Overrides](#ask-mode-overrides)
   - [Advanced Features](#advanced-features)
     - [Subagents](#subagents)
+      - [In-Process Subagents](#in-process-subagents)
+      - [External CLI Subagent Daemons](#external-cli-subagent-daemons)
+    - [TaskPlan Structure](#taskplan-structure)
     - [Memory Providers](#memory-providers)
     - [Permissions](#permissions)
   - [Examples](#examples)
@@ -58,7 +68,7 @@ uv run pip install langchain-core langgraph
 
 ```python
 import asyncio
-from noesium.agents.noe import NoeAgent
+from noesium.noe import NoeAgent
 
 async def main():
     agent = NoeAgent()
@@ -72,13 +82,13 @@ asyncio.run(main())
 
 ```bash
 # Run the interactive terminal UI
-python -m noesium.agents.noe.tui
+python -m noesium.noe.tui
 ```
 
 Or using the environment variable:
 
 ```bash
-NOE_INTERFACE=tui python -m noesium.agents.noe.tui
+NOE_INTERFACE=tui python -m noesium.noe.tui
 ```
 
 ## Modes of Operation
@@ -92,16 +102,21 @@ NoeAgent supports three interface modes (configured via `NoeConfig.interface_mod
 
 **Exported Classes:**
 
-The `noesium.agents.noe` module exports the following:
+The `noesium.noe` module exports the following:
 
 - `NoeAgent` - Main agent class
 - `NoeConfig` - Configuration class
 - `NoeMode` - Agent mode enum (`ASK` or `AGENT`)
+- `CliSubagentConfig` - External CLI subagent daemon configuration
 - `TaskPlan` - Plan structure with steps
 - `TaskStep` - Individual plan step
-- `AgentAction` - Structured action schema
-- `SubagentAction` - Subagent spawn/interact schema
+- `AgentAction` - Structured action schema (with mutual exclusivity validator)
+- `SubagentAction` - Subagent spawn/interact/CLI schema
 - `ToolCallAction` - Tool invocation schema
+- `ProgressEvent` - Typed progress event model
+- `ProgressEventType` - Enumeration of all progress event kinds
+- `ProgressCallback` - Push-style callback protocol for consumers
+- `SessionLogger` - JSONL session logger
 
 | Mode | Description |
 |------|-------------|
@@ -117,7 +132,7 @@ The `NoeAgent` class provides a simple API for autonomous research tasks.
 #### Synchronous API
 
 ```python
-from noesium.agents.noe import NoeAgent
+from noesium.noe import NoeAgent
 
 agent = NoeAgent()
 result = agent.run("Research the history of artificial intelligence")
@@ -128,7 +143,7 @@ print(result)
 
 ```python
 import asyncio
-from noesium.agents.noe import NoeAgent
+from noesium.noe import NoeAgent
 
 async def main():
     agent = NoeAgent()
@@ -143,11 +158,11 @@ asyncio.run(main())
 Create a custom configuration using `NoeConfig`:
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig, NoeMode
+from noesium.noe import NoeAgent, NoeConfig, NoeMode
 
 config = NoeConfig(
     mode=NoeMode.AGENT,
-    llm_provider="openrouter",
+    llm_provider="openai",
     model_name="anthropic/claude-3-5-sonnet",
     max_iterations=15,
     reflection_interval=3,
@@ -164,37 +179,49 @@ result = agent.run("Your research question")
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `mode` | `NoeMode` | `AGENT` | Agent mode (`AGENT` or `ASK`) |
-| `llm_provider` | `str` | `"openrouter"` | LLM provider name |
-| `model_name` | `str | None` | `None` | Specific model to use |
-| `planning_model` | `str | None` | `None` | Model for task planning |
+| `llm_provider` | `str` | `"openai"` | LLM provider name |
+| `model_name` | `str \| None` | `None` | Specific model to use |
+| `planning_model` | `str \| None` | `None` | Separate model for task planning |
 | `max_iterations` | `int` | `25` | Maximum execution iterations |
-| `max_tool_calls_per_step` | `int` | `5` | Max tool calls per step |
+| `max_tool_calls_per_step` | `int` | `5` | Max tool calls per step (enforced by truncation) |
 | `reflection_interval` | `int` | `3` | Iterations between reflections |
-| `enabled_toolkits` | `list[str]` | See defaults | Enabled toolkits |
+| `interface_mode` | `str` | `"library"` | `"library"` or `"tui"` |
+| `progress_callbacks` | `list[Callable]` | `[]` | Push-style ProgressCallback instances |
+| `session_log_dir` | `str` | `"~/.noe_agent/sessions"` | JSONL session log directory |
+| `enable_session_logging` | `bool` | `True` | Enable JSONL session logging |
+| `enabled_toolkits` | `list[str]` | All 18 toolkits | Enabled toolkits |
 | `mcp_servers` | `list[dict]` | `[]` | MCP server configurations |
 | `custom_tools` | `list[Callable]` | `[]` | Custom tool functions |
 | `memory_providers` | `list[str]` | `["working", "event_sourced", "memu"]` | Memory providers |
 | `persist_memory` | `bool` | `True` | Persist research results |
-| `working_directory` | `str | None` | `None` | Working directory for tools |
+| `working_directory` | `str \| None` | `None` | Working directory for tools |
 | `permissions` | `list[str]` | See defaults | Tool permissions |
-| `enable_subagents` | `bool` | `True` | Enable subagent spawning |
+| `enable_subagents` | `bool` | `True` | Enable in-process subagent spawning |
 | `subagent_max_depth` | `int` | `2` | Max subagent nesting depth |
+| `cli_subagents` | `list[CliSubagentConfig]` | `[]` | External CLI subagent daemon configurations |
 
 #### Default Toolkits
 
-The following toolkits are enabled by default in AGENT mode:
+All 18 registered toolkits are enabled by default in AGENT mode:
 
-- `wizsearch` - Web search
-- `jina_research` - Research via Jina
+- `wizsearch` - Multi-engine web search
+- `jina_research` - Research via Jina Reader
 - `bash` - Shell command execution
 - `python_executor` - Python code execution
 - `file_edit` - File operations
 - `memory` - Memory operations
-- `document` - Document processing
-- `image` - Image analysis
-- `tabular_data` - Data table processing
-- `video` - Video analysis
+- `document` - Document processing (PDF, Word, etc.)
+- `image` - Image processing and generation
+- `tabular_data` - CSV/Excel data processing
+- `video` - Video processing
 - `user_interaction` - User prompts
+- `arxiv` - ArXiv paper search and retrieval
+- `serper` - Google search via Serper API
+- `wikipedia` - Wikipedia search and retrieval
+- `github` - GitHub API operations
+- `gmail` - Gmail email operations
+- `audio` - General audio processing
+- `audio_aliyun` - Aliyun audio processing (TTS, STT)
 
 #### Default Permissions
 
@@ -207,73 +234,148 @@ Default permissions in AGENT mode:
 
 ### Streaming Output
 
-For real-time progress updates, use the `stream()` method:
+For real-time progress updates, use the `stream()` method (yields final answer text only):
 
 ```python
 import asyncio
-from noesium.agents.noe import NoeAgent
+from noesium.noe import NoeAgent
 
 async def main():
     agent = NoeAgent()
     async for chunk in agent.stream("Analyze Python async patterns"):
         print(chunk, end="", flush=True)
-    print()  # New line after completion
+    print()
 
 asyncio.run(main())
 ```
 
-For detailed event tracking, use the `astream_events()` method:
+#### `astream_progress()` — Canonical Typed Event Stream
+
+The primary streaming API. Yields `ProgressEvent` objects with full typing:
 
 ```python
 import asyncio
-from noesium.agents.noe import NoeAgent
+from noesium.noe import NoeAgent, ProgressEventType
 
 async def main():
     agent = NoeAgent()
 
-    async for event in agent.astream_events("Research AI trends"):
-        event_type = event.get("type")
+    async for event in agent.astream_progress("Research AI trends"):
+        if event.type == ProgressEventType.PLAN_CREATED:
+            print(f"Plan: {event.summary}")
 
-        if event_type == "plan_created":
-            print(f"Plan created with {len(event['plan'].steps)} steps")
+        elif event.type == ProgressEventType.STEP_START:
+            print(f"Step {event.step_index + 1}: {event.step_desc}")
 
-        elif event_type == "step_started":
-            print(f"Starting step {event['index'] + 1}: {event['step']}")
+        elif event.type == ProgressEventType.TOOL_START:
+            print(f"Using {event.tool_name}({event.tool_args})")
 
-        elif event_type == "tool_call_started":
-            print(f"Calling tool: {event['name']}")
+        elif event.type == ProgressEventType.TOOL_END:
+            print(f"Result: {event.tool_result}")
 
-        elif event_type == "tool_call_completed":
-            print(f"Tool completed: {event['name']}")
+        elif event.type == ProgressEventType.SUBAGENT_START:
+            print(f"Delegating to [{event.subagent_id}]")
 
-        elif event_type == "reflection":
-            print(f"Reflecting: {event['text'][:100]}...")
+        elif event.type == ProgressEventType.REFLECTION:
+            print(f"Reflecting: {event.text[:100]}...")
 
-        elif event_type == "final_answer":
-            print(f"Answer: {event['text']}")
+        elif event.type == ProgressEventType.FINAL_ANSWER:
+            print(f"Answer: {event.text}")
 
 asyncio.run(main())
 ```
 
-**Event Types:**
+#### `astream_events()` — Dict-Based Event Stream
 
-| Event Type | Description | Fields |
-|------------|-------------|--------|
-| `plan_created` | New task plan created | `plan: TaskPlan` |
-| `step_started` | Plan step started | `step: str`, `index: int` |
-| `tool_call_started` | Tool invocation started | `name: str`, `args: dict` |
-| `tool_call_completed` | Tool execution finished | `name: str`, `result: str` |
-| `thinking` | Agent reasoning/delegation | `thought: str` |
-| `text_chunk` | Text output chunk | `text: str` |
-| `reflection` | Agent self-assessment | `text: str` |
-| `final_answer` | Final result | `text: str` |
+Backward-compatible wrapper that converts each `ProgressEvent` to a plain dict:
+
+```python
+async for event in agent.astream_events("Research AI trends"):
+    if event["type"] == "plan.created":
+        print(event["summary"])
+```
+
+#### ProgressEvent Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `ProgressEventType` | Event kind (see table below) |
+| `timestamp` | `datetime` | UTC timestamp |
+| `session_id` | `str` | Session identifier |
+| `sequence` | `int` | Monotonic sequence number |
+| `node` | `str \| None` | Graph node that emitted the event |
+| `step_index` | `int \| None` | Current plan step index |
+| `step_desc` | `str \| None` | Current plan step description |
+| `tool_name` | `str \| None` | Tool name (for TOOL_START/TOOL_END) |
+| `tool_args` | `dict \| None` | Tool arguments (for TOOL_START) |
+| `tool_result` | `str \| None` | Tool result summary (for TOOL_END) |
+| `subagent_id` | `str \| None` | Subagent identifier |
+| `text` | `str \| None` | Text content (for TEXT_CHUNK, FINAL_ANSWER) |
+| `summary` | `str \| None` | Short one-liner suitable for TUI rendering |
+| `detail` | `str \| None` | Verbose content for session logging |
+| `plan_snapshot` | `dict \| None` | Full plan dump (for PLAN_CREATED/PLAN_REVISED) |
+| `error` | `str \| None` | Error message (for ERROR events) |
+| `metadata` | `dict` | Arbitrary extension metadata |
+
+#### ProgressEventType Values
+
+| Event Type | Value | Description |
+|------------|-------|-------------|
+| `SESSION_START` | `session.start` | Session initiated |
+| `SESSION_END` | `session.end` | Session completed |
+| `PLAN_CREATED` | `plan.created` | New task plan created |
+| `PLAN_REVISED` | `plan.revised` | Plan updated after reflection |
+| `STEP_START` | `step.start` | Plan step execution started |
+| `STEP_COMPLETE` | `step.complete` | Plan step finished |
+| `TOOL_START` | `tool.start` | Tool invocation started |
+| `TOOL_END` | `tool.end` | Tool execution finished |
+| `SUBAGENT_START` | `subagent.start` | Subagent spawned/messaged |
+| `SUBAGENT_PROGRESS` | `subagent.progress` | Subagent intermediate update |
+| `SUBAGENT_END` | `subagent.end` | Subagent task completed |
+| `THINKING` | `thinking` | Agent reasoning |
+| `TEXT_CHUNK` | `text.chunk` | Text output chunk |
+| `PARTIAL_RESULT` | `partial.result` | Intermediate result |
+| `REFLECTION` | `reflection` | Agent self-assessment |
+| `FINAL_ANSWER` | `final.answer` | Final synthesized result |
+| `ERROR` | `error` | Error occurred |
+
+#### ProgressCallback Protocol
+
+Library consumers can register push-style callbacks:
+
+```python
+from noesium.noe import NoeAgent, NoeConfig, ProgressEvent, ProgressCallback
+
+class MyCallback:
+    async def on_progress(self, event: ProgressEvent) -> None:
+        print(f"[{event.type.value}] {event.summary}")
+
+config = NoeConfig(progress_callbacks=[MyCallback()])
+agent = NoeAgent(config)
+await agent.arun("Research quantum computing")
+```
+
+#### SessionLogger
+
+JSONL-based session logging that persists all progress events to disk:
+
+```python
+from noesium.noe import NoeConfig
+
+config = NoeConfig(
+    enable_session_logging=True,
+    session_log_dir="~/.noe_agent/sessions",
+)
+```
+
+Session logs are written as `.jsonl` files in the configured directory, one JSON object per line corresponding to each `ProgressEvent`.
 
 ### Custom Tools
 
 Add custom Python functions as tools using the `custom_tools` configuration:
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig
+from noesium.noe import NoeAgent, NoeConfig
 
 def calculate_fibonacci(n: int) -> dict:
     """Calculate the nth Fibonacci number."""
@@ -302,7 +404,7 @@ result = agent.run("What's the 20th Fibonacci number and the weather in Tokyo?")
 Connect to Model Context Protocol (MCP) servers:
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig
+from noesium.noe import NoeAgent, NoeConfig
 
 config = NoeConfig(
     mcp_servers=[
@@ -328,7 +430,7 @@ agent = NoeAgent(config)
 The TUI provides a simple interactive terminal interface:
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig, NoeMode
+from noesium.noe import NoeAgent, NoeConfig, NoeMode
 
 agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, interface_mode="tui"))
 agent.run_tui()
@@ -337,7 +439,7 @@ agent.run_tui()
 Or run as a module:
 
 ```bash
-python -m noesium.agents.noe.tui
+python -m noesium.noe.tui
 ```
 
 ### TUI Commands
@@ -367,6 +469,7 @@ noe> /exit
 | `/mode agent` | Switch to agent mode |
 | `/plan` | Show current task plan |
 | `/memory` | Show memory stats |
+| `/session` | Show current session ID and log path |
 | `/clear` | Clear the screen |
 | Any text | Submit a research task to the agent |
 
@@ -393,7 +496,7 @@ The full-featured autonomous research mode with:
 - **Memory Persistence**: Stores research results for future reference
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig, NoeMode
+from noesium.noe import NoeAgent, NoeConfig, NoeMode
 
 config = NoeConfig(mode=NoeMode.AGENT)
 agent = NoeAgent(config)
@@ -435,7 +538,7 @@ A simplified read-only Q&A mode:
 - **Memory access**: Can retrieve previously stored information
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig, NoeMode
+from noesium.noe import NoeAgent, NoeConfig, NoeMode
 
 config = NoeConfig(mode=NoeMode.ASK)
 agent = NoeAgent(config)
@@ -455,10 +558,14 @@ When using `NoeMode.ASK`, the following configuration is automatically applied:
 
 ### Subagents
 
-NoeAgent can spawn child agents for parallel task execution:
+NoeAgent supports two categories of child agents:
+
+#### In-Process Subagents
+
+Child `NoeAgent` instances spawned within the same process. The LLM decides when to delegate via the `SubagentAction` schema:
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig
+from noesium.noe import NoeAgent, NoeConfig
 
 config = NoeConfig(
     enable_subagents=True,
@@ -469,14 +576,47 @@ agent = NoeAgent(config)
 result = agent.run("Research both solar and wind energy advantages")
 ```
 
-Subagents are automatically spawned when the LLM determines a task can be delegated.
+#### External CLI Subagent Daemons
+
+Long-lived external CLI processes (e.g., Claude Code CLI) that run as persistent daemons. Configured via `CliSubagentConfig`:
+
+```python
+from noesium.noe import NoeAgent, NoeConfig, CliSubagentConfig
+
+config = NoeConfig(
+    cli_subagents=[
+        CliSubagentConfig(
+            name="claude-code",
+            command="claude",
+            args=["--session"],
+            timeout=300,
+            restart_policy="on-failure",
+            task_types=["code_generation", "code_review"],
+        ),
+    ],
+)
+
+agent = NoeAgent(config)
+```
+
+The `SubagentAction` schema supports five actions for routing:
+
+| Action | Target | Description |
+|--------|--------|-------------|
+| `spawn` | In-process | Create a new child NoeAgent |
+| `interact` | In-process | Send a message to an existing child |
+| `spawn_cli` | CLI daemon | Start an external CLI subagent |
+| `interact_cli` | CLI daemon | Send a task to a running CLI daemon |
+| `terminate_cli` | CLI daemon | Shut down a CLI daemon |
+
+The LLM intelligently determines whether to use a tool, an in-process subagent, or a CLI subagent based on task complexity, required autonomy, and configured `task_types`.
 
 ### TaskPlan Structure
 
 The `TaskPlan` class represents the agent's execution plan:
 
 ```python
-from noesium.agents.noe import TaskPlan, TaskStep
+from noesium.noe import TaskPlan, TaskStep
 
 # TaskPlan attributes
 plan.goal: str                          # The research goal
@@ -498,7 +638,10 @@ step.step_id: str                       # Unique identifier
 step.description: str                   # Step description
 step.status: str                        # "pending" | "in_progress" | "completed" | "failed"
 step.result: str | None                 # Step result (if completed)
+step.execution_hint: str                # "tool" | "subagent" | "cli_subagent" | "auto"
 ```
+
+The `execution_hint` guides the planner's routing heuristic. When set to `"auto"` (default), the LLM decides the execution strategy at runtime.
 
 ### Memory Providers
 
@@ -511,7 +654,7 @@ NoeAgent supports multiple memory providers:
 | `memu` | Memu long-term memory |
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig
+from noesium.noe import NoeAgent, NoeConfig
 
 config = NoeConfig(
     memory_providers=["working", "memu"],
@@ -528,7 +671,7 @@ agent = NoeAgent(config)
 Control what the agent can do with fine-grained permissions:
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig
+from noesium.noe import NoeAgent, NoeConfig
 
 # Read-only agent
 config = NoeConfig(
@@ -551,7 +694,7 @@ config = NoeConfig(
 ### Example 1: Simple Research Query
 
 ```python
-from noesium.agents.noe import NoeAgent
+from noesium.noe import NoeAgent
 
 agent = NoeAgent()
 result = agent.run("What are the key differences between REST and GraphQL?")
@@ -561,7 +704,7 @@ print(result)
 ### Example 2: File Analysis
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig
+from noesium.noe import NoeAgent, NoeConfig
 
 config = NoeConfig(
     permissions=["fs:read"],
@@ -575,7 +718,7 @@ result = agent.run("Analyze the contents of /path/to/report.pdf and summarize ke
 ### Example 3: Data Analysis
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig
+from noesium.noe import NoeAgent, NoeConfig
 
 config = NoeConfig(
     enabled_toolkits=["python_executor", "tabular_data"],
@@ -591,7 +734,7 @@ result = agent.run(
 
 ```python
 import asyncio
-from noesium.agents.noe import NoeAgent
+from noesium.noe import NoeAgent
 
 async def streaming_research():
     agent = NoeAgent()
@@ -608,7 +751,7 @@ asyncio.run(streaming_research())
 ### Example 5: Ask Mode for Memory Retrieval
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig, NoeMode
+from noesium.noe import NoeAgent, NoeConfig, NoeMode
 
 # First, do some research with memory enabled
 agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, persist_memory=True))
@@ -623,7 +766,7 @@ print(answer)
 ### Example 6: Custom Research Workflow
 
 ```python
-from noesium.agents.noe import NoeAgent, NoeConfig
+from noesium.noe import NoeAgent, NoeConfig
 
 def search_arxiv(query: str) -> dict:
     """Search arXiv for papers matching the query."""
@@ -662,8 +805,9 @@ WARNING: Failed to initialize memu provider: ...
 
 ### LLM Provider Configuration
 
-Make sure your LLM provider credentials are configured. The default is OpenRouter:
+Make sure your LLM provider credentials are configured. The default provider is OpenAI (set via `NOESIUM_LLM_PROVIDER` env var):
 
 ```bash
-export OPENROUTER_API_KEY="your_key"
+export NOESIUM_LLM_PROVIDER="openai"
+export OPENAI_API_KEY="your_key"
 ```

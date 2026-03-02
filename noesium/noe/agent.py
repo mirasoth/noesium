@@ -48,12 +48,14 @@ class NoeAgent(BaseGraphicAgent):
         self.config = (config or NoeConfig()).effective()
         super().__init__(
             llm_provider=self.config.llm_provider,
+            model_name=self.config.model_name,
         )
         self._agent_id = f"noe-{id(self)}"
         self._memory_manager: ProviderMemoryManager | None = None
         self._tool_executor: ToolExecutor | None = None
         self._tool_registry: ToolRegistry | None = None
         self._planner: TaskPlanner | None = None
+        self._cli_adapter: "ExternalCliAdapter | None" = None
         self._event_store = InMemoryEventStore()
         self._subagents: dict[str, "NoeAgent"] = {}
         self._depth: int = 0
@@ -66,7 +68,24 @@ class NoeAgent(BaseGraphicAgent):
         await self._setup_memory()
         if self.config.mode == NoeMode.AGENT:
             await self._setup_tools()
-            self._planner = TaskPlanner(self.llm)
+            planning_llm = None
+            if self.config.planning_model:
+                from noesium.core.llm import get_llm_client
+
+                try:
+                    planning_llm = get_llm_client(
+                        provider=self.config.llm_provider,
+                        chat_model=self.config.planning_model,
+                    )
+                except Exception as exc:
+                    logger.warning("Failed to create planning LLM, using default: %s", exc)
+            cli_names = [c.name for c in self.config.cli_subagents]
+            self._planner = TaskPlanner(
+                self.llm,
+                planning_llm=planning_llm,
+                cli_subagent_names=cli_names,
+            )
+            await self._setup_cli_subagents()
 
     async def _setup_memory(self) -> None:
         providers = []
@@ -139,6 +158,46 @@ class NoeAgent(BaseGraphicAgent):
             producer=AgentRef(agent_id=self._agent_id, agent_type="noe"),
         )
 
+        if self.config.enable_subagents:
+            self._register_subagent_tools()
+
+    def _register_subagent_tools(self) -> None:
+        """Register subagent spawn/interact as callable tools in the registry."""
+        parent = self
+
+        async def spawn_subagent(name: str, task: str, mode: str = "agent") -> str:
+            """Spawn a child NoeAgent to work on a subtask autonomously and return its result.
+
+            Args:
+                name: Short identifier for the subagent (e.g. 'web-searcher', 'code-analyzer')
+                task: The full task description to delegate to the child agent
+                mode: 'agent' for full tool access, 'ask' for read-only Q&A
+            """
+            sid = await parent.spawn_subagent(name, mode=NoeMode(mode))
+            return await parent.interact_with_subagent(sid, task)
+
+        self._tool_registry.register(FunctionAdapter.from_function(spawn_subagent))
+
+    async def _setup_cli_subagents(self) -> None:
+        """Initialize ExternalCliAdapter if CLI subagents are configured."""
+        if not self.config.cli_subagents:
+            return
+        from .cli_adapter import ExternalCliAdapter
+
+        self._cli_adapter = ExternalCliAdapter()
+        for cli_cfg in self.config.cli_subagents:
+            try:
+                result = await self._cli_adapter.spawn_from_config(cli_cfg)
+                logger.info("CLI subagent setup: %s", result)
+            except Exception as exc:
+                logger.warning("Failed to spawn CLI subagent '%s': %s", cli_cfg.name, exc)
+
+    async def _cleanup_subagents(self) -> None:
+        """Terminate all in-process and CLI subagents."""
+        self._subagents.clear()
+        if self._cli_adapter is not None:
+            await self._cli_adapter.terminate_all()
+
     @staticmethod
     async def _connect_mcp(mcp_config: dict) -> Any:
         """Attempt to connect to an MCP server. Returns session or raises."""
@@ -195,6 +254,7 @@ class NoeAgent(BaseGraphicAgent):
                 llm=self.llm,
                 tool_registry=self._tool_registry,
                 memory_manager=self._memory_manager,
+                max_tool_calls=self.config.max_tool_calls_per_step,
             )
 
         async def _tools(state: AgentState) -> dict:
@@ -208,6 +268,7 @@ class NoeAgent(BaseGraphicAgent):
                 tool_registry=self._tool_registry,
                 tool_executor=self._tool_executor,
                 context=ctx,
+                max_tool_calls=self.config.max_tool_calls_per_step,
             )
 
         async def _subagent(state: AgentState) -> dict:
@@ -276,7 +337,7 @@ class NoeAgent(BaseGraphicAgent):
         last_msg = state["messages"][-1] if state.get("messages") else None
         if last_msg and getattr(last_msg, "tool_calls", None):
             return "tool_node"
-        if last_msg and last_msg.additional_kwargs.get("subagent_action"):
+        if last_msg and getattr(last_msg, "additional_kwargs", {}).get("subagent_action"):
             return "subagent_node"
 
         iteration = state.get("iteration", 0)
@@ -399,6 +460,19 @@ class NoeAgent(BaseGraphicAgent):
         async def _emit(evt: ProgressEvent) -> None:
             await self._fire_callbacks(evt)
 
+        def _brief_args(args: dict[str, Any], max_len: int = 60) -> str:
+            if not args:
+                return ""
+            parts = []
+            for k, v in args.items():
+                sv = str(v)
+                if len(sv) > 40:
+                    sv = sv[:37] + "..."
+                parts.append(f'{k}="{sv}"' if isinstance(v, str) else f"{k}={sv}")
+                if sum(len(p) for p in parts) > max_len:
+                    break
+            return ", ".join(parts)
+
         initial = self._build_initial_state()
         initial["messages"] = [HumanMessage(content=user_message)]
 
@@ -408,6 +482,7 @@ class NoeAgent(BaseGraphicAgent):
 
         _prev_plan_id: int | None = None
         _prev_tool_count = 0
+        _prev_step_index: int = -1
 
         try:
             async for raw_event in compiled.astream(initial):
@@ -432,6 +507,23 @@ class NoeAgent(BaseGraphicAgent):
                             )
                             await _emit(evt)
                             yield evt
+
+                        cur_idx = plan.current_step_index
+                        if cur_idx > _prev_step_index and _prev_step_index >= 0:
+                            for completed_idx in range(_prev_step_index, min(cur_idx, len(plan.steps))):
+                                step = plan.steps[completed_idx]
+                                if step.status == "completed":
+                                    evt = _evt(
+                                        ProgressEventType.STEP_COMPLETE,
+                                        node=node_name,
+                                        step_index=completed_idx,
+                                        step_desc=step.description,
+                                        summary=f"Completed step {completed_idx + 1}: {step.description}",
+                                    )
+                                    await _emit(evt)
+                                    yield evt
+                        _prev_step_index = cur_idx
+
                         if plan.current_step:
                             evt = _evt(
                                 ProgressEventType.STEP_START,
@@ -451,12 +543,13 @@ class NoeAgent(BaseGraphicAgent):
                         for tr in new_results:
                             tname = tr.get("tool", "?")
                             raw_result = str(tr.get("result", ""))
+                            first_line = raw_result.split("\n", 1)[0].strip()[:120]
                             evt = _evt(
                                 ProgressEventType.TOOL_END,
                                 node=node_name,
                                 tool_name=tname,
-                                tool_result=raw_result[:200],
-                                summary=f"Completed: {tname}",
+                                tool_result=first_line,
+                                summary=f"{tname}: {first_line}" if first_line else f"{tname}: done",
                                 detail=raw_result[:5000],
                             )
                             await _emit(evt)
@@ -471,12 +564,13 @@ class NoeAgent(BaseGraphicAgent):
                                 for call in tc:
                                     cname = call.get("name", "?")
                                     cargs = call.get("args", {})
+                                    brief_args = _brief_args(cargs)
                                     evt = _evt(
                                         ProgressEventType.TOOL_START,
                                         node=node_name,
                                         tool_name=cname,
                                         tool_args=cargs,
-                                        summary=f"Using {cname}",
+                                        summary=f"Using {cname}({brief_args})" if brief_args else f"Using {cname}",
                                         detail=str(cargs)[:2000],
                                     )
                                     await _emit(evt)
@@ -486,11 +580,12 @@ class NoeAgent(BaseGraphicAgent):
                                 sa = getattr(msg, "additional_kwargs", {}).get("subagent_action")
                                 if sa:
                                     sa_name = sa.get("name", "?")
+                                    sa_msg = sa.get("message", "")[:80]
                                     evt = _evt(
                                         ProgressEventType.SUBAGENT_START,
                                         node=node_name,
                                         subagent_id=sa_name,
-                                        summary=f"Delegating to subagent: {sa_name}",
+                                        summary=f"[{sa_name}] {sa_msg}" if sa_msg else f"[{sa_name}] spawned",
                                         detail=str(sa),
                                     )
                                     await _emit(evt)
@@ -541,6 +636,7 @@ class NoeAgent(BaseGraphicAgent):
             yield err_evt
             raise
         finally:
+            await self._cleanup_subagents()
             end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended")
             await _emit(end_evt)
             yield end_evt

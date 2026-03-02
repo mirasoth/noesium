@@ -21,6 +21,9 @@ more.  Work through your plan step by step, using tools as needed.
 ## Current Plan Step
 {plan}
 
+## Execution Hint
+{execution_hint}
+
 ## Completed Results So Far
 {completed_results}
 
@@ -38,8 +41,16 @@ Set **mark_step_complete** to true when the current plan step is fully done.
 PLANNING_PROMPT = """\
 Break the following goal into a concise ordered list of actionable steps.
 Each step should be one concrete action (search, analyze, compute, write, etc.).
-Return a JSON object with a "steps" array where each element has a
-"description" string.
+
+Return a JSON object with a "steps" array where each element has:
+- "description": string describing the step
+- "execution_hint": one of "tool", "subagent", "cli_subagent", or "auto"
+
+Available execution modes:
+- tool: Use a tool for atomic operations (search, read, compute)
+- subagent: Delegate to a child agent for multi-step reasoning
+- cli_subagent: Delegate to an external CLI agent for specialized tasks{cli_subagent_info}
+- auto: Let the agent decide based on context
 
 Goal: {goal}
 Context: {context}
@@ -71,7 +82,9 @@ Original steps: {original_steps}
 Feedback: {feedback}
 Completed results: {completed_results}
 
-Return a revised JSON object with a "steps" array.
+Return a revised JSON object with a "steps" array where each element has:
+- "description": string describing the step
+- "execution_hint": one of "tool", "subagent", "cli_subagent", or "auto"
 """
 
 FINALIZE_PROMPT = """\

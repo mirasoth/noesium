@@ -7,7 +7,7 @@ This script demonstrates the core functionality of the NoeAgent.
 
 import asyncio
 
-from noesium.agents.noe import NoeAgent
+from noesium.noe import NoeAgent
 
 
 async def main():

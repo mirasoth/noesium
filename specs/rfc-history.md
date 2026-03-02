@@ -2,7 +2,7 @@
 
 This document tracks all RFC lifecycle events in chronological order (newest first).
 
-**Last Updated**: 2026-03-01
+**Last Updated**: 2026-03-02
 
 ---
 
@@ -20,6 +20,13 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 ---
 
 ## Change History
+
+### 2026-03-02
+
+- **Updated**: RFC-0005 - Merged RFC-0005-Patch1 (Persistent External CLI Subagent Daemon Architecture) into RFC-0005 as abstract design; added CapabilityType taxonomy (§4.2), Persistent Subagent Architecture (§10), Subagent Lifecycle Model (§11), Tool vs Subagent comparison (§16); removed NoeAgent-specific references to maintain abstract design
+- **Deprecated**: RFC-0005-Patch1 - Merged into RFC-0005, file deleted
+- **Reference Updated**: rfc-history.md - Added RFC-0005 merge entry
+- **Reference Updated**: rfc-index.md - Updated RFC-0005 last updated date
 
 ### 2026-03-01 (Phase 3)
 

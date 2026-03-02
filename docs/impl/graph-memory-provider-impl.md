@@ -616,7 +616,7 @@ class MemoryLinked(DomainEvent):
 
 ### 6.2 Integration with NoeAgent
 
-Update `noesium/agents/noe/agent.py`:
+Update `noesium/noe/agent.py`:
 
 ```python
 async def _setup_memory(self) -> None:

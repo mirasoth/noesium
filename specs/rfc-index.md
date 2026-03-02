@@ -2,7 +2,7 @@
 
 Master index of all RFC specifications.
 
-**Last Updated**: 2026-03-01
+**Last Updated**: 2026-03-02
 
 ---
 
@@ -27,7 +27,7 @@ Master index of all RFC specifications.
 | [RFC-0002](RFC-0002.md) | Event Schema and Envelope Specification | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
 | [RFC-0003](RFC-0003.md) | Deterministic Kernel Execution Constraints | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
 | [RFC-0004](RFC-0004.md) | Projection and Memory Formal Model | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
-| [RFC-0005](RFC-0005.md) | Capability Registry and Discovery Protocol | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
+| [RFC-0005](RFC-0005.md) | Capability Registry and Discovery Protocol | Architecture Design | Draft | 2025-03-01 | 2026-03-02 |
 | [RFC-0006](RFC-0006.md) | Agent Kernel and Sandboxed Subagent Model | Architecture Design | Draft | 2026-03-01 | 2026-03-01 |
 
 ### RFC-1xxx: Core Framework Implementation Design

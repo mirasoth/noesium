@@ -4,14 +4,29 @@ from __future__ import annotations
 
 import os
 from enum import Enum
+from pathlib import Path
 from typing import Any, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
+
+_NOE_HOME = Path.home() / ".noe_agent"
 
 
 class NoeMode(str, Enum):
     ASK = "ask"
     AGENT = "agent"
+
+
+class CliSubagentConfig(BaseModel):
+    """Configuration for an external CLI subagent daemon (impl guide §5.10)."""
+
+    name: str
+    command: str
+    args: list[str] = Field(default_factory=list)
+    env: dict[str, str] = Field(default_factory=dict)
+    timeout: int = 300
+    restart_policy: str = "on-failure"
+    task_types: list[str] = Field(default_factory=list)
 
 
 class NoeConfig(BaseModel):
@@ -23,16 +38,16 @@ class NoeConfig(BaseModel):
 
     mode: NoeMode = NoeMode.AGENT
     llm_provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
+    model_name: str | None = None
     planning_model: str | None = None
 
     max_iterations: int = 25
     max_tool_calls_per_step: int = 5
     reflection_interval: int = 3
-    interface_mode: str = "library"  # library | tui
+    interface_mode: str = "library"
 
-    # Progress reporting (impl guide §5.5, §5.9)
     progress_callbacks: list[Callable] = Field(default_factory=list)
-    session_log_dir: str = ".noe_sessions"
+    session_log_dir: str = Field(default_factory=lambda: str(_NOE_HOME / "sessions"))
     enable_session_logging: bool = True
 
     enabled_toolkits: list[str] = Field(
@@ -48,6 +63,13 @@ class NoeConfig(BaseModel):
             "tabular_data",
             "video",
             "user_interaction",
+            "arxiv",
+            "serper",
+            "wikipedia",
+            "github",
+            "gmail",
+            "audio",
+            "audio_aliyun",
         ],
     )
     mcp_servers: list[dict[str, Any]] = Field(default_factory=list)
@@ -56,7 +78,7 @@ class NoeConfig(BaseModel):
     memory_providers: list[str] = Field(
         default_factory=lambda: ["working", "event_sourced", "memu"],
     )
-    memu_memory_dir: str = ".noe_memory"
+    memu_memory_dir: str = Field(default_factory=lambda: str(_NOE_HOME / "memory"))
     memu_user_id: str = "default_user"
     persist_memory: bool = True
 
@@ -71,6 +93,7 @@ class NoeConfig(BaseModel):
     )
     enable_subagents: bool = True
     subagent_max_depth: int = 2
+    cli_subagents: list[CliSubagentConfig] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
