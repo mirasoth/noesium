@@ -242,6 +242,17 @@ def pytest_collection_modifyitems(config, items):
             if "slow" in item.keywords:
                 item.add_marker(skip_slow)
 
+    # Skip LLM-dependent tests if no LLM API key is available
+    llm_keys = ["OPENAI_API_KEY", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "OLLAMA_BASE_URL"]
+    has_llm_key = any(os.getenv(key) for key in llm_keys)
+    if not has_llm_key:
+        skip_llm = pytest.mark.skip(
+            reason="No LLM API key set (OPENAI_API_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY, or OLLAMA_BASE_URL)"
+        )
+        for item in items:
+            if "llm" in item.keywords:
+                item.add_marker(skip_llm)
+
     # Skip tests requiring service API keys if not available
     # List of modules that require API keys
     api_key_modules = {

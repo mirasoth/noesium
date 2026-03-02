@@ -269,6 +269,10 @@ class TestSlashCommands:
 
 
 class TestStreamEvents:
+    """Tests for event streaming - require LLM API key for agent initialization."""
+
+    @pytest.mark.integration
+    @pytest.mark.llm
     @pytest.mark.asyncio
     async def test_plan_created_event(self):
         """astream_events yields plan.created when plan node emits a plan."""
@@ -301,6 +305,8 @@ class TestStreamEvents:
         assert plan_events[0]["plan_snapshot"] is not None
         assert plan_events[0]["plan_snapshot"]["goal"] == "Test"
 
+    @pytest.mark.integration
+    @pytest.mark.llm
     @pytest.mark.asyncio
     async def test_final_answer_event(self):
         """astream_events yields final.answer."""
@@ -327,6 +333,8 @@ class TestStreamEvents:
         assert len(final_events) == 1
         assert final_events[0]["text"] == "The answer."
 
+    @pytest.mark.integration
+    @pytest.mark.llm
     @pytest.mark.asyncio
     async def test_tool_start_event(self):
         """astream_events yields tool.start from AIMessage.tool_calls."""
@@ -361,6 +369,8 @@ class TestStreamEvents:
         assert tc_events[0]["tool_name"] == "run_bash"
         assert tc_events[0]["tool_args"] == {"command": "ls"}
 
+    @pytest.mark.integration
+    @pytest.mark.llm
     @pytest.mark.asyncio
     async def test_reflection_event(self):
         """astream_events yields reflection event."""
@@ -387,6 +397,8 @@ class TestStreamEvents:
         assert len(ref_events) == 1
         assert ref_events[0]["text"] == "Good progress so far."
 
+    @pytest.mark.integration
+    @pytest.mark.llm
     @pytest.mark.asyncio
     async def test_session_lifecycle_events(self):
         """astream_events emits session.start at beginning and session.end at end."""
@@ -655,11 +667,15 @@ class TestTodoPersistence:
 
 
 class TestRouting:
+    """Tests for routing logic - require LLM API key for agent initialization."""
+
     def _make_agent(self):
         from noesium.noe.agent import NoeAgent
 
         return NoeAgent(NoeConfig(mode=NoeMode.AGENT))
 
+    @pytest.mark.integration
+    @pytest.mark.llm
     def test_route_finalize_when_plan_complete(self):
         agent = self._make_agent()
         plan = TaskPlan(goal="x", steps=[], is_complete=True)
@@ -673,6 +689,8 @@ class TestRouting:
         }
         assert agent._route_after_execute(state) == "finalize"
 
+    @pytest.mark.integration
+    @pytest.mark.llm
     def test_route_tool_node_when_tool_calls(self):
         from langchain_core.messages import AIMessage
 
@@ -691,6 +709,8 @@ class TestRouting:
         }
         assert agent._route_after_execute(state) == "tool_node"
 
+    @pytest.mark.integration
+    @pytest.mark.llm
     def test_route_subagent_when_subagent_action(self):
         from langchain_core.messages import AIMessage
 
@@ -707,6 +727,8 @@ class TestRouting:
         }
         assert agent._route_after_execute(state) == "subagent_node"
 
+    @pytest.mark.integration
+    @pytest.mark.llm
     def test_route_reflect_at_interval(self):
         from langchain_core.messages import AIMessage
 
@@ -722,6 +744,8 @@ class TestRouting:
         }
         assert agent._route_after_execute(state) == "reflect"
 
+    @pytest.mark.integration
+    @pytest.mark.llm
     def test_route_after_reflect_revise(self):
         agent = self._make_agent()
         state: AgentState = {
@@ -734,6 +758,8 @@ class TestRouting:
         }
         assert agent._route_after_reflect(state) == "revise_plan"
 
+    @pytest.mark.integration
+    @pytest.mark.llm
     def test_route_after_reflect_continue(self):
         agent = self._make_agent()
         state: AgentState = {
