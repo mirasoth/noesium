@@ -35,13 +35,19 @@ class TestOpenRouterIntegration:
             {"role": "user", "content": "What are the top 3 things to do in Tokyo?"},
         ]
 
-        response = self.client.completion(messages, temperature=0.7)
+        try:
+            response = self.client.completion(messages, temperature=0.7)
 
-        # Assertions
-        assert response is not None
-        assert isinstance(response, str)
-        assert len(response) > 0
-        assert "Tokyo" in response or "japan" in response.lower()
+            # Assertions
+            assert response is not None
+            assert isinstance(response, str)
+            assert len(response) > 0
+            assert "Tokyo" in response or "japan" in response.lower()
+        except Exception as e:
+            # Skip if model not available in region
+            if "403" in str(e) or "not available" in str(e).lower():
+                pytest.skip(f"Model not available in your region: {e}")
+            raise
 
     def test_completion_alias(self):
         """Test that completion method works as alias for completion."""
@@ -50,26 +56,38 @@ class TestOpenRouterIntegration:
             {"role": "user", "content": "Say 'test completed' exactly."},
         ]
 
-        # Test completion method (alias)
-        response = self.client.completion(messages, temperature=0.1)
+        try:
+            # Test completion method (alias)
+            response = self.client.completion(messages, temperature=0.1)
 
-        # Assertions
-        assert response is not None
-        assert isinstance(response, str)
-        assert len(response) > 0
-        assert "test completed" in response.lower()
+            # Assertions
+            assert response is not None
+            assert isinstance(response, str)
+            assert len(response) > 0
+            assert "test completed" in response.lower()
+        except Exception as e:
+            # Skip if model not available in region
+            if "403" in str(e) or "not available" in str(e).lower():
+                pytest.skip(f"Model not available in your region: {e}")
+            raise
 
     def test_completion_convenience_function(self):
         """Test the convenience completion function."""
         messages = [{"role": "user", "content": "What's the capital of France?"}]
 
-        response = self.client.completion(messages)
+        try:
+            response = self.client.completion(messages)
 
-        # Assertions
-        assert response is not None
-        assert isinstance(response, str)
-        assert len(response) > 0
-        assert "paris" in response.lower() or "france" in response.lower()
+            # Assertions
+            assert response is not None
+            assert isinstance(response, str)
+            assert len(response) > 0
+            assert "paris" in response.lower() or "france" in response.lower()
+        except Exception as e:
+            # Skip if model not available in region
+            if "403" in str(e) or "not available" in str(e).lower():
+                pytest.skip(f"Model not available in your region: {e}")
+            raise
 
     def test_image_analysis_with_sample_image(self):
         """Test image analysis functionality if sample image exists."""
@@ -103,15 +121,21 @@ class TestOpenRouterIntegration:
         """Test that temperature parameter affects response variability."""
         messages = [{"role": "user", "content": "Give me a random number between 1 and 10"}]
 
-        # Test with different temperatures
-        response_low = self.client.completion(messages, temperature=0.1)
-        response_high = self.client.completion(messages, temperature=0.9)
+        try:
+            # Test with different temperatures
+            response_low = self.client.completion(messages, temperature=0.1)
+            response_high = self.client.completion(messages, temperature=0.9)
 
-        # Both should be valid responses
-        assert response_low is not None
-        assert response_high is not None
-        assert isinstance(response_low, str)
-        assert isinstance(response_high, str)
+            # Both should be valid responses
+            assert response_low is not None
+            assert response_high is not None
+            assert isinstance(response_low, str)
+            assert isinstance(response_high, str)
+        except Exception as e:
+            # Skip if model not available in region
+            if "403" in str(e) or "not available" in str(e).lower():
+                pytest.skip(f"Model not available in your region: {e}")
+            raise
 
     def test_structured_completion_integration(self):
         """Test structured completion with OpenRouter."""
@@ -120,20 +144,26 @@ class TestOpenRouterIntegration:
         class SimpleResponse(BaseModel):
             message: str
 
-        # Get client with instructor enabled
-        client = get_llm_client(provider="openrouter", instructor=True)
+        try:
+            # Get client with instructor enabled
+            client = get_llm_client(provider="openrouter", instructor=True)
 
-        # Make a structured completion
-        messages = [{"role": "user", "content": "Reply with a simple greeting message"}]
-        response = client.structured_completion(
-            messages=messages, response_model=SimpleResponse, temperature=0.1, max_tokens=50
-        )
+            # Make a structured completion
+            messages = [{"role": "user", "content": "Reply with a simple greeting message"}]
+            response = client.structured_completion(
+                messages=messages, response_model=SimpleResponse, temperature=0.1, max_tokens=50
+            )
 
-        # Verify response
-        assert response is not None
-        assert isinstance(response, SimpleResponse)
-        assert hasattr(response, "message")
-        assert len(response.message.strip()) > 0
+            # Verify response
+            assert response is not None
+            assert isinstance(response, SimpleResponse)
+            assert hasattr(response, "message")
+            assert len(response.message.strip()) > 0
+        except Exception as e:
+            # Skip if model not available in region
+            if "403" in str(e) or "not available" in str(e).lower():
+                pytest.skip(f"Model not available in your region: {e}")
+            raise
 
     def test_multiple_messages_conversation(self):
         """Test handling of multi-turn conversations."""
@@ -144,35 +174,47 @@ class TestOpenRouterIntegration:
             {"role": "user", "content": "What about 15 * 2?"},
         ]
 
-        response = self.client.completion(messages, temperature=0.1)
+        try:
+            response = self.client.completion(messages, temperature=0.1)
 
-        # Assertions
-        assert response is not None
-        assert isinstance(response, str)
-        assert len(response) > 0
-        # Should mention 30 or show understanding of math
-        assert any(str(i) in response for i in [30, "thirty"])
+            # Assertions
+            assert response is not None
+            assert isinstance(response, str)
+            assert len(response) > 0
+            # Should mention 30 or show understanding of math
+            assert any(str(i) in response for i in [30, "thirty"])
+        except Exception as e:
+            # Skip if model not available in region
+            if "403" in str(e) or "not available" in str(e).lower():
+                pytest.skip(f"Model not available in your region: {e}")
+            raise
 
     def test_max_tokens_parameter(self):
         """Test max_tokens parameter limits response length."""
         messages = [{"role": "user", "content": "Write a long story about a dragon and a knight."}]
 
-        # Test with very limited tokens
-        short_response = self.client.completion(messages, max_tokens=20)
+        try:
+            # Test with very limited tokens
+            short_response = self.client.completion(messages, max_tokens=20)
 
-        # Test with more tokens
-        long_response = self.client.completion(messages, max_tokens=100)
+            # Test with more tokens
+            long_response = self.client.completion(messages, max_tokens=100)
 
-        # Assertions
-        assert short_response is not None
-        assert long_response is not None
-        assert isinstance(short_response, str)
-        assert isinstance(long_response, str)
+            # Assertions
+            assert short_response is not None
+            assert long_response is not None
+            assert isinstance(short_response, str)
+            assert isinstance(long_response, str)
 
-        # Long response should generally be longer (though not guaranteed)
-        # This is a probabilistic test, so we'll just check they're both valid
-        assert len(short_response.strip()) > 0
-        assert len(long_response.strip()) > 0
+            # Long response should generally be longer (though not guaranteed)
+            # This is a probabilistic test, so we'll just check they're both valid
+            assert len(short_response.strip()) > 0
+            assert len(long_response.strip()) > 0
+        except Exception as e:
+            # Skip if model not available in region
+            if "403" in str(e) or "not available" in str(e).lower():
+                pytest.skip(f"Model not available in your region: {e}")
+            raise
 
     def test_embed_single_text(self):
         """Test embedding generation for a single text."""
@@ -195,8 +237,9 @@ class TestOpenRouterIntegration:
             assert len(embedding) in [1536, 3072]
 
         except Exception as e:
-            if "api key" in str(e).lower():
-                pytest.skip(f"OpenAI API key required for embeddings: {e}")
+            error_str = str(e).lower()
+            if "api key" in error_str or "404" in str(e) or "no embedding" in error_str:
+                pytest.skip(f"Embedding not available: {e}")
             else:
                 raise
 
@@ -228,8 +271,9 @@ class TestOpenRouterIntegration:
                 assert len(embedding) == len(embeddings[0])
 
         except Exception as e:
-            if "api key" in str(e).lower():
-                pytest.skip(f"OpenAI API key required for batch embeddings: {e}")
+            error_str = str(e).lower()
+            if "api key" in error_str or "404" in str(e) or "no embedding" in error_str:
+                pytest.skip(f"Batch embedding not available: {e}")
             else:
                 raise
 
@@ -249,28 +293,30 @@ class TestOpenRouterIntegration:
         ]
 
         try:
-            reranked_chunks = self.client.rerank(query, chunks)
+            reranked_results = self.client.rerank(query, chunks)
 
             # Assertions
-            assert reranked_chunks is not None
-            assert isinstance(reranked_chunks, list)
-            assert len(reranked_chunks) == len(chunks)
-            assert set(reranked_chunks) == set(chunks)  # Same chunks, different order
+            assert reranked_results is not None
+            assert isinstance(reranked_results, list)
+            assert len(reranked_results) == len(chunks)
 
-            # The first chunk should be more relevant to the query
+            # Rerank returns tuples of (similarity, index, chunk)
+            reranked_chunk_texts = [chunk for similarity, index, chunk in reranked_results]
+            assert set(reranked_chunk_texts) == set(chunks)
+
+            # At least one relevant chunk should be in the top 3
             relevant_chunks = [
                 "Deep learning is a subset of machine learning.",
                 "Neural networks are used in artificial intelligence.",
                 "Supervised learning requires labeled training data.",
             ]
-
-            # At least one relevant chunk should be in the top 3
-            top_3 = reranked_chunks[:3]
+            top_3 = reranked_chunk_texts[:3]
             assert any(chunk in top_3 for chunk in relevant_chunks)
 
         except Exception as e:
-            if "api key" in str(e).lower():
-                pytest.skip(f"OpenAI API key required for reranking: {e}")
+            error_str = str(e).lower()
+            if "api key" in error_str or "404" in str(e) or "embedding" in error_str:
+                pytest.skip(f"Reranking not available: {e}")
             else:
                 raise
 

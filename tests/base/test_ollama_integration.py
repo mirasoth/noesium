@@ -306,7 +306,11 @@ class TestOllamaIntegration:
             assert reranked_chunks is not None
             assert isinstance(reranked_chunks, list)
             assert len(reranked_chunks) == len(chunks)
-            assert set(reranked_chunks) == set(chunks)  # Same chunks, different order
+
+            # Rerank returns tuples of (similarity, index, chunk)
+            # Extract just the chunks from the results
+            reranked_chunk_texts = [chunk for similarity, index, chunk in reranked_chunks]
+            assert set(reranked_chunk_texts) == set(chunks)  # Same chunks, different order
 
             # The first chunk should be more relevant to the query
             relevant_chunks = [
@@ -316,7 +320,7 @@ class TestOllamaIntegration:
             ]
 
             # At least one relevant chunk should be in the top 3
-            top_3 = reranked_chunks[:3]
+            top_3 = reranked_chunk_texts[:3]
             assert any(chunk in top_3 for chunk in relevant_chunks)
 
         except Exception as e:

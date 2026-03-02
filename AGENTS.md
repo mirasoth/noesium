@@ -2,6 +2,112 @@
 
 Comprehensive documentation of available agents, toolkits, and architecture in the Noesium cognitive agentic framework.
 
+---
+
+## MANDATORY RULES (Must Comply)
+
+**AI agents MUST complete ALL of the following before finishing any development session:**
+
+### 1. Specification Compliance
+
+Follow the specification hierarchy (see [Specification Hierarchy](#specification-hierarchy) section).
+
+### 2. RFC History Maintenance
+
+**When modifying any RFC file (`specs/rfc-*.md`)**, AI agents MUST also update `specs/rfc-history.md` and `specs/rfc-index.md`:
+
+- Add an entry under the current date
+- Document: RFC number, type of change, brief description, author, rationale
+- Follow the template format in `specs/rfc-history.md`
+
+This ensures all RFC changes are tracked chronologically for audit and reference.
+
+### 3. Work Progress Documentation
+
+**AI agents MUST record work progress in `.agents/worklogs/` before completing any session.**
+
+#### File Naming
+
+Format: `progress-YYYY-MM-DD-NNN.md`
+- `YYYY-MM-DD`: Session date
+- `NNN`: Sequence number (001, 002, etc.)
+
+Example: `.agents/worklogs/progress-2026-01-21-001.md`
+
+#### Required Format
+
+**Frontmatter (YAML):**
+
+```yaml
+---
+date: YYYY-MM-DD
+session: <unique-id>
+objective: <one-line summary>
+status: completed | in-progress | blocked
+---
+```
+
+#### Required Sections
+
+| Section | Content |
+|---------|---------|
+| Objective | Goal of this session |
+| Completed | List of completed tasks |
+| Files Changed | Modified files with brief descriptions |
+| Tests | Test results (pass/fail) |
+| Notes | Important observations, decisions, context |
+| Next Steps | What comes next (even if "none") |
+
+#### Session Completion Checklist
+
+Before ending a session, AI agents MUST:
+
+1. [ ] Create progress file in `.agents/worklogs/`
+2. [ ] Document all files changed
+3. [ ] Record test results when code changes are made
+4. [ ] Note next steps (even if "none")
+5. [ ] If RFC files were modified, update `specs/rfc-history.md`
+
+Template: `.agents/worklogs/_template.md`
+
+---
+
+## Specification Hierarchy
+
+Specifications define the Noesium system. Follow them in priority order:
+
+### Priority 1: Core Standards (Must Comply)
+
+- **`specs/RFC-0001.md` ~ `specs/RFC-0003.md`** - Global product design: product definition, development specification, design principles
+- **`specs/RFC-1001.md` ~ `specs/RFC-1004.md`** - Frontend design: UI layout, interaction/state model, tasks/actions, research space/RO
+- **`specs/rfc-namings.md`** - Authoritative naming reference for all layers
+
+### Priority 2: RFC Specifications (Must Comply)
+
+Each RFC defines specific system aspects. Index: `specs/rfc-index.md`
+
+RFC classification:
+- **RFC-0xxx**: Global product design (RFC-0001 ~ RFC-0003)
+- **RFC-1xxx**: Frontend design principles (RFC-1001 ~ RFC-1006)
+- **RFC-2xxx**: Abstract contracts between frontend-backend, UI semantics, agents (RFC-2001 ~ RFC-2004)
+- **RFC-3xxx**: Backend design and principles
+- **RFC-4xxx**: Agent design and principles
+- **RFC-6xxx**: Backend and agent impl architectures
+
+---
+
+## Resources
+
+| Resource | Location |
+|----------|----------|
+| All RFCs | `specs/RFC-*.md` |
+| RFC Index | `specs/rfc-index.md` |
+| RFC Naming | `specs/rfc-namings.md` |
+| API Contract | `specs/RFC-2004.md` |
+| Milestones | `docs/impl/` |
+
+---
+
 ## Table of Contents
 
 - [Agents](#agents)

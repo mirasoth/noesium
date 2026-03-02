@@ -278,8 +278,9 @@ class TestLiteLLMIntegration:
             assert any(keyword in response_lower for keyword in ["nature", "landscape", "boardwalk", "path", "green"])
 
         except Exception as e:
-            if "vision" in str(e).lower() or "image" in str(e).lower():
-                pytest.skip(f"Vision not supported by this model: {e}")
+            error_str = str(e).lower()
+            if "vision" in error_str or "image" in error_str or "timeout" in error_str or "timed out" in error_str:
+                pytest.skip(f"Vision not supported or timeout: {e}")
             else:
                 raise
 
