@@ -166,10 +166,10 @@ The Noesium codebase provides a functional agent framework with LangGraph integr
 
 | Pattern | RFC-1002 Spec | Current State |
 |---------|---------------|---------------|
-| State model | TypedDict or Pydantic, consistent per archetype | AskuraAgent uses Pydantic; SearchAgent/DeepResearch use TypedDict ✅ |
+| State model | TypedDict or Pydantic, consistent per archetype | AskuraAgent uses Pydantic; DeepResearch uses TypedDict ✅ |
 | Node signatures | `async def _name_node(self, state, config) -> dict` | Mixed sync/async, some return full state, some return dict |
 | Node naming | `_<name>_node` | Mostly consistent ✅ |
-| Error handling | Structured error responses for conversations | AskuraAgent has it ✅; SearchAgent uses emoji strings ⚠️ |
+| Error handling | Structured error responses for conversations | AskuraAgent has it ✅ |
 | Graph construction | Canonical 6-step pattern | Similar but not standardized |
 | Event emission from nodes | `_pending_events` field | Not implemented |
 
@@ -275,9 +275,8 @@ Phase 4 (P2):  core/capability/     ← Inter-agent discovery
 
 1. Split `core/agent/base.py` into separate files
 2. Standardize node signatures across agents
-3. Add structured error responses to SearchAgent
-4. Standardize graph construction patterns
-5. Update agent demos
+3. Standardize graph construction patterns
+4. Update agent demos
 
 ---
 
@@ -287,7 +286,7 @@ Phase 4 (P2):  core/capability/     ← Inter-agent discovery
 - Toolkit system (Toolify) with auto-discovery and 17+ toolkits
 - LLM client abstraction with 5 providers
 - AskuraAgent's HITL pattern with InMemorySaver
-- DeepResearchAgent's Send/fan-out pattern
+- TacitusAgent's Send/fan-out pattern
 - Token usage tracking
 - Memu memory subsystem (can coexist with new layers)
 - Browser_use agent with event bus integration (bubus)

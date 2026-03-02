@@ -22,7 +22,7 @@ This guide describes how to implement and extend LangGraph-based agents in Noesi
 ```
 ┌────────────────────────────────────────────────────────┐
 │                   Concrete Agents                       │
-│  AskuraAgent   SearchAgent   DeepResearchAgent   ...   │
+│  AskuraAgent   TacitusAgent   ...                  │
 └──────────┬─────────┬──────────────┬────────────────────┘
            │         │              │
     ┌──────▼───┐ ┌───▼─────┐ ┌─────▼──────┐
@@ -437,11 +437,6 @@ def __init__(self, config):
 ### 9.2 Graph Integration Tests
 
 ```python
-async def test_search_agent_full_flow():
-    agent = SearchAgent(llm_provider="openai", search_engines=["tavily"])
-    result = await agent.run("Python web frameworks 2025")
-    assert "results" in result.lower() or len(result) > 0
-
 async def test_conversation_agent_multi_turn():
     agent = MyConversationAgent(config=MyConfig())
     r1 = agent.start_conversation("user1", "Hello")
@@ -454,7 +449,7 @@ async def test_conversation_agent_multi_turn():
 
 ```python
 async def test_reflection_node():
-    agent = DeepResearchAgent()
+    agent = TacitusAgent()
     state = ResearchState(
         messages=[HumanMessage(content="test")],
         search_summaries=["summary 1", "summary 2"],

@@ -9,7 +9,8 @@ Comprehensive documentation of available agents, toolkits, and architecture in t
   - [BrowserUseAgent](#browseruseagent)
   - [TacitusAgent](#tacitusagent)
 - [Toolkits](#toolkits)
-  - [Search Toolkit](#search-toolkit)
+  - [WizSearch Toolkit](#wizsearch-toolkit)
+  - [Jina Research Toolkit](#jina-research-toolkit)
   - [Bash Toolkit](#bash-toolkit)
   - [Memory Toolkit](#memory-toolkit)
   - [Python Executor Toolkit](#python-executor-toolkit)
@@ -106,23 +107,38 @@ START → generate_query → [web_research nodes] → reflection → [conditiona
 
 All toolkits are located in `noesium/toolkits/` and managed through the Toolify system.
 
-### Search Toolkit
+### WizSearch Toolkit
 
-**Registration Name:** `search`
-**Location:** `noesium/toolkits/search_toolkit.py`
+**Registration Name:** `wizsearch`
+**Location:** `noesium/toolkits/wizsearch_toolkit.py`
 
 **Tools:**
-- `search_google_api` - Google search via Serper API
-- `get_web_content` - Extract content from web pages via Jina Reader
-- `web_qa` - Ask questions about web content with LLM
+- `web_search` - Multi-engine concurrent search via WizSearch
 - `tavily_search` - Tavily search with AI-powered summaries
 - `google_ai_search` - Google AI search with Gemini models
+- `crawl_page` - Extract content from web pages via Crawl4AI
 
 **Features:**
-- Intelligent content filtering (banned sites)
+- Multi-engine concurrent search (Tavily, DuckDuckGo, Brave, Google AI, etc.)
+- Automatic result deduplication and round-robin merging
+- Configurable engines, timeouts, and result limits
+- Web page content crawling in markdown, HTML, or text format
+
+---
+
+### Jina Research Toolkit
+
+**Registration Name:** `jina_research`
+**Location:** `noesium/toolkits/jina_research_toolkit.py`
+
+**Tools:**
+- `get_web_content` - Extract content from web pages via Jina Reader
+- `web_qa` - Ask questions about web content with LLM
+
+**Features:**
+- Web content extraction via Jina Reader API
 - LLM-powered Q&A on web content
 - Related link extraction
-- Multiple search engine support
 
 ---
 
@@ -334,8 +350,10 @@ export OPENROUTER_API_KEY="sk-..."
 # Ollama
 export OLLAMA_BASE_URL="http://localhost:11434"
 
-# Search Toolkit
+# Serper Toolkit
 export SERPER_API_KEY="..."
+
+# Jina Research Toolkit
 export JINA_API_KEY="..."
 
 # PostgreSQL (for vector store)

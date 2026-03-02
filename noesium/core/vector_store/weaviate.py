@@ -43,7 +43,7 @@ class WeaviateVectorStore(BaseVectorStore):
         super().__init__(embedding_model_dims)
 
         if "localhost" in cluster_url:
-            self.client = weaviate.connect_to_local(headers=additional_headers)
+            self.client = weaviate.connect_to_local(host="localhost", port=8080, headers=additional_headers)
         else:
             self.client = weaviate.connect_to_weaviate_cloud(
                 cluster_url=cluster_url,

@@ -53,16 +53,20 @@ class ToolRegistry:
             tools = [t for t in tools if all(tag in t.tags for tag in tags)]
         return tools
 
-    def load_builtin_toolkits(self, toolkit_names: list[str] | None = None) -> None:
+    async def load_builtin_toolkits(self, toolkit_names: list[str] | None = None) -> None:
         """Discover and wrap existing registered toolkits as AtomicTools."""
         from noesium.core.toolify.adapters.builtin_adapter import BuiltinAdapter
+        from noesium.core.toolify.base import AsyncBaseToolkit
         from noesium.core.toolify.registry import ToolkitRegistry
 
         names = toolkit_names or ToolkitRegistry.list_toolkits()
         for name in names:
             try:
                 toolkit = ToolkitRegistry.create_toolkit(name)
-                atomic_tools = BuiltinAdapter.from_toolkit(toolkit, name)
+                # Initialize async toolkits
+                if isinstance(toolkit, AsyncBaseToolkit):
+                    await toolkit.build()
+                atomic_tools = await BuiltinAdapter.from_toolkit(toolkit, name)
                 self.register_many(atomic_tools)
             except Exception as exc:
                 logger.debug("Skipping toolkit %s: %s", name, exc)

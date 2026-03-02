@@ -1,7 +1,8 @@
-"""Noe configuration (impl guide §4.1)."""
+"""Noe configuration (impl guide §3.1, §7)."""
 
 from __future__ import annotations
 
+import os
 from enum import Enum
 from typing import Any, Callable
 
@@ -21,29 +22,50 @@ class NoeConfig(BaseModel):
     """
 
     mode: NoeMode = NoeMode.AGENT
-    llm_provider: str = "openrouter"
-    model_name: str | None = None
+    llm_provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
     planning_model: str | None = None
 
     max_iterations: int = 25
     max_tool_calls_per_step: int = 5
     reflection_interval: int = 3
+    interface_mode: str = "library"  # library | tui
 
     enabled_toolkits: list[str] = Field(
-        default_factory=lambda: ["search", "bash", "python_executor", "file_edit"],
+        default_factory=lambda: [
+            "wizsearch",
+            "jina_research",
+            "bash",
+            "python_executor",
+            "file_edit",
+            "memory",
+            "document",
+            "image",
+            "tabular_data",
+            "video",
+            "user_interaction",
+        ],
     )
     mcp_servers: list[dict[str, Any]] = Field(default_factory=list)
     custom_tools: list[Callable] = Field(default_factory=list)
 
     memory_providers: list[str] = Field(
-        default_factory=lambda: ["working", "event_sourced"],
+        default_factory=lambda: ["working", "event_sourced", "memu"],
     )
+    memu_memory_dir: str = ".noe_memory"
+    memu_user_id: str = "default_user"
     persist_memory: bool = True
 
     working_directory: str | None = None
     permissions: list[str] = Field(
-        default_factory=lambda: ["fs:read", "fs:write", "net:outbound", "shell:execute"],
+        default_factory=lambda: [
+            "fs:read",
+            "fs:write",
+            "net:outbound",
+            "shell:execute",
+        ],
     )
+    enable_subagents: bool = True
+    subagent_max_depth: int = 2
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

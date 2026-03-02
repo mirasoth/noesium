@@ -1,11 +1,11 @@
-"""Graph node implementations for Noe (impl guide §6)."""
+"""Graph node implementations for Noe (impl guide §4-5)."""
 
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-from noesium.core.memory.provider import RecallQuery, RecallScope
+from noesium.core.memory.provider import MemoryTier, RecallQuery, RecallScope
 
 from .prompts import (
     AGENT_SYSTEM_PROMPT,
@@ -13,9 +13,57 @@ from .prompts import (
     FINALIZE_PROMPT,
     REFLECTION_PROMPT,
 )
+from .schemas import AgentAction
 from .state import AgentState, AskState, TaskPlan
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _build_tool_descriptions(tool_registry: Any) -> str:
+    """Format tool registry entries into a prompt-friendly description block."""
+    if tool_registry is None:
+        return "No tools available."
+    tools = tool_registry.list_tools()
+    if not tools:
+        return "No tools available."
+    lines: list[str] = []
+    for t in tools:
+        params = ""
+        schema = t.input_schema or {}
+        props = schema.get("properties", {})
+        required = set(schema.get("required", []))
+        if props:
+            parts = []
+            for pname, pinfo in props.items():
+                req = " (required)" if pname in required else ""
+                parts.append(f"    - {pname}: {pinfo.get('type', 'any')}{req}")
+            params = "\n" + "\n".join(parts)
+        desc = (t.description or "").split("\n")[0].strip()
+        lines.append(f"- **{t.name}**: {desc}{params}")
+    return "\n".join(lines)
+
+
+async def _persist_plan_to_memory(
+    plan: TaskPlan | None,
+    memory_manager: Any,
+) -> None:
+    """Write current plan as todo markdown into working memory."""
+    if plan is None or memory_manager is None:
+        return
+    try:
+        await memory_manager.store(
+            key="current_plan",
+            value=plan.to_todo_markdown(),
+            content_type="plan",
+            tier=MemoryTier.WORKING,
+        )
+    except Exception as exc:
+        logger.debug("Failed to persist plan to memory: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -70,34 +118,93 @@ async def plan_node(
     state: AgentState,
     *,
     planner: Any,
+    memory_manager: Any = None,
 ) -> dict[str, Any]:
     """Use TaskPlanner to decompose the user's request."""
     user_msg = state["messages"][-1].content if state["messages"] else ""
     plan: TaskPlan = await planner.create_plan(user_msg)
-    return {"plan": plan, "iteration": 0, "tool_results": [], "reflection": "", "final_answer": ""}
+    await _persist_plan_to_memory(plan, memory_manager)
+    return {
+        "plan": plan,
+        "iteration": 0,
+        "tool_results": [],
+        "reflection": "",
+        "final_answer": "",
+    }
 
 
 async def execute_step_node(
     state: AgentState,
     *,
     llm: Any,
-    tool_names: list[str],
+    tool_registry: Any,
+    memory_manager: Any = None,
 ) -> dict[str, Any]:
-    """Execute current plan step via LLM with tool access."""
+    """Execute current plan step via structured LLM output with tool access.
+
+    Uses ``structured_completion`` to get an ``AgentAction`` that may contain
+    tool calls, a subagent request, or a direct text response.
+    """
     from langchain_core.messages import AIMessage
 
     plan: TaskPlan | None = state.get("plan")
     step_desc = plan.current_step.description if plan and plan.current_step else "Answer the question."
     completed = "\n".join(f"- {r['tool']}: {str(r['result'])[:200]}" for r in state.get("tool_results", []))
+    tool_desc = _build_tool_descriptions(tool_registry)
+
     system = AGENT_SYSTEM_PROMPT.format(
         plan=step_desc,
         completed_results=completed or "None yet.",
+        tool_descriptions=tool_desc,
     )
-    messages = [{"role": "system", "content": system}] + [
-        {"role": m.type if hasattr(m, "type") else "user", "content": m.content} for m in state["messages"]
-    ]
-    response = llm.completion(messages=messages, temperature=0.2)
-    return {"messages": [AIMessage(content=response)]}
+    user_msg = state["messages"][-1].content if state["messages"] else ""
+
+    try:
+        action: AgentAction = llm.structured_completion(
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_msg},
+            ],
+            response_model=AgentAction,
+            temperature=0.2,
+        )
+    except Exception as exc:
+        logger.warning("Structured completion failed, falling back to text: %s", exc)
+        text = llm.completion(
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_msg},
+            ],
+            temperature=0.2,
+        )
+        return {"messages": [AIMessage(content=str(text))]}
+
+    if action.mark_step_complete and plan:
+        plan.advance()
+        await _persist_plan_to_memory(plan, memory_manager)
+
+    if action.tool_calls:
+        tool_calls_data = [
+            {
+                "name": tc.tool_name,
+                "args": tc.arguments,
+                "id": f"call_{i}",
+                "type": "tool_call",
+            }
+            for i, tc in enumerate(action.tool_calls)
+        ]
+        msg = AIMessage(
+            content=action.thought,
+            tool_calls=tool_calls_data,
+        )
+        return {"messages": [msg]}
+
+    if action.subagent:
+        msg = AIMessage(content=action.thought)
+        msg.additional_kwargs["subagent_action"] = action.subagent.model_dump()
+        return {"messages": [msg]}
+
+    return {"messages": [AIMessage(content=action.text_response or action.thought)]}
 
 
 async def tool_node(
@@ -124,11 +231,59 @@ async def tool_node(
         except Exception as exc:
             logger.warning("Tool %s failed: %s", call.get("name", "?"), exc)
             results.append({"tool": call.get("name", "?"), "result": f"Error: {exc}"})
-            messages.append(ToolMessage(content=f"Error: {exc}", tool_call_id=call.get("id", "")))
+            messages.append(
+                ToolMessage(
+                    content=f"Error: {exc}",
+                    tool_call_id=call.get("id", ""),
+                )
+            )
 
     return {
         "tool_results": state.get("tool_results", []) + results,
         "messages": messages,
+        "iteration": state["iteration"] + 1,
+    }
+
+
+async def subagent_node(
+    state: AgentState,
+    *,
+    agent: Any,
+) -> dict[str, Any]:
+    """Handle subagent spawn/interact requests."""
+    from langchain_core.messages import AIMessage
+
+    last_msg = state["messages"][-1]
+    sa_data = last_msg.additional_kwargs.get("subagent_action")
+    if not sa_data:
+        return {"messages": [AIMessage(content="No subagent action found.")]}
+
+    from .schemas import SubagentAction
+
+    sa = SubagentAction(**sa_data)
+    try:
+        if sa.action == "spawn":
+            from .config import NoeMode
+
+            mode = NoeMode(sa.mode) if sa.mode in ("ask", "agent") else NoeMode.AGENT
+            subagent_id = await agent.spawn_subagent(sa.name, mode=mode)
+            if sa.message:
+                result = await agent.interact_with_subagent(subagent_id, sa.message)
+            else:
+                result = f"Subagent '{subagent_id}' spawned successfully."
+        else:
+            matching = [sid for sid in agent._subagents if sa.name in sid]
+            if not matching:
+                result = f"No subagent matching '{sa.name}' found."
+            else:
+                result = await agent.interact_with_subagent(matching[0], sa.message)
+    except Exception as exc:
+        logger.warning("Subagent operation failed: %s", exc)
+        result = f"Subagent error: {exc}"
+
+    return {
+        "tool_results": state.get("tool_results", []) + [{"tool": f"subagent:{sa.name}", "result": result}],
+        "messages": [AIMessage(content=str(result))],
         "iteration": state["iteration"] + 1,
     }
 
@@ -161,6 +316,7 @@ async def revise_plan_node(
     state: AgentState,
     *,
     planner: Any,
+    memory_manager: Any = None,
 ) -> dict[str, Any]:
     """Revise the plan based on reflection feedback."""
     plan: TaskPlan | None = state.get("plan")
@@ -168,6 +324,7 @@ async def revise_plan_node(
         return {}
     completed = [str(r["result"])[:200] for r in state.get("tool_results", [])]
     new_plan = await planner.revise_plan(plan, state.get("reflection", ""), completed)
+    await _persist_plan_to_memory(new_plan, memory_manager)
     return {"plan": new_plan}
 
 

@@ -29,6 +29,10 @@ class TaskStep(BaseModel):
     status: Literal["pending", "in_progress", "completed", "failed"] = "pending"
     result: str | None = None
 
+    def to_todo_line(self, index: int) -> str:
+        marker = "x" if self.status == "completed" else " "
+        return f"- [{marker}] {index}. {self.description}"
+
 
 class TaskPlan(BaseModel):
     goal: str
@@ -49,6 +53,12 @@ class TaskPlan(BaseModel):
         self.current_step_index += 1
         if self.current_step_index >= len(self.steps):
             self.is_complete = True
+
+    def to_todo_markdown(self) -> str:
+        lines = [f"# Todo for: {self.goal}", ""]
+        for idx, step in enumerate(self.steps, start=1):
+            lines.append(step.to_todo_line(idx))
+        return "\n".join(lines)
 
 
 class AgentState(TypedDict):

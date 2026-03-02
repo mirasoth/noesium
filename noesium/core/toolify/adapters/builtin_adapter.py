@@ -45,14 +45,14 @@ class BuiltinAdapter:
     """Converts existing toolkit functions to AtomicTool instances."""
 
     @staticmethod
-    def from_toolkit(
+    async def from_toolkit(
         toolkit: Any,
         toolkit_name: str,
     ) -> list[AtomicTool]:
         from noesium.core.toolify.base import AsyncBaseToolkit
 
         if isinstance(toolkit, AsyncBaseToolkit):
-            tools_map = toolkit.get_tools_map_sync()
+            tools_map = await toolkit.get_filtered_tools_map()
         else:
             tools_map = toolkit.get_filtered_tools_map()
 

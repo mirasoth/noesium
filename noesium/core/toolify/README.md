@@ -54,16 +54,16 @@ configs = {
     "bash": ToolkitConfig(
         config={"workspace_root": "/tmp/workspace"}
     ),
-    "search": ToolkitConfig(
+    "wizsearch": ToolkitConfig(
         config={
-            "SERPER_API_KEY": "your_api_key",
-            "JINA_API_KEY": "your_jina_key"
+            "enabled_engines": ["tavily", "duckduckgo"],
+            "max_results_per_engine": 10,
         }
     )
 }
 
 # Get all toolkits
-toolkits = get_toolkits_map(["python_executor", "bash", "search"], configs)
+toolkits = get_toolkits_map(["python_executor", "bash", "wizsearch"], configs)
 
 # Use them
 for name, toolkit in toolkits.items():
@@ -106,25 +106,53 @@ result = await toolkit.call_tool("execute_python_code",
 - Timeout protection
 - Comprehensive error handling
 
-### Search Toolkit
+### WizSearch Toolkit
 
-Web search and content extraction capabilities.
+Multi-engine web search and page crawling via the wizsearch library.
 
 ```python
 config = ToolkitConfig(config={
-    "SERPER_API_KEY": "your_serper_key",
+    "enabled_engines": ["tavily", "duckduckgo"],
+    "max_results_per_engine": 10,
+})
+
+toolkit = get_toolkit("wizsearch", config)
+
+# Multi-engine web search
+search_result = await toolkit.call_tool("web_search",
+    query="Python asyncio tutorial",
+    max_results=5
+)
+
+# Page content crawling
+content = await toolkit.call_tool("crawl_page",
+    url="https://docs.python.org/3/library/asyncio.html"
+)
+```
+
+**Features:**
+- Multi-engine concurrent search (Tavily, DuckDuckGo, Brave, Google AI, etc.)
+- Tavily search with AI summaries
+- Google AI grounded search with citations
+- Web page content crawling via Crawl4AI
+
+### Jina Research Toolkit
+
+Web content extraction and LLM-powered Q&A via Jina Reader API.
+
+```python
+config = ToolkitConfig(config={
     "JINA_API_KEY": "your_jina_key"
 })
 
-toolkit = get_toolkit("search", config)
+toolkit = get_toolkit("jina_research", config)
 
-# Web search
-search_result = await toolkit.call_tool("search_google_api", 
-    query="Python asyncio tutorial",
-    num_results=5
+# Web content extraction
+content = await toolkit.call_tool("get_web_content",
+    url="https://docs.python.org/3/library/asyncio.html"
 )
 
-# Web content extraction and Q&A
+# Web Q&A
 qa_result = await toolkit.call_tool("web_qa",
     url="https://docs.python.org/3/library/asyncio.html",
     question="What is asyncio?"
@@ -132,9 +160,7 @@ qa_result = await toolkit.call_tool("web_qa",
 ```
 
 **Features:**
-- Google search via Serper API
 - Web content extraction via Jina Reader API
-- Intelligent content filtering
 - LLM-powered Q&A on web content
 - Related link extraction
 

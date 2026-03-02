@@ -1,10 +1,9 @@
 # NoeAgent Implementation Architecture
 
-> Implementation guide for the NoeAgent research assistant in Noesium.
+> Unified implementation guide for the NoeAgent autonomous research assistant.
 >
 > **Module**: `noesium/agents/noe/`
 > **Source**: Derived from [RFC-1002](../../specs/RFC-1002.md) (LangGraph Agent Design), [RFC-2001](../../specs/RFC-2001.md), [RFC-2002](../../specs/RFC-2002.md), [RFC-2003](../../specs/RFC-2003.md), [RFC-2004](../../specs/RFC-2004.md)
-> **Related RFCs**: [RFC-0001](../../specs/RFC-0001.md), [RFC-0002](../../specs/RFC-0002.md), [RFC-0003](../../specs/RFC-0003.md), [RFC-0004](../../specs/RFC-0004.md), [RFC-0005](../../specs/RFC-0005.md), [RFC-1001](../../specs/RFC-1001.md)
 > **Language**: Python 3.11+
 > **Framework**: LangGraph, Pydantic v2
 
@@ -12,43 +11,32 @@
 
 ## 1. Overview
 
-NoeAgent is a long-running autonomous research assistant built on the Noesium framework. It operates in two modes:
+NoeAgent is a long-running autonomous research assistant built on the Noesium framework. Inspired by Claude Code's architecture, it supports dual operational modes, task decomposition with todo-list tracking, toolkit-first tool execution, persistent memory via Memu, subagent orchestration, and both library and Rich TUI interfaces.
 
-- **Ask Mode**: Single-turn, read-only question answering. No tool execution, no file writes, no side effects. Uses memory recall and LLM reasoning to answer queries. Analogous to Cursor's "Ask" mode.
+### 1.1 Modes
 
-- **Agent Mode**: Full autonomous agent with iterative planning, tool execution (web search, code execution, file I/O, bash, MCP tools), memory persistence, and self-reflection. Analogous to Cursor's "Agent" mode.
-
-### 1.1 Purpose
-
-This document specifies the implementation architecture for NoeAgent. It provides:
-
-- Module structure and file layout
-- State model and LangGraph graph design
-- Mode-specific execution paths
-- Tool integration via ToolExecutor (RFC-2004)
-- Memory integration via MemoryManager (RFC-2002)
-- Task planning and iterative refinement
-- Error handling and configuration
+- **Ask Mode**: Single-turn, read-only Q&A. No tools, no writes, no side effects. Uses memory recall + LLM reasoning. Analogous to Cursor's "Ask" mode.
+- **Agent Mode**: Full autonomous agent with iterative planning, tool execution (bash, file I/O, python, search, MCP tools), memory persistence, and self-reflection. Analogous to Cursor's "Agent" mode.
 
 ### 1.2 Scope
 
 **In Scope**:
-- NoeAgent class hierarchy and state model
-- LangGraph graph for both ask and agent modes
-- Tool binding and execution flow
-- Memory read/write integration
-- Configuration and mode switching
-- Unit and integration test strategy
+- NoeAgent class, state model, and LangGraph graph for both modes
+- Structured tool-calling via `structured_completion()` with `AgentAction` schema
+- Task decomposition, todo-list rendering, and plan persistence
+- Memory integration: Working, EventSourced, Memu providers
+- Subagent spawn/interact as both runtime API and graph node
+- Rich TUI with streaming events, spinner, tool panels, markdown rendering
+- Library API: `run()`, `arun()`, `stream()`, `astream_events()`
 
 **Out of Scope**:
-- UI/CLI implementation
+- Individual toolkit implementations (they live in `noesium/toolkits/`)
 - Specific LLM model selection
 - Browser automation internals
-- Individual tool implementations
 
 ### 1.3 Spec Compliance
 
-This guide MUST NOT contradict RFC-1002 (agent archetypes), RFC-2001/2002 (memory), or RFC-2003/2004 (tools). All invariants from source RFCs are preserved.
+This guide MUST NOT contradict RFC-1002 (agent archetypes), RFC-2001/2002 (memory), or RFC-2003/2004 (tools).
 
 ---
 
@@ -57,18 +45,24 @@ This guide MUST NOT contradict RFC-1002 (agent archetypes), RFC-2001/2002 (memor
 ### 2.1 System Context
 
 ```
-┌───────────────────────────────────────────────────────────────┐
-│                     NoeAgent                               │
-│  ┌─────────────┐  ┌───────────────┐  ┌─────────────────────┐ │
-│  │  Ask Graph   │  │  Agent Graph   │  │   Task Planner      │ │
-│  │  (read-only) │  │  (autonomous)  │  │   (goal decompose)  │ │
-│  └──────┬───────┘  └───────┬────────┘  └──────────┬──────────┘ │
-│         │                  │                       │            │
-│  ┌──────▼──────────────────▼───────────────────────▼──────────┐ │
+┌────────────────────────────────────────────────────────────────┐
+│                         NoeAgent                               │
+│  ┌──────────────┐  ┌────────────────┐  ┌────────────────────┐  │
+│  │  Ask Graph    │  │  Agent Graph    │  │   Task Planner     │  │
+│  │  (read-only)  │  │  (autonomous)   │  │   (decompose)      │  │
+│  └──────┬────────┘  └───────┬─────────┘  └──────────┬─────────┘  │
+│         │                   │                        │           │
+│  ┌──────▼───────────────────▼────────────────────────▼─────────┐ │
 │  │              Noesium Core Layer                              │ │
-│  │  MemoryManager  ToolExecutor  KernelExecutor  EventStore   │ │
+│  │  ProviderMemoryManager  ToolExecutor  ToolRegistry  Events  │ │
 │  └─────────────────────────────────────────────────────────────┘ │
-└───────────────────────────────────────────────────────────────┘
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │               Interface Layer                               │ │
+│  │  Library API (.run/.arun/.stream/.astream_events)           │ │
+│  │  Rich TUI (spinner, panels, markdown, plan table)           │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.2 Dependency Graph
@@ -76,55 +70,47 @@ This guide MUST NOT contradict RFC-1002 (agent archetypes), RFC-2001/2002 (memor
 ```
 NoeAgent
 ├── noesium.core.agent.base.BaseGraphicAgent
-├── noesium.core.memory.manager.MemoryManager (RFC-2002)
+├── noesium.core.memory.provider_manager.ProviderMemoryManager (RFC-2002)
+│   ├── WorkingMemoryProvider
+│   ├── EventSourcedProvider
+│   └── MemuProvider → MemuMemoryStore
 ├── noesium.core.toolify.executor.ToolExecutor (RFC-2004)
 ├── noesium.core.toolify.tool_registry.ToolRegistry (RFC-2004)
-├── noesium.core.event.store.EventStore (RFC-1001)
-├── noesium.core.kernel.executor.KernelExecutor (RFC-1001)
-├── noesium.core.projection.engine.ProjectionEngine (RFC-1001)
+├── noesium.core.toolify.adapters.BuiltinAdapter
+├── noesium.core.event.store.InMemoryEventStore
 ├── langgraph.graph.StateGraph
-└── pydantic.BaseModel
+├── pydantic.BaseModel
+└── rich (Console, Live, Panel, Markdown, Spinner, Table, Prompt)
 ```
 
-### 2.3 Module Responsibilities
-
-| Module | Responsibility | Dependencies |
-|--------|----------------|--------------|
-| `agent.py` | Main NoeAgent class, graph building, mode dispatch | All below |
-| `state.py` | Pydantic state models for ask and agent graphs | pydantic |
-| `planner.py` | Task decomposition and planning | LLM client |
-| `nodes.py` | Graph node implementations | state, tools, memory |
-| `config.py` | AlithiaConfig with mode, tools, memory settings | pydantic |
-| `prompts.py` | System prompts for ask and agent modes | --- |
-
----
-
-## 3. Module Structure
+### 2.3 Module Structure
 
 ```
 noesium/agents/noe/
-├── __init__.py          # Exports NoeAgent, AlithiaConfig
-├── agent.py             # NoeAgent class
-├── state.py             # AlithiaState, AskState, AgentState, TaskPlan
+├── __init__.py          # Exports NoeAgent, NoeConfig, schemas
+├── agent.py             # NoeAgent class, graph building, astream_events, subagent API
+├── state.py             # AskState, AgentState, TaskPlan, TaskStep
+├── schemas.py           # AgentAction, ToolCallAction (structured output)
 ├── planner.py           # TaskPlanner for goal decomposition
 ├── nodes.py             # Graph node functions
-├── config.py            # AlithiaConfig
-└── prompts.py           # Prompt templates
+├── config.py            # NoeConfig
+├── prompts.py           # Prompt templates
+└── tui.py               # Rich TUI (spinner, panels, markdown, slash commands)
 ```
 
 ---
 
-## 4. Core Types
+## 3. Core Types
 
-### 4.1 AlithiaConfig
+### 3.1 NoeConfig
 
 ```python
-class AlithiaMode(str, Enum):
+class NoeMode(str, Enum):
     ASK = "ask"
     AGENT = "agent"
 
-class AlithiaConfig(BaseModel):
-    mode: AlithiaMode = AlithiaMode.AGENT
+class NoeConfig(BaseModel):
+    mode: NoeMode = NoeMode.AGENT
     llm_provider: str = "openrouter"
     model_name: str | None = None
     planning_model: str | None = None
@@ -132,388 +118,303 @@ class AlithiaConfig(BaseModel):
     max_iterations: int = 25
     max_tool_calls_per_step: int = 5
     reflection_interval: int = 3
+    interface_mode: str = "library"   # library | tui
 
-    enabled_toolkits: list[str] = Field(default_factory=lambda: [
-        "search", "bash", "python_executor", "file_edit",
-    ])
-    mcp_servers: list[dict[str, Any]] = Field(default_factory=list)
-    custom_tools: list[Callable] = Field(default_factory=list)
+    enabled_toolkits: list[str]       # bash, python_executor, file_edit, ...
+    mcp_servers: list[dict]
+    custom_tools: list[Callable]
 
-    memory_providers: list[str] = Field(default_factory=lambda: ["working", "event_sourced"])
+    memory_providers: list[str]       # working, event_sourced, memu
+    memu_memory_dir: str = ".noe_memory"
+    memu_user_id: str = "default_user"
     persist_memory: bool = True
 
     working_directory: str | None = None
-    permissions: list[str] = Field(default_factory=lambda: [
-        "fs:read", "fs:write", "net:outbound", "shell:execute",
-    ])
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    permissions: list[str]            # fs:read, fs:write, net:outbound, shell:execute
+    enable_subagents: bool = True
+    subagent_max_depth: int = 2
 ```
 
-### 4.2 AlithiaState (Agent Mode)
+Ask-mode overrides: `max_iterations=1`, `enabled_toolkits=[]`, `permissions=[]`, `persist_memory=False`.
+
+### 3.2 State Models
 
 ```python
 class TaskStep(BaseModel):
-    step_id: str = Field(default_factory=lambda: str(uuid7str()))
+    step_id: str
     description: str
     status: Literal["pending", "in_progress", "completed", "failed"] = "pending"
     result: str | None = None
 
 class TaskPlan(BaseModel):
     goal: str
-    steps: list[TaskStep] = Field(default_factory=list)
+    steps: list[TaskStep]
     current_step_index: int = 0
     is_complete: bool = False
 
+    def to_todo_markdown(self) -> str: ...
+    def advance(self) -> None: ...
+
 class AgentState(TypedDict):
-    messages: Annotated[list[BaseMessage], add_messages]
+    messages: Annotated[list, add_messages]
     plan: TaskPlan | None
     iteration: int
     tool_results: list[dict[str, Any]]
     reflection: str
     final_answer: str
-    _pending_events: list[DomainEvent]
-```
 
-### 4.3 AskState (Ask Mode)
-
-```python
 class AskState(TypedDict):
-    messages: Annotated[list[BaseMessage], add_messages]
+    messages: Annotated[list, add_messages]
     memory_context: list[dict[str, Any]]
     final_answer: str
 ```
 
----
-
-## 5. Key Interfaces
-
-### 5.1 NoeAgent
+### 3.3 Structured Tool-Calling Schemas
 
 ```python
-class NoeAgent(BaseGraphicAgent):
-    def __init__(self, config: AlithiaConfig | None = None) -> None:
-        self.config = config or AlithiaConfig()
-        super().__init__(
-            llm_provider=self.config.llm_provider,
-            model_name=self.config.model_name,
-        )
-        self._memory_manager: MemoryManager | None = None
-        self._tool_executor: ToolExecutor | None = None
-        self._tool_registry: ToolRegistry | None = None
-        self._event_store: EventStore | None = None
+class ToolCallAction(BaseModel):
+    tool_name: str          # must match a registered tool name
+    arguments: dict[str, Any] = {}
 
-    async def initialize(self) -> None:
-        """Set up memory, tools, and event infrastructure."""
-        ...
+class SubagentAction(BaseModel):
+    action: Literal["spawn", "interact"]
+    name: str
+    message: str = ""
+    mode: str = "agent"
 
-    def get_state_class(self) -> Type:
-        if self.config.mode == AlithiaMode.ASK:
-            return AskState
-        return AgentState
-
-    def _build_graph(self) -> StateGraph:
-        if self.config.mode == AlithiaMode.ASK:
-            return self._build_ask_graph()
-        return self._build_agent_graph()
-
-    def run(self, user_message: str, context=None, config=None) -> str:
-        """Synchronous entry point."""
-        ...
-
-    async def arun(self, user_message: str, context=None) -> str:
-        """Async entry point."""
-        ...
-
-    async def stream(self, user_message: str, context=None) -> AsyncGenerator[str, None]:
-        """Streaming entry point for incremental output."""
-        ...
+class AgentAction(BaseModel):
+    thought: str                                    # reasoning trace
+    tool_calls: list[ToolCallAction] | None = None  # if tool use needed
+    subagent: SubagentAction | None = None          # if subagent use needed
+    text_response: str | None = None                # if direct answer
+    mark_step_complete: bool = False                # advance plan step
 ```
 
-### 5.2 TaskPlanner
-
-```python
-class TaskPlanner:
-    def __init__(self, llm_client: BaseLLMClient) -> None:
-        self._llm = llm_client
-
-    async def create_plan(self, goal: str, context: str = "") -> TaskPlan:
-        """Decompose a goal into a TaskPlan with ordered steps."""
-        ...
-
-    async def revise_plan(
-        self, plan: TaskPlan, feedback: str, completed_results: list[str],
-    ) -> TaskPlan:
-        """Revise a plan based on reflection and completed results."""
-        ...
-```
+The LLM is called via `structured_completion(response_model=AgentAction)`. This works with any provider because `structured_completion` uses Instructor.
 
 ---
 
-## 6. Implementation Details
+## 4. Graph Design
 
-### 6.1 Ask Mode Graph
+### 4.1 Ask Mode Graph
 
 ```
 START → recall_memory → generate_answer → END
 ```
 
-**Nodes**:
+No tools, no writes, no side effects.
 
-1. **recall_memory**: Queries MemoryManager with the user's question across all providers. Populates `memory_context` in state.
-
-2. **generate_answer**: Calls LLM with system prompt + memory context + user query. Produces `final_answer`. No tool calls.
-
-**Constraints**: No tools, no writes, no side effects. Pure LLM inference + memory recall.
-
-### 6.2 Agent Mode Graph
+### 4.2 Agent Mode Graph
 
 ```
 START → plan → execute_step → [conditional]
   → tool_node → execute_step (loop)
+  → subagent_node → execute_step (loop)
   → reflect → [conditional]
-    → revise_plan → execute_step (continue)
+    → revise_plan → execute_step
     → finalize → END
+  → finalize → END
 ```
 
-**Nodes**:
+### 4.3 Routing Logic
 
-1. **plan**: Uses TaskPlanner to decompose the user's request into a TaskPlan. Stores plan in state.
+**After execute_step**:
+1. If `plan.is_complete` → `finalize`
+2. If `AgentAction.tool_calls` present → `tool_node`
+3. If `AgentAction.subagent` present → `subagent_node`
+4. If `iteration >= max_iterations` → `finalize`
+5. If `iteration % reflection_interval == 0` → `reflect`
+6. Otherwise → `execute_step`
 
-2. **execute_step**: Takes the current step from the plan. Calls LLM with tools available, the current step description, and prior results. LLM either generates a tool call or a text response.
+**After reflect**:
+1. If reflection contains "REVISE" → `revise_plan`
+2. If `plan.is_complete` → `finalize`
+3. Otherwise → `execute_step`
 
-3. **tool_node**: Executes tool calls via ToolExecutor. Collects results. Emits `tool.invoked` / `tool.completed` events.
+---
 
-4. **reflect**: Every `reflection_interval` iterations, the LLM reflects on progress: what's been accomplished, what's remaining, whether the plan needs revision.
+## 5. Key Implementation Details
 
-5. **revise_plan**: If reflection indicates the plan needs changes, calls TaskPlanner.revise_plan() with feedback.
+### 5.1 Structured Tool Calling
 
-6. **finalize**: Generates the final comprehensive answer from all accumulated results and reasoning.
+`execute_step_node` builds a system prompt containing:
+- Current plan step description
+- Available tool names and descriptions (from ToolRegistry)
+- Completed results so far
 
-**Edges (conditional routing)**:
+It calls `llm.structured_completion(messages, response_model=AgentAction)`. The returned `AgentAction` is mapped:
+- `tool_calls` → `AIMessage` with `tool_calls` attribute for LangGraph routing
+- `subagent` → `AIMessage` with custom `subagent_action` attribute
+- `text_response` → plain `AIMessage`
+- `mark_step_complete` → calls `plan.advance()`
 
+### 5.2 Tool Execution
+
+Tools are loaded from existing Noesium toolkits via `BuiltinAdapter`. No custom "local tools" are introduced. Command execution uses `bash.run_bash`, file search uses `file_edit.search_in_files`, etc.
+
+Default enabled toolkits: `bash`, `python_executor`, `file_edit`, `search`, `memory`, `document`, `image`, `tabular_data`, `video`, `user_interaction`.
+
+### 5.3 Memory Integration
+
+- **Working**: In-process, ephemeral
+- **EventSourced**: Append-only event log
+- **Memu**: Persistent cross-session memory (optional, graceful fallback)
+
+Todo state is persisted to working memory after each iteration:
 ```python
-def _route_after_execute(state: AgentState) -> str:
-    if state["plan"] and state["plan"].is_complete:
-        return "finalize"
-    last_msg = state["messages"][-1]
-    if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-        return "tool_node"
-    if state["iteration"] % config.reflection_interval == 0:
-        return "reflect"
-    return "execute_step"
-
-def _route_after_reflect(state: AgentState) -> str:
-    if "REVISE" in state["reflection"]:
-        return "revise_plan"
-    if state["plan"] and state["plan"].is_complete:
-        return "finalize"
-    return "execute_step"
+await memory_manager.store(key="current_plan", value=plan.to_todo_markdown(), ...)
 ```
 
-### 6.3 Tool Integration
+### 5.4 Subagent Model
 
-NoeAgent initializes tools via the ToolRegistry (RFC-2004):
+- Parent manages `_subagents: dict[str, NoeAgent]`
+- Child config derived from parent with depth limits and isolated memory
+- `subagent_node` in the graph handles spawn/interact via `AgentAction.subagent`
+- Interaction is async
+
+### 5.5 Event Streaming Protocol
+
+The `astream_events()` async generator bridges LangGraph node outputs and the TUI. It iterates over `compiled.astream(initial)` and translates node outputs into typed event dicts:
+
+| Event Type | Fields | Emitted By |
+|------------|--------|------------|
+| `plan_created` | `plan: TaskPlan` | `plan_node`, `revise_plan_node` |
+| `step_started` | `step: str`, `index: int` | when plan step advances |
+| `tool_call_started` | `name: str`, `args: dict` | `execute_step_node` (from `AIMessage.tool_calls`) |
+| `tool_call_completed` | `name: str`, `result: str` | `tool_node` (from `tool_results`) |
+| `thinking` | `thought: str` | subagent delegation |
+| `text_chunk` | `text: str` | intermediate text from LLM |
+| `reflection` | `text: str` | `reflect_node` |
+| `final_answer` | `text: str` | `finalize_node` |
 
 ```python
-async def _setup_tools(self) -> None:
-    self._tool_registry = ToolRegistry()
-
-    # Load built-in toolkits
-    for toolkit_name in self.config.enabled_toolkits:
-        try:
-            toolkit = ToolkitRegistry.create_toolkit(toolkit_name)
-            tools = BuiltinAdapter.from_toolkit(toolkit, toolkit_name)
-            self._tool_registry.register_many(tools)
-        except Exception as e:
-            self.logger.warning(f"Failed to load toolkit {toolkit_name}: {e}")
-
-    # Load MCP server tools
-    for mcp_config in self.config.mcp_servers:
-        session = await MCPSession.connect(**mcp_config)
-        await self._tool_registry.load_mcp_server(session)
-
-    # Load user-defined tools
-    for func in self.config.custom_tools:
-        tool = FunctionAdapter.from_function(func)
-        self._tool_registry.register(tool)
-
-    # Create ToolExecutor
-    self._tool_executor = ToolExecutor(
-        event_store=self._event_store,
-        producer=AgentRef(agent_id=self._agent_id, agent_type="noe"),
-    )
+async def astream_events(self, user_message: str) -> AsyncGenerator[dict, None]:
+    # ... initialize graph ...
+    async for event in compiled.astream(initial):
+        for node_name, node_output in event.items():
+            # inspect plan, tool_results, messages, reflection, final_answer
+            # yield typed event dicts
 ```
 
-In the tool_node, execution is wrapped:
+### 5.6 Rich TUI
 
-```python
-async def _tool_node(self, state: AgentState) -> dict:
-    tool_calls = state["messages"][-1].tool_calls
-    results = []
-    context = ToolContext(
-        agent_id=self._agent_id,
-        trace=TraceContext(),
-        granted_permissions=[ToolPermission(p) for p in self.config.permissions],
-        working_directory=self.config.working_directory,
-    )
-    for call in tool_calls:
-        tool = self._tool_registry.get_by_name(call["name"])
-        result = await self._tool_executor.run(tool, context, **call["args"])
-        results.append({"tool": call["name"], "result": result})
+The TUI (`tui.py`) consumes events from `astream_events()` and renders them using Rich components:
 
-    return {
-        "tool_results": results,
-        "messages": [ToolMessage(content=str(r["result"]), tool_call_id=call["id"])
-                     for r, call in zip(results, tool_calls)],
-        "iteration": state["iteration"] + 1,
-    }
+```
+┌───────────────────────────────────────────────────┐
+│  NoeAgent — Autonomous Research Assistant          │
+│  Mode: agent  |  /help for commands, /exit to quit │
+└───────────────────────────────────────────────────┘
+
+noe> How does the memory system work?
+
+⠋ Thinking...
+
+┌── Plan: Analyze memory system ────────────────────┐
+│ #  │ Status │ Step                                 │
+│ 1  │ [x]    │ Read memory provider code            │
+│ 2  │ [>]    │ Analyze provider manager              │
+│ 3  │ [ ]    │ Summarize architecture                │
+└───────────────────────────────────────────────────┘
+
+┌── Tool: bash.run_bash ───────────────────────────┐
+│ {"command": "cat noesium/core/memory/..."}       │
+│ --- result ---                                    │
+│ (file contents)                                   │
+└──────────────────────────────────────────────────┘
+
+## Memory System Architecture
+The memory system uses a provider-based approach...
 ```
 
-### 6.4 Memory Integration
+**Rich Components Used:**
 
-NoeAgent uses MemoryManager (RFC-2002) for both modes:
+| Component | Purpose |
+|-----------|---------|
+| `Console` | Primary output handle |
+| `Live` | Live-updating display for spinner during processing |
+| `Spinner` | Shows "Thinking...", "Executing tool: X", step status |
+| `Panel` | Wraps tool calls, errors, reflections |
+| `Markdown` | Renders final answers and text chunks |
+| `Table` | Todo/plan checklist rendering |
+| `Prompt` | Styled `noe>` input with multiline (backslash continuation) |
+| `Text` | Styled status markers and fragments |
 
-**Ask Mode**: recall only (read)
+**Slash Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `/exit`, `/quit` | Exit the TUI |
+| `/mode ask\|agent` | Switch mode at runtime |
+| `/plan` | Show current task plan |
+| `/memory` | Show memory statistics |
+| `/clear` | Clear the screen |
+| `/help` | List available commands |
+
+**TUI Architecture:**
+
+1. `run_agent_tui(agent)` — main loop, reads input, dispatches slash commands or queries
+2. `_process_query(agent, input, console)` — async, calls `agent.astream_events()`, renders events with `Live` context
+3. `render_plan_table(plan)` — converts `TaskPlan` to `rich.table.Table`
+4. `render_tool_call_panel(name, args, result)` — creates `rich.panel.Panel` for tool calls
+5. `handle_slash_command(cmd, agent, console)` — parses and executes slash commands
+6. `read_user_input(console)` — multiline input with `\` continuation
+
+### 5.7 MCP Server Loading
+
 ```python
-async def _recall_memory_node(self, state: AskState) -> dict:
-    query = RecallQuery(query=state["messages"][-1].content, scope=RecallScope.ALL, limit=10)
-    results = await self._memory_manager.recall(query)
-    return {"memory_context": [{"key": r.entry.key, "value": r.entry.value,
-                                 "score": r.score} for r in results]}
-```
-
-**Agent Mode**: recall + persist
-```python
-async def _persist_results(self, key: str, value: str, content_type: str = "research") -> None:
-    if self.config.persist_memory:
-        await self._memory_manager.store(
-            key=key, value=value, content_type=content_type,
-            tier=MemoryTier.PERSISTENT,
-        )
-```
-
-### 6.5 Iteration Control
-
-The agent graph enforces `max_iterations` to prevent infinite loops:
-
-```python
-def _should_continue(self, state: AgentState) -> bool:
-    if state["iteration"] >= self.config.max_iterations:
-        return False
-    if state.get("plan") and state["plan"].is_complete:
-        return False
-    return True
+for mcp_config in self.config.mcp_servers:
+    session = await MCPSession.connect(**mcp_config)
+    await self._tool_registry.load_mcp_server(session)
 ```
 
 ---
 
-## 7. Error Handling
-
-### 7.1 Error Types
-
-```python
-class AlithiaError(NoesiumError):
-    """Base NoeAgent error."""
-
-class PlanningError(AlithiaError):
-    """Task planning or revision failed."""
-
-class ModeError(AlithiaError):
-    """Invalid mode or mode-specific constraint violation."""
-
-class IterationLimitError(AlithiaError):
-    """Max iterations exceeded."""
-```
-
-### 7.2 Error Handling Strategy
+## 6. Error Handling
 
 | Error Category | Handling Approach |
 |----------------|-------------------|
 | Tool execution failure | Log, add error to tool_results, continue to next step |
 | LLM call failure | Retry up to 3 times, then raise |
+| Structured output parse failure | Retry with lower temperature, fall back to text-only response |
 | Planning failure | Fall back to single-step "just answer" plan |
 | Memory recall failure | Continue without memory context, log warning |
 | Iteration limit | Force finalize with partial results |
 | Permission denied | Skip tool, add error message, continue |
+| Subagent failure | Log error, return error as tool result, continue parent graph |
+| TUI rendering error | Catch and display in red error Panel, continue loop |
 
 ---
 
-## 8. Configuration
-
-### 8.1 Defaults
+## 7. Configuration Defaults
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `mode` | `agent` | Operating mode |
+| `interface_mode` | `library` | `library` or `tui` |
 | `max_iterations` | `25` | Maximum graph iterations |
 | `max_tool_calls_per_step` | `5` | Max tool calls per execute_step |
 | `reflection_interval` | `3` | Steps between reflections |
-| `enabled_toolkits` | `["search","bash","python_executor","file_edit"]` | Active toolkits |
+| `enabled_toolkits` | `[bash, python_executor, file_edit, search, memory, document, image, tabular_data, video, user_interaction]` | Active toolkits |
 | `persist_memory` | `true` | Persist agent results to durable memory |
-| `permissions` | `["fs:read","fs:write","net:outbound","shell:execute"]` | Granted tool permissions |
-
-### 8.2 Ask Mode Overrides
-
-When `mode=ask`, the following are forced:
-- `max_iterations = 1`
-- `enabled_toolkits = []` (no tools)
-- `permissions = []` (read-only)
-- `persist_memory = false`
 
 ---
 
-## 9. Testing Strategy
-
-### 9.1 Unit Tests
+## 8. Testing Strategy
 
 | Component | Test Focus |
 |-----------|------------|
-| `AlithiaConfig` | Defaults, validation, ask mode overrides |
+| `AgentAction` schema | Structured output parsing, tool_call and subagent fields |
+| `NoeConfig` | Defaults, validation, ask mode overrides |
 | `TaskPlanner` | Plan creation, revision (with mocked LLM) |
-| `AskState` / `AgentState` | State initialization, type safety |
-| `_recall_memory_node` | Memory recall with mocked MemoryManager |
-| `_tool_node` | Tool execution with mocked ToolExecutor |
+| `execute_step_node` | Structured completion returns tool calls |
+| `tool_node` | Tool execution with mocked ToolExecutor |
+| `subagent_node` | Spawn and interaction |
+| `astream_events` | Event types emitted for plan, tool, text, final answer |
 | `_route_after_execute` | Conditional routing logic |
-| `_route_after_reflect` | Reflection routing logic |
-
-### 9.2 Integration Tests
-
-| Test | Coverage |
-|------|----------|
-| Ask mode end-to-end | Query → memory recall → LLM answer |
-| Agent mode single step | Query → plan → one tool call → finalize |
-| Agent mode multi-step | Query → plan → multiple iterations → reflect → finalize |
-| Tool failure recovery | Tool fails → agent continues → produces result |
-| Memory persistence | Agent writes results → recall in new session |
-
-### 9.3 Test Utilities
-
-```python
-class MockLLMClient:
-    """Returns pre-configured responses for deterministic testing."""
-
-class MockToolExecutor:
-    """Records tool calls and returns pre-configured results."""
-
-class MockMemoryManager:
-    """In-memory provider for testing recall and persistence."""
-```
-
----
-
-## 10. Migration / Compatibility
-
-### 10.1 Relationship to Existing Agents
-
-NoeAgent does NOT replace existing agents (AskuraAgent, SearchAgent, DeepResearchAgent). It is a new agent that leverages the unified tool and memory systems.
-
-### 10.2 Incremental Adoption
-
-1. **Phase 1**: NoeAgent with ask mode using existing LLM client and basic memory.
-2. **Phase 2**: Agent mode with built-in toolkits and TaskPlanner.
-3. **Phase 3**: MCP tool integration and memory persistence.
-4. **Phase 4**: Streaming output and advanced reflection.
+| `render_plan_table` | Plan → Rich Table conversion |
+| `handle_slash_command` | Slash command parsing and dispatch |
+| Todo persistence | Plan stored/recalled from working memory |
 
 ---
 
@@ -521,20 +422,21 @@ NoeAgent does NOT replace existing agents (AskuraAgent, SearchAgent, DeepResearc
 
 | RFC Requirement | Guide Section | Implementation |
 |-----------------|---------------|----------------|
-| RFC-1002 §5.2 (Conversation Agent) | §6.1 | Ask mode graph |
-| RFC-1002 §5.3 (Research Agent) | §6.2 | Agent mode graph |
-| RFC-1002 §5.4 (Task Agent) | §6.2 | TaskPlanner + agent loop |
-| RFC-2001 §9 (Recall Protocol) | §6.4 | MemoryManager.recall() |
-| RFC-2002 §8 (MemoryManager) | §6.4 | Memory store/recall |
-| RFC-2003 §7 (Event-Wrapped Execution) | §6.3 | ToolExecutor.run() |
-| RFC-2004 §5 (ToolExecutor) | §6.3 | Tool node implementation |
-| RFC-2004 §7 (Source Adapters) | §6.3 | _setup_tools() |
-| RFC-0003 §10 (Checkpointing) | §6.5 | Iteration control |
+| RFC-1002 §5.2 (Conversation Agent) | §4.1 | Ask mode graph |
+| RFC-1002 §5.3 (Research Agent) | §4.2 | Agent mode graph |
+| RFC-1002 §5.4 (Task Agent) | §4.2 | TaskPlanner + agent loop |
+| RFC-2001 §9 (Recall Protocol) | §5.3 | ProviderMemoryManager.recall() |
+| RFC-2002 §8 (MemoryManager) | §5.3 | Memory store/recall |
+| RFC-2003 §7 (Event-Wrapped Execution) | §5.2 | ToolExecutor.run() |
+| RFC-2004 §5 (ToolExecutor) | §5.2 | Tool node implementation |
+| RFC-2004 §7 (Source Adapters) | §5.2 | _setup_tools() |
 
 ---
 
 ## Appendix B: Revision History
 
-| Date | RFC Version | Changes |
-|------|-------------|---------|
-| 2026-03-01 | Initial | Initial guide based on RFC-1002, RFC-2001-2004 |
+| Date | Changes |
+|------|---------|
+| 2026-03-01 | Initial guide based on RFC-1002, RFC-2001-2004 |
+| 2026-03-02 | Unified with evolution guide: added structured tool calling, subagent graph node, todo persistence |
+| 2026-03-02 | Removed ACP/Toad mode; added Rich TUI with event streaming protocol, slash commands, spinner, tool panels, markdown rendering |

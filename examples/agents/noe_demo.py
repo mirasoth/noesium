@@ -7,7 +7,7 @@ This script demonstrates the core functionality of the NoeAgent.
 
 import asyncio
 
-from noesium.agents.noe.agent import NoeAgent
+from noesium.agents.noe import NoeAgent
 
 
 async def main():
@@ -21,7 +21,7 @@ async def main():
     print(f"🔍 Researching: {topic}")
 
     print("🔄 Starting research...")
-    result = await agent.run(topic)
+    result = await agent.arun(topic)
 
     print(f"\n✅ Research completed!")
     print(f"📖 Result: {result}")

@@ -82,7 +82,7 @@ def weaviate_config():
 def pgvector_config():
     """PGVector connection configuration."""
     return {
-        "dbname": os.getenv("PGVECTOR_DB", "test_vectorstore"),
+        "dbname": os.getenv("PGVECTOR_DB", "vectordb"),
         "user": os.getenv("PGVECTOR_USER", "postgres"),
         "password": os.getenv("PGVECTOR_PASSWORD", "postgres"),
         "host": os.getenv("PGVECTOR_HOST", "localhost"),
@@ -241,6 +241,44 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "slow" in item.keywords:
                 item.add_marker(skip_slow)
+
+    # Skip tests requiring service API keys if not available
+    # List of modules that require API keys
+    api_key_modules = {
+        "test_serper_toolkit.py": "SERPER_API_KEY",
+        "test_gmail_toolkit.py": "GMAIL_ACCESS_TOKEN",
+        "test_openai_integration.py": "OPENAI_API_KEY",
+        "test_openrouter_integration.py": "OPENROUTER_API_KEY",
+    }
+
+    for item in items:
+        # Check if this test is in a module that requires API keys
+        module_file = item.fspath.strpath
+        for module_name, required_key in api_key_modules.items():
+            if module_name in module_file and not os.getenv(required_key):
+                item.add_marker(pytest.mark.skip(reason=f"{required_key} not set"))
+                break
+
+        # Special handling for LiteLLM - needs at least one provider API key
+        if "test_litellm_integration.py" in module_file:
+            litellm_keys = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "COHERE_API_KEY"]
+            if not any(os.getenv(key) for key in litellm_keys):
+                item.add_marker(
+                    pytest.mark.skip(reason="No LiteLLM provider API keys set (OPENAI, ANTHROPIC, or COHERE)")
+                )
+                continue
+
+        # Skip Weaviate tests if Weaviate is not available
+        if "test_weaviate_store.py" in module_file and "integration" in item.keywords:
+            try:
+                # Quick check if Weaviate is accessible
+                import weaviate
+
+                client = weaviate.connect_to_local(host="localhost", port=8080)
+                client.close()
+            except Exception:
+                item.add_marker(pytest.mark.skip(reason="Weaviate server not available or not compatible"))
+                continue
 
 
 def pytest_addoption(parser):

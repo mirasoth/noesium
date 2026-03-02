@@ -24,7 +24,7 @@ The implementation is incremental — existing agents MUST continue working thro
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Agents Layer                              │
-│  (AskuraAgent, SearchAgent, DeepResearchAgent, ...)         │
+│  (AskuraAgent, TacitusAgent, ...)                      │
 └──────────────────────────┬──────────────────────────────────┘
                            │ uses
 ┌──────────────────────────▼──────────────────────────────────┐

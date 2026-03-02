@@ -33,7 +33,7 @@ class BaseAgent(ABC):
     - Error handling patterns
     """
 
-    def __init__(self, llm_provider: str = "openrouter", model_name: Optional[str] = None):
+    def __init__(self, llm_provider: str = "openai", model_name: Optional[str] = None):
         """Initialize base agent with LLM client and logging."""
         self.logger = get_logger(self.__class__.__name__)
         self.llm_provider = llm_provider
@@ -74,7 +74,7 @@ class BaseGraphicAgent(BaseAgent):
     - Common graph patterns
     """
 
-    def __init__(self, llm_provider: str = "openrouter", model_name: Optional[str] = None):
+    def __init__(self, llm_provider: str = "openai", model_name: Optional[str] = None):
         """Initialize graphic agent with graph support."""
         super().__init__(llm_provider, model_name)
         self.graph: Optional[StateGraph] = None
@@ -212,7 +212,7 @@ class BaseResearcher(BaseGraphicAgent):
     - Result compilation patterns
     """
 
-    def __init__(self, llm_provider: str = "openrouter", model_name: Optional[str] = None):
+    def __init__(self, llm_provider: str = "openai", model_name: Optional[str] = None):
         """Initialize researcher agent."""
         super().__init__(llm_provider, model_name)
 
