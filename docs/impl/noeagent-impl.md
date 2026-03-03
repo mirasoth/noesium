@@ -595,21 +595,26 @@ result = await agent.arun("analyze the memory system")
 Implements the persistent daemon model from RFC-0005 §10.
 
 ```python
-class SubagentHandle:
+class SubagentHandle(BaseModel):
     """Opaque handle to a running subagent daemon."""
-    process: asyncio.subprocess.Process
+    name: str
+    config: CliSubagentConfig
     session_id: str
     state: Literal["CREATED", "RUNNING", "BUSY", "IDLE", "TERMINATED"]
     started_at: datetime
+    pid: int | None
 
 class ExternalCliAdapter:
     """Manages persistent CLI subagent daemons."""
 
-    async def spawn(self, config: CliSubagentConfig) -> SubagentHandle
-    async def send(self, handle: SubagentHandle, message: str) -> str
-    async def health_check(self, handle: SubagentHandle) -> bool
-    async def restart(self, handle: SubagentHandle) -> SubagentHandle
-    async def terminate(self, handle: SubagentHandle) -> None
+    async def spawn(self, name: str, initial_message: str = "") -> str
+    async def spawn_from_config(self, config: CliSubagentConfig, initial_message: str = "") -> str
+    async def interact(self, name: str, message: str) -> str
+    async def health_check(self, name: str) -> bool
+    async def restart(self, name: str) -> str
+    async def terminate(self, name: str) -> str
+    async def terminate_all(self) -> None
+    def get_handle(self, name: str) -> SubagentHandle | None
 ```
 
 **Claude Code CLI integration:**
