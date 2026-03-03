@@ -398,7 +398,7 @@ def read_user_input(console: Console, mode: str = "agent", history: InputHistory
     """
     lines: list[str] = []
     # Plain text prompt for prompt_toolkit (Rich markup not supported)
-    f"noe|{mode}> "
+    prompt_str = f"noe|{mode}> "
     continuation_str = "...  "
     # Rich-formatted prompt for fallback
     rich_prompt_str = f"[bold cyan]noe|{mode}>[/bold cyan] "
@@ -407,7 +407,7 @@ def read_user_input(console: Console, mode: str = "agent", history: InputHistory
     # Try using prompt_toolkit for better history support
     try:
         from prompt_toolkit import PromptSession
-        from prompt_toolkit.history import FileHistory
+        from prompt_toolkit.history import InMemoryHistory
         from prompt_toolkit.styles import Style
 
         # Define a simple style for prompt_toolkit
@@ -417,12 +417,19 @@ def read_user_input(console: Console, mode: str = "agent", history: InputHistory
             }
         )
 
-        history_path = str(history.history_file) if history else None
-        session = PromptSession(history=FileHistory(history_path) if history_path else None)
+        # Use InMemoryHistory populated from our InputHistory
+        # (FileHistory uses plain text format, incompatible with our JSON format)
+        ptk_history = InMemoryHistory()
+        if history:
+            # Pre-populate with existing history (in reverse order so most recent is first)
+            for entry in reversed(history.history):
+                ptk_history.append_string(entry)
+
+        session = PromptSession(history=ptk_history)
 
         try:
             # Use a formatted prompt with prompt_toolkit style
-            first = session.prompt([("class:prompt", f"noe|{mode}> ")], style=style)
+            first = session.prompt([("class:prompt", prompt_str)], style=style)
         except (EOFError, KeyboardInterrupt):
             return None
 
@@ -442,7 +449,7 @@ def read_user_input(console: Console, mode: str = "agent", history: InputHistory
         else:
             result = first
 
-        # Add to history if provided and not already handled by prompt_toolkit
+        # Add to our history for persistence (prompt_toolkit already added to InMemoryHistory)
         if history and result.strip():
             history.add(result)
 
@@ -489,7 +496,14 @@ async def _process_query(
     console: Console,
     session_logger: SessionLogger | None = None,
 ) -> "TaskPlan | None":
-    """Process a single user query with compact Claude Code-style output."""
+    """Process a single user query with compact Claude Code-style output.
+
+    Args:
+        agent: The NoeAgent instance
+        user_input: User's query
+        console: Rich console for output
+        session_logger: Optional session logger
+    """
     from .state import TaskPlan
 
     current_plan: TaskPlan | None = None
@@ -497,6 +511,7 @@ async def _process_query(
     partial_results: list[str] = []
     final_answer: str = ""
     current_step_summary: str = ""
+    step_details: list[Text] = []  # Step progress details
 
     # Dynamic thinking text generator
     thinking_gen = DynamicThinkingText()
@@ -515,11 +530,15 @@ async def _process_query(
             if compact:
                 parts.append(compact)
                 parts.append(Text(""))
-        # Show full plan table if enabled (optional - can be toggled)
-        # parts.append(render_plan_table(current_plan))
-        # parts.append(Text(""))
-        if current_step_summary and not current_plan:
-            parts.append(Text(f"  {current_step_summary}", style="bold"))
+        # Show full plan table (enabled by default)
+        if current_plan:
+            parts.append(render_plan_table(current_plan))
+            parts.append(Text(""))
+        # Show step details (enabled by default)
+        if step_details:
+            for detail in step_details[-5:]:
+                parts.append(detail)
+            parts.append(Text(""))
         for line in activity_lines[-15:]:
             parts.append(line)
         parts.append(Text(""))
@@ -536,11 +555,14 @@ async def _process_query(
                 if event.plan_snapshot:
                     current_plan = TaskPlan(**event.plan_snapshot)
                 thinking_gen.set_phase("executing")
+                if current_plan:
+                    step_details.append(Text(f"📋 Plan created with {len(current_plan.steps)} steps", style="dim"))
 
             elif etype == ProgressEventType.PLAN_REVISED:
                 if event.plan_snapshot:
                     current_plan = TaskPlan(**event.plan_snapshot)
                 thinking_gen.set_phase("executing")
+                step_details.append(Text("📝 Plan revised", style="dim"))
 
             elif etype == ProgressEventType.STEP_START:
                 current_step_summary = event.summary or ""
@@ -549,12 +571,20 @@ async def _process_query(
                     if idx < len(current_plan.steps):
                         current_plan.steps[idx].status = "in_progress"
                         thinking_gen.set_phase("executing", f"step {idx + 1}")
+                        step_desc = current_plan.steps[idx].description[:60]
+                        step_details.append(
+                            Text.assemble((f"  [>] ", "bold yellow"), (f"Step {idx + 1}: ", "bold"), (step_desc, ""))
+                        )
 
             elif etype == ProgressEventType.STEP_COMPLETE:
                 if current_plan and event.step_index is not None:
                     idx = event.step_index
                     if idx < len(current_plan.steps):
                         current_plan.steps[idx].status = "completed"
+                        step_desc = current_plan.steps[idx].description[:60]
+                        step_details.append(
+                            Text.assemble((f"  [✓] ", "bold green"), (f"Step {idx + 1}: ", "bold"), (step_desc, "dim"))
+                        )
 
             elif etype in (
                 ProgressEventType.TOOL_START,
@@ -567,6 +597,9 @@ async def _process_query(
                 line = _activity_line(event, thinking_gen)
                 if line:
                     activity_lines.append(line)
+                # Also add tool/subagent details to step_details
+                if etype == ProgressEventType.TOOL_START and event.tool_name:
+                    step_details.append(Text.assemble(("    → ", "dim"), (f"Using tool: {event.tool_name}", "blue")))
 
             elif etype == ProgressEventType.THINKING:
                 # Update thinking phase based on the thinking event
@@ -597,10 +630,26 @@ async def _process_query(
             elif etype == ProgressEventType.REFLECTION:
                 activity_lines.append(Text.assemble(("  . ", "dim"), ("Reflected on progress", "dim italic")))
                 thinking_gen.set_phase("reflecting")
+                step_details.append(Text("  💭 Reflection completed", style="dim italic"))
 
             elif etype == ProgressEventType.FINAL_ANSWER:
                 final_answer = event.text or ""
                 thinking_gen.set_phase("finalizing")
+                # Mark all remaining steps as completed when final answer is received
+                if current_plan:
+                    for step in current_plan.steps:
+                        if step.status in ("in_progress", "pending"):
+                            step.status = "completed"
+                    current_plan.is_complete = True
+                step_details.append(Text("  ✓ Final answer generated", style="bold green"))
+
+            elif etype == ProgressEventType.SESSION_END:
+                # Ensure all steps are marked completed at session end
+                if current_plan:
+                    for step in current_plan.steps:
+                        if step.status in ("in_progress", "pending"):
+                            step.status = "completed"
+                    current_plan.is_complete = True
 
     # --- Post-processing: render static output ---
 
@@ -736,7 +785,13 @@ def main() -> None:
 
     from noesium.core.utils.logging import setup_logging
 
-    config = NoeConfig(mode=NoeMode.AGENT, interface_mode="tui")
+    # Try to load from global config file first, fall back to defaults
+    try:
+        config = NoeConfig.from_global_config()
+        config = config.model_copy(update={"interface_mode": "tui"})
+    except Exception:
+        # Fall back to defaults if global config doesn't exist or is invalid
+        config = NoeConfig(mode=NoeMode.AGENT, interface_mode="tui")
 
     # Load dotenv if enabled
     config.load_dotenv_if_enabled()

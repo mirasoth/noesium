@@ -2,7 +2,7 @@
 
 > Unified implementation guide for the NoeAgent autonomous research assistant.
 >
-> **Module**: `noesium/noe/`
+> **Module**: `noesium/noeagent/`
 > **Source**: Derived from [RFC-1002](../../specs/RFC-1002.md) (LangGraph Agent Design), [RFC-0005](../../specs/RFC-0005.md) (Capability Registry), [RFC-2001](../../specs/RFC-2001.md), [RFC-2002](../../specs/RFC-2002.md), [RFC-2003](../../specs/RFC-2003.md), [RFC-2004](../../specs/RFC-2004.md)
 > **Language**: Python 3.11+
 > **Framework**: LangGraph, Pydantic v2
@@ -99,7 +99,7 @@ NoeAgent
 ### 2.3 Module Structure
 
 ```
-noesium/noe/
+noesium/noeagent/
 ├── __init__.py          # Exports NoeAgent, NoeConfig, schemas, progress types
 ├── __main__.py          # CLI entrypoint: python -m noesium.noeagent
 ├── agent.py             # NoeAgent class, graph building, astream_progress, subagent API
@@ -112,7 +112,8 @@ noesium/noe/
 ├── progress.py          # ProgressEvent, ProgressEventType, ProgressCallback
 ├── session_log.py       # SessionLogger (JSONL per-session writer)
 ├── cli_adapter.py       # ExternalCliAdapter for persistent CLI daemon subagents
-└── tui.py               # Rich TUI (compact progress, plan table, markdown)
+├── tui.py               # Rich TUI (compact progress, plan table, markdown)
+└── example_config.json  # Example configuration file
 ```
 
 ---
@@ -293,13 +294,14 @@ It calls `llm.structured_completion(messages, response_model=AgentAction)`. The 
 
 Tools are loaded from existing Noesium toolkits via `BuiltinAdapter`. No custom "local tools" are introduced. Command execution uses `bash.run_bash`, file search uses `file_edit.search_in_files`, etc.
 
-Default enabled toolkits (all 18):
+Default enabled toolkits (8 core toolkits):
 
 ```
-wizsearch, jina_research, bash, python_executor, file_edit, memory,
-document, image, tabular_data, video, user_interaction, arxiv, serper,
-wikipedia, github, gmail, audio, audio_aliyun
+bash, file_edit, document, image, python_executor, tabular_data,
+wizsearch, user_interaction
 ```
+
+Additional available toolkits (not enabled by default): `jina_research`, `memory`, `video`, `arxiv`, `serper`, `wikipedia`, `github`, `gmail`, `audio`, `audio_aliyun`
 
 **`max_tool_calls_per_step` enforcement**: `tool_node` enforces the configured limit by processing only the first N tool calls and returning a warning message for any excess.
 
@@ -690,7 +692,7 @@ For each step, suggest an execution_hint.
 | `max_iterations` | `25` | Maximum graph iterations |
 | `max_tool_calls_per_step` | `5` | Max tool calls per execute_step |
 | `reflection_interval` | `3` | Steps between reflections |
-| `enabled_toolkits` | all 18 | Active toolkits |
+| `enabled_toolkits` | 8 core toolkits | Active toolkits (bash, file_edit, document, image, python_executor, tabular_data, wizsearch, user_interaction) |
 | `persist_memory` | `true` | Persist agent results to durable memory |
 | `progress_callbacks` | `[]` | List of async callables / `ProgressCallback` instances |
 | `session_log_dir` | `~/.noeagent/sessions` | Directory for session JSONL logs |
@@ -733,7 +735,7 @@ Current codebase gaps relative to this design:
 |-----|--------------|----------------|----------|--------|
 | `additional_kwargs` safety | Used without defensive `getattr` in routing | Add `getattr` guards in `_route_after_execute` | P0 (bug) | Done |
 | `AgentAction` mutual exclusivity | No validation | Add `model_validator` ensuring exactly one action | P0 (bug) | Done |
-| Tool arg pre-validation | LLM passes raw args, Pydantic errors at toolkit level | Pre-validate against tool schema before dispatch | P1 | Done |
+| Tool arg pre-validation | LLM passes raw args, Pydantic errors at toolkit level | Pre-validate against tool schema before dispatch | P1 | Partial (type coercion only, no full schema validation) |
 | `max_tool_calls_per_step` | Config field exists, not enforced | Enforce in `tool_node` and `execute_step_node` | P1 | Done |
 | `planning_model` | Config field exists, not used | Pass to `TaskPlanner` LLM calls | P2 | Done |
 | `TaskStep.execution_hint` | Not present | Add field for tool/subagent routing hints | P2 | Done |

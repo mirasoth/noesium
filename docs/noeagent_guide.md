@@ -40,6 +40,7 @@ NoeAgent is an autonomous research assistant built on the Noesium framework. It 
     - [Subagents](#subagents)
       - [In-Process Subagents](#in-process-subagents)
       - [External CLI Subagent Daemons](#external-cli-subagent-daemons)
+      - [Browser Use Subagent Example](#browser-use-subagent-example)
     - [TaskPlan Structure](#taskplan-structure)
     - [Memory Providers](#memory-providers)
     - [Permissions](#permissions)
@@ -50,6 +51,8 @@ NoeAgent is an autonomous research assistant built on the Noesium framework. It 
     - [Example 4: Streaming Research](#example-4-streaming-research)
     - [Example 5: Ask Mode for Memory Retrieval](#example-5-ask-mode-for-memory-retrieval)
     - [Example 6: Custom Research Workflow](#example-6-custom-research-workflow)
+    - [Example 7: Subagent Configuration](#example-7-subagent-configuration)
+    - [Example 8: Browser Automation with Subagent](#example-8-browser-automation-with-subagent)
   - [Troubleshooting](#troubleshooting)
     - [Import Errors](#import-errors)
     - [Memory Provider Issues](#memory-provider-issues)
@@ -88,7 +91,7 @@ python -m noesium.noeagent.tui
 Or using the environment variable:
 
 ```bash
-NOE_INTERFACE=tui uv run python -m noesium.noeagent.tui
+uv run python -m noesium.noeagent.tui
 ```
 
 ## Modes of Operation
@@ -107,6 +110,7 @@ The `noesium.noeagent` module exports the following:
 - `NoeAgent` - Main agent class
 - `NoeConfig` - Configuration class
 - `NoeMode` - Agent mode enum (`ASK` or `AGENT`)
+- `AgentSubagentConfig` - Built-in agent subagent configuration (browser_use, tacitus, etc.)
 - `CliSubagentConfig` - External CLI subagent daemon configuration
 - `TaskPlan` - Plan structure with steps
 - `TaskStep` - Individual plan step
@@ -198,6 +202,7 @@ result = agent.run("Your research question")
 | `permissions` | `list[str]` | See defaults | Tool permissions |
 | `enable_subagents` | `bool` | `True` | Enable in-process subagent spawning |
 | `subagent_max_depth` | `int` | `2` | Max subagent nesting depth |
+| `agent_subagents` | `list[AgentSubagentConfig]` | See defaults | Built-in agent subagent configurations |
 | `cli_subagents` | `list[CliSubagentConfig]` | `[]` | External CLI subagent daemon configurations |
 
 #### Default Toolkits
@@ -576,6 +581,41 @@ agent = NoeAgent(config)
 result = agent.run("Research both solar and wind energy advantages")
 ```
 
+**Built-in Agent Subagents:**
+
+NoeAgent comes with pre-configured agent subagents for specialized tasks:
+
+- **browser_use**: Web automation agent for browser interaction and DOM manipulation
+- **tacitus**: Research agent with iterative query generation and web search
+
+These are enabled by default and can be customized via `config.agent_subagents`:
+
+```python
+from noesium.noeagent import NoeAgent, NoeConfig, AgentSubagentConfig
+
+config = NoeConfig(
+    enable_subagents=True,
+    agent_subagents=[
+        AgentSubagentConfig(
+            name="browser_use",
+            agent_type="browser_use",
+            description="Web automation agent for browser interaction",
+            enabled=True,
+        ),
+        AgentSubagentConfig(
+            name="tacitus",
+            agent_type="tacitus",
+            description="Research agent with iterative query generation",
+            enabled=True,
+        ),
+    ],
+)
+
+agent = NoeAgent(config)
+```
+
+To disable specific built-in subagents, set `enabled=False` or remove them from the list.
+
 #### External CLI Subagent Daemons
 
 Long-lived external CLI processes (e.g., Claude Code CLI) that run as persistent daemons. Configured via `CliSubagentConfig`:
@@ -610,6 +650,37 @@ The `SubagentAction` schema supports five actions for routing:
 | `terminate_cli` | CLI daemon | Shut down a CLI daemon |
 
 The LLM intelligently determines whether to use a tool, an in-process subagent, or a CLI subagent based on task complexity, required autonomy, and configured `task_types`.
+
+#### Browser Use Subagent Example
+
+The `browser_use` subagent is ideal for web automation tasks. Here's how to use it:
+
+```python
+from noesium.noeagent import NoeAgent, NoeConfig
+
+# Enable browser_use subagent (enabled by default)
+config = NoeConfig(
+    enable_subagents=True,
+    subagent_max_depth=2,
+)
+
+agent = NoeAgent(config)
+
+# The agent will automatically delegate browser tasks to the browser_use subagent
+result = agent.run(
+    "Navigate to example.com, fill out the contact form with test data, "
+    "and screenshot the confirmation page"
+)
+```
+
+**When the LLM uses browser_use:**
+- Web scraping and data extraction
+- Form filling and submission
+- Multi-page navigation workflows
+- Screenshot capture and visual verification
+- DOM manipulation and testing
+
+The browser_use subagent operates autonomously and returns results back to the parent agent for synthesis.
 
 ### TaskPlan Structure
 
@@ -782,6 +853,73 @@ config = NoeConfig(
 
 agent = NoeAgent(config)
 result = agent.run("Find recent papers about transformer architectures and summarize them")
+```
+
+### Example 7: Subagent Configuration
+
+```python
+from noesium.noeagent import (
+    NoeAgent,
+    NoeConfig,
+    AgentSubagentConfig,
+    CliSubagentConfig,
+)
+
+# Configure with both agent subagents and CLI subagents
+config = NoeConfig(
+    enable_subagents=True,
+    subagent_max_depth=2,
+    # Built-in agent subagents (browser_use, tacitus)
+    agent_subagents=[
+        AgentSubagentConfig(
+            name="browser_use",
+            agent_type="browser_use",
+            description="Web automation agent for browser tasks",
+            enabled=True,
+        ),
+        AgentSubagentConfig(
+            name="tacitus",
+            agent_type="tacitus",
+            description="Deep research agent with iterative search",
+            enabled=True,
+        ),
+    ],
+    # External CLI subagents
+    cli_subagents=[
+        CliSubagentConfig(
+            name="claude-code",
+            command="claude",
+            args=["--session"],
+            timeout=300,
+            task_types=["code_generation", "code_review"],
+        ),
+    ],
+)
+
+agent = NoeAgent(config)
+result = agent.run(
+    "Research the latest React patterns, then generate a component example"
+)
+```
+
+### Example 8: Browser Automation with Subagent
+
+```python
+from noesium.noeagent import NoeAgent, NoeConfig
+
+# Browser automation is enabled by default via browser_use subagent
+agent = NoeAgent(NoeConfig(enable_subagents=True))
+
+result = agent.run(
+    "Go to github.com/trending, scrape the top 5 repositories, "
+    "and summarize what makes them popular"
+)
+
+# The agent will:
+# 1. Delegate browser navigation to browser_use subagent
+# 2. Subagent scrapes the page and extracts data
+# 3. Parent agent synthesizes findings into summary
+print(result)
 ```
 
 ## Troubleshooting

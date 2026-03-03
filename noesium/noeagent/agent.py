@@ -126,7 +126,7 @@ class NoeAgent(BaseGraphicAgent):
         self._memory_manager = ProviderMemoryManager(providers)
 
     async def _setup_capabilities(self) -> None:
-        """Create CapabilityRegistry and register all providers."""
+        """Create CapabilityRegistry and register all providers (parallel toolkit loading)."""
         import os
 
         from noesium.core.toolify.base import AsyncBaseToolkit
@@ -151,7 +151,9 @@ class NoeAgent(BaseGraphicAgent):
 
         work_dir = self.config.working_directory or os.getcwd()
 
-        for toolkit_name in self.config.enabled_toolkits:
+        # Load toolkits in parallel for better performance
+        async def _load_toolkit(toolkit_name: str) -> list:
+            """Load a single toolkit and return its providers."""
             try:
                 toolkit_config = ToolkitConfig(
                     name=toolkit_name,
@@ -164,24 +166,43 @@ class NoeAgent(BaseGraphicAgent):
                 if isinstance(toolkit, AsyncBaseToolkit):
                     await toolkit.build()
                 tools = await BuiltinAdapter.from_toolkit(toolkit, toolkit_name)
+                providers = []
                 for tool in tools:
                     provider = ToolCapabilityProvider(tool, self._tool_executor, self._tool_context)
-                    self._registry.register(provider)
+                    providers.append(provider)
+                return providers
             except Exception as exc:
                 logger.warning("Failed to load toolkit %s: %s", toolkit_name, exc)
+                return []
 
-        for mcp_config in self.config.mcp_servers:
-            try:
-                session = await self._connect_mcp(mcp_config)
-                from noesium.core.toolify.adapters.mcp_adapter import MCPAdapter
+        # Load all toolkits concurrently
+        if self.config.enabled_toolkits:
+            toolkit_tasks = [_load_toolkit(name) for name in self.config.enabled_toolkits]
+            toolkit_results = await asyncio.gather(*toolkit_tasks, return_exceptions=True)
 
-                adapter = MCPAdapter(session)
-                mcp_tools = await adapter.discover_tools()
-                for tool in mcp_tools:
-                    provider = MCPCapabilityProvider(tool, self._tool_executor, self._tool_context)
-                    self._registry.register(provider)
-            except Exception as exc:
-                logger.warning("Failed to load MCP server: %s", exc)
+            # Register all providers from successfully loaded toolkits
+            for result in toolkit_results:
+                if isinstance(result, list):
+                    for provider in result:
+                        self._registry.register(provider)
+                # Exceptions are already logged in _load_toolkit
+
+        # MCP servers are disabled by default (mcp_servers defaults to empty list)
+        # Only load if explicitly configured
+        if self.config.mcp_servers:
+            logger.info("Loading %d MCP server(s)...", len(self.config.mcp_servers))
+            for mcp_config in self.config.mcp_servers:
+                try:
+                    session = await self._connect_mcp(mcp_config)
+                    from noesium.core.toolify.adapters.mcp_adapter import MCPAdapter
+
+                    adapter = MCPAdapter(session)
+                    mcp_tools = await adapter.discover_tools()
+                    for tool in mcp_tools:
+                        provider = MCPCapabilityProvider(tool, self._tool_executor, self._tool_context)
+                        self._registry.register(provider)
+                except Exception as exc:
+                    logger.warning("Failed to load MCP server: %s", exc)
 
         for func in self.config.custom_tools:
             tool = FunctionAdapter.from_function(func)
