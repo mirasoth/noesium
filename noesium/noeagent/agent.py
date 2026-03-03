@@ -1002,3 +1002,39 @@ class NoeAgent(BaseGraphicAgent):
         tasks = [self.interact_with_subagent(sid, msg) for sid, msg in requests]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return {sid: (r if isinstance(r, str) else f"Error: {r}") for (sid, _), r in zip(requests, results)}
+
+    async def execute_builtin_subagent_streaming(
+        self,
+        provider: Any,
+        message: str,
+        subagent_name: str,
+    ) -> str:
+        """Execute a built-in subagent with progress streaming to TUI.
+
+        This method streams progress events from the built-in subagent,
+        forwarding them to parent callbacks and queuing them for
+        astream_progress() to yield to the TUI.
+
+        Args:
+            provider: The BuiltInAgentCapabilityProvider instance.
+            message: The task message for the subagent.
+            subagent_name: Name of the subagent for event tagging.
+
+        Returns:
+            The final result string from the subagent.
+        """
+        final_result = ""
+
+        async for event in provider.invoke_streaming(message=message):
+            # Fire to callbacks (SessionLogger, etc.)
+            await self._fire_callbacks(event)
+
+            # Queue for astream_progress to yield
+            if self._subagent_event_queue is not None:
+                self._subagent_event_queue.put_nowait(event)
+
+            # Track final result
+            if event.type == ProgressEventType.SUBAGENT_END:
+                final_result = event.detail or event.summary or ""
+
+        return final_result

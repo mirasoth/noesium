@@ -4,7 +4,7 @@ Enhanced base class designed for extensibility.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, AsyncGenerator, Dict, List, Optional, Type
 
 try:
     from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
@@ -396,3 +396,200 @@ class TacitusAgent(BaseResearcher):
             "messages": [AIMessage(content=final_answer)],
             "sources_gathered": state.get("sources_gathered", []),
         }
+
+    async def astream_progress(
+        self,
+        user_message: str,
+        context: Dict[str, Any] = None,
+        config: Optional[RunnableConfig] = None,
+    ) -> AsyncGenerator[Any, None]:
+        """Stream progress events during research.
+
+        This method yields ProgressEvent objects compatible with NoeAgent's
+        progress system, allowing real-time visibility into research phases.
+
+        Args:
+            user_message: User's research request
+            context: Additional context for research
+            config: Optional RunnableConfig for runtime configuration
+
+        Yields:
+            ProgressEvent: Events describing research progress.
+
+        Event Sequence:
+            1. SESSION_START - Research initiated
+            2. PLAN_CREATED - Research plan (queries to generate)
+            3. STEP_START - For each query generation
+            4. TOOL_START/TOOL_END - For web searches
+            5. THINKING - During reflection
+            6. FINAL_ANSWER - Research summary
+            7. SESSION_END - Complete
+        """
+        # Lazy import to avoid circular dependencies
+        from uuid_extensions import uuid7str
+
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+
+        session_id = uuid7str()
+
+        # Yield SESSION_START
+        yield ProgressEvent(
+            type=ProgressEventType.SESSION_START,
+            session_id=session_id,
+            summary=f"Research: {user_message[:60]}",
+        )
+
+        # Initialize state
+        initial_state = {
+            "messages": [HumanMessage(content=user_message)],
+            "context": context,
+            "search_query": [],
+            "web_research_result": [],
+            "sources_gathered": [],
+            "initial_search_query_count": self.number_of_initial_queries,
+            "max_research_loops": self.max_research_loops,
+            "research_loop_count": 0,
+        }
+
+        try:
+            # Stream graph execution
+            current_loop = 0
+            total_sources = 0
+            final_content = None
+
+            # Yield thinking event before starting
+            yield ProgressEvent(
+                type=ProgressEventType.THINKING,
+                session_id=session_id,
+                summary="Analyzing research topic...",
+            )
+
+            async for event in self.graph.astream(initial_state):
+                for node_name, node_output in event.items():
+                    if not isinstance(node_output, dict):
+                        continue
+
+                    # Generate query node
+                    if node_name == "generate_query":
+                        query_list = node_output.get("query_list", [])
+                        queries_generated = len(query_list)
+
+                        # Yield PLAN_CREATED with query steps
+                        yield ProgressEvent(
+                            type=ProgressEventType.PLAN_CREATED,
+                            session_id=session_id,
+                            summary=f"Generated {queries_generated} search queries",
+                            plan_snapshot={
+                                "steps": [
+                                    {"description": f"Search: {q['query'][:50]}", "status": "pending"}
+                                    for q in query_list
+                                ],
+                                "goal": user_message,
+                            },
+                        )
+
+                        # Yield step events for each query
+                        for i, q in enumerate(query_list):
+                            yield ProgressEvent(
+                                type=ProgressEventType.STEP_START,
+                                session_id=session_id,
+                                step_index=i,
+                                summary=f"🔍 Query {i+1}/{queries_generated}: {q['query'][:40]}",
+                            )
+
+                    # Web research node
+                    elif node_name == "web_research":
+                        search_query = node_output.get("search_query", [])
+                        sources = node_output.get("sources_gathered", [])
+
+                        for query in search_query:
+                            yield ProgressEvent(
+                                type=ProgressEventType.TOOL_START,
+                                session_id=session_id,
+                                tool_name="web_search",
+                                summary=f"🔎 Searching: {query[:50]}",
+                            )
+
+                        if sources:
+                            total_sources += len(sources)
+                            yield ProgressEvent(
+                                type=ProgressEventType.TOOL_END,
+                                session_id=session_id,
+                                tool_name="web_search",
+                                tool_result=f"Found {len(sources)} sources",
+                                summary=f"✓ Found {len(sources)} sources (total: {total_sources})",
+                            )
+
+                    # Reflection node
+                    elif node_name == "reflection":
+                        is_sufficient = node_output.get("is_sufficient", False)
+                        current_loop = node_output.get("research_loop_count", 0)
+                        knowledge_gap = node_output.get("knowledge_gap", "")
+
+                        # Yield thinking event for reflection
+                        yield ProgressEvent(
+                            type=ProgressEventType.THINKING,
+                            session_id=session_id,
+                            summary=f"Reflecting on research (loop {current_loop}/{self.max_research_loops})...",
+                        )
+
+                        # Yield reflection result
+                        if is_sufficient:
+                            yield ProgressEvent(
+                                type=ProgressEventType.REFLECTION,
+                                session_id=session_id,
+                                text="Research is sufficient, proceeding to finalize.",
+                                summary="✓ Research sufficient",
+                            )
+                        else:
+                            gap_text = knowledge_gap[:50] if knowledge_gap else "more research needed"
+                            yield ProgressEvent(
+                                type=ProgressEventType.PLAN_REVISED,
+                                session_id=session_id,
+                                summary=f"Need more research: {gap_text}",
+                                detail=knowledge_gap,
+                            )
+
+                    # Finalize answer node
+                    elif node_name == "finalize_answer":
+                        messages = node_output.get("messages", [])
+                        sources = node_output.get("sources_gathered", [])
+
+                        # Extract final content
+                        for msg in reversed(messages):
+                            if hasattr(msg, "content"):
+                                final_content = msg.content
+                                break
+
+                        # Yield thinking before finalizing
+                        yield ProgressEvent(
+                            type=ProgressEventType.THINKING,
+                            session_id=session_id,
+                            summary="Synthesizing final answer...",
+                        )
+
+                        # Yield final answer
+                        yield ProgressEvent(
+                            type=ProgressEventType.FINAL_ANSWER,
+                            session_id=session_id,
+                            text=final_content or "Research completed",
+                            summary=f"Research complete ({total_sources} sources)",
+                            detail=f"Sources: {[s.get('url', s.get('title', 'unknown')) for s in sources[:5]]}",
+                        )
+
+        except Exception as e:
+            logger.error(f"Research failed: {e}")
+            yield ProgressEvent(
+                type=ProgressEventType.ERROR,
+                session_id=session_id,
+                error=str(e),
+                summary=f"Research failed: {str(e)[:60]}",
+            )
+            raise
+
+        finally:
+            # Yield SESSION_END
+            yield ProgressEvent(
+                type=ProgressEventType.SESSION_END,
+                session_id=session_id,
+            )

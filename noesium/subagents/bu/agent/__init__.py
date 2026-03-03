@@ -9,7 +9,7 @@ import asyncio
 import logging
 import shutil
 from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import Any, AsyncGenerator, Generic, TypeVar
 
 from noesium.core.agent import BaseAgent
 from noesium.core.llm import BaseLLMClient
@@ -18,6 +18,15 @@ from noesium.core.utils.logging import get_logger
 from ..browser.profile import BrowserProfile
 from .service import Agent
 from .views import AgentHistoryList
+
+
+# Lazy import for ProgressEvent to avoid circular imports
+def _get_progress_types():
+    """Lazy import progress types to avoid circular dependencies."""
+    from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+
+    return ProgressEvent, ProgressEventType
+
 
 T = TypeVar("T")
 
@@ -218,6 +227,242 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
             AgentHistoryList containing the execution history and results.
         """
         return asyncio.run(self.run(user_message, context, config, max_steps))
+
+    async def astream_progress(
+        self,
+        user_message: str,
+        context: dict[str, Any] | None = None,
+        config: Any = None,
+        max_steps: int = 25,
+    ) -> AsyncGenerator[Any, None]:
+        """Stream progress events during browser automation.
+
+        This method yields ProgressEvent objects compatible with NoeAgent's
+        progress system, allowing real-time visibility into browser actions.
+
+        Args:
+            user_message: The task description in natural language.
+            context: Optional context dictionary (ignored in browser_use).
+            config: Optional config object (ignored in browser_use).
+            max_steps: Maximum number of steps to take.
+
+        Yields:
+            ProgressEvent: Events describing browser automation progress.
+
+        Event Sequence:
+            1. SESSION_START - Browser session initialized
+            2. PLAN_CREATED - Dynamic plan (up to max_steps)
+            3. STEP_START/STEP_COMPLETE - For each browser action
+            4. TOOL_START/TOOL_END - For specific actions (click, type, etc.)
+            5. FINAL_ANSWER - Task result
+            6. SESSION_END - Cleanup complete
+        """
+        ProgressEvent, ProgressEventType = _get_progress_types()
+        from uuid_extensions import uuid7str
+
+        session_id = uuid7str()
+        step_count = 0
+
+        # Yield SESSION_START
+        yield ProgressEvent(
+            type=ProgressEventType.SESSION_START,
+            session_id=session_id,
+            summary=f"Browser task: {user_message[:60]}",
+        )
+
+        # Yield PLAN_CREATED (browser steps are dynamic)
+        yield ProgressEvent(
+            type=ProgressEventType.PLAN_CREATED,
+            session_id=session_id,
+            summary=f"Browser automation: up to {max_steps} steps",
+            plan_snapshot={
+                "steps": [],
+                "goal": user_message,
+                "max_steps": max_steps,
+            },
+        )
+
+        # Step callback for real-time updates
+        current_step = [0]
+        current_action = [""]
+
+        def on_step(browser_state, model_output, step_num):
+            """Callback for each browser step."""
+            nonlocal step_count
+            step_count = step_num
+            current_step[0] = step_num
+            if model_output and hasattr(model_output, "action"):
+                current_action[0] = self._describe_action_from_output(model_output)
+
+        # Create underlying agent with step callback
+        from ..adapters.llm_adapter import BaseChatModel
+
+        try:
+            agent = Agent(
+                task=user_message,
+                llm=BaseChatModel(self._llm_client),
+                browser_profile=self.browser_profile,
+                use_vision=self.use_vision,
+                register_new_step_callback=on_step,
+            )
+
+            # Yield THINKING before starting
+            yield ProgressEvent(
+                type=ProgressEventType.THINKING,
+                session_id=session_id,
+                summary="Starting browser session...",
+            )
+
+            # Run the agent
+            result = await agent.run(max_steps=max_steps)
+            self._last_result = result
+
+            # Process history and yield events for each step
+            history = result.history if result else []
+            for i, history_item in enumerate(history):
+                # Step start
+                yield ProgressEvent(
+                    type=ProgressEventType.STEP_START,
+                    session_id=session_id,
+                    step_index=i,
+                    summary=f"Browser step {i + 1}/{len(history)}",
+                )
+
+                # Extract action details from history
+                action_desc = ""
+                if hasattr(history_item, "model_output") and history_item.model_output:
+                    action_desc = self._describe_action_from_output(history_item.model_output)
+                    if action_desc:
+                        yield ProgressEvent(
+                            type=ProgressEventType.TOOL_START,
+                            session_id=session_id,
+                            tool_name="browser_action",
+                            summary=action_desc,
+                            detail=(
+                                str(history_item.model_output.action)[:500]
+                                if hasattr(history_item.model_output, "action")
+                                else None
+                            ),
+                        )
+
+                # Check for action result
+                if hasattr(history_item, "result") and history_item.result:
+                    result_desc = self._describe_result(history_item.result)
+                    yield ProgressEvent(
+                        type=ProgressEventType.TOOL_END,
+                        session_id=session_id,
+                        tool_name="browser_action",
+                        tool_result=result_desc[:100],
+                        summary=f"✓ {result_desc[:60]}",
+                    )
+
+                # Step complete
+                yield ProgressEvent(
+                    type=ProgressEventType.STEP_COMPLETE,
+                    session_id=session_id,
+                    step_index=i,
+                    summary=f"Step {i + 1} completed",
+                )
+
+            # Yield final answer
+            final_result = result.final_result() if result else None
+            if final_result:
+                yield ProgressEvent(
+                    type=ProgressEventType.FINAL_ANSWER,
+                    session_id=session_id,
+                    text=final_result,
+                    summary="Browser task completed",
+                )
+            else:
+                # Task completed without final result text
+                yield ProgressEvent(
+                    type=ProgressEventType.FINAL_ANSWER,
+                    session_id=session_id,
+                    text="Task completed (no text result)",
+                    summary="Browser task completed",
+                )
+
+        except Exception as e:
+            self.logger.error(f"Browser task failed: {e}")
+            yield ProgressEvent(
+                type=ProgressEventType.ERROR,
+                session_id=session_id,
+                error=str(e),
+                summary=f"Browser task failed: {str(e)[:60]}",
+            )
+            raise
+
+        finally:
+            # Yield SESSION_END
+            yield ProgressEvent(
+                type=ProgressEventType.SESSION_END,
+                session_id=session_id,
+            )
+
+    def _describe_action_from_output(self, model_output) -> str:
+        """Generate human-readable description from model output."""
+        if not model_output:
+            return "Unknown action"
+
+        action = getattr(model_output, "action", None)
+        if not action:
+            return "Processing..."
+
+        # Get action name and parameters
+        action_name = type(action).__name__.lower()
+
+        # Map action types to descriptions
+        action_descriptions = {
+            "clickaction": "👆 Clicking element",
+            "inputtextaction": "⌨️ Typing text",
+            "gotourlaction": "→ Navigating",
+            "scrollaction": "📜 Scrolling",
+            "extractcontentaction": "📄 Extracting content",
+            "downloadaction": "📥 Downloading",
+            "switchtabaction": "🔄 Switching tab",
+            "doneaction": "✓ Task complete",
+            "searchaction": "🔍 Searching",
+        }
+
+        # Get base description
+        base_desc = "🔧 Browser action"
+        for key, desc in action_descriptions.items():
+            if key.lower() in action_name:
+                base_desc = desc
+                break
+
+        # Add context if available
+        context = ""
+        if hasattr(action, "url") and action.url:
+            context = f": {action.url[:40]}"
+        elif hasattr(action, "text") and action.text:
+            text_preview = str(action.text)[:30]
+            context = f": {text_preview}..."
+        elif hasattr(action, "index") and action.index is not None:
+            context = f" (element {action.index})"
+        elif hasattr(action, "query") and action.query:
+            context = f": {action.query[:40]}"
+
+        return f"{base_desc}{context}"
+
+    def _describe_result(self, result) -> str:
+        """Generate description from action result."""
+        if not result:
+            return "Done"
+
+        # Handle list of results
+        if isinstance(result, list) and result:
+            result = result[-1]
+
+        # Check for common result attributes
+        if hasattr(result, "extracted_content") and result.extracted_content:
+            return f"Extracted: {result.extracted_content[:50]}..."
+        if hasattr(result, "is_done") and result.is_done:
+            return "Task completed successfully"
+        if hasattr(result, "error") and result.error:
+            return f"Error: {result.error[:50]}"
+
+        return "Action completed"
 
 
 __all__ = ["BrowserUseAgent", "Agent", "AgentHistoryList", "BrowserProfile"]

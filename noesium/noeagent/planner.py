@@ -88,9 +88,15 @@ class TaskPlanner:
             builtin_subagent_info=self._builtin_info(),
         )
         try:
-            raw = self._llm.completion(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.2,
+            # Run synchronous LLM call in thread pool to avoid blocking
+            import asyncio
+
+            raw = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self._llm.completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.2,
+                ),
             )
             steps = self._parse_steps(raw)
             return TaskPlan(goal=goal, steps=steps)
@@ -115,9 +121,15 @@ class TaskPlanner:
             completed_results="\n".join(completed_results),
         )
         try:
-            raw = self._llm.completion(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.2,
+            # Run synchronous LLM call in thread pool to avoid blocking
+            import asyncio
+
+            raw = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self._llm.completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.2,
+                ),
             )
             steps = self._parse_steps(raw)
             return TaskPlan(goal=plan.goal, steps=steps)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -17,6 +18,26 @@ from .schemas import AgentAction
 from .state import AgentState, AskState, TaskPlan
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Async Helper for Synchronous LLM Calls
+# ---------------------------------------------------------------------------
+
+
+async def _run_llm_async(llm: Any, method: str, **kwargs: Any) -> Any:
+    """Run a synchronous LLM method in a thread pool to avoid blocking.
+
+    Args:
+        llm: The LLM client instance
+        method: Method name ('completion' or 'structured_completion')
+        **kwargs: Arguments to pass to the method
+
+    Returns:
+        The result from the LLM call
+    """
+    func = getattr(llm, method)
+    return await asyncio.get_event_loop().run_in_executor(None, lambda: func(**kwargs))
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +118,9 @@ async def generate_answer_node(
     mem_text = "\n".join(f"- {m['key']}: {m['value']}" for m in mem_ctx) or "No memory context."
     system = ASK_SYSTEM_PROMPT.format(memory_context=mem_text)
     user_msg = state["messages"][-1].content if state["messages"] else ""
-    answer = llm.completion(
+    answer = await _run_llm_async(
+        llm,
+        "completion",
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user_msg},
@@ -171,7 +194,9 @@ async def execute_step_node(
     user_msg = state["messages"][-1].content if state["messages"] else ""
 
     try:
-        action: AgentAction = llm.structured_completion(
+        action: AgentAction = await _run_llm_async(
+            llm,
+            "structured_completion",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_msg},
@@ -181,7 +206,9 @@ async def execute_step_node(
         )
     except Exception as exc:
         logger.warning("Structured completion failed, falling back to text: %s", exc)
-        text = llm.completion(
+        text = await _run_llm_async(
+            llm,
+            "completion",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_msg},
@@ -375,7 +402,12 @@ async def subagent_node(
                     # Built-in agents are registered as "builtin_agent:{name}"
                     cap_id = f"builtin_agent:{sa.name}"
                     provider = registry.get_by_name(cap_id)
-                    result = await provider.invoke(message=sa.message)
+
+                    # Use streaming if available for real-time progress
+                    if hasattr(provider, "invoke_streaming"):
+                        result = await agent.execute_builtin_subagent_streaming(provider, sa.message, sa.name)
+                    else:
+                        result = await provider.invoke(message=sa.message)
                 except Exception as exc:
                     result = f"Failed to invoke built-in agent '{sa.name}': {exc}"
         elif sa.action == "invoke_cli":
@@ -435,7 +467,9 @@ async def reflect_node(
         plan_steps=plan_steps or "No plan.",
         completed_results=completed or "None.",
     )
-    reflection = llm.completion(
+    reflection = await _run_llm_async(
+        llm,
+        "completion",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
     )
@@ -470,7 +504,9 @@ async def finalize_node(
         results = last_msg
 
     prompt = FINALIZE_PROMPT.format(goal=goal, results=results)
-    answer = llm.completion(
+    answer = await _run_llm_async(
+        llm,
+        "completion",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
     )

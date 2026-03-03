@@ -1176,6 +1176,580 @@ class TestInvokeCliAction:
 
 
 # ---------------------------------------------------------------------------
+# BuiltInAgentCapabilityProvider Streaming Tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuiltInAgentCapabilityProviderStreaming:
+    """Tests for BuiltInAgentCapabilityProvider.invoke_streaming()."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_invoke_streaming_with_progress_support(self):
+        """invoke_streaming should yield wrapped progress events."""
+        from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+
+        # Create a mock agent with astream_progress
+        mock_agent = MagicMock()
+
+        async def mock_astream_progress(message, **kwargs):
+            yield ProgressEvent(
+                type=ProgressEventType.SESSION_START,
+                session_id="test-session",
+                summary="Test started",
+            )
+            yield ProgressEvent(
+                type=ProgressEventType.THINKING,
+                session_id="test-session",
+                summary="Thinking...",
+            )
+            yield ProgressEvent(
+                type=ProgressEventType.FINAL_ANSWER,
+                session_id="test-session",
+                text="Task completed",
+                summary="Done",
+            )
+            yield ProgressEvent(
+                type=ProgressEventType.SESSION_END,
+                session_id="test-session",
+            )
+
+        mock_agent.astream_progress = mock_astream_progress
+
+        provider = BuiltInAgentCapabilityProvider(
+            name="test_agent",
+            agent_factory=lambda: mock_agent,
+            agent_type="test_type",
+        )
+
+        events = []
+        async for event in provider.invoke_streaming(message="Test task"):
+            events.append(event)
+
+        # Should have wrapped events (excluding SESSION_START/SESSION_END)
+        assert len(events) >= 2
+
+        # Check that events are wrapped as SUBAGENT_PROGRESS
+        progress_events = [e for e in events if e.type == ProgressEventType.SUBAGENT_PROGRESS]
+        assert len(progress_events) >= 2  # THINKING and FINAL_ANSWER wrapped
+
+        # Check metadata is preserved
+        for evt in progress_events:
+            assert evt.subagent_id == "test_agent"
+            assert "child_event_type" in (evt.metadata or {})
+            assert "agent_type" in (evt.metadata or {})
+
+        # Last event should be SUBAGENT_END
+        assert events[-1].type == ProgressEventType.SUBAGENT_END
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_invoke_streaming_without_progress_support(self):
+        """invoke_streaming should fallback to invoke for non-streaming agents."""
+        from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
+        from noesium.noeagent.progress import ProgressEventType
+
+        # Create a mock agent without astream_progress
+        mock_agent = MagicMock()
+        mock_agent.arun = AsyncMock(return_value="Task completed")
+        # No astream_progress attribute
+        del mock_agent.astream_progress
+
+        provider = BuiltInAgentCapabilityProvider(
+            name="non_streaming_agent",
+            agent_factory=lambda: mock_agent,
+        )
+
+        events = []
+        async for event in provider.invoke_streaming(message="Test task"):
+            events.append(event)
+
+        # Should emit SUBAGENT_START and SUBAGENT_END
+        assert len(events) == 2
+        assert events[0].type == ProgressEventType.SUBAGENT_START
+        assert events[1].type == ProgressEventType.SUBAGENT_END
+        assert "no streaming" in events[0].summary.lower()
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_invoke_streaming_error_handling(self):
+        """invoke_streaming should handle errors gracefully."""
+        from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+
+        # Create a mock agent that raises an error
+        mock_agent = MagicMock()
+
+        async def mock_astream_progress(message, **kwargs):
+            yield ProgressEvent(
+                type=ProgressEventType.SESSION_START,
+                session_id="test-session",
+                summary="Test started",
+            )
+            raise RuntimeError("Test error")
+
+        mock_agent.astream_progress = mock_astream_progress
+
+        provider = BuiltInAgentCapabilityProvider(
+            name="failing_agent",
+            agent_factory=lambda: mock_agent,
+        )
+
+        events = []
+        with pytest.raises(RuntimeError, match="Test error"):
+            async for event in provider.invoke_streaming(message="Test task"):
+                events.append(event)
+
+        # Should have yielded at least the SESSION_START (wrapped as SUBAGENT_PROGRESS)
+        # But the error should propagate
+
+
+# ---------------------------------------------------------------------------
+# NoeAgent Streaming Integration Tests
+# ---------------------------------------------------------------------------
+
+
+class TestNoeAgentBuiltinStreaming:
+    """Tests for NoeAgent.execute_builtin_subagent_streaming()."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_execute_builtin_subagent_streaming(self):
+        """execute_builtin_subagent_streaming should stream events and return result."""
+        from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
+        from noesium.noeagent.agent import NoeAgent
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+
+        agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
+        agent._subagent_event_queue = asyncio.Queue()
+
+        # Track callbacks
+        callback_events = []
+
+        async def mock_callback(event):
+            callback_events.append(event)
+
+        agent._progress_callbacks = [mock_callback]
+
+        # Create mock provider with streaming
+        mock_provider = MagicMock()
+
+        async def mock_invoke_streaming(message, **kwargs):
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_PROGRESS,
+                subagent_id="browser_use",
+                summary="[browser_use] Navigating...",
+                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
+            )
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_PROGRESS,
+                subagent_id="browser_use",
+                summary="[browser_use] Clicking button",
+                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
+            )
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_END,
+                subagent_id="browser_use",
+                summary="[browser_use] completed",
+                detail="Browser task completed successfully",
+            )
+
+        mock_provider.invoke_streaming = mock_invoke_streaming
+
+        result = await agent.execute_builtin_subagent_streaming(
+            mock_provider, "Navigate to example.com", "browser_use"
+        )
+
+        assert result == "Browser task completed successfully"
+
+        # Check callbacks were fired
+        assert len(callback_events) == 3
+
+        # Check events were queued
+        assert agent._subagent_event_queue.qsize() == 3
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_invoke_builtin_uses_streaming(self):
+        """invoke_builtin action should use streaming when available."""
+        from langchain_core.messages import AIMessage
+
+        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.noeagent.agent import NoeAgent
+        from noesium.noeagent.nodes import subagent_node
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.noeagent.state import AgentState
+
+        agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
+        agent._registry = CapabilityRegistry()
+        agent._subagent_event_queue = asyncio.Queue()
+
+        # Create mock provider with streaming support
+        mock_provider = MagicMock()
+        mock_provider.invoke_streaming = AsyncMock(return_value=[])
+        mock_provider.invoke_streaming.return_value = self._make_streaming_generator()
+
+        agent._registry._by_name["builtin_agent:browser_use"] = mock_provider
+
+        state: AgentState = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    additional_kwargs={
+                        "subagent_action": {
+                            "action": "invoke_builtin",
+                            "name": "browser_use",
+                            "message": "Navigate to example.com",
+                        }
+                    },
+                )
+            ],
+            "iteration": 0,
+            "tool_results": [],
+        }
+
+        result = await subagent_node(state, agent=agent)
+
+        assert "tool_results" in result
+        # Streaming should have been used
+        mock_provider.invoke_streaming.assert_awaited_once()
+
+    def _make_streaming_generator(self):
+        """Helper to create an async generator for streaming."""
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+
+        async def gen():
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_PROGRESS,
+                subagent_id="browser_use",
+                summary="[browser_use] Working...",
+            )
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_END,
+                subagent_id="browser_use",
+                summary="[browser_use] completed",
+                detail="Done",
+            )
+
+        return gen()
+
+
+# ---------------------------------------------------------------------------
+# BrowserUseAgent Progress Streaming Tests
+# ---------------------------------------------------------------------------
+
+
+class TestBrowserUseAgentProgressStreaming:
+    """Tests for BrowserUseAgent.astream_progress()."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_astream_progress_event_sequence(self):
+        """astream_progress should yield events in correct sequence."""
+        from noesium.noeagent.progress import ProgressEventType
+        from noesium.subagents.bu.agent import BrowserUseAgent
+
+        # Create agent with mock LLM
+        mock_llm = MagicMock()
+        agent = BrowserUseAgent(llm_client=mock_llm)
+
+        # Mock the underlying Agent.run to avoid actual browser interaction
+        mock_result = MagicMock()
+        mock_result.history = []
+        mock_result.final_result = MagicMock(return_value="Task completed")
+
+        # We need to mock the Agent class and its run method
+        with patch("noesium.subagents.bu.agent.Agent") as MockAgent:
+            mock_agent_instance = MagicMock()
+            mock_agent_instance.run = AsyncMock(return_value=mock_result)
+            MockAgent.return_value = mock_agent_instance
+
+            events = []
+            async for event in agent.astream_progress("Navigate to example.com"):
+                events.append(event)
+
+            # Verify event sequence
+            event_types = [e.type for e in events]
+
+            # Should start with SESSION_START
+            assert event_types[0] == ProgressEventType.SESSION_START
+
+            # Should have PLAN_CREATED
+            assert ProgressEventType.PLAN_CREATED in event_types
+
+            # Should have THINKING
+            assert ProgressEventType.THINKING in event_types
+
+            # Should have FINAL_ANSWER
+            assert ProgressEventType.FINAL_ANSWER in event_types
+
+            # Should end with SESSION_END
+            assert event_types[-1] == ProgressEventType.SESSION_END
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_astream_progress_error_handling(self):
+        """astream_progress should emit ERROR event on failure."""
+        from noesium.noeagent.progress import ProgressEventType
+        from noesium.subagents.bu.agent import BrowserUseAgent
+
+        mock_llm = MagicMock()
+        agent = BrowserUseAgent(llm_client=mock_llm)
+
+        with patch("noesium.subagents.bu.agent.Agent") as MockAgent:
+            mock_agent_instance = MagicMock()
+            mock_agent_instance.run = AsyncMock(side_effect=RuntimeError("Browser failed"))
+            MockAgent.return_value = mock_agent_instance
+
+            events = []
+            with pytest.raises(RuntimeError, match="Browser failed"):
+                async for event in agent.astream_progress("Test task"):
+                    events.append(event)
+
+            # Should have emitted ERROR event before raising
+            error_events = [e for e in events if e.type == ProgressEventType.ERROR]
+            assert len(error_events) == 1
+            assert "Browser failed" in error_events[0].error
+
+
+# ---------------------------------------------------------------------------
+# TacitusAgent Progress Streaming Tests
+# ---------------------------------------------------------------------------
+
+
+class TestTacitusAgentProgressStreaming:
+    """Tests for TacitusAgent.astream_progress()."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_astream_progress_event_sequence(self):
+        """astream_progress should yield events in correct sequence for research."""
+        from noesium.noeagent.progress import ProgressEventType
+        from noesium.subagents.tacitus.agent import TacitusAgent
+
+        # Create agent with mock LLM
+        mock_llm = MagicMock()
+        mock_llm.structured_completion = MagicMock(
+            return_value=MagicMock(query=["query1", "query2"], rationale="test")
+        )
+        mock_llm.completion = MagicMock(return_value="Test response")
+
+        agent = TacitusAgent(query_generation_llm=mock_llm, reflection_llm=mock_llm)
+
+        # Mock the graph.astream to avoid actual web searches
+        async def mock_astream(initial_state):
+            yield {"generate_query": {"query_list": [{"query": "test query 1"}, {"query": "test query 2"}]}}
+            yield {
+                "web_research": {
+                    "search_query": ["test query 1"],
+                    "sources_gathered": [{"url": "http://example.com", "title": "Example"}],
+                }
+            }
+            yield {"reflection": {"is_sufficient": True, "research_loop_count": 1}}
+            yield {"finalize_answer": {"messages": [MagicMock(content="Research completed")]}}
+
+        agent.graph.astream = mock_astream
+
+        events = []
+        async for event in agent.astream_progress("Research AI agents"):
+            events.append(event)
+
+        # Verify event sequence
+        event_types = [e.type for e in events]
+
+        # Should start with SESSION_START
+        assert event_types[0] == ProgressEventType.SESSION_START
+
+        # Should have THINKING events
+        assert ProgressEventType.THINKING in event_types
+
+        # Should have PLAN_CREATED
+        assert ProgressEventType.PLAN_CREATED in event_types
+
+        # Should have FINAL_ANSWER
+        assert ProgressEventType.FINAL_ANSWER in event_types
+
+        # Should end with SESSION_END
+        assert event_types[-1] == ProgressEventType.SESSION_END
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_astream_progress_reflection_events(self):
+        """astream_progress should emit reflection events for research loops."""
+        from noesium.noeagent.progress import ProgressEventType
+        from noesium.subagents.tacitus.agent import TacitusAgent
+
+        mock_llm = MagicMock()
+        agent = TacitusAgent(query_generation_llm=mock_llm, reflection_llm=mock_llm, max_research_loops=2)
+
+        # Mock graph with multi-loop research
+        async def mock_astream(initial_state):
+            yield {"generate_query": {"query_list": [{"query": "q1"}]}}
+            yield {"web_research": {"search_query": ["q1"], "sources_gathered": []}}
+            yield {
+                "reflection": {
+                    "is_sufficient": False,
+                    "research_loop_count": 1,
+                    "knowledge_gap": "Need more sources",
+                }
+            }
+            yield {"web_research": {"search_query": ["q2"], "sources_gathered": [{"url": "http://test.com"}]}}
+            yield {"reflection": {"is_sufficient": True, "research_loop_count": 2}}
+            yield {"finalize_answer": {"messages": [MagicMock(content="Done")]}}
+
+        agent.graph.astream = mock_astream
+
+        events = []
+        async for event in agent.astream_progress("Research topic"):
+            events.append(event)
+
+        # Should have PLAN_REVISED when research is insufficient
+        plan_revised_events = [e for e in events if e.type == ProgressEventType.PLAN_REVISED]
+        assert len(plan_revised_events) >= 1
+
+        # Should have THINKING events for reflection
+        thinking_events = [e for e in events if e.type == ProgressEventType.THINKING]
+        assert len(thinking_events) >= 2  # At least initial and final
+
+
+# ---------------------------------------------------------------------------
+# End-to-End Streaming Integration Tests
+# ---------------------------------------------------------------------------
+
+
+class TestEndToEndStreamingIntegration:
+    """End-to-end tests for the complete streaming pipeline."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_subagent_progress_in_astream_progress(self):
+        """SUBAGENT_PROGRESS events should appear in NoeAgent.astream_progress()."""
+        from langchain_core.messages import AIMessage
+
+        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.noeagent.agent import NoeAgent
+        from noesium.noeagent.progress import ProgressEventType
+
+        agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
+        agent._registry = CapabilityRegistry()
+        agent.initialize = AsyncMock()
+
+        # Create a mock provider that will be invoked
+        mock_provider = MagicMock()
+
+        async def mock_invoke_streaming(message, **kwargs):
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_PROGRESS,
+                subagent_id="browser_use",
+                summary="[browser_use] Navigating to page...",
+                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
+            )
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_PROGRESS,
+                subagent_id="browser_use",
+                summary="[browser_use] Extracting content...",
+                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
+            )
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_END,
+                subagent_id="browser_use",
+                summary="[browser_use] completed",
+                detail="Browser task done",
+            )
+
+        mock_provider.invoke_streaming = mock_invoke_streaming
+        mock_provider.invoke = AsyncMock(return_value="fallback result")
+        agent._registry._by_name["builtin_agent:browser_use"] = mock_provider
+
+        mock_compiled = AsyncMock()
+
+        async def fake_astream(initial):
+            yield {
+                "subagent": {
+                    "messages": [
+                        AIMessage(
+                            content="",
+                            additional_kwargs={
+                                "subagent_action": {
+                                    "action": "invoke_builtin",
+                                    "name": "browser_use",
+                                    "message": "Navigate",
+                                }
+                            },
+                        )
+                    ],
+                    "tool_results": [],
+                }
+            }
+            yield {"finalize": {"final_answer": "Done.", "messages": []}}
+
+        mock_compiled.astream = fake_astream
+        agent._build_graph = MagicMock()
+        agent._build_graph.return_value.compile.return_value = mock_compiled
+
+        events = []
+        async for event in agent.astream_progress("Browse to example.com"):
+            events.append(event)
+
+        # Should have SUBAGENT_PROGRESS events in the stream
+        progress_events = [e for e in events if e.type == ProgressEventType.SUBAGENT_PROGRESS]
+        assert len(progress_events) >= 2
+
+        # Should have SUBAGENT_END event
+        end_events = [e for e in events if e.type == ProgressEventType.SUBAGENT_END]
+        assert len(end_events) >= 1
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_tui_receives_subagent_events(self):
+        """TUI should receive and display subagent progress events."""
+        from noesium.noeagent.progress import ProgressEventType
+        from noesium.noeagent.tui import SubagentTracker
+
+        tracker = SubagentTracker(max_display=3)
+
+        # Simulate subagent events
+        events = [
+            ProgressEvent(
+                type=ProgressEventType.SUBAGENT_START,
+                subagent_id="browser_use",
+                summary="[browser_use] spawned",
+            ),
+            ProgressEvent(
+                type=ProgressEventType.SUBAGENT_PROGRESS,
+                subagent_id="browser_use",
+                summary="[browser_use] Navigating...",
+                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
+            ),
+            ProgressEvent(
+                type=ProgressEventType.SUBAGENT_PROGRESS,
+                subagent_id="browser_use",
+                summary="[browser_use] Clicking...",
+                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
+            ),
+            ProgressEvent(
+                type=ProgressEventType.SUBAGENT_END,
+                subagent_id="browser_use",
+                summary="[browser_use] completed",
+            ),
+        ]
+
+        for event in events:
+            tracker.update(event)
+
+        # Check tracker state
+        assert "browser_use" in tracker._states
+        state = tracker._states["browser_use"]
+        assert state.status == "done"
+        assert state.agent_type == "browser_use"
+
+        # Render should produce output
+        lines = tracker.render()
+        assert len(lines) >= 1
+
+
+# ---------------------------------------------------------------------------
 # CliAgentCapabilityProvider Tests (Updated)
 # ---------------------------------------------------------------------------
 

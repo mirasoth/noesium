@@ -184,6 +184,41 @@ def render_compact_progress(plan: "TaskPlan | None", current_step: str = "") -> 
 # Compact activity rendering
 # ---------------------------------------------------------------------------
 
+# Action type to icon mapping for different agent types
+BROWSER_ACTION_ICONS = {
+    "tool.start": "🔧",
+    "tool.end": "✓",
+    "step.start": "→",
+    "step.complete": "✓",
+    "navigate": "→",
+    "click": "👆",
+    "input_text": "⌨️",
+    "scroll": "📜",
+    "extract": "📄",
+    "download": "📥",
+    "switch_tab": "🔄",
+    "done": "✓",
+}
+
+RESEARCH_ACTION_ICONS = {
+    "plan.created": "📋",
+    "query_generation": "🔍",
+    "web_search": "🔎",
+    "reflection": "💭",
+    "answer": "📝",
+    "tool.start": "🔧",
+    "tool.end": "✓",
+}
+
+
+def _get_action_icon(child_event_type: str, agent_type: str) -> str:
+    """Get icon for action based on agent type and event type."""
+    if agent_type == "browser_use":
+        return BROWSER_ACTION_ICONS.get(child_event_type, "")
+    elif agent_type == "tacitus":
+        return RESEARCH_ACTION_ICONS.get(child_event_type, "")
+    return ""
+
 
 def _activity_line(event: ProgressEvent, thinking_gen: DynamicThinkingText | None = None) -> Text | None:
     """Produce a compact one-liner for an activity event, or None to skip."""
@@ -215,7 +250,27 @@ def _activity_line(event: ProgressEvent, thinking_gen: DynamicThinkingText | Non
 
     if etype == ProgressEventType.SUBAGENT_PROGRESS:
         tag = event.subagent_id or "subagent"
-        return Text.assemble(("  ", ""), (f"[{tag}] ", "magenta"), (event.summary or "", "dim"))
+        metadata = event.metadata or {}
+        child_type = metadata.get("child_event_type", "")
+        agent_type = metadata.get("agent_type", "")
+
+        # Get icon based on agent type
+        icon = _get_action_icon(child_type, agent_type)
+
+        # Extract summary, stripping tag prefix if present
+        summary = event.summary or ""
+        if summary.startswith(f"[{tag}]"):
+            summary = summary[len(f"[{tag}]") :].strip()
+
+        # Build the line with icon
+        if icon:
+            return Text.assemble(
+                ("  ", ""),
+                (f"[{tag}] ", "magenta"),
+                (f"{icon} ", ""),
+                (summary, "dim"),
+            )
+        return Text.assemble(("  ", ""), (f"[{tag}] ", "magenta"), (summary, "dim"))
 
     if etype == ProgressEventType.SUBAGENT_END:
         tag = event.subagent_id or "subagent"
@@ -243,6 +298,7 @@ class _SubagentState:
     completed_steps: int = 0
     current_step: str = ""
     last_activity: str = ""
+    agent_type: str = ""  # "browser_use", "tacitus", etc.
 
 
 class SubagentTracker:
@@ -259,7 +315,13 @@ class SubagentTracker:
         if sid not in self._states:
             self._states[sid] = _SubagentState(subagent_id=sid)
         state = self._states[sid]
-        child_type = (event.metadata or {}).get("child_event_type", "")
+        metadata = event.metadata or {}
+        child_type = metadata.get("child_event_type", "")
+        agent_type = metadata.get("agent_type", "")
+
+        # Capture agent type on first progress event
+        if agent_type and not state.agent_type:
+            state.agent_type = agent_type
 
         if event.type == ProgressEventType.SUBAGENT_START:
             state.status = "running"
@@ -279,19 +341,31 @@ class SubagentTracker:
                 state.current_step = ""
             elif child_type == "error":
                 state.status = "error"
-            state.last_activity = event.summary or ""
+            # Strip [tag] prefix from summary for cleaner display
+            summary = event.summary or ""
+            if summary.startswith(f"[{sid}]"):
+                summary = summary[len(f"[{sid}]") :].strip()
+            state.last_activity = summary
 
     def render(self) -> list[Text]:
         lines: list[Text] = []
         items = list(self._states.values())[-self._max_display :]
         for st in items:
             tag = st.subagent_id
+            # Get agent type indicator
+            type_indicator = ""
+            if st.agent_type == "browser_use":
+                type_indicator = "🌐 "
+            elif st.agent_type == "tacitus":
+                type_indicator = "🔬 "
+
             if st.status == "done":
                 progress = f"✓ {st.completed_steps}/{st.plan_steps}" if st.plan_steps else "✓ done"
                 lines.append(
                     Text.assemble(
                         ("  ", ""),
                         (f"[{tag}] ", "green"),
+                        (type_indicator, ""),
                         (progress, "green"),
                     )
                 )
@@ -316,6 +390,7 @@ class SubagentTracker:
                     Text.assemble(
                         ("  ", ""),
                         (f"[{tag}] ", "magenta"),
+                        (type_indicator, ""),
                         (progress, "yellow"),
                     )
                 )

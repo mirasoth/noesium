@@ -8,7 +8,7 @@ Each adapter wraps an existing Noesium construct into the unified
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from noesium.core.toolify.atomic import AtomicTool, ToolContext
 from noesium.core.toolify.executor import ToolExecutor
@@ -359,3 +359,103 @@ class BuiltInAgentCapabilityProvider:
     async def health(self) -> bool:
         """Built-in agents are always healthy (in-process)."""
         return True
+
+    async def invoke_streaming(
+        self,
+        message: str,
+        **kwargs: Any,
+    ) -> AsyncGenerator[Any, None]:
+        """Invoke the built-in agent with progress streaming.
+
+        This method streams ProgressEvent objects wrapped as SUBAGENT_PROGRESS
+        events, allowing real-time visibility into agent execution.
+
+        Args:
+            message: The task message for the agent.
+            **kwargs: Additional arguments passed to the agent.
+
+        Yields:
+            ProgressEvent: Events wrapped with subagent context.
+        """
+        # Lazy import to avoid circular dependencies
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+
+        # Ensure agent is created
+        if self._agent_instance is None:
+            try:
+                factory_result = self._agent_factory()
+                if hasattr(factory_result, "__await__"):
+                    self._agent_instance = await factory_result
+                else:
+                    self._agent_instance = factory_result
+            except Exception as exc:
+                logger.error("Failed to create built-in agent '%s': %s", self._name, exc)
+                yield ProgressEvent(
+                    type=ProgressEventType.ERROR,
+                    subagent_id=self._name,
+                    error=str(exc),
+                    summary=f"Failed to create agent: {exc}",
+                )
+                raise RuntimeError(f"Failed to create built-in agent '{self._name}': {exc}") from exc
+
+        # Check for astream_progress support
+        if hasattr(self._agent_instance, "astream_progress"):
+            final_result = ""
+            async for event in self._agent_instance.astream_progress(message, **kwargs):
+                # Skip SESSION_START/SESSION_END for wrapped events
+                if event.type in (ProgressEventType.SESSION_START, ProgressEventType.SESSION_END):
+                    continue
+
+                # Wrap as SUBAGENT_PROGRESS
+                wrapped = ProgressEvent(
+                    type=ProgressEventType.SUBAGENT_PROGRESS,
+                    session_id=event.session_id,
+                    sequence=event.sequence,
+                    subagent_id=self._name,
+                    summary=f"[{self._name}] {event.summary or ''}",
+                    detail=event.detail,
+                    tool_name=event.tool_name,
+                    tool_result=event.tool_result,
+                    step_index=event.step_index,
+                    step_desc=event.step_desc,
+                    plan_snapshot=event.plan_snapshot,
+                    error=event.error,
+                    metadata={
+                        "child_event_type": event.type.value,
+                        "agent_type": self._agent_type,
+                        **(event.metadata or {}),
+                    },
+                )
+                yield wrapped
+
+                # Track final result
+                if event.type == ProgressEventType.FINAL_ANSWER:
+                    final_result = event.text or ""
+
+            # Emit SUBAGENT_END
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_END,
+                subagent_id=self._name,
+                summary=f"[{self._name}] completed",
+                detail=final_result[:500] if final_result else None,
+            )
+        else:
+            # Fallback: emit start/end only (non-streaming agent)
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_START,
+                subagent_id=self._name,
+                summary=f"[{self._name}] started (no streaming support)",
+            )
+
+            try:
+                result = await self.invoke(message=message, **kwargs)
+                result_str = str(result)[:500]
+            except Exception as exc:
+                result_str = f"Error: {exc}"
+
+            yield ProgressEvent(
+                type=ProgressEventType.SUBAGENT_END,
+                subagent_id=self._name,
+                summary=f"[{self._name}] completed",
+                detail=result_str,
+            )
