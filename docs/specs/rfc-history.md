@@ -2,7 +2,7 @@
 
 This document tracks all RFC lifecycle events in chronological order (newest first).
 
-**Last Updated**: 2026-03-02
+**Last Updated**: 2026-03-03
 
 ---
 
@@ -20,6 +20,13 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 ---
 
 ## Change History
+
+### 2026-03-03
+
+- **Reference Updated**: All RFC files moved from `specs/` to `docs/specs/` for better project organization
+- **Reference Updated**: rfc-index.md - Updated all RFC paths to reflect new location
+- **Reference Updated**: rfc-namings.md - Regenerated with updated RFC paths
+- **Reference Updated**: rfc-history.md - Updated Last Updated date
 
 ### 2026-03-02
 

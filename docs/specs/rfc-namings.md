@@ -2,7 +2,7 @@
 
 Authoritative terminology reference for noesium RFC specifications.
 
-**Last Updated**: 2026-03-01
+**Last Updated**: 2026-03-03
 
 ---
 
@@ -22,13 +22,10 @@ Authoritative terminology reference for noesium RFC specifications.
 | Agent Kernel | RFC-0001 §5.2 | Deterministic, graph-based execution runtime within each agent |
 | Agent Kernel Pod | RFC-1003 §5.1 | Control plane pod responsible for ToolCall generation, capability validation, and subagent dispatch |
 | AgentRef | RFC-0002 §5 | Producer identity structure containing agent_id, agent_type, runtime_id, instance_id |
-| Noe | Impl Guide | Autonomous research assistant agent with ask and agent modes |
-| Ask Mode | Impl Guide | Read-only, single-turn Q&A mode with memory recall and no tool execution |
-| Agent Mode | Impl Guide | Full autonomous mode with tools, planning, reflection, and memory persistence |
 | AtomicTool | RFC-2003 §6 | Smallest executable unit in the tool system with schema and capability metadata |
 | BaseAgent | RFC-1001 §11 | Abstract base class for all Noesium agents |
-| BaseHitlAgent | RFC-1002 §5.2 | Base class for multi-turn conversation agents with HITL |
 | BaseGraphicAgent | RFC-1001 §11 | Base class for LangGraph-based agents |
+| BaseHitlAgent | RFC-1002 §5.2 | Base class for multi-turn conversation agents with HITL |
 | BaseProjection | RFC-1001 §8.1 | Abstract generic projection: deterministic fold over event stream |
 | BaseResearcher | RFC-1002 §5.3 | Base class for iterative research agents |
 | Capability | RFC-0005 §4.1 | Typed contract declaring an agent's available functions |
@@ -41,10 +38,9 @@ Authoritative terminology reference for noesium RFC specifications.
 | Determinism Class | RFC-0005 §4.1 | Classification: deterministic or nondeterministic |
 | Deterministic Kernel | RFC-0003 §3 | Execution substrate enforcing reproducibility via graph-based state transitions |
 | Domain Event | RFC-1001 §6.2 | Typed business-level event that produces an EventEnvelope |
+| Durable Memory | RFC-0004 §5.2 | Event-sourced canonical memory layer (task history, structured knowledge) |
 | Effect Node | RFC-0006 §10 | Record of external tool execution with input hash, tool spec, metadata, output, and exit status |
 | Effect Result | RFC-0006 §7 | Structured result returned from sandboxed tool execution containing tool_id, exit_code, output, and metadata |
-| Envelope Bridge | RFC-1001 §6.4 | Bidirectional adapter between bubus BaseEvent and EventEnvelope |
-| Durable Memory | RFC-0004 §5.2 | Event-sourced canonical memory layer (task history, structured knowledge) |
 | Envelope Bridge | RFC-1001 §6.4 | Bidirectional adapter between bubus BaseEvent and EventEnvelope |
 | Ephemeral Memory | RFC-0004 §5.1 | Session-scoped working memory, cleared on restart |
 | Event Bus | RFC-0001 §5.1 | Topic-based transport layer for inter-agent event routing |
@@ -65,10 +61,12 @@ Authoritative terminology reference for noesium RFC specifications.
 | Memory Tier | RFC-2001 §5 | Classification: working, persistent, or indexed |
 | MemuProvider | RFC-2002 §6.3 | Persistent memory provider wrapping MemU file-based memory system |
 | Node Result | RFC-1001 §7.1 | Output from a graph node: state_delta + emitted events |
+| OpenSandbox Executor | RFC-1003 §5.3 | Data plane component providing hardened container isolation for tool execution |
 | Partition Key | RFC-0002 §8.2 | Determines event stream partition for ordering guarantees |
 | Persistent Memory | RFC-2001 §5.2 | Cross-session durable memory tier surviving restarts |
 | Projection | RFC-0004 §4.2 | Deterministic fold over event stream: P(State, Event) → State |
 | Projection Engine | RFC-1001 §8.2 | Manages projection lifecycle: build, cache, invalidate, rebuild |
+| Projection Layer | RFC-0001 §5.4 | Derives current agent state from the event log |
 | Recall Protocol | RFC-2001 §9 | Unified query interface across all memory providers with result merging |
 | Recall Query | RFC-2002 §4.3 | Structured query with scope, content_types, and metadata filters |
 | Research Agent | RFC-1002 §5.3 | Agent archetype for iterative multi-step research |
@@ -76,16 +74,14 @@ Authoritative terminology reference for noesium RFC specifications.
 | Semantic Projection | RFC-0004 §4.3.3 | Index-based projection constructed from deterministic projection output |
 | Session Worker | RFC-1003 §5.2 | Logical worker representing a user session with memory namespace, execution stack, and capability scope |
 | Side-Effect Class | RFC-0005 §4.1 | Classification: pure, idempotent, or external |
-| Subagent | RFC-0006 §5.2 | Isolated execution unit running inside sandbox runtime for external tool execution |
 | Signature Block | RFC-0002 §11 | Optional cryptographic signature covering the canonicalized envelope |
 | Skill | RFC-2003 §9 | Named composition of AtomicTools with input/output contract and orchestration logic |
 | Skill Registry | RFC-2004 §9 | Registry for skill discovery and management |
 | State Graph | RFC-0003 §4 | Directed graph declaring workflow nodes and allowed transitions |
+| Subagent | RFC-0006 §5.2 | Isolated execution unit running inside sandbox runtime for external tool execution |
 | Task Agent | RFC-1002 §5.4 | Agent archetype for linear or branching task execution |
-| Task Planner | Impl Guide | LLM-based goal decomposition producing ordered TaskPlan steps |
-| Tool Context | RFC-2004 §4.2 | Execution context with agent identity, permissions, and trace |
 | Tool Call | RFC-0006 §6 | Specification for tool execution with tool_id, capability, input, timeout, and resource limits |
-| OpenSandbox Executor | RFC-1003 §5.3 | Data plane component providing hardened container isolation for tool execution |
+| Tool Context | RFC-2004 §4.2 | Execution context with agent identity, permissions, and trace |
 | Tool Executor | RFC-2004 §5 | Event-wrapping execution engine for AtomicTools with permission checking |
 | Tool Permission | RFC-2003 §10 | Declared permission requirement: fs:read, shell:execute, net:outbound, etc. |
 | Tool Registry | RFC-2004 §8 | Capability-based registry for AtomicTool discovery and lookup |
@@ -107,7 +103,3 @@ Authoritative terminology reference for noesium RFC specifications.
 ---
 
 ## Related Documents
-
-- [rfc-standard.md](rfc-standard.md) - RFC process and conventions
-- [rfc-index.md](rfc-index.md) - RFC index
-- [rfc-history.md](rfc-history.md) - Change history

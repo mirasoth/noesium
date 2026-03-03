@@ -2,7 +2,7 @@
 
 Master index of all RFC specifications.
 
-**Last Updated**: 2026-03-02
+**Last Updated**: 2026-03-03
 
 ---
 
@@ -21,37 +21,37 @@ Master index of all RFC specifications.
 
 ### RFC-0xxx: Global Architecture Design
 
-| RFC | Title | Kind | Status | Created | Last Updated |
-|-----|-------|------|--------|---------|--------------|
-| [RFC-0001](RFC-0001.md) | Event-Sourced Multi-Agent Kernel Architecture | Conceptual Design | Draft | 2025-03-01 | 2025-03-01 |
-| [RFC-0002](RFC-0002.md) | Event Schema and Envelope Specification | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
-| [RFC-0003](RFC-0003.md) | Deterministic Kernel Execution Constraints | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
-| [RFC-0004](RFC-0004.md) | Projection and Memory Formal Model | Architecture Design | Draft | 2025-03-01 | 2025-03-01 |
-| [RFC-0005](RFC-0005.md) | Capability Registry and Discovery Protocol | Architecture Design | Draft | 2025-03-01 | 2026-03-02 |
-| [RFC-0006](RFC-0006.md) | Agent Kernel and Sandboxed Subagent Model | Architecture Design | Draft | 2026-03-01 | 2026-03-01 |
+| RFC | Title | Kind | Status | Created | Last Updated | Version |
+|-----|-------|------|--------|---------|--------------|---------|
+| [RFC-0001](RFC-0001.md) | Event-Sourced Multi-Agent Kernel Architecture | Conceptual Design | Draft | 2025-03-01 | 2025-03-01 | 001 |
+| [RFC-0002](RFC-0002.md) | Event Schema and Envelope Specification | Architecture Design | Draft | 2025-03-01 | 2025-03-01 | 001 |
+| [RFC-0003](RFC-0003.md) | Deterministic Kernel Execution Constraints | Architecture Design | Draft | 2025-03-01 | 2025-03-01 | 001 |
+| [RFC-0004](RFC-0004.md) | Projection and Memory Formal Model | Architecture Design | Draft | 2025-03-01 | 2025-03-01 | 001 |
+| [RFC-0005](RFC-0005.md) | Capability Registry and Discovery Protocol | Architecture Design | Draft | 2025-03-01 | 2026-03-02 | 001 |
+| [RFC-0006](RFC-0006.md) | Agent Kernel and Sandboxed Subagent Model | Architecture Design | Draft | 2026-03-01 | 2026-03-01 | 001 |
 
 ### RFC-1xxx: Core Framework Implementation Design
 
-| RFC | Title | Kind | Status | Created | Last Updated |
-|-----|-------|------|--------|---------|--------------|
-| [RFC-1001](RFC-1001.md) | Core Framework Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 |
-| [RFC-1002](RFC-1002.md) | LangGraph-Based Agent Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 |
-| [RFC-1003](RFC-1003.md) | OpenSandbox-Based Multi-User Agent Isolation Architecture | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 |
+| RFC | Title | Kind | Status | Created | Last Updated | Version |
+|-----|-------|------|--------|---------|--------------|---------|
+| [RFC-1001](RFC-1001.md) | Core Framework Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 | 001 |
+| [RFC-1002](RFC-1002.md) | LangGraph-Based Agent Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 | 001 |
+| [RFC-1003](RFC-1003.md) | OpenSandbox-Based Multi-User Agent Isolation Architecture | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 | 001 |
 
 ### RFC-2xxx: Enhancements
 
-| RFC | Title | Kind | Status | Created | Last Updated |
-|-----|-------|------|--------|---------|--------------|
-| [RFC-2001](RFC-2001.md) | Memory Management Architecture | Architecture Design | Draft | 2026-03-01 | 2026-03-01 |
-| [RFC-2002](RFC-2002.md) | Memory Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 |
-| [RFC-2003](RFC-2003.md) | Tool System Architecture | Architecture Design | Draft | 2026-03-01 | 2026-03-01 |
-| [RFC-2004](RFC-2004.md) | Tool Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 |
+| RFC | Title | Kind | Status | Created | Last Updated | Version |
+|-----|-------|------|--------|---------|--------------|---------|
+| [RFC-2001](RFC-2001.md) | Memory Management Architecture | Architecture Design | Draft | 2026-03-01 | 2026-03-01 | 001 |
+| [RFC-2002](RFC-2002.md) | Memory Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 | 001 |
+| [RFC-2003](RFC-2003.md) | Tool System Architecture | Architecture Design | Draft | 2026-03-01 | 2026-03-01 | 001 |
+| [RFC-2004](RFC-2004.md) | Tool Implementation Design | Implementation Interface Design | Draft | 2026-03-01 | 2026-03-01 | 001 |
 
 ### RFC-9xxx: Experimental
 
-| RFC | Title | Kind | Status | Created | Last Updated |
-|-----|-------|------|--------|---------|--------------|
-| _None yet_ | | | | | |
+| RFC | Title | Kind | Status | Created | Last Updated | Version |
+|-----|-------|------|--------|---------|--------------|---------|
+| _None yet_ | | | | | | |
 
 ---
 
