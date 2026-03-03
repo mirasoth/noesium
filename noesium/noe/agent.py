@@ -1,4 +1,4 @@
-"""Noe -- autonomous research assistant (impl guide §5)."""
+"""Noe -- autonomous research assistant (impl guide §5, RFC-1004)."""
 
 from __future__ import annotations
 
@@ -19,6 +19,13 @@ except ImportError:
 from uuid_extensions import uuid7str
 
 from noesium.core.agent.base import BaseGraphicAgent
+from noesium.core.capability.providers import (
+    AgentCapabilityProvider,
+    CliAgentCapabilityProvider,
+    MCPCapabilityProvider,
+    ToolCapabilityProvider,
+)
+from noesium.core.capability.registry import CapabilityRegistry
 from noesium.core.event.envelope import AgentRef
 from noesium.core.event.store import InMemoryEventStore
 from noesium.core.memory.provider import MemoryTier
@@ -30,7 +37,6 @@ from noesium.core.toolify.adapters.builtin_adapter import BuiltinAdapter
 from noesium.core.toolify.adapters.function_adapter import FunctionAdapter
 from noesium.core.toolify.atomic import ToolContext, ToolPermission
 from noesium.core.toolify.executor import ToolExecutor
-from noesium.core.toolify.tool_registry import ToolRegistry
 
 from . import nodes
 from .config import NoeConfig, NoeMode
@@ -42,7 +48,11 @@ logger = logging.getLogger(__name__)
 
 
 class NoeAgent(BaseGraphicAgent):
-    """Long-running autonomous research assistant with structured tool calling."""
+    """Long-running autonomous research assistant with structured tool calling.
+
+    Uses the unified ``CapabilityRegistry`` (RFC-1004) as the single source of
+    truth for all tools, MCP tools, skills, and subagent providers.
+    """
 
     def __init__(self, config: NoeConfig | None = None) -> None:
         self.config = (config or NoeConfig()).effective()
@@ -52,8 +62,9 @@ class NoeAgent(BaseGraphicAgent):
         )
         self._agent_id = f"noe-{id(self)}"
         self._memory_manager: ProviderMemoryManager | None = None
+        self._registry: CapabilityRegistry | None = None
         self._tool_executor: ToolExecutor | None = None
-        self._tool_registry: ToolRegistry | None = None
+        self._tool_context: ToolContext | None = None
         self._planner: TaskPlanner | None = None
         self._cli_adapter: "ExternalCliAdapter | None" = None
         self._event_store = InMemoryEventStore()
@@ -67,7 +78,7 @@ class NoeAgent(BaseGraphicAgent):
     async def initialize(self) -> None:
         await self._setup_memory()
         if self.config.mode == NoeMode.AGENT:
-            await self._setup_tools()
+            await self._setup_capabilities()
             planning_llm = None
             if self.config.planning_model:
                 from noesium.core.llm import get_llm_client
@@ -114,20 +125,34 @@ class NoeAgent(BaseGraphicAgent):
                 logger.warning("Failed to initialize memu provider: %s", exc)
         self._memory_manager = ProviderMemoryManager(providers)
 
-    async def _setup_tools(self) -> None:
-        self._tool_registry = ToolRegistry()
+    async def _setup_capabilities(self) -> None:
+        """Create CapabilityRegistry and register all providers."""
         import os
 
         from noesium.core.toolify.base import AsyncBaseToolkit
         from noesium.core.toolify.config import ToolkitConfig
         from noesium.core.toolify.registry import ToolkitRegistry
 
-        # Determine working directory for toolkits
+        producer = AgentRef(agent_id=self._agent_id, agent_type="noe")
+
+        self._tool_executor = ToolExecutor(
+            event_store=self._event_store,
+            producer=producer,
+        )
+        self._tool_context = ToolContext(
+            agent_id=self._agent_id,
+            granted_permissions=[ToolPermission(p) for p in self.config.permissions],
+            working_directory=self.config.working_directory,
+        )
+        self._registry = CapabilityRegistry(
+            event_store=self._event_store,
+            producer=producer,
+        )
+
         work_dir = self.config.working_directory or os.getcwd()
 
         for toolkit_name in self.config.enabled_toolkits:
             try:
-                # Create toolkit config with working directory
                 toolkit_config = ToolkitConfig(
                     name=toolkit_name,
                     config={
@@ -136,33 +161,38 @@ class NoeAgent(BaseGraphicAgent):
                     },
                 )
                 toolkit = ToolkitRegistry.create_toolkit(toolkit_name, toolkit_config)
-                # Initialize async toolkits
                 if isinstance(toolkit, AsyncBaseToolkit):
                     await toolkit.build()
                 tools = await BuiltinAdapter.from_toolkit(toolkit, toolkit_name)
-                self._tool_registry.register_many(tools)
+                for tool in tools:
+                    provider = ToolCapabilityProvider(tool, self._tool_executor, self._tool_context)
+                    self._registry.register(provider)
             except Exception as exc:
                 logger.warning("Failed to load toolkit %s: %s", toolkit_name, exc)
 
         for mcp_config in self.config.mcp_servers:
             try:
-                await self._tool_registry.load_mcp_server(await self._connect_mcp(mcp_config))
+                session = await self._connect_mcp(mcp_config)
+                from noesium.core.toolify.adapters.mcp_adapter import MCPAdapter
+
+                adapter = MCPAdapter(session)
+                mcp_tools = await adapter.discover_tools()
+                for tool in mcp_tools:
+                    provider = MCPCapabilityProvider(tool, self._tool_executor, self._tool_context)
+                    self._registry.register(provider)
             except Exception as exc:
                 logger.warning("Failed to load MCP server: %s", exc)
 
         for func in self.config.custom_tools:
-            self._tool_registry.register(FunctionAdapter.from_function(func))
-
-        self._tool_executor = ToolExecutor(
-            event_store=self._event_store,
-            producer=AgentRef(agent_id=self._agent_id, agent_type="noe"),
-        )
+            tool = FunctionAdapter.from_function(func)
+            provider = ToolCapabilityProvider(tool, self._tool_executor, self._tool_context)
+            self._registry.register(provider)
 
         if self.config.enable_subagents:
-            self._register_subagent_tools()
+            self._register_subagent_tool()
 
-    def _register_subagent_tools(self) -> None:
-        """Register subagent spawn/interact as callable tools in the registry."""
+    def _register_subagent_tool(self) -> None:
+        """Register subagent spawn as a callable tool provider."""
         parent = self
 
         async def spawn_subagent(name: str, task: str, mode: str = "agent") -> str:
@@ -176,10 +206,11 @@ class NoeAgent(BaseGraphicAgent):
             sid = await parent.spawn_subagent(name, mode=NoeMode(mode))
             return await parent.interact_with_subagent(sid, task)
 
-        self._tool_registry.register(FunctionAdapter.from_function(spawn_subagent))
+        tool = FunctionAdapter.from_function(spawn_subagent)
+        provider = ToolCapabilityProvider(tool, self._tool_executor, self._tool_context)
+        self._registry.register(provider)
 
     async def _setup_cli_subagents(self) -> None:
-        """Initialize ExternalCliAdapter if CLI subagents are configured."""
         if not self.config.cli_subagents:
             return
         from .cli_adapter import ExternalCliAdapter
@@ -188,19 +219,25 @@ class NoeAgent(BaseGraphicAgent):
         for cli_cfg in self.config.cli_subagents:
             try:
                 result = await self._cli_adapter.spawn_from_config(cli_cfg)
+                provider = CliAgentCapabilityProvider(
+                    cli_cfg.name,
+                    self._cli_adapter,
+                    task_types=cli_cfg.task_types,
+                )
+                self._registry.register(provider)
                 logger.info("CLI subagent setup: %s", result)
             except Exception as exc:
                 logger.warning("Failed to spawn CLI subagent '%s': %s", cli_cfg.name, exc)
 
     async def _cleanup_subagents(self) -> None:
-        """Terminate all in-process and CLI subagents."""
         self._subagents.clear()
         if self._cli_adapter is not None:
             await self._cli_adapter.terminate_all()
+        if self._registry is not None:
+            await self._registry.stop_health_monitor()
 
     @staticmethod
     async def _connect_mcp(mcp_config: dict) -> Any:
-        """Attempt to connect to an MCP server. Returns session or raises."""
         try:
             from noesium.core.toolify.mcp_session import MCPSession
 
@@ -239,8 +276,6 @@ class NoeAgent(BaseGraphicAgent):
     def _build_agent_graph(self) -> StateGraph:
         workflow = StateGraph(AgentState)
 
-        # -- node closures --------------------------------------------------
-
         async def _plan(state: AgentState) -> dict:
             return await nodes.plan_node(
                 state,
@@ -252,22 +287,15 @@ class NoeAgent(BaseGraphicAgent):
             return await nodes.execute_step_node(
                 state,
                 llm=self.llm,
-                tool_registry=self._tool_registry,
+                registry=self._registry,
                 memory_manager=self._memory_manager,
                 max_tool_calls=self.config.max_tool_calls_per_step,
             )
 
         async def _tools(state: AgentState) -> dict:
-            ctx = ToolContext(
-                agent_id=self._agent_id,
-                granted_permissions=[ToolPermission(p) for p in self.config.permissions],
-                working_directory=self.config.working_directory,
-            )
             return await nodes.tool_node(
                 state,
-                tool_registry=self._tool_registry,
-                tool_executor=self._tool_executor,
-                context=ctx,
+                registry=self._registry,
                 max_tool_calls=self.config.max_tool_calls_per_step,
             )
 
@@ -286,8 +314,6 @@ class NoeAgent(BaseGraphicAgent):
 
         async def _finalize(state: AgentState) -> dict:
             return await nodes.finalize_node(state, llm=self.llm)
-
-        # -- wire graph ------------------------------------------------------
 
         workflow.add_node("plan", _plan)
         workflow.add_node("execute_step", _execute)
@@ -362,7 +388,6 @@ class NoeAgent(BaseGraphicAgent):
         return uuid7str()
 
     async def _fire_callbacks(self, event: ProgressEvent) -> None:
-        """Invoke all registered progress callbacks, swallowing errors."""
         for cb in self.config.progress_callbacks:
             try:
                 if hasattr(cb, "on_progress"):
@@ -393,7 +418,6 @@ class NoeAgent(BaseGraphicAgent):
         context: Dict[str, Any] | None = None,
         config: Optional[RunnableConfig] = None,
     ) -> str:
-        """Synchronous entry point."""
         loop = asyncio.new_event_loop()
         try:
             return loop.run_until_complete(self.arun(user_message, context))
@@ -405,7 +429,6 @@ class NoeAgent(BaseGraphicAgent):
         user_message: str,
         context: Dict[str, Any] | None = None,
     ) -> str:
-        """Async entry point.  Fires progress callbacks when registered."""
         final_answer = ""
         async for event in self.astream_progress(user_message, context):
             if event.type == ProgressEventType.FINAL_ANSWER:
@@ -425,7 +448,6 @@ class NoeAgent(BaseGraphicAgent):
         user_message: str,
         context: Dict[str, Any] | None = None,
     ) -> AsyncGenerator[str, None]:
-        """Streaming entry point -- yields final_answer text chunks only."""
         async for event in self.astream_progress(user_message, context):
             if event.type == ProgressEventType.FINAL_ANSWER and event.text:
                 yield event.text
@@ -435,11 +457,7 @@ class NoeAgent(BaseGraphicAgent):
         user_message: str,
         context: Dict[str, Any] | None = None,
     ) -> AsyncGenerator[ProgressEvent, None]:
-        """Canonical typed progress stream (impl guide §5.5).
-
-        Yields ``ProgressEvent`` objects covering the full agent lifecycle.
-        Also fires all ``progress_callbacks`` registered in ``NoeConfig``.
-        """
+        """Canonical typed progress stream (impl guide §5.5)."""
         from .state import TaskPlan
 
         await self.initialize()
@@ -490,7 +508,6 @@ class NoeAgent(BaseGraphicAgent):
                     if not isinstance(node_output, dict):
                         continue
 
-                    # --- Plan created / revised ---
                     plan = node_output.get("plan")
                     if plan is not None and isinstance(plan, TaskPlan):
                         plan_id = id(plan)
@@ -535,7 +552,6 @@ class NoeAgent(BaseGraphicAgent):
                             await _emit(evt)
                             yield evt
 
-                    # --- Tool results ---
                     tool_results = node_output.get("tool_results")
                     if tool_results and isinstance(tool_results, list):
                         new_results = tool_results[_prev_tool_count:]
@@ -555,7 +571,6 @@ class NoeAgent(BaseGraphicAgent):
                             await _emit(evt)
                             yield evt
 
-                    # --- Messages (tool calls, subagent delegation, text) ---
                     msgs = node_output.get("messages")
                     if msgs and isinstance(msgs, list):
                         for msg in msgs:
@@ -600,7 +615,6 @@ class NoeAgent(BaseGraphicAgent):
                                     await _emit(evt)
                                     yield evt
 
-                    # --- Reflection ---
                     reflection = node_output.get("reflection")
                     if reflection and isinstance(reflection, str):
                         evt = _evt(
@@ -613,7 +627,6 @@ class NoeAgent(BaseGraphicAgent):
                         await _emit(evt)
                         yield evt
 
-                    # --- Final answer ---
                     final = node_output.get("final_answer")
                     if final and isinstance(final, str):
                         evt = _evt(
@@ -646,16 +659,11 @@ class NoeAgent(BaseGraphicAgent):
         user_message: str,
         context: Dict[str, Any] | None = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
-        """Backward-compatible dict-based event stream.
-
-        Wraps ``astream_progress()`` and converts each ``ProgressEvent`` to a
-        plain dict.  New code should prefer ``astream_progress()`` directly.
-        """
+        """Backward-compatible dict-based event stream."""
         async for event in self.astream_progress(user_message, context):
             yield event.model_dump()
 
     def run_tui(self) -> None:
-        """Launch interactive Rich TUI loop."""
         from .tui import run_agent_tui
 
         run_agent_tui(self)
@@ -681,6 +689,11 @@ class NoeAgent(BaseGraphicAgent):
         child._depth = self._depth + 1
         subagent_id = f"{name}-{len(self._subagents) + 1}"
         self._subagents[subagent_id] = child
+
+        if self._registry is not None:
+            provider = AgentCapabilityProvider(subagent_id, child)
+            self._registry.register(provider)
+
         return subagent_id
 
     async def interact_with_subagent(self, subagent_id: str, message: str) -> str:

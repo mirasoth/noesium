@@ -2,7 +2,7 @@
 
 Covers:
 - AgentAction / ToolCallAction / SubagentAction schema parsing
-- execute_step_node structured tool calling
+- execute_step_node structured tool calling (uses CapabilityRegistry)
 - subagent_node spawn and interaction
 - Todo persistence via memory manager
 - Config defaults and ask-mode overrides
@@ -13,10 +13,11 @@ Covers:
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
 import pytest
 
+from noesium.core.capability.models import CapabilityDescriptor, CapabilityType
 from noesium.noe.config import NoeConfig, NoeMode
 from noesium.noe.schemas import AgentAction, SubagentAction, ToolCallAction
 from noesium.noe.state import AgentState, TaskPlan, TaskStep
@@ -462,8 +463,31 @@ class TestNoeConfig:
 
 
 # ---------------------------------------------------------------------------
-# Node tests (with mocked LLM)
+# Node tests (with mocked LLM, uses CapabilityRegistry)
 # ---------------------------------------------------------------------------
+
+
+def _mock_registry_with_tools(tools: list[dict] | None = None):
+    """Create a mock CapabilityRegistry with optional tool providers."""
+    registry = MagicMock()
+    providers = []
+    if tools:
+        for t in tools:
+            p = MagicMock()
+            desc = CapabilityDescriptor(
+                capability_id=t["name"],
+                capability_type=CapabilityType.TOOL,
+                description=t.get("description", ""),
+                input_schema=t.get("input_schema", {}),
+            )
+            type(p).descriptor = PropertyMock(return_value=desc)
+            p.invoke = AsyncMock(return_value=t.get("result", "ok"))
+            providers.append(p)
+    registry.list_providers.return_value = providers
+    registry.get_by_name = MagicMock(
+        side_effect=lambda name: next((p for p in providers if p.descriptor.capability_id == name), None)
+    )
+    return registry
 
 
 class TestExecuteStepNode:
@@ -480,8 +504,7 @@ class TestExecuteStepNode:
         )
         mock_llm.structured_completion = MagicMock(return_value=mock_action)
 
-        mock_registry = MagicMock()
-        mock_registry.list_tools.return_value = []
+        mock_registry = _mock_registry_with_tools()
 
         state: AgentState = {
             "messages": [HumanMessage(content="List files in current dir")],
@@ -492,7 +515,7 @@ class TestExecuteStepNode:
             "final_answer": "",
         }
 
-        result = await execute_step_node(state, llm=mock_llm, tool_registry=mock_registry)
+        result = await execute_step_node(state, llm=mock_llm, registry=mock_registry)
 
         msg = result["messages"][0]
         assert isinstance(msg, AIMessage)
@@ -512,8 +535,7 @@ class TestExecuteStepNode:
         )
         mock_llm.structured_completion = MagicMock(return_value=mock_action)
 
-        mock_registry = MagicMock()
-        mock_registry.list_tools.return_value = []
+        mock_registry = _mock_registry_with_tools()
 
         state: AgentState = {
             "messages": [HumanMessage(content="What is 6*7?")],
@@ -524,7 +546,7 @@ class TestExecuteStepNode:
             "final_answer": "",
         }
 
-        result = await execute_step_node(state, llm=mock_llm, tool_registry=mock_registry)
+        result = await execute_step_node(state, llm=mock_llm, registry=mock_registry)
 
         msg = result["messages"][0]
         assert isinstance(msg, AIMessage)
@@ -544,8 +566,7 @@ class TestExecuteStepNode:
         )
         mock_llm.structured_completion = MagicMock(return_value=mock_action)
 
-        mock_registry = MagicMock()
-        mock_registry.list_tools.return_value = []
+        mock_registry = _mock_registry_with_tools()
 
         state: AgentState = {
             "messages": [HumanMessage(content="Research this")],
@@ -556,7 +577,7 @@ class TestExecuteStepNode:
             "final_answer": "",
         }
 
-        result = await execute_step_node(state, llm=mock_llm, tool_registry=mock_registry)
+        result = await execute_step_node(state, llm=mock_llm, registry=mock_registry)
 
         msg = result["messages"][0]
         assert msg.additional_kwargs.get("subagent_action") is not None
@@ -572,8 +593,7 @@ class TestExecuteStepNode:
         mock_llm.structured_completion = MagicMock(side_effect=Exception("Instructor failed"))
         mock_llm.completion = MagicMock(return_value="Fallback answer")
 
-        mock_registry = MagicMock()
-        mock_registry.list_tools.return_value = []
+        mock_registry = _mock_registry_with_tools()
 
         state: AgentState = {
             "messages": [HumanMessage(content="Question")],
@@ -584,7 +604,7 @@ class TestExecuteStepNode:
             "final_answer": "",
         }
 
-        result = await execute_step_node(state, llm=mock_llm, tool_registry=mock_registry)
+        result = await execute_step_node(state, llm=mock_llm, registry=mock_registry)
 
         msg = result["messages"][0]
         assert msg.content == "Fallback answer"
@@ -774,7 +794,7 @@ class TestRouting:
 
 
 # ---------------------------------------------------------------------------
-# Tool description builder tests
+# Tool description builder tests (uses CapabilityRegistry)
 # ---------------------------------------------------------------------------
 
 
@@ -782,19 +802,21 @@ class TestToolDescriptions:
     def test_build_tool_descriptions_with_tools(self):
         from noesium.noe.nodes import _build_tool_descriptions
 
-        mock_tool = MagicMock()
-        mock_tool.name = "run_bash"
-        mock_tool.description = "Execute a bash command"
-        mock_tool.input_schema = {
-            "type": "object",
-            "properties": {"command": {"type": "string"}},
-            "required": ["command"],
-        }
+        registry = _mock_registry_with_tools(
+            [
+                {
+                    "name": "run_bash",
+                    "description": "Execute a bash command",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {"command": {"type": "string"}},
+                        "required": ["command"],
+                    },
+                },
+            ]
+        )
 
-        mock_registry = MagicMock()
-        mock_registry.list_tools.return_value = [mock_tool]
-
-        result = _build_tool_descriptions(mock_registry)
+        result = _build_tool_descriptions(registry)
         assert "run_bash" in result
         assert "command" in result
         assert "(required)" in result
@@ -805,5 +827,5 @@ class TestToolDescriptions:
         assert _build_tool_descriptions(None) == "No tools available."
 
         mock_registry = MagicMock()
-        mock_registry.list_tools.return_value = []
+        mock_registry.list_providers.return_value = []
         assert _build_tool_descriptions(mock_registry) == "No tools available."

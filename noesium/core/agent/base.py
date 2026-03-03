@@ -22,38 +22,43 @@ from noesium.core.utils.typing import override
 
 
 class BaseAgent(ABC):
-    """
-    Base class for all agents with common functionality.
+    """Base class for all agents with common functionality.
 
     Provides:
     - LLM client management with instructor support
     - Token usage tracking
+    - Capability declaration for the unified registry (RFC-0005 / RFC-1004)
     - Logging capabilities
     - Configuration management
     - Error handling patterns
     """
 
     def __init__(self, llm_provider: str = "openai", model_name: Optional[str] = None):
-        """Initialize base agent with LLM client and logging."""
         self.logger = get_logger(self.__class__.__name__)
         self.llm_provider = llm_provider
         self.model_name = model_name
-
-        # Initialize LLM client with instructor support
         self.llm = get_llm_client(provider=llm_provider, chat_model=model_name)
-
         self.logger.info(f"Initialized {self.__class__.__name__} with {llm_provider} provider")
 
     @abstractmethod
     def run(self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None) -> Any:
         """Run the agent with a user message and context."""
 
+    def declare_capabilities(self) -> list:
+        """Declare capabilities this agent provides (RFC-0005 §12).
+
+        Returns a list of ``CapabilityDescriptor`` instances.  Override in
+        subclasses to register the agent's capabilities with the
+        ``CapabilityRegistry``.  The default implementation returns an empty
+        list (agent does not self-declare any capabilities).
+        """
+        return []
+
     def get_token_usage_stats(self) -> Dict[str, Any]:
         """Get comprehensive token usage statistics."""
         return get_token_tracker().get_stats()
 
     def print_token_usage_summary(self):
-        """Print a brief structured token usage summary."""
         stats = self.get_token_usage_stats()
         if stats["total_tokens"] > 0:
             print(

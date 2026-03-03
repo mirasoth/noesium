@@ -1,4 +1,4 @@
-"""Graph node implementations for Noe (impl guide §4-5)."""
+"""Graph node implementations for Noe (impl guide §4-5, RFC-1004)."""
 
 from __future__ import annotations
 
@@ -24,17 +24,18 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _build_tool_descriptions(tool_registry: Any) -> str:
-    """Format tool registry entries into a prompt-friendly description block."""
-    if tool_registry is None:
+def _build_tool_descriptions(registry: Any) -> str:
+    """Format registry providers into a prompt-friendly description block."""
+    if registry is None:
         return "No tools available."
-    tools = tool_registry.list_tools()
-    if not tools:
+    providers = registry.list_providers()
+    if not providers:
         return "No tools available."
     lines: list[str] = []
-    for t in tools:
+    for p in providers:
+        d = p.descriptor
         params = ""
-        schema = t.input_schema or {}
+        schema = d.input_schema or {}
         props = schema.get("properties", {})
         required = set(schema.get("required", []))
         if props:
@@ -43,8 +44,8 @@ def _build_tool_descriptions(tool_registry: Any) -> str:
                 req = " (required)" if pname in required else ""
                 parts.append(f"    - {pname}: {pinfo.get('type', 'any')}{req}")
             params = "\n" + "\n".join(parts)
-        desc = (t.description or "").split("\n")[0].strip()
-        lines.append(f"- **{t.name}**: {desc}{params}")
+        desc = (d.description or "").split("\n")[0].strip()
+        lines.append(f"- **{d.capability_id}**: {desc}{params}")
     return "\n".join(lines)
 
 
@@ -52,7 +53,6 @@ async def _persist_plan_to_memory(
     plan: TaskPlan | None,
     memory_manager: Any,
 ) -> None:
-    """Write current plan as todo markdown into working memory."""
     if plan is None or memory_manager is None:
         return
     try:
@@ -76,7 +76,6 @@ async def recall_memory_node(
     *,
     memory_manager: Any,
 ) -> dict[str, Any]:
-    """Query MemoryManager with the user's question across all providers."""
     user_msg = state["messages"][-1].content if state["messages"] else ""
     context: list[dict[str, Any]] = []
     if memory_manager is not None:
@@ -94,7 +93,6 @@ async def generate_answer_node(
     *,
     llm: Any,
 ) -> dict[str, Any]:
-    """Generate answer using LLM with memory context. No tool calls."""
     mem_ctx = state.get("memory_context") or []
     mem_text = "\n".join(f"- {m['key']}: {m['value']}" for m in mem_ctx) or "No memory context."
     system = ASK_SYSTEM_PROMPT.format(memory_context=mem_text)
@@ -120,7 +118,6 @@ async def plan_node(
     planner: Any,
     memory_manager: Any = None,
 ) -> dict[str, Any]:
-    """Use TaskPlanner to decompose the user's request."""
     user_msg = state["messages"][-1].content if state["messages"] else ""
     plan: TaskPlan = await planner.create_plan(user_msg)
     await _persist_plan_to_memory(plan, memory_manager)
@@ -137,14 +134,13 @@ async def execute_step_node(
     state: AgentState,
     *,
     llm: Any,
-    tool_registry: Any,
+    registry: Any,
     memory_manager: Any = None,
     max_tool_calls: int = 5,
 ) -> dict[str, Any]:
     """Execute current plan step via structured LLM output with tool access.
 
-    Uses ``structured_completion`` to get an ``AgentAction`` that may contain
-    tool calls, a subagent request, or a direct text response.
+    Uses the unified ``CapabilityRegistry`` for tool descriptions.
     """
     from langchain_core.messages import AIMessage
 
@@ -160,7 +156,7 @@ async def execute_step_node(
     }.get(hint, "Choose the best approach.")
 
     completed = "\n".join(f"- {r['tool']}: {str(r['result'])[:200]}" for r in state.get("tool_results", []))
-    tool_desc = _build_tool_descriptions(tool_registry)
+    tool_desc = _build_tool_descriptions(registry)
 
     system = AGENT_SYSTEM_PROMPT.format(
         plan=step_desc,
@@ -227,9 +223,9 @@ async def execute_step_node(
     return {"messages": [AIMessage(content=action.text_response or action.thought)]}
 
 
-def _coerce_tool_args(args: dict[str, Any], tool: Any) -> dict[str, Any]:
-    """Best-effort type coercion of tool arguments against the tool's input_schema."""
-    schema = getattr(tool, "input_schema", None) or {}
+def _coerce_tool_args(args: dict[str, Any], descriptor: Any) -> dict[str, Any]:
+    """Best-effort type coercion of tool arguments against the descriptor's input_schema."""
+    schema = getattr(descriptor, "input_schema", None) or {}
     props = schema.get("properties", {})
     if not props:
         return args
@@ -257,12 +253,10 @@ def _coerce_tool_args(args: dict[str, Any], tool: Any) -> dict[str, Any]:
 async def tool_node(
     state: AgentState,
     *,
-    tool_registry: Any,
-    tool_executor: Any,
-    context: Any,
+    registry: Any,
     max_tool_calls: int = 5,
 ) -> dict[str, Any]:
-    """Execute tool calls via ToolExecutor with arg validation and call limit."""
+    """Execute tool calls via CapabilityRegistry providers (direct invocation)."""
     from langchain_core.messages import ToolMessage
 
     last_msg = state["messages"][-1]
@@ -284,20 +278,20 @@ async def tool_node(
             if tool_name == "subagent":
                 args = call.get("args", {})
                 redirect_name = "spawn_subagent"
-                tool = tool_registry.get_by_name(redirect_name)
+                provider = registry.get_by_name(redirect_name)
                 sa_args = {
                     "name": args.get("name", "subagent"),
                     "task": args.get("message", args.get("task", str(args))),
                     "mode": args.get("mode", "agent"),
                 }
-                result = await tool_executor.run(tool, context, **sa_args)
+                result = await provider.invoke(**sa_args)
                 results.append({"tool": f"subagent:{sa_args['name']}", "result": result})
                 messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
                 continue
 
-            tool = tool_registry.get_by_name(tool_name)
-            coerced_args = _coerce_tool_args(call.get("args", {}), tool)
-            result = await tool_executor.run(tool, context, **coerced_args)
+            provider = registry.get_by_name(tool_name)
+            coerced_args = _coerce_tool_args(call.get("args", {}), provider.descriptor)
+            result = await provider.invoke(**coerced_args)
             results.append({"tool": tool_name, "result": result})
             messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
         except Exception as exc:
@@ -385,7 +379,6 @@ async def reflect_node(
     *,
     llm: Any,
 ) -> dict[str, Any]:
-    """Reflect on progress and decide whether to revise the plan."""
     plan: TaskPlan | None = state.get("plan")
     goal = plan.goal if plan else ""
     plan_steps = ""
@@ -410,7 +403,6 @@ async def revise_plan_node(
     planner: Any,
     memory_manager: Any = None,
 ) -> dict[str, Any]:
-    """Revise the plan based on reflection feedback."""
     plan: TaskPlan | None = state.get("plan")
     if plan is None:
         return {}
@@ -425,7 +417,6 @@ async def finalize_node(
     *,
     llm: Any,
 ) -> dict[str, Any]:
-    """Generate the final comprehensive answer."""
     plan: TaskPlan | None = state.get("plan")
     goal = plan.goal if plan else ""
     results = "\n".join(f"- {r['tool']}: {str(r['result'])[:300]}" for r in state.get("tool_results", []))

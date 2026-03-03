@@ -90,15 +90,38 @@ class CapabilityRegistered(DomainEvent):
     capability_id: str
     version: str
     agent_id: str
+    capability_type: str = "tool"
 
     def event_type(self) -> str:
         return "capability.registered"
+
+
+class CapabilityUnregistered(DomainEvent):
+    capability_id: str
+    version: str
+    reason: str = ""
+
+    def event_type(self) -> str:
+        return "capability.unregistered"
+
+
+class CapabilityRequested(DomainEvent):
+    """Emitted before resolving a capability (agent invocation path)."""
+
+    caller_agent_id: str
+    capability_id: str
+    correlation_id: str = ""
+
+    def event_type(self) -> str:
+        return "capability.requested"
 
 
 class CapabilityInvoked(DomainEvent):
     caller_agent_id: str
     target_agent_id: str
     capability_id: str
+    capability_type: str = ""
+    correlation_id: str = ""
 
     def event_type(self) -> str:
         return "capability.invoked"
@@ -107,11 +130,25 @@ class CapabilityInvoked(DomainEvent):
 class CapabilityCompleted(DomainEvent):
     capability_id: str
     caller_agent_id: str
+    capability_type: str = ""
+    correlation_id: str = ""
     result: Any = None
     error: str | None = None
+    duration_ms: int = 0
 
     def event_type(self) -> str:
         return "capability.completed"
+
+
+class HealthChanged(DomainEvent):
+    """Emitted when a stateful provider's health status changes."""
+
+    capability_id: str
+    agent_id: str
+    healthy: bool
+
+    def event_type(self) -> str:
+        return "capability.health_changed"
 
 
 # --- Memory ---

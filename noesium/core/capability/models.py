@@ -1,12 +1,19 @@
-"""Capability data models and classification enums (RFC-0005, RFC-1001 Section 10)."""
+"""Capability data models, provider protocol, and classification enums (RFC-0005)."""
 
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
-from uuid_extensions import uuid7str
+
+
+class CapabilityType(str, Enum):
+    TOOL = "tool"
+    MCP_TOOL = "mcp_tool"
+    SKILL = "skill"
+    AGENT = "agent"
+    CLI_AGENT = "cli_agent"
 
 
 class DeterminismClass(str, Enum):
@@ -27,13 +34,15 @@ class LatencyClass(str, Enum):
     BATCH = "batch"
 
 
-class Capability(BaseModel):
-    """Declarative description of a capability offered by an agent."""
+STATEFUL_TYPES = frozenset({CapabilityType.AGENT, CapabilityType.CLI_AGENT})
 
-    id: str = Field(default_factory=lambda: uuid7str())
+
+class CapabilityDescriptor(BaseModel):
+    """Typed contract describing what a capability can do."""
+
     capability_id: str
     version: str = "1.0.0"
-    agent_id: str
+    capability_type: CapabilityType
     description: str = ""
     input_schema: dict[str, Any] = Field(default_factory=dict)
     output_schema: dict[str, Any] = Field(default_factory=dict)
@@ -41,6 +50,30 @@ class Capability(BaseModel):
     side_effects: SideEffectClass = SideEffectClass.PURE
     latency: LatencyClass = LatencyClass.FAST
     tags: list[str] = Field(default_factory=list)
-    roles: list[str] = Field(default_factory=list)
-    scopes: list[str] = Field(default_factory=list)
-    deprecated: bool = False
+
+    @property
+    def stateful(self) -> bool:
+        return self.capability_type in STATEFUL_TYPES
+
+
+@runtime_checkable
+class CapabilityProvider(Protocol):
+    """Anything that provides a capability: tool, MCP tool, skill, or agent."""
+
+    @property
+    def descriptor(self) -> CapabilityDescriptor: ...
+
+    async def invoke(self, **kwargs: Any) -> Any: ...
+
+    async def health(self) -> bool: ...
+
+
+class CapabilityQuery(BaseModel):
+    """Structured query for capability discovery."""
+
+    capability_id: str | None = None
+    version: str | None = None
+    capability_type: CapabilityType | None = None
+    tag: str | None = None
+    determinism: DeterminismClass | None = None
+    healthy_only: bool = True
