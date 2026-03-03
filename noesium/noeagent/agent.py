@@ -56,6 +56,10 @@ class NoeAgent(BaseGraphicAgent):
 
     def __init__(self, config: NoeConfig | None = None) -> None:
         self.config = (config or NoeConfig()).effective()
+
+        # Configure logging based on verbose setting
+        self._setup_logging()
+
         super().__init__(
             llm_provider=self.config.llm_provider,
             model_name=self.config.model_name,
@@ -127,6 +131,31 @@ class NoeAgent(BaseGraphicAgent):
         except Exception as exc:
             logger.warning("Failed to create planning LLM, using default: %s", exc)
         return self._planning_llm
+
+    def _setup_logging(self) -> None:
+        """Configure logging based on verbose setting.
+
+        If verbose=True, set logging level to INFO.
+        If verbose=False (default), set logging level to WARNING.
+        This only configures logging once per process.
+        """
+        import os
+
+        # Check if logging has already been configured by NoeAgent
+        if hasattr(NoeAgent, "_logging_configured"):
+            return
+
+        # Determine log level from config or environment
+        if self.config.verbose:
+            level = "INFO"
+        else:
+            # Respect LOG_LEVEL env var if set, otherwise WARNING
+            level = os.getenv("LOG_LEVEL", "WARNING").upper()
+
+        from noesium.core.utils.logging import setup_logging
+
+        setup_logging(level=level, third_party_level="WARNING")
+        NoeAgent._logging_configured = True
 
     def _get_compiled_graph(self) -> Any:
         """Return cached compiled graph, rebuilding only on mode change (O1/O2)."""

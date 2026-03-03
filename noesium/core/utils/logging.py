@@ -13,7 +13,6 @@ Usage:
 """
 
 import logging
-import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -23,9 +22,9 @@ try:
 except ImportError:
     colorlog = None  # fallback if colorlog is not installed
 
-# Configure logging
-log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
+# Note: logging.basicConfig() is NOT called at module level.
+# Logging must be explicitly configured via setup_logging() or by NoeAgent.
+# This allows the verbose config to control logging level.
 logger = logging.getLogger(__name__)
 
 

@@ -36,7 +36,7 @@ def minimal_config_with_subagents():
         enabled_toolkits=[],
         enable_subagents=True,
         subagent_max_depth=2,
-        agent_subagents=[
+        builtin=[
             AgentSubagentConfig(
                 name="browser_use",
                 agent_type="browser_use",
@@ -44,7 +44,7 @@ def minimal_config_with_subagents():
                 enabled=True,
             ),
         ],
-        cli_subagents=[],
+        external=[],
         enable_session_logging=False,
     )
 
@@ -72,7 +72,7 @@ class TestBrowserUseSubagent:
         """BrowserUse subagent should be available in config."""
         config = minimal_config_with_subagents
 
-        browser_use_config = config.get_agent_subagent("browser_use")
+        browser_use_config = config.get_builtin_subagent("browser_use")
         assert browser_use_config is not None
         assert browser_use_config["name"] == "browser_use"
         assert browser_use_config["agent_type"] == "browser_use"
@@ -211,11 +211,11 @@ class TestCliSubagent:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_cli_subagent_config(self):
-        """CLI subagent configuration should be properly set."""
+    async def test_external_subagent_config(self):
+        """External subagent configuration should be properly set."""
         config = NoeConfig(
             mode=NoeMode.AGENT,
-            cli_subagents=[
+            external=[
                 CliSubagentConfig(
                     name="claude",
                     command="claude",
@@ -226,8 +226,8 @@ class TestCliSubagent:
             ],
         )
 
-        assert len(config.cli_subagents) == 1
-        cli_config = config.cli_subagents[0]
+        assert len(config.external) == 1
+        cli_config = config.external[0]
         assert cli_config.name == "claude"
         assert cli_config.command == "claude"
         assert cli_config.timeout == 300
@@ -369,14 +369,14 @@ class TestNoeAgentCliSubagentIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_noeagent_sets_up_cli_subagents(self):
-        """NoeAgent should set up CLI subagents on initialization."""
+    async def test_noeagent_sets_up_external_subagents(self):
+        """NoeAgent should set up external subagents on initialization."""
         from noesium.noeagent.agent import NoeAgent
         from noesium.noeagent.cli_adapter import ExternalCliAdapter
 
         config = NoeConfig(
             mode=NoeMode.AGENT,
-            cli_subagents=[
+            external=[
                 CliSubagentConfig(
                     name="claude-mock",
                     command="echo",
@@ -392,7 +392,7 @@ class TestNoeAgentCliSubagentIntegration:
             mock_spawn.return_value = "spawned"
 
             agent = NoeAgent(config)
-            await agent._setup_cli_subagents()
+            await agent._setup_external_subagents()
 
             # Verify adapter was created
             assert agent._cli_adapter is not None
@@ -574,13 +574,13 @@ class TestBuiltInAgentCapabilityProvider:
         assert await provider.health() is True
 
 
-class TestBuiltInAgentSubagentSetup:
-    """Tests for NoeAgent._setup_agent_subagents()."""
+class TestBuiltInBuiltinSubagentSetup:
+    """Tests for NoeAgent._setup_builtin_subagents()."""
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_setup_agent_subagents_registers_providers(self, minimal_config_with_subagents):
-        """_setup_agent_subagents should register built-in agents in the registry."""
+    async def test_setup_builtin_subagents_registers_providers(self, minimal_config_with_subagents):
+        """_setup_builtin_subagents should register built-in agents in the registry."""
         from noesium.core.capability.registry import CapabilityRegistry
         from noesium.noeagent.agent import NoeAgent
 
@@ -588,7 +588,7 @@ class TestBuiltInAgentSubagentSetup:
         agent._registry = CapabilityRegistry()
         agent.llm = MagicMock()
 
-        await agent._setup_agent_subagents()
+        await agent._setup_builtin_subagents()
 
         # Should have registered browser_use as builtin_agent:browser_use
         provider = agent._registry.get_by_name("builtin_agent:browser_use")
@@ -597,14 +597,14 @@ class TestBuiltInAgentSubagentSetup:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_setup_agent_subagents_skips_disabled(self):
-        """_setup_agent_subagents should skip disabled subagents."""
+    async def test_setup_builtin_subagents_skips_disabled(self):
+        """_setup_builtin_subagents should skip disabled subagents."""
         from noesium.core.capability.registry import CapabilityRegistry
         from noesium.noeagent.agent import NoeAgent
 
         config = NoeConfig(
             mode=NoeMode.AGENT,
-            agent_subagents=[
+            builtin=[
                 AgentSubagentConfig(
                     name="browser_use",
                     agent_type="browser_use",
@@ -618,7 +618,7 @@ class TestBuiltInAgentSubagentSetup:
         agent._registry = CapabilityRegistry()
         agent.llm = MagicMock()
 
-        await agent._setup_agent_subagents()
+        await agent._setup_builtin_subagents()
 
         # Should not have registered the disabled subagent
         with pytest.raises(Exception):  # CapabilityNotFoundError
@@ -626,14 +626,14 @@ class TestBuiltInAgentSubagentSetup:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_setup_agent_subagents_handles_unknown_type(self):
-        """_setup_agent_subagents should skip unknown agent types."""
+    async def test_setup_builtin_subagents_handles_unknown_type(self):
+        """_setup_builtin_subagents should skip unknown agent types."""
         from noesium.core.capability.registry import CapabilityRegistry
         from noesium.noeagent.agent import NoeAgent
 
         config = NoeConfig(
             mode=NoeMode.AGENT,
-            agent_subagents=[
+            builtin=[
                 AgentSubagentConfig(
                     name="unknown_agent",
                     agent_type="unknown_type",
@@ -648,7 +648,7 @@ class TestBuiltInAgentSubagentSetup:
         agent.llm = MagicMock()
 
         # Should not raise, just log warning
-        await agent._setup_agent_subagents()
+        await agent._setup_builtin_subagents()
 
         # Registry should be empty
         assert len(agent._registry.list_providers()) == 0

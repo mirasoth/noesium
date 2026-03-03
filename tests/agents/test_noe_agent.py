@@ -491,25 +491,25 @@ class TestNoeConfig:
         assert cfg.load_dotenv is True
         assert cfg.tui_history_size == 1000
 
-    def test_default_agent_subagents(self):
-        """Test that default agent subagents are loaded."""
+    def test_default_builtin_subagents(self):
+        """Test that default built-in subagents are loaded."""
         cfg = NoeConfig()
-        assert len(cfg.agent_subagents) == 2
+        assert len(cfg.builtin) == 2
 
-        browser_use = cfg.get_agent_subagent("browser_use")
+        browser_use = cfg.get_builtin_subagent("browser_use")
         assert browser_use is not None
         assert browser_use["agent_type"] == "browser_use"
         assert browser_use["enabled"] is True
 
-        tacitus = cfg.get_agent_subagent("tacitus")
+        tacitus = cfg.get_builtin_subagent("tacitus")
         assert tacitus is not None
         assert tacitus["agent_type"] == "tacitus"
         assert tacitus["enabled"] is True
 
-    def test_get_enabled_agent_subagents(self):
-        """Test filtering enabled agent subagents."""
+    def test_get_enabled_builtin_subagents(self):
+        """Test filtering enabled built-in subagents."""
         cfg = NoeConfig()
-        enabled = cfg.get_enabled_agent_subagents()
+        enabled = cfg.get_enabled_builtin_subagents()
         assert len(enabled) == 2
         assert all(s.enabled for s in enabled)
 

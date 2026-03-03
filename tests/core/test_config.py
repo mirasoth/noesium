@@ -135,8 +135,8 @@ class TestConfigModels:
         config = SubagentsConfig()
         assert config.enabled is True
         assert config.max_depth == 2
-        assert config.agent_subagents == []
-        assert config.cli_subagents == []
+        assert config.builtin == []
+        assert config.external == []
 
     def test_agent_subagent_config(self):
         """Test AgentSubagentConfig."""
@@ -457,23 +457,23 @@ class TestUtilityFunctions:
 class TestConfigNormalization:
     """Test configuration data normalization."""
 
-    def test_normalize_agent_subagents_dict(self):
-        """Test normalization of agent_subagents from dict to list."""
+    def test_normalize_builtin_dict(self):
+        """Test normalization of builtin from dict to list."""
         from noesium.core.config import _normalize_config_data
 
-        data = {"subagents": {"agent_subagents": {"browser_use": {}}}}
+        data = {"subagents": {"builtin": {"browser_use": {}}}}
         result = _normalize_config_data(data)
 
-        assert result["subagents"]["agent_subagents"] == []
+        assert result["subagents"]["builtin"] == []
 
-    def test_normalize_cli_subagents_dict(self):
-        """Test normalization of cli_subagents from dict to list."""
+    def test_normalize_external_dict(self):
+        """Test normalization of external from dict to list."""
         from noesium.core.config import _normalize_config_data
 
-        data = {"subagents": {"cli_subagents": {"test": {}}}}
+        data = {"subagents": {"external": {"test": {}}}}
         result = _normalize_config_data(data)
 
-        assert result["subagents"]["cli_subagents"] == []
+        assert result["subagents"]["external"] == []
 
     def test_normalize_memory_providers_dict(self):
         """Test normalization of memory.providers from dict to list."""

@@ -328,7 +328,7 @@ The `subagents` section configures subagent behavior:
   "subagents": {
     "enabled": true,
     "max_depth": 2,
-    "agent_subagents": [
+    "builtin": [
       {
         "name": "browser_use",
         "agent_type": "browser_use",
@@ -340,7 +340,7 @@ The `subagents` section configures subagent behavior:
         "description": "Advanced research and analysis agent"
       }
     ],
-    "cli_subagents": []
+    "external": []
   }
 }
 ```
@@ -348,10 +348,10 @@ The `subagents` section configures subagent behavior:
 **Fields:**
 - `enabled` (bool): Enable subagent spawning
 - `max_depth` (int): Maximum nesting depth (default: 2)
-- `agent_subagents` (list): Built-in agent subagent configurations
-- `cli_subagents` (list): External CLI subagent daemon configurations
+- `builtin` (list): Built-in agent subagent configurations (in-process agents)
+- `external` (list): External CLI subagent configurations (spawned processes)
 
-**Agent Subagent Fields:**
+**Built-in Subagent Fields:**
 - `name` (string): Subagent identifier
 - `agent_type` (string): Agent type from available agents (e.g., "browser_use", "tacitus")
 - `description` (string, optional): Description of subagent purpose
@@ -362,7 +362,7 @@ The `subagents` section configures subagent behavior:
 - `askura` - Conversation-style agent (from `noesium.subagents.askura`)
 - `t2` - Task-specific agents (from `noesium.subagents.t2`)
 
-**CLI Subagent Fields:**
+**External Subagent Fields:**
 - `name` (string): Subagent identifier
 - `command` (string): Executable command
 - `args` (list): Command arguments
@@ -375,7 +375,7 @@ The `subagents` section configures subagent behavior:
 - **In-process spawning**: Child NoeAgent instances spawned within the same process
 - **Depth tracking**: Prevents infinite recursion with `max_depth` limit
 - **Agent delegation**: Specific agent types (browser_use, tacitus) can be delegated tasks
-- **CLI daemons**: External processes that run as daemons for specific task types
+- **External daemons**: External processes that run as daemons for specific task types
 
 ### 5. Memory Configuration
 

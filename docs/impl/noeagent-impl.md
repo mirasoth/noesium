@@ -161,7 +161,7 @@ class NoeConfig(BaseModel):
     permissions: list[str]            # fs:read, fs:write, net:outbound, shell:execute
     enable_subagents: bool = True
     subagent_max_depth: int = 2
-    cli_subagents: list[CliSubagentConfig] = []
+    external: list[CliSubagentConfig] = []
 
     # Progress reporting (§5.5, §5.9)
     progress_callbacks: list[Callable] = []
@@ -179,7 +179,7 @@ class TaskStep(BaseModel):
     description: str
     status: Literal["pending", "in_progress", "completed", "failed"] = "pending"
     result: str | None = None
-    execution_hint: Literal["tool", "subagent", "cli_subagent", "auto"] = "auto"
+    execution_hint: Literal["tool", "subagent", "external_subagent", "auto"] = "auto"
 
 class TaskPlan(BaseModel):
     goal: str

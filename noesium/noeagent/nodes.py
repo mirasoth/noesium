@@ -154,7 +154,7 @@ async def execute_step_node(
     hint_text = {
         "tool": "Prefer using a tool for this step (atomic operation).",
         "subagent": "Consider delegating to a child agent for this step (multi-step reasoning).",
-        "cli_subagent": "Consider delegating to an external CLI agent for this step.",
+        "external_subagent": "Consider delegating to an external CLI agent (e.g., Claude) for this step.",
         "builtin_agent": "Consider delegating to a built-in specialized agent (browser_use, tacitus) for this step.",
         "auto": "Choose the best approach (tool, subagent, or direct answer).",
     }.get(hint, "Choose the best approach.")

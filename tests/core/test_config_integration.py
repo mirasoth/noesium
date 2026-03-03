@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from noesium.core.config import (
+    AgentSubagentConfig,
     NoeAgentConfig,
     init_default_config,
     load_config,
@@ -93,12 +94,12 @@ class TestConfigIntegration:
     def test_config_with_subagents(self):
         """Test configuration with subagents."""
         config = NoeAgentConfig()
-        config.subagents.agent_subagents = [
-            {
-                "name": "browser_use",
-                "agent_type": "browser_use",
-                "description": "Web automation agent",
-            }
+        config.subagents.builtin = [
+            AgentSubagentConfig(
+                name="browser_use",
+                agent_type="browser_use",
+                description="Web automation agent",
+            )
         ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -106,9 +107,9 @@ class TestConfigIntegration:
             save_config(config, config_path)
 
             loaded = load_config(config_path)
-            assert len(loaded.subagents.agent_subagents) == 1
-            assert loaded.subagents.agent_subagents[0].name == "browser_use"
-            assert loaded.subagents.agent_subagents[0].agent_type == "browser_use"
+            assert len(loaded.subagents.builtin) == 1
+            assert loaded.subagents.builtin[0].name == "browser_use"
+            assert loaded.subagents.builtin[0].agent_type == "browser_use"
 
     def test_config_with_toolkit_configs(self):
         """Test configuration with toolkit-specific settings."""
@@ -154,26 +155,26 @@ class TestNoeConfigIntegration:
                 assert noe_config.max_iterations == 50
                 assert "bash" in noe_config.enabled_toolkits
 
-    def test_noe_config_get_agent_subagent(self):
-        """Test getting agent subagent configuration."""
+    def test_noe_config_get_builtin_subagent(self):
+        """Test getting builtin subagent configuration."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"
 
             # Create global config with subagent
             global_config = NoeAgentConfig()
-            global_config.subagents.agent_subagents = [
-                {
-                    "name": "browser_use",
-                    "agent_type": "browser_use",
-                    "description": "Web automation",
-                }
+            global_config.subagents.builtin = [
+                AgentSubagentConfig(
+                    name="browser_use",
+                    agent_type="browser_use",
+                    description="Web automation",
+                )
             ]
             save_config(global_config, config_path)
 
             # Get subagent via NoeConfig
             with patch.dict(os.environ, {"NOE_AGENT_CONFIG": str(config_path)}):
                 noe_config = NoeConfig.from_global_config()
-                subagent = noe_config.get_agent_subagent("browser_use")
+                subagent = noe_config.get_builtin_subagent("browser_use")
 
                 assert subagent is not None
                 assert subagent["name"] == "browser_use"

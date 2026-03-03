@@ -588,14 +588,14 @@ NoeAgent comes with pre-configured agent subagents for specialized tasks:
 - **browser_use**: Web automation agent for browser interaction and DOM manipulation
 - **tacitus**: Research agent with iterative query generation and web search
 
-These are enabled by default and can be customized via `config.agent_subagents`:
+These are enabled by default and can be customized via `config.builtin`:
 
 ```python
 from noesium.noeagent import NoeAgent, NoeConfig, AgentSubagentConfig
 
 config = NoeConfig(
     enable_subagents=True,
-    agent_subagents=[
+    builtin=[
         AgentSubagentConfig(
             name="browser_use",
             agent_type="browser_use",
@@ -624,7 +624,7 @@ Long-lived external CLI processes (e.g., Claude Code CLI) that run as persistent
 from noesium.noeagent import NoeAgent, NoeConfig, CliSubagentConfig
 
 config = NoeConfig(
-    cli_subagents=[
+    external=[
         CliSubagentConfig(
             name="claude-code",
             command="claude",
