@@ -137,10 +137,13 @@ async def execute_step_node(
     registry: Any,
     memory_manager: Any = None,
     max_tool_calls: int = 5,
+    tool_desc_cache: str | None = None,
 ) -> dict[str, Any]:
     """Execute current plan step via structured LLM output with tool access.
 
     Uses the unified ``CapabilityRegistry`` for tool descriptions.
+    Accepts an optional ``tool_desc_cache`` to avoid regenerating
+    the tool description string on every step (O4).
     """
     from langchain_core.messages import AIMessage
 
@@ -156,7 +159,7 @@ async def execute_step_node(
     }.get(hint, "Choose the best approach.")
 
     completed = "\n".join(f"- {r['tool']}: {str(r['result'])[:200]}" for r in state.get("tool_results", []))
-    tool_desc = _build_tool_descriptions(registry)
+    tool_desc = tool_desc_cache if tool_desc_cache is not None else _build_tool_descriptions(registry)
 
     system = AGENT_SYSTEM_PROMPT.format(
         plan=step_desc,

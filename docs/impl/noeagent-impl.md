@@ -748,9 +748,16 @@ Current codebase gaps relative to this design:
 | CLI adapter wiring | Not connected | `_setup_cli_subagents()` in `initialize()`, CLI actions in `subagent_node` | P2 | Done |
 | `model_name` passthrough | Not passed to `BaseAgent` | `super().__init__(model_name=config.model_name)` | P2 | Done |
 | All toolkits by default | 11 of 18 enabled | Enable all 18 in default config | P3 | Done |
-| Module path | `noesium/agents/noe/` | `noesium/noe/` (old module removed) | - | Done |
+| Module path | `noesium/agents/noe/` | `noesium/noeagent/` (old module removed) | - | Done |
 
-All gaps have been resolved.
+## Gap Status Summary
+
+**Fully Resolved**: 11/15 gaps
+**Partially Implemented**: 2/15 gaps
+- Tool arg pre-validation: Type coercion implemented, full schema validation pending
+- ExternalCliAdapter: Functional but uses name-based API instead of handle-based API documented in spec
+
+**Remaining Work**: Consider adding full Pydantic schema validation for tool arguments and aligning ExternalCliAdapter API with the documented handle-based interface.
 
 ---
 
@@ -761,7 +768,7 @@ All gaps have been resolved.
 | RFC-0005 §4.2 (Capability Types) | §5.2, §5.4 | Tool types map to CapabilityType taxonomy |
 | RFC-0005 §10 (Persistent Subagent) | §5.10 | ExternalCliAdapter |
 | RFC-0005 §11 (Lifecycle Model) | §5.4.3 | Subagent cleanup and lifecycle |
-| RFC-0005 §16 (Tool vs Subagent) | §5.11 | Auto-planning heuristics |
+| RFC-0005 §17 (Comparison: Capability Type Taxonomy) | §5.11 | Auto-planning heuristics |
 | RFC-1002 §5.2 (Conversation Agent) | §4.1 | Ask mode graph |
 | RFC-1002 §5.3 (Research Agent) | §4.2 | Agent mode graph |
 | RFC-1002 §5.4 (Task Agent) | §4.2 | TaskPlanner + agent loop |

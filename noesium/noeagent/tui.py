@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -230,6 +231,102 @@ def _activity_line(event: ProgressEvent, thinking_gen: DynamicThinkingText | Non
 
 
 # ---------------------------------------------------------------------------
+# Subagent progress tracker
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _SubagentState:
+    subagent_id: str
+    status: str = "running"  # "running" | "done" | "error"
+    plan_steps: int = 0
+    completed_steps: int = 0
+    current_step: str = ""
+    last_activity: str = ""
+
+
+class SubagentTracker:
+    """Tracks per-subagent progress for multiplexed display."""
+
+    def __init__(self, max_display: int = 3) -> None:
+        self._states: dict[str, _SubagentState] = {}
+        self._max_display = max_display
+
+    def update(self, event: ProgressEvent) -> None:
+        sid = event.subagent_id
+        if not sid:
+            return
+        if sid not in self._states:
+            self._states[sid] = _SubagentState(subagent_id=sid)
+        state = self._states[sid]
+        child_type = (event.metadata or {}).get("child_event_type", "")
+
+        if event.type == ProgressEventType.SUBAGENT_START:
+            state.status = "running"
+            state.last_activity = event.summary or "spawned"
+        elif event.type == ProgressEventType.SUBAGENT_END:
+            state.status = "done"
+            state.last_activity = event.summary or "completed"
+        elif event.type == ProgressEventType.SUBAGENT_PROGRESS:
+            if child_type == "plan.created" and event.plan_snapshot:
+                steps = event.plan_snapshot.get("steps", [])
+                state.plan_steps = len(steps)
+                state.completed_steps = sum(1 for s in steps if s.get("status") == "completed")
+            elif child_type == "step.start":
+                state.current_step = event.step_desc or ""
+            elif child_type == "step.complete":
+                state.completed_steps += 1
+                state.current_step = ""
+            elif child_type == "error":
+                state.status = "error"
+            state.last_activity = event.summary or ""
+
+    def render(self) -> list[Text]:
+        lines: list[Text] = []
+        items = list(self._states.values())[-self._max_display :]
+        for st in items:
+            tag = st.subagent_id
+            if st.status == "done":
+                progress = f"✓ {st.completed_steps}/{st.plan_steps}" if st.plan_steps else "✓ done"
+                lines.append(
+                    Text.assemble(
+                        ("  ", ""),
+                        (f"[{tag}] ", "green"),
+                        (progress, "green"),
+                    )
+                )
+            elif st.status == "error":
+                lines.append(
+                    Text.assemble(
+                        ("  ", ""),
+                        (f"[{tag}] ", "red"),
+                        ("error", "red"),
+                    )
+                )
+            else:
+                if st.plan_steps:
+                    cur = st.current_step[:40] if st.current_step else "working..."
+                    progress = f"> {st.completed_steps}/{st.plan_steps} · {cur}"
+                else:
+                    progress = st.last_activity[:60] if st.last_activity else "running..."
+                    # Strip the [tag] prefix if summary already contains it
+                    if progress.startswith(f"[{tag}]"):
+                        progress = progress[len(f"[{tag}]") :].strip()
+                lines.append(
+                    Text.assemble(
+                        ("  ", ""),
+                        (f"[{tag}] ", "magenta"),
+                        (progress, "yellow"),
+                    )
+                )
+        return lines
+
+    @property
+    def has_active(self) -> bool:
+        return any(s.status == "running" for s in self._states.values())
+
+
+# ---------------------------------------------------------------------------
 # Slash commands
 # ---------------------------------------------------------------------------
 
@@ -275,6 +372,11 @@ def handle_slash_command(
         if arg in ("ask", "agent"):
             new_mode = NoeMode.ASK if arg == "ask" else NoeMode.AGENT
             agent.config = agent.config.model_copy(update={"mode": new_mode})
+            # Invalidate cached state so next query re-initializes for new mode
+            agent._initialized = False
+            agent._compiled_graph = None
+            agent._compiled_mode = None
+            agent._tool_desc_cache = None
             console.print(f"[bold green]Switched to {arg} mode[/bold green]")
         else:
             console.print("[yellow]Usage: /mode ask | /mode agent[/yellow]")
@@ -512,6 +614,7 @@ async def _process_query(
     final_answer: str = ""
     current_step_summary: str = ""
     step_details: list[Text] = []  # Step progress details
+    sa_tracker = SubagentTracker(max_display=3)
 
     # Dynamic thinking text generator
     thinking_gen = DynamicThinkingText()
@@ -539,6 +642,12 @@ async def _process_query(
             for detail in step_details[-5:]:
                 parts.append(detail)
             parts.append(Text(""))
+        # Show subagent progress tracks
+        sa_lines = sa_tracker.render()
+        if sa_lines:
+            for sa_line in sa_lines:
+                parts.append(sa_line)
+            parts.append(Text(""))
         for line in activity_lines[-15:]:
             parts.append(line)
         parts.append(Text(""))
@@ -547,7 +656,7 @@ async def _process_query(
 
     from rich.live import Live
 
-    with Live(_build_display(), console=console, refresh_per_second=8, transient=True):
+    with Live(_build_display(), console=console, refresh_per_second=8, transient=True) as live:
         async for event in agent.astream_progress(user_input):
             etype = event.type
 
@@ -594,12 +703,37 @@ async def _process_query(
                 ProgressEventType.SUBAGENT_END,
                 ProgressEventType.ERROR,
             ):
+                # Feed subagent events into the tracker
+                if etype in (
+                    ProgressEventType.SUBAGENT_START,
+                    ProgressEventType.SUBAGENT_PROGRESS,
+                    ProgressEventType.SUBAGENT_END,
+                ):
+                    sa_tracker.update(event)
+                    if sa_tracker.has_active:
+                        thinking_gen.set_phase("executing", f"[{event.subagent_id or 'subagent'}]")
+
                 line = _activity_line(event, thinking_gen)
                 if line:
                     activity_lines.append(line)
-                # Also add tool/subagent details to step_details
+
                 if etype == ProgressEventType.TOOL_START and event.tool_name:
                     step_details.append(Text.assemble(("    → ", "dim"), (f"Using tool: {event.tool_name}", "blue")))
+                elif etype == ProgressEventType.SUBAGENT_PROGRESS:
+                    child_type = (event.metadata or {}).get("child_event_type", "")
+                    if child_type == "plan.created":
+                        tag = event.subagent_id or "subagent"
+                        step_details.append(
+                            Text.assemble(("    ", ""), (f"[{tag}] ", "magenta"), ("Plan created", "dim"))
+                        )
+                    elif child_type == "tool.start" and event.tool_name:
+                        tag = event.subagent_id or "subagent"
+                        step_details.append(
+                            Text.assemble(("    ", ""), (f"[{tag}] ", "magenta"), (f"→ {event.tool_name}", "blue"))
+                        )
+                elif etype == ProgressEventType.SUBAGENT_END:
+                    tag = event.subagent_id or "subagent"
+                    step_details.append(Text.assemble(("    ", ""), (f"[{tag}] ", "green"), ("completed", "green")))
 
             elif etype == ProgressEventType.THINKING:
                 # Update thinking phase based on the thinking event
@@ -650,6 +784,9 @@ async def _process_query(
                         if step.status in ("in_progress", "pending"):
                             step.status = "completed"
                     current_plan.is_complete = True
+
+            # Refresh the live display after every event
+            live.update(_build_display())
 
     # --- Post-processing: render static output ---
 

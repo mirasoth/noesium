@@ -66,37 +66,83 @@ class NoeAgent(BaseGraphicAgent):
         self._tool_executor: ToolExecutor | None = None
         self._tool_context: ToolContext | None = None
         self._planner: TaskPlanner | None = None
+        self._planning_llm: Any = None
         self._cli_adapter: "ExternalCliAdapter | None" = None
         self._event_store = InMemoryEventStore()
         self._subagents: dict[str, "NoeAgent"] = {}
         self._depth: int = 0
+        self._initialized: bool = False
+        self._compiled_graph: Any = None
+        self._compiled_mode: NoeMode | None = None
+        self._tool_desc_cache: str | None = None
+        self._tool_desc_provider_count: int = -1
+        self._subagent_event_queue: asyncio.Queue[ProgressEvent] | None = None
 
     # ------------------------------------------------------------------
     # Initialization
     # ------------------------------------------------------------------
 
     async def initialize(self) -> None:
+        if self._initialized:
+            return
         await self._setup_memory()
         if self.config.mode == NoeMode.AGENT:
             await self._setup_capabilities()
-            planning_llm = None
-            if self.config.planning_model:
-                from noesium.core.llm import get_llm_client
-
-                try:
-                    planning_llm = get_llm_client(
-                        provider=self.config.llm_provider,
-                        chat_model=self.config.planning_model,
-                    )
-                except Exception as exc:
-                    logger.warning("Failed to create planning LLM, using default: %s", exc)
             cli_names = [c.name for c in self.config.cli_subagents]
             self._planner = TaskPlanner(
                 self.llm,
-                planning_llm=planning_llm,
+                planning_llm=self._get_planning_llm(),
                 cli_subagent_names=cli_names,
             )
             await self._setup_cli_subagents()
+        self._initialized = True
+
+    async def reinitialize(self) -> None:
+        """Force re-initialization after config changes (e.g. mode switch)."""
+        self._initialized = False
+        self._compiled_graph = None
+        self._compiled_mode = None
+        self._tool_desc_cache = None
+        await self._cleanup_subagents()
+        await self.initialize()
+
+    def _get_planning_llm(self) -> Any:
+        """Lazy creation of planning LLM client (O5)."""
+        if self._planning_llm is not None:
+            return self._planning_llm
+        if not self.config.planning_model:
+            return None
+        from noesium.core.llm import get_llm_client
+
+        try:
+            self._planning_llm = get_llm_client(
+                provider=self.config.llm_provider,
+                chat_model=self.config.planning_model,
+            )
+        except Exception as exc:
+            logger.warning("Failed to create planning LLM, using default: %s", exc)
+        return self._planning_llm
+
+    def _get_compiled_graph(self) -> Any:
+        """Return cached compiled graph, rebuilding only on mode change (O1/O2)."""
+        if self._compiled_graph is not None and self._compiled_mode == self.config.mode:
+            return self._compiled_graph
+        self._compiled_graph = self._build_graph().compile()
+        self._compiled_mode = self.config.mode
+        return self._compiled_graph
+
+    def get_tool_descriptions(self) -> str:
+        """Return cached tool description string, regenerating on registry change (O4)."""
+        if self._registry is None:
+            return "No tools available."
+        provider_count = len(self._registry.list_providers())
+        if self._tool_desc_cache is not None and self._tool_desc_provider_count == provider_count:
+            return self._tool_desc_cache
+        from .nodes import _build_tool_descriptions
+
+        self._tool_desc_cache = _build_tool_descriptions(self._registry)
+        self._tool_desc_provider_count = provider_count
+        return self._tool_desc_cache
 
     async def _setup_memory(self) -> None:
         providers = []
@@ -311,6 +357,7 @@ class NoeAgent(BaseGraphicAgent):
                 registry=self._registry,
                 memory_manager=self._memory_manager,
                 max_tool_calls=self.config.max_tool_calls_per_step,
+                tool_desc_cache=self.get_tool_descriptions(),
             )
 
         async def _tools(state: AgentState) -> dict:
@@ -482,8 +529,16 @@ class NoeAgent(BaseGraphicAgent):
         from .state import TaskPlan
 
         await self.initialize()
-        compiled = self._build_graph().compile()
+        compiled = self._get_compiled_graph()
         self.graph = compiled
+
+        # O6: trim event store for long sessions to bound memory
+        if hasattr(self._event_store, "_events") and len(self._event_store._events) > 10000:
+            self._event_store._events = self._event_store._events[-5000:]
+
+        # Callback-to-yield bridge: subagent events emitted inside nodes
+        # are pushed to this queue so we can yield them from the generator.
+        self._subagent_event_queue = asyncio.Queue()
 
         session_id = self._make_session_id()
         seq = 0
@@ -525,6 +580,14 @@ class NoeAgent(BaseGraphicAgent):
 
         try:
             async for raw_event in compiled.astream(initial):
+                # Drain subagent events queued by interact_with_subagent()
+                while self._subagent_event_queue and not self._subagent_event_queue.empty():
+                    try:
+                        queued = self._subagent_event_queue.get_nowait()
+                        yield queued
+                    except asyncio.QueueEmpty:
+                        break
+
                 for node_name, node_output in raw_event.items():
                     if not isinstance(node_output, dict):
                         continue
@@ -706,6 +769,14 @@ class NoeAgent(BaseGraphicAgent):
             yield err_evt
             raise
         finally:
+            # Drain any remaining subagent events
+            while self._subagent_event_queue and not self._subagent_event_queue.empty():
+                try:
+                    queued = self._subagent_event_queue.get_nowait()
+                    yield queued
+                except asyncio.QueueEmpty:
+                    break
+            self._subagent_event_queue = None
             await self._cleanup_subagents()
             end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended")
             await _emit(end_evt)
@@ -744,6 +815,17 @@ class NoeAgent(BaseGraphicAgent):
             )
         )
         child._depth = self._depth + 1
+
+        # O2: share parent's toolkit infrastructure to avoid re-loading
+        if self._registry is not None:
+            child._registry = self._registry
+            child._tool_executor = self._tool_executor
+            child._tool_context = ToolContext(
+                agent_id=f"{self._agent_id}:{name}",
+                granted_permissions=(self._tool_context.granted_permissions if self._tool_context else []),
+                working_directory=(self._tool_context.working_directory if self._tool_context else None),
+            )
+
         subagent_id = f"{name}-{len(self._subagents) + 1}"
         self._subagents[subagent_id] = child
 
@@ -754,6 +836,54 @@ class NoeAgent(BaseGraphicAgent):
         return subagent_id
 
     async def interact_with_subagent(self, subagent_id: str, message: str) -> str:
+        """Stream child agent progress, forwarding events to parent callbacks and queue."""
         if subagent_id not in self._subagents:
             raise KeyError(f"Unknown subagent: {subagent_id}")
-        return await self._subagents[subagent_id].arun(message)
+
+        child = self._subagents[subagent_id]
+        final_answer = ""
+
+        async for event in child.astream_progress(message):
+            if event.type == ProgressEventType.FINAL_ANSWER:
+                final_answer = event.text or ""
+            elif event.type not in (
+                ProgressEventType.SESSION_START,
+                ProgressEventType.SESSION_END,
+            ):
+                wrapped = ProgressEvent(
+                    type=ProgressEventType.SUBAGENT_PROGRESS,
+                    session_id=event.session_id,
+                    sequence=event.sequence,
+                    subagent_id=subagent_id,
+                    summary=f"[{subagent_id}] {event.summary or ''}",
+                    detail=event.detail,
+                    tool_name=event.tool_name,
+                    step_index=event.step_index,
+                    step_desc=event.step_desc,
+                    plan_snapshot=event.plan_snapshot,
+                    metadata={
+                        "child_event_type": event.type.value,
+                        "child_node": event.node,
+                        **event.metadata,
+                    },
+                )
+                await self._fire_callbacks(wrapped)
+                if self._subagent_event_queue is not None:
+                    self._subagent_event_queue.put_nowait(wrapped)
+
+        end_event = ProgressEvent(
+            type=ProgressEventType.SUBAGENT_END,
+            subagent_id=subagent_id,
+            summary=f"[{subagent_id}] completed",
+        )
+        await self._fire_callbacks(end_event)
+        if self._subagent_event_queue is not None:
+            self._subagent_event_queue.put_nowait(end_event)
+
+        return final_answer
+
+    async def interact_with_subagents(self, requests: list[tuple[str, str]]) -> dict[str, str]:
+        """Execute multiple subagent interactions in parallel (O3)."""
+        tasks = [self.interact_with_subagent(sid, msg) for sid, msg in requests]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        return {sid: (r if isinstance(r, str) else f"Error: {r}") for (sid, _), r in zip(requests, results)}
