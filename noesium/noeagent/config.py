@@ -24,10 +24,46 @@ class AgentSubagentConfig(BaseModel):
     agent_type: str  # browser_use, tacitus, askura, t2
     description: str | None = None
     enabled: bool = True
+    # Enhanced capability descriptors for intelligent routing
+    task_types: list[str] = Field(
+        default_factory=list,
+        description="Types of tasks this subagent handles (e.g., ['web_browsing', 'form_filling', 'scraping'])",
+    )
+    use_cases: list[str] = Field(
+        default_factory=list,
+        description="Example use cases for semantic matching (e.g., ['Find stock prices', 'Book a flight'])",
+    )
+    keywords: list[str] = Field(
+        default_factory=list,
+        description="Keywords for routing decisions (e.g., ['browser', 'click', 'navigate', 'stock', 'price'])",
+    )
+    preferred_for: list[str] = Field(
+        default_factory=list,
+        description="Query patterns this subagent is preferred for (e.g., ['real-time data', 'interactive web'])",
+    )
 
 
 class CliSubagentConfig(BaseModel):
-    """Configuration for an external CLI subagent daemon (impl guide §5.10)."""
+    """Configuration for an external CLI subagent (impl guide §5.10).
+
+    Supports two execution modes:
+    - daemon: Long-lived persistent process with bidirectional JSON streaming
+    - oneshot: Single execution per request, process exits after completion
+
+    Attributes:
+        name: Subagent identifier
+        command: Executable command
+        args: Command arguments
+        env: Environment variables
+        timeout: Timeout in seconds
+        restart_policy: Restart behavior (daemon mode only)
+        task_types: Supported task types
+        mode: Execution mode - 'daemon' or 'oneshot'
+        output_format: Expected output format from the CLI
+        input_format: Input format to send to the CLI (oneshot mode)
+        allowed_tools: Tools to allow in the CLI session
+        skip_permissions: Skip permission prompts (automation mode)
+    """
 
     name: str
     command: str
@@ -36,6 +72,11 @@ class CliSubagentConfig(BaseModel):
     timeout: int = 300
     restart_policy: str = "on-failure"
     task_types: list[str] = Field(default_factory=list)
+    mode: str = "oneshot"  # "daemon" or "oneshot"
+    output_format: str = "text"  # "text", "json", "stream-json", "ndjson"
+    input_format: str = "text"  # "text", "stream-json"
+    allowed_tools: list[str] = Field(default_factory=list)
+    skip_permissions: bool = True  # For automation workflows
 
 
 # Default agent subagents (browser_use and tacitus)
@@ -43,14 +84,35 @@ DEFAULT_AGENT_SUBAGENTS = [
     AgentSubagentConfig(
         name="browser_use",
         agent_type="browser_use",
-        description="Web automation agent for browser interaction and DOM manipulation",
+        description="Web automation agent for browser interaction, form filling, and real-time web data extraction",
         enabled=True,
+        task_types=["web_browsing", "form_filling", "web_scraping", "dom_interaction", "screenshot"],
+        use_cases=[
+            "Find real-time stock prices from financial websites",
+            "Book flights or hotels on travel sites",
+            "Fill out web forms automatically",
+            "Navigate multi-page websites",
+            "Extract data from interactive web applications",
+            "Take screenshots of web pages",
+        ],
+        keywords=["browser", "click", "navigate", "form", "button", "website", "real-time", "stock price", "booking"],
+        preferred_for=["real-time data", "interactive websites", "form submission", "multi-step web workflows"],
     ),
     AgentSubagentConfig(
         name="tacitus",
         agent_type="tacitus",
-        description="Research agent with iterative query generation and web search",
+        description="Research agent with iterative query generation, multi-source web search, and answer synthesis",
         enabled=True,
+        task_types=["web_research", "information_synthesis", "multi_source_search", "fact_checking"],
+        use_cases=[
+            "Research a topic from multiple sources",
+            "Find and synthesize information from the web",
+            "Answer complex questions requiring multiple searches",
+            "Verify facts across different sources",
+            "Generate comprehensive research reports",
+        ],
+        keywords=["research", "search", "synthesize", "information", "multiple sources", "analyze", "compare"],
+        preferred_for=["information gathering", "multi-source research", "complex questions", "fact verification"],
     ),
 ]
 

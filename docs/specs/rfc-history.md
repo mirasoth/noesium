@@ -23,6 +23,7 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 
 ### 2026-03-03
 
+- **Created**: RFC-1005 - Tool Call vs Subagent Call Distinction; ontological distinction between tools and subagents; control flow semantics; state and memory model; temporal scope; failure semantics; decision heuristics; implementation mapping in NoeAgent LangGraph workflow; anti-patterns; cost and performance considerations
 - **Created**: RFC-1004 - Capability Registry Implementation Architecture; Provider-First, Hybrid Event-Sourced design; CapabilityRegistry, provider adapters (Tool, MCP, Skill, Agent, CliAgent), health model, NoeAgent integration
 - **Updated**: RFC-0005 - Provider-first, hybrid event-sourced capability registry design; 5-type taxonomy (TOOL, MCP_TOOL, SKILL, AGENT, CLI_AGENT); CapabilityDescriptor and CapabilityProvider protocol; unified CapabilityRegistry; dual health model; hybrid invocation (direct for tools, event-mediated for agents); BaseAgent.declare_capabilities()
 - **Reference Updated**: All RFC files moved from `specs/` to `docs/specs/` for better project organization

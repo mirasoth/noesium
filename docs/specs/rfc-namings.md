@@ -21,6 +21,7 @@ Authoritative terminology reference for noesium RFC specifications.
 |------|-----------|-------------------|
 | Agent Kernel | RFC-0001 §5.2 | Deterministic, graph-based execution runtime within each agent |
 | Agent Kernel Pod | RFC-1003 §5.1 | Control plane pod responsible for ToolCall generation, capability validation, and subagent dispatch |
+| AgentAction | RFC-1005 §12.1 | NoeAgent action model containing thought and exactly one of: tool_calls, subagent, or text_response |
 | AgentRef | RFC-0002 §5 | Producer identity structure containing agent_id, agent_type, runtime_id, instance_id |
 | AtomicTool | RFC-2003 §6 | Smallest executable unit in the tool system with schema and capability metadata |
 | BaseAgent | RFC-1001 §11 | Abstract base class for all Noesium agents |
@@ -79,10 +80,14 @@ Authoritative terminology reference for noesium RFC specifications.
 | Skill Registry | RFC-2004 §9 | Registry for skill discovery and management |
 | State Graph | RFC-0003 §4 | Directed graph declaring workflow nodes and allowed transitions |
 | Subagent | RFC-0006 §5.2 | Isolated execution unit running inside sandbox runtime for external tool execution |
+| SubagentAction | RFC-1005 §12.1 | NoeAgent action for spawning, interacting with, or terminating subagents |
+| Subagent Call | RFC-1005 §5.1 | Execution modality delegating autonomous reasoning to a cognitive worker |
 | Task Agent | RFC-1002 §5.4 | Agent archetype for linear or branching task execution |
-| Tool Call | RFC-0006 §6 | Specification for tool execution with tool_id, capability, input, timeout, and resource limits |
+| Tool Call | RFC-1005 §5.1 | Execution modality invoking a stateless capability as a procedure |
+| Tool Call Action | RFC-1005 §12.1 | NoeAgent action representing a single tool invocation with name and args |
 | Tool Context | RFC-2004 §4.2 | Execution context with agent identity, permissions, and trace |
 | Tool Executor | RFC-2004 §5 | Event-wrapping execution engine for AtomicTools with permission checking |
+| Tool Node | RFC-1005 §12.3 | LangGraph node executing tool calls via ToolExecutor |
 | Tool Permission | RFC-2003 §10 | Declared permission requirement: fs:read, shell:execute, net:outbound, etc. |
 | Tool Registry | RFC-2004 §8 | Capability-based registry for AtomicTool discovery and lookup |
 | Tool Source | RFC-2003 §5 | Classification: builtin, langchain, mcp, or user |

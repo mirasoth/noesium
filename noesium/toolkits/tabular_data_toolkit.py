@@ -5,11 +5,16 @@ Provides tools for reading, analyzing, and extracting insights from various
 tabular data formats including CSV, Excel, JSON, and Parquet files.
 """
 
+from __future__ import annotations
+
 import json
 import math
 import os
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
@@ -23,7 +28,7 @@ try:
 
     PANDAS_AVAILABLE = True
 except ImportError:
-    pd = None
+    pd = None  # type: ignore
     PANDAS_AVAILABLE = False
 
 # Template for column analysis

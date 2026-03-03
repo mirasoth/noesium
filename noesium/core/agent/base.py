@@ -41,7 +41,9 @@ class BaseAgent(ABC):
         self.logger.info(f"Initialized {self.__class__.__name__} with {llm_provider} provider")
 
     @abstractmethod
-    def run(self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None) -> Any:
+    async def run(
+        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+    ) -> Any:
         """Run the agent with a user message and context."""
 
     def declare_capabilities(self) -> list:
@@ -190,11 +192,19 @@ class BaseHitlAgent(BaseGraphicAgent):
         self.logger.info(f"Cleared {session_count} sessions")
 
     @override
-    def run(self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None) -> str:
+    async def run(
+        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+    ) -> str:
         """Run the agent with a user message and context. Required by BaseAgent."""
         # Create a temporary user ID for standalone run
         response = self.start_conversation("standalone_user", user_message)
         return response.message
+
+    async def arun(
+        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+    ) -> str:
+        """Async alias for run()."""
+        return await self.run(user_message, context, config)
 
 
 class ResearchOutput(BaseModel):
@@ -222,7 +232,7 @@ class BaseResearcher(BaseGraphicAgent):
         super().__init__(llm_provider, model_name)
 
     @abstractmethod
-    def research(
+    async def research(
         self,
         user_message: str,
         context: Dict[str, Any] = None,
@@ -231,10 +241,18 @@ class BaseResearcher(BaseGraphicAgent):
         """Research a topic and return structured results."""
 
     @override
-    def run(self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None) -> str:
+    async def run(
+        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+    ) -> str:
         """
         Default implementation of run() for researchers.
         Calls research() and returns the content.
         """
-        result = self.research(user_message, context, config)
+        result = await self.research(user_message, context, config)
         return result.content if result else "Research failed to produce results."
+
+    async def arun(
+        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+    ) -> str:
+        """Async alias for run()."""
+        return await self.run(user_message, context, config)

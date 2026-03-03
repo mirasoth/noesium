@@ -204,7 +204,12 @@ class AgentCapabilityProvider:
 class CliAgentCapabilityProvider:
     """Wraps an ``ExternalCliAdapter`` handle as a capability provider (stateful).
 
-    Health check delegates to the adapter's process-level liveness check.
+    Supports both execution modes:
+    - oneshot: Each invocation spawns a new process (recommended for CLI tools like Claude)
+    - daemon: Interacts with a persistent daemon process
+
+    Health check delegates to the adapter's process-level liveness check for daemons,
+    or config registration check for oneshot mode.
     """
 
     def __init__(
@@ -213,27 +218,144 @@ class CliAgentCapabilityProvider:
         adapter: Any,
         *,
         task_types: list[str] | None = None,
+        mode: str = "oneshot",
     ) -> None:
         self._name = name
         self._adapter = adapter
+        self._mode = mode
         self._descriptor = CapabilityDescriptor(
             capability_id=f"cli_agent:{name}",
             version="1.0.0",
             capability_type=CapabilityType.CLI_AGENT,
-            description=f"External CLI subagent: {name}",
+            description=f"External CLI subagent: {name} (mode={mode})",
             determinism=DeterminismClass.STOCHASTIC,
             side_effects=SideEffectClass.EFFECTFUL,
             latency=LatencyClass.BATCH,
-            tags=["cli_subagent", f"cli:{name}"] + (task_types or []),
+            tags=["cli_subagent", f"cli:{name}", f"mode:{mode}"] + (task_types or []),
         )
 
     @property
     def descriptor(self) -> CapabilityDescriptor:
         return self._descriptor
 
+    @property
+    def mode(self) -> str:
+        return self._mode
+
     async def invoke(self, **kwargs: Any) -> Any:
+        """Invoke the CLI subagent.
+
+        For oneshot mode, spawns a new process and captures output.
+        For daemon mode, sends message to existing persistent process.
+        """
         message = kwargs.get("message", kwargs.get("task", str(kwargs)))
+
+        # Check adapter's execute_oneshot method (preferred)
+        if hasattr(self._adapter, "execute_oneshot"):
+            result = await self._adapter.execute_oneshot(
+                self._name,
+                message,
+                **{k: v for k, v in kwargs.items() if k not in ("message", "task")},
+            )
+            # Handle CliExecutionResult
+            if hasattr(result, "success"):
+                if result.success:
+                    return result.content
+                else:
+                    return f"Error: {result.error}"
+            return result
+
+        # Fallback to interact method (daemon mode)
         return await self._adapter.interact(self._name, message)
 
     async def health(self) -> bool:
         return await self._adapter.health_check(self._name)
+
+
+class BuiltInAgentCapabilityProvider:
+    """Wraps a built-in subagent (BrowserUseAgent, TacitusAgent) as a capability provider.
+
+    This provider lazily instantiates the agent on first invocation and caches it
+    for subsequent calls. Built-in agents run in-process and share the parent's
+    LLM client infrastructure.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        agent_factory: Any,
+        *,
+        agent_type: str = "builtin",
+        description: str = "",
+        task_types: list[str] | None = None,
+    ) -> None:
+        self._name = name
+        self._agent_factory = agent_factory
+        self._agent_type = agent_type
+        self._agent_instance: Any = None
+        self._descriptor = CapabilityDescriptor(
+            capability_id=f"builtin_agent:{name}",
+            version="1.0.0",
+            capability_type=CapabilityType.AGENT,
+            description=description or f"Built-in subagent: {name}",
+            determinism=DeterminismClass.STOCHASTIC,
+            side_effects=SideEffectClass.EFFECTFUL,
+            latency=LatencyClass.BATCH,
+            tags=["builtin_subagent", f"agent:{name}", agent_type] + (task_types or []),
+        )
+
+    @property
+    def descriptor(self) -> CapabilityDescriptor:
+        return self._descriptor
+
+    @property
+    def agent(self) -> Any:
+        return self._agent_instance
+
+    async def invoke(self, **kwargs: Any) -> Any:
+        """Invoke the built-in agent with the given task.
+
+        The agent is lazily created on first invocation.
+        """
+        if self._agent_instance is None:
+            try:
+                factory_result = self._agent_factory()
+                # Handle both sync and async factories
+                if hasattr(factory_result, "__await__"):
+                    self._agent_instance = await factory_result
+                else:
+                    self._agent_instance = factory_result
+            except Exception as exc:
+                logger.error("Failed to create built-in agent '%s': %s", self._name, exc)
+                raise RuntimeError(f"Failed to create built-in agent '{self._name}': {exc}") from exc
+
+        message = kwargs.get("message", kwargs.get("task", str(kwargs)))
+
+        # Try different invocation patterns
+        try:
+            if hasattr(self._agent_instance, "arun"):
+                result = await self._agent_instance.arun(message)
+            elif hasattr(self._agent_instance, "research"):
+                # TacitusAgent uses research() method
+                result = await self._agent_instance.research(message)
+                # ResearchOutput has a content attribute
+                if hasattr(result, "content"):
+                    result = result.content
+            elif hasattr(self._agent_instance, "run"):
+                # Check if run is async
+                import inspect
+
+                if inspect.iscoroutinefunction(self._agent_instance.run):
+                    result = await self._agent_instance.run(message)
+                else:
+                    result = self._agent_instance.run(message)
+            else:
+                raise RuntimeError(f"Agent '{self._name}' has no run/arun/research method")
+            return result
+        except Exception as exc:
+            logger.error("Built-in agent '%s' invocation failed: %s", self._name, exc)
+            raise
+
+    async def health(self) -> bool:
+        """Built-in agents are always healthy (in-process)."""
+        return True

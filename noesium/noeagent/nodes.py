@@ -155,6 +155,7 @@ async def execute_step_node(
         "tool": "Prefer using a tool for this step (atomic operation).",
         "subagent": "Consider delegating to a child agent for this step (multi-step reasoning).",
         "cli_subagent": "Consider delegating to an external CLI agent for this step.",
+        "builtin_agent": "Consider delegating to a built-in specialized agent (browser_use, tacitus) for this step.",
         "auto": "Choose the best approach (tool, subagent, or direct answer).",
     }.get(hint, "Choose the best approach.")
 
@@ -364,6 +365,47 @@ async def subagent_node(
                 result = "CLI subagent adapter not configured."
             else:
                 result = await cli_adapter.terminate(sa.name)
+        elif sa.action == "invoke_builtin":
+            # Invoke a built-in specialized agent via the registry
+            registry = getattr(agent, "_registry", None)
+            if registry is None:
+                result = "Capability registry not configured."
+            else:
+                try:
+                    # Built-in agents are registered as "builtin_agent:{name}"
+                    cap_id = f"builtin_agent:{sa.name}"
+                    provider = registry.get_by_name(cap_id)
+                    result = await provider.invoke(message=sa.message)
+                except Exception as exc:
+                    result = f"Failed to invoke built-in agent '{sa.name}': {exc}"
+        elif sa.action == "invoke_cli":
+            # Invoke CLI subagent (oneshot or daemon mode via unified interface)
+            cli_adapter = getattr(agent, "_cli_adapter", None)
+            if cli_adapter is None:
+                result = "CLI subagent adapter not configured."
+            else:
+                # Build kwargs from SubagentAction options
+                invoke_kwargs = {"message": sa.message}
+                if sa.allowed_tools is not None:
+                    invoke_kwargs["allowed_tools"] = sa.allowed_tools
+                if sa.skip_permissions is not None:
+                    invoke_kwargs["skip_permissions"] = sa.skip_permissions
+
+                try:
+                    # Try execute_oneshot first (preferred for CLI agents like Claude)
+                    if hasattr(cli_adapter, "execute_oneshot"):
+                        exec_result = await cli_adapter.execute_oneshot(sa.name, sa.message, **invoke_kwargs)
+                        # Handle CliExecutionResult
+                        if hasattr(exec_result, "success"):
+                            result = exec_result.content if exec_result.success else f"Error: {exec_result.error}"
+                        else:
+                            result = str(exec_result)
+                    else:
+                        # Fallback to interact (daemon mode)
+                        result = await cli_adapter.interact(sa.name, sa.message)
+                except Exception as exc:
+                    logger.warning("CLI invocation '%s' failed: %s", sa.name, exc)
+                    result = f"Failed to invoke CLI agent '{sa.name}': {exc}"
         else:
             result = f"Unknown subagent action: {sa.action}"
     except Exception as exc:

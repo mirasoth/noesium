@@ -165,14 +165,23 @@ class AgentSubagentConfig(BaseModel):
 class CliSubagentConfig(BaseModel):
     """CLI subagent configuration.
 
+    Supports two execution modes:
+    - daemon: Long-lived persistent process with bidirectional JSON streaming
+    - oneshot: Single execution per request, process exits after completion
+
     Attributes:
         name: Subagent identifier
         command: Executable command
         args: Command arguments
         env: Environment variables
         timeout: Timeout in seconds
-        restart_policy: Restart behavior
+        restart_policy: Restart behavior (daemon mode only)
         task_types: Supported task types
+        mode: Execution mode - 'daemon' or 'oneshot'
+        output_format: Expected output format from the CLI
+        input_format: Input format to send to the CLI (oneshot mode)
+        allowed_tools: Tools to allow in the CLI session
+        skip_permissions: Skip permission prompts (automation mode)
     """
 
     name: str
@@ -182,6 +191,11 @@ class CliSubagentConfig(BaseModel):
     timeout: int = 300
     restart_policy: str = "on-failure"
     task_types: List[str] = Field(default_factory=list)
+    mode: str = "oneshot"  # "daemon" or "oneshot"
+    output_format: str = "text"  # "text", "json", "stream-json", "ndjson"
+    input_format: str = "text"  # "text", "stream-json"
+    allowed_tools: List[str] = Field(default_factory=list)
+    skip_permissions: bool = True  # For automation workflows
 
 
 class SubagentsConfig(BaseModel):

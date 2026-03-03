@@ -34,14 +34,16 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         llm: BaseLLMClient | None = None,
         browser_profile: BrowserProfile | None = None,
         use_vision: bool = True,
+        headless: bool = True,
         **kwargs,
     ):
         """Initialize the BrowserUseAgent.
 
         Args:
             llm: LLM client to use. If None, uses default noesium LLM client.
-            browser_profile: Browser configuration profile.
+            browser_profile: Browser configuration profile. If None, creates one with headless mode.
             use_vision: Whether to use vision capabilities.
+            headless: Whether to run browser in headless mode (default: True).
             **kwargs: Additional arguments passed to the underlying Agent.
         """
         super().__init__(llm_provider="openai", model_name=None)  # Will be overridden
@@ -51,7 +53,14 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
 
             llm = get_llm_client(structured_output=True)
 
-        self.browser_profile = browser_profile or BrowserProfile()
+        # Create default browser profile with headless mode if not provided
+        if browser_profile is None:
+            browser_profile = BrowserProfile(headless=headless)
+        elif browser_profile.headless is None:
+            # Ensure headless is set if profile was provided but headless is None
+            browser_profile.headless = headless
+
+        self.browser_profile = browser_profile
         self.use_vision = use_vision
         self._llm_client = llm
         self._underlying_agent: Agent | None = None

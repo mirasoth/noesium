@@ -3,6 +3,8 @@
 Tests cover:
 - BrowserUse subagent integration
 - CLI subagent integration (Claude CLI mock)
+- One-shot CLI execution mode
+- Claude CLI adapter
 """
 
 from __future__ import annotations
@@ -495,3 +497,729 @@ class TestSubagentProgressEvents:
 
         assert event.type == ProgressEventType.SUBAGENT_END
         assert "completed" in event.summary.lower()
+
+
+# ---------------------------------------------------------------------------
+# Built-in Agent Subagent Tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuiltInAgentCapabilityProvider:
+    """Tests for BuiltInAgentCapabilityProvider."""
+
+    @pytest.mark.unit
+    def test_provider_descriptor_creation(self):
+        """BuiltInAgentCapabilityProvider should create correct descriptor."""
+        from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
+
+        def mock_factory():
+            return MagicMock()
+
+        provider = BuiltInAgentCapabilityProvider(
+            name="browser_use",
+            agent_factory=mock_factory,
+            agent_type="browser_use",
+            description="Browser automation agent",
+        )
+
+        assert provider.descriptor.capability_id == "builtin_agent:browser_use"
+        assert provider.descriptor.capability_type.value == "agent"
+        assert "browser_use" in provider.descriptor.tags
+        assert provider.descriptor.stateful is True
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_provider_invoke_creates_agent(self):
+        """BuiltInAgentCapabilityProvider should lazily create agent on invoke."""
+        from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
+
+        mock_agent = MagicMock()
+        mock_agent.arun = AsyncMock(return_value="Task completed")
+
+        factory_called = False
+
+        def mock_factory():
+            nonlocal factory_called
+            factory_called = True
+            return mock_agent
+
+        provider = BuiltInAgentCapabilityProvider(
+            name="test_agent",
+            agent_factory=mock_factory,
+        )
+
+        # Agent should not be created yet
+        assert provider.agent is None
+        assert not factory_called
+
+        # Invoke should create and use the agent
+        result = await provider.invoke(message="Test task")
+
+        assert factory_called
+        assert provider.agent is mock_agent
+        assert result == "Task completed"
+        mock_agent.arun.assert_awaited_once_with("Test task")
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_provider_health_always_true(self):
+        """BuiltInAgentCapabilityProvider health should always return True."""
+        from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
+
+        provider = BuiltInAgentCapabilityProvider(
+            name="test_agent",
+            agent_factory=lambda: MagicMock(),
+        )
+
+        assert await provider.health() is True
+
+
+class TestBuiltInAgentSubagentSetup:
+    """Tests for NoeAgent._setup_agent_subagents()."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_setup_agent_subagents_registers_providers(self, minimal_config_with_subagents):
+        """_setup_agent_subagents should register built-in agents in the registry."""
+        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.noeagent.agent import NoeAgent
+
+        agent = NoeAgent(minimal_config_with_subagents)
+        agent._registry = CapabilityRegistry()
+        agent.llm = MagicMock()
+
+        await agent._setup_agent_subagents()
+
+        # Should have registered browser_use as builtin_agent:browser_use
+        provider = agent._registry.get_by_name("builtin_agent:browser_use")
+        assert provider is not None
+        assert provider.descriptor.capability_type.value == "agent"
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_setup_agent_subagents_skips_disabled(self):
+        """_setup_agent_subagents should skip disabled subagents."""
+        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.noeagent.agent import NoeAgent
+
+        config = NoeConfig(
+            mode=NoeMode.AGENT,
+            agent_subagents=[
+                AgentSubagentConfig(
+                    name="browser_use",
+                    agent_type="browser_use",
+                    enabled=False,
+                ),
+            ],
+            enable_session_logging=False,
+        )
+
+        agent = NoeAgent(config)
+        agent._registry = CapabilityRegistry()
+        agent.llm = MagicMock()
+
+        await agent._setup_agent_subagents()
+
+        # Should not have registered the disabled subagent
+        with pytest.raises(Exception):  # CapabilityNotFoundError
+            agent._registry.get_by_name("builtin_agent:browser_use")
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_setup_agent_subagents_handles_unknown_type(self):
+        """_setup_agent_subagents should skip unknown agent types."""
+        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.noeagent.agent import NoeAgent
+
+        config = NoeConfig(
+            mode=NoeMode.AGENT,
+            agent_subagents=[
+                AgentSubagentConfig(
+                    name="unknown_agent",
+                    agent_type="unknown_type",
+                    enabled=True,
+                ),
+            ],
+            enable_session_logging=False,
+        )
+
+        agent = NoeAgent(config)
+        agent._registry = CapabilityRegistry()
+        agent.llm = MagicMock()
+
+        # Should not raise, just log warning
+        await agent._setup_agent_subagents()
+
+        # Registry should be empty
+        assert len(agent._registry.list_providers()) == 0
+
+
+class TestInvokeBuiltinAction:
+    """Tests for invoke_builtin subagent action."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_invoke_builtin_action(self):
+        """invoke_builtin action should invoke the built-in agent."""
+        from langchain_core.messages import AIMessage
+
+        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.noeagent.agent import NoeAgent
+        from noesium.noeagent.nodes import subagent_node
+        from noesium.noeagent.state import AgentState
+
+        # Create mock agent and registry
+        agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
+        agent._registry = CapabilityRegistry()
+
+        # Create mock provider
+        mock_provider = MagicMock()
+        mock_provider.invoke = AsyncMock(return_value="Browser task completed")
+        agent._registry._by_name["builtin_agent:browser_use"] = mock_provider
+
+        # Create state with invoke_builtin action
+        state: AgentState = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    additional_kwargs={
+                        "subagent_action": {
+                            "action": "invoke_builtin",
+                            "name": "browser_use",
+                            "message": "Navigate to example.com",
+                        }
+                    },
+                )
+            ],
+            "iteration": 0,
+            "tool_results": [],
+        }
+
+        result = await subagent_node(state, agent=agent)
+
+        assert "tool_results" in result
+        assert len(result["tool_results"]) == 1
+        assert "browser_use" in result["tool_results"][0]["tool"]
+        mock_provider.invoke.assert_awaited_once_with(message="Navigate to example.com")
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_invoke_builtin_missing_agent(self):
+        """invoke_builtin should handle missing agent gracefully."""
+        from langchain_core.messages import AIMessage
+
+        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.noeagent.agent import NoeAgent
+        from noesium.noeagent.nodes import subagent_node
+        from noesium.noeagent.state import AgentState
+
+        agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
+        agent._registry = CapabilityRegistry()
+
+        state: AgentState = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    additional_kwargs={
+                        "subagent_action": {
+                            "action": "invoke_builtin",
+                            "name": "nonexistent",
+                            "message": "Test",
+                        }
+                    },
+                )
+            ],
+            "iteration": 0,
+            "tool_results": [],
+        }
+
+        result = await subagent_node(state, agent=agent)
+
+        assert "failed" in result["tool_results"][0]["result"].lower()
+
+
+# ---------------------------------------------------------------------------
+# One-shot CLI Mode Tests
+# ---------------------------------------------------------------------------
+
+
+class TestOneshotCliMode:
+    """Tests for one-shot CLI execution mode."""
+
+    @pytest.mark.unit
+    def test_cli_config_oneshot_mode_default(self):
+        """CliSubagentConfig should default to oneshot mode."""
+        config = CliSubagentConfig(
+            name="test",
+            command="test",
+        )
+        assert config.mode == "oneshot"
+        assert config.output_format == "text"
+        assert config.skip_permissions is True
+
+    @pytest.mark.unit
+    def test_cli_config_daemon_mode(self):
+        """CliSubagentConfig should support daemon mode."""
+        config = CliSubagentConfig(
+            name="test",
+            command="test",
+            mode="daemon",
+            output_format="stream-json",
+        )
+        assert config.mode == "daemon"
+        assert config.output_format == "stream-json"
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_oneshot_execution_mock(self):
+        """Test oneshot execution with mocked subprocess."""
+        from noesium.noeagent.cli_adapter import ExternalCliAdapter
+
+        adapter = ExternalCliAdapter()
+
+        config = CliSubagentConfig(
+            name="echo-cli",
+            command="echo",
+            mode="oneshot",
+            output_format="text",
+            timeout=10,
+        )
+        adapter.register_config(config)
+
+        # Mock the subprocess execution
+        with patch.object(asyncio, "create_subprocess_exec", new_callable=AsyncMock) as mock_spawn:
+            mock_proc = MagicMock()
+            mock_proc.stdin = MagicMock()
+            mock_proc.stdin.write = MagicMock()
+            mock_proc.stdin.drain = AsyncMock()
+            mock_proc.stdin.close = MagicMock()
+            mock_proc.stdout = MagicMock()
+            mock_proc.stderr = MagicMock()
+            mock_proc.communicate = AsyncMock(return_value=(b"Hello World", b""))
+            mock_proc.returncode = 0
+            mock_spawn.return_value = mock_proc
+
+            result = await adapter.execute_oneshot("echo-cli", "Hello World")
+
+            assert result.success is True
+            assert "Hello World" in result.content
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_oneshot_execution_timeout(self):
+        """Test oneshot execution timeout handling."""
+        from noesium.noeagent.cli_adapter import ExternalCliAdapter
+
+        adapter = ExternalCliAdapter()
+
+        config = CliSubagentConfig(
+            name="slow-cli",
+            command="sleep",
+            mode="oneshot",
+            timeout=1,  # 1 second timeout
+        )
+        adapter.register_config(config)
+
+        with patch.object(asyncio, "create_subprocess_exec", new_callable=AsyncMock) as mock_spawn:
+            mock_proc = MagicMock()
+            mock_proc.stdin = MagicMock()
+            mock_proc.stdin.write = MagicMock()
+            mock_proc.stdin.drain = AsyncMock()
+            mock_proc.stdin.close = MagicMock()
+            mock_proc.kill = MagicMock()
+            mock_proc.wait = AsyncMock()
+            mock_proc.communicate = AsyncMock(side_effect=asyncio.TimeoutError())
+            mock_spawn.return_value = mock_proc
+
+            result = await adapter.execute_oneshot("slow-cli", "test")
+
+            assert result.success is False
+            assert "timed out" in result.error.lower()
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_oneshot_execution_command_not_found(self):
+        """Test oneshot execution with missing command."""
+        from noesium.noeagent.cli_adapter import ExternalCliAdapter
+
+        adapter = ExternalCliAdapter()
+
+        config = CliSubagentConfig(
+            name="missing-cli",
+            command="this-command-does-not-exist-12345",
+            mode="oneshot",
+        )
+        adapter.register_config(config)
+
+        with patch.object(asyncio, "create_subprocess_exec", new_callable=AsyncMock) as mock_spawn:
+            mock_spawn.side_effect = FileNotFoundError("Command not found")
+
+            result = await adapter.execute_oneshot("missing-cli", "test")
+
+            assert result.success is False
+            assert "not found" in result.error.lower()
+
+
+# ---------------------------------------------------------------------------
+# Output Parser Tests
+# ---------------------------------------------------------------------------
+
+
+class TestOutputParser:
+    """Tests for CLI output parsing."""
+
+    @pytest.mark.unit
+    def test_parse_text_output(self):
+        """Test plain text output parsing."""
+        from noesium.noeagent.cli_adapter import OutputParser
+
+        raw = b"Hello, this is plain text output.\n"
+        result = OutputParser.parse(raw, "text")
+        assert result == "Hello, this is plain text output."
+
+    @pytest.mark.unit
+    def test_parse_json_output(self):
+        """Test single JSON object parsing."""
+        from noesium.noeagent.cli_adapter import OutputParser
+
+        raw = b'{"content": "Hello from JSON"}'
+        result = OutputParser.parse(raw, "json")
+        assert result == "Hello from JSON"
+
+    @pytest.mark.unit
+    def test_parse_ndjson_output(self):
+        """Test NDJSON streaming output parsing."""
+        from noesium.noeagent.cli_adapter import OutputParser
+
+        raw = b'{"content": "Hello"}\n{"content": " World"}\n'
+        result = OutputParser.parse(raw, "ndjson")
+        assert result == "Hello World"
+
+    @pytest.mark.unit
+    def test_parse_claude_streaming_format(self):
+        """Test Claude CLI streaming format parsing."""
+        from noesium.noeagent.cli_adapter import OutputParser
+
+        # Simulate Claude CLI stream-json output
+        raw = b"""
+{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
+{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" world"}}
+{"type":"content_block_stop","index":0}
+{"type":"message_stop"}
+""".strip()
+        result = OutputParser.parse(raw, "stream-json")
+        assert result == "Hello world"
+
+
+# ---------------------------------------------------------------------------
+# Claude CLI Adapter Tests
+# ---------------------------------------------------------------------------
+
+
+class TestClaudeCliAdapter:
+    """Tests for specialized Claude CLI adapter."""
+
+    @pytest.mark.unit
+    def test_claude_adapter_config_validation(self):
+        """Claude CLI adapter should validate configuration."""
+        from noesium.noeagent.cli_adapter import ClaudeCliAdapter
+
+        config = CliSubagentConfig(
+            name="claude",
+            command="claude",
+            mode="oneshot",
+            output_format="stream-json",
+            skip_permissions=True,
+        )
+
+        adapter = ClaudeCliAdapter(config)
+        assert adapter.config.name == "claude"
+
+    @pytest.mark.unit
+    def test_build_command_args_oneshot(self):
+        """Claude CLI adapter should build correct command args."""
+        from noesium.noeagent.cli_adapter import ClaudeCliAdapter
+
+        config = CliSubagentConfig(
+            name="claude",
+            command="claude",
+            mode="oneshot",
+            output_format="stream-json",
+        )
+
+        adapter = ClaudeCliAdapter(config)
+        args = adapter.build_command_args("test task")
+
+        # Should include print mode
+        assert "-p" in args
+        # Should include output format
+        assert "--output-format" in args
+        assert "stream-json" in args
+        # Should include verbose (required for stream-json)
+        assert "--verbose" in args
+        # Should skip permissions by default
+        assert "--dangerously-skip-permissions" in args
+
+    @pytest.mark.unit
+    def test_build_command_args_with_tools(self):
+        """Claude CLI adapter should handle allowed tools."""
+        from noesium.noeagent.cli_adapter import ClaudeCliAdapter
+
+        config = CliSubagentConfig(
+            name="claude",
+            command="claude",
+            mode="oneshot",
+            allowed_tools=["Bash", "Edit", "Read"],
+        )
+
+        adapter = ClaudeCliAdapter(config)
+        args = adapter.build_command_args("test task")
+
+        assert "--allowedTools" in args
+        tool_idx = args.index("--allowedTools")
+        assert "Bash,Edit,Read" in args[tool_idx + 1]
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_claude_adapter_execute_mock(self):
+        """Test Claude CLI execution with mocked subprocess."""
+        from noesium.noeagent.cli_adapter import ClaudeCliAdapter
+
+        config = CliSubagentConfig(
+            name="claude",
+            command="claude",
+            mode="oneshot",
+            output_format="stream-json",
+            timeout=60,
+        )
+
+        adapter = ClaudeCliAdapter(config)
+
+        with patch.object(asyncio, "create_subprocess_exec", new_callable=AsyncMock) as mock_spawn:
+            mock_proc = MagicMock()
+            mock_proc.stdin = MagicMock()
+            mock_proc.stdin.write = MagicMock()
+            mock_proc.stdin.drain = AsyncMock()
+            mock_proc.stdin.close = MagicMock()
+            mock_proc.stdout = MagicMock()
+            mock_proc.stderr = MagicMock()
+
+            # Simulate Claude CLI streaming response
+            streaming_output = (
+                '{"type":"content_block_delta","delta":{"text":"Hello"}}\n'
+                '{"type":"content_block_delta","delta":{"text":" from Claude"}}\n'
+            ).encode()
+            mock_proc.communicate = AsyncMock(return_value=(streaming_output, b""))
+            mock_proc.returncode = 0
+            mock_spawn.return_value = mock_proc
+
+            result = await adapter.execute("Say hello")
+
+            assert result.success is True
+            assert "Hello" in result.content
+
+
+# ---------------------------------------------------------------------------
+# invoke_cli Action Tests
+# ---------------------------------------------------------------------------
+
+
+class TestInvokeCliAction:
+    """Tests for invoke_cli subagent action."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_invoke_cli_action_success(self):
+        """invoke_cli action should execute CLI in oneshot mode."""
+        from langchain_core.messages import AIMessage
+
+        from noesium.noeagent.agent import NoeAgent
+        from noesium.noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
+        from noesium.noeagent.nodes import subagent_node
+        from noesium.noeagent.state import AgentState
+
+        agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
+        agent._cli_adapter = ExternalCliAdapter()
+
+        # Register a mock CLI config
+        config = CliSubagentConfig(
+            name="test-cli",
+            command="test",
+            mode="oneshot",
+        )
+        agent._cli_adapter.register_config(config)
+
+        # Mock execute_oneshot
+        mock_result = CliExecutionResult(success=True, content="CLI output here")
+        agent._cli_adapter.execute_oneshot = AsyncMock(return_value=mock_result)
+
+        state: AgentState = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    additional_kwargs={
+                        "subagent_action": {
+                            "action": "invoke_cli",
+                            "name": "test-cli",
+                            "message": "Do something",
+                        }
+                    },
+                )
+            ],
+            "iteration": 0,
+            "tool_results": [],
+        }
+
+        result = await subagent_node(state, agent=agent)
+
+        assert "tool_results" in result
+        assert "CLI output here" in result["tool_results"][0]["result"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_invoke_cli_action_with_options(self):
+        """invoke_cli action should pass allowed_tools option."""
+        from langchain_core.messages import AIMessage
+
+        from noesium.noeagent.agent import NoeAgent
+        from noesium.noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
+        from noesium.noeagent.nodes import subagent_node
+        from noesium.noeagent.state import AgentState
+
+        agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
+        agent._cli_adapter = ExternalCliAdapter()
+
+        config = CliSubagentConfig(
+            name="claude",
+            command="claude",
+            mode="oneshot",
+        )
+        agent._cli_adapter.register_config(config)
+
+        mock_result = CliExecutionResult(success=True, content="Done")
+        agent._cli_adapter.execute_oneshot = AsyncMock(return_value=mock_result)
+
+        state: AgentState = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    additional_kwargs={
+                        "subagent_action": {
+                            "action": "invoke_cli",
+                            "name": "claude",
+                            "message": "Edit file",
+                            "allowed_tools": ["Edit", "Read"],
+                            "skip_permissions": True,
+                        }
+                    },
+                )
+            ],
+            "iteration": 0,
+            "tool_results": [],
+        }
+
+        result = await subagent_node(state, agent=agent)
+
+        # Verify execute_oneshot was called with the options
+        agent._cli_adapter.execute_oneshot.assert_awaited_once()
+        call_kwargs = agent._cli_adapter.execute_oneshot.call_args[1]
+        assert call_kwargs["allowed_tools"] == ["Edit", "Read"]
+        assert call_kwargs["skip_permissions"] is True
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_invoke_cli_action_failure(self):
+        """invoke_cli action should handle execution failure."""
+        from langchain_core.messages import AIMessage
+
+        from noesium.noeagent.agent import NoeAgent
+        from noesium.noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
+        from noesium.noeagent.nodes import subagent_node
+        from noesium.noeagent.state import AgentState
+
+        agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
+        agent._cli_adapter = ExternalCliAdapter()
+
+        config = CliSubagentConfig(
+            name="failing-cli",
+            command="test",
+            mode="oneshot",
+        )
+        agent._cli_adapter.register_config(config)
+
+        mock_result = CliExecutionResult(
+            success=False,
+            error="Command failed with exit code 1",
+        )
+        agent._cli_adapter.execute_oneshot = AsyncMock(return_value=mock_result)
+
+        state: AgentState = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    additional_kwargs={
+                        "subagent_action": {
+                            "action": "invoke_cli",
+                            "name": "failing-cli",
+                            "message": "Do something",
+                        }
+                    },
+                )
+            ],
+            "iteration": 0,
+            "tool_results": [],
+        }
+
+        result = await subagent_node(state, agent=agent)
+
+        assert "Error:" in result["tool_results"][0]["result"]
+
+
+# ---------------------------------------------------------------------------
+# CliAgentCapabilityProvider Tests (Updated)
+# ---------------------------------------------------------------------------
+
+
+class TestCliAgentCapabilityProviderUpdated:
+    """Tests for updated CliAgentCapabilityProvider with mode support."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_provider_oneshot_mode(self):
+        """Provider should execute in oneshot mode."""
+        from noesium.core.capability.providers import CliAgentCapabilityProvider
+        from noesium.noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
+
+        adapter = ExternalCliAdapter()
+        mock_result = CliExecutionResult(success=True, content="Task completed")
+        adapter.execute_oneshot = AsyncMock(return_value=mock_result)
+
+        provider = CliAgentCapabilityProvider(
+            "claude",
+            adapter,
+            mode="oneshot",
+            task_types=["code_edit"],
+        )
+
+        result = await provider.invoke(message="Edit the file")
+
+        assert result == "Task completed"
+        assert provider.mode == "oneshot"
+
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_provider_descriptor_includes_mode(self):
+        """Provider descriptor should include mode in tags."""
+        from noesium.core.capability.providers import CliAgentCapabilityProvider
+        from noesium.noeagent.cli_adapter import ExternalCliAdapter
+
+        adapter = ExternalCliAdapter()
+
+        provider = CliAgentCapabilityProvider(
+            "claude",
+            adapter,
+            mode="oneshot",
+        )
+
+        assert "mode:oneshot" in provider.descriptor.tags
+        assert "oneshot" in provider.descriptor.description

@@ -63,16 +63,29 @@
         "name": "browser_use",
         "agent_type": "browser_use",
         "description": "Web automation agent for browser interaction and DOM manipulation",
+        "task_types": ["web_automation", "form_filling", "scraping"],
         "enabled": true
       },
       {
         "name": "tacitus",
         "agent_type": "tacitus",
         "description": "Research agent with iterative query generation and web search",
+        "task_types": ["research", "information_synthesis", "multi_source_queries"],
         "enabled": true
       }
     ],
-    "cli_subagents": []
+    "cli_subagents": [
+      {
+        "name": "claude",
+        "command": "claude",
+        "mode": "oneshot",
+        "output_format": "stream-json",
+        "timeout": 300,
+        "task_types": ["code_edit", "code_review", "refactoring"],
+        "allowed_tools": ["Bash", "Edit", "Read", "Write"],
+        "skip_permissions": true
+      }
+    ]
   },
   "memory": {
     "providers": ["working", "event_sourced", "memu"],

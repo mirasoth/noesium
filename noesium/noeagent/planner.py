@@ -18,7 +18,7 @@ from .state import TaskPlan, TaskStep
 
 logger = logging.getLogger(__name__)
 
-_VALID_HINTS = {"tool", "subagent", "cli_subagent", "auto"}
+_VALID_HINTS = {"tool", "subagent", "cli_subagent", "builtin_agent", "auto"}
 
 
 class TaskPlanner:
@@ -30,9 +30,13 @@ class TaskPlanner:
         *,
         planning_llm: BaseLLMClient | None = None,
         cli_subagent_names: list[str] | None = None,
+        agent_subagent_names: list[str] | None = None,
+        agent_subagent_configs: list[Any] | None = None,
     ) -> None:
         self._llm = planning_llm or llm_client
         self._cli_subagent_names = cli_subagent_names or []
+        self._agent_subagent_names = agent_subagent_names or []
+        self._agent_subagent_configs = agent_subagent_configs or []
 
     def _cli_info(self) -> str:
         if not self._cli_subagent_names:
@@ -40,11 +44,48 @@ class TaskPlanner:
         names = ", ".join(self._cli_subagent_names)
         return f" (available: {names})"
 
+    def _agent_info(self) -> str:
+        """Format detailed subagent capability information for the planning prompt."""
+        if not self._agent_subagent_configs:
+            # Fallback to simple names if no configs available
+            if not self._agent_subagent_names:
+                return ""
+            names = ", ".join(self._agent_subagent_names)
+            return f" (available: {names})"
+
+        # Build rich capability descriptions
+        lines = []
+        for cfg in self._agent_subagent_configs:
+            # Get attributes safely (handles both dict and object)
+            if isinstance(cfg, dict):
+                name = cfg.get("name", "unknown")
+                desc = cfg.get("description", "")
+                task_types = cfg.get("task_types", [])
+                use_cases = cfg.get("use_cases", [])
+                keywords = cfg.get("keywords", [])
+            else:
+                name = getattr(cfg, "name", "unknown")
+                desc = getattr(cfg, "description", "")
+                task_types = getattr(cfg, "task_types", [])
+                use_cases = getattr(cfg, "use_cases", [])
+                keywords = getattr(cfg, "keywords", [])
+
+            lines.append(f"\n  **{name}**: {desc}")
+            if task_types:
+                lines.append(f"    - Task types: {', '.join(task_types)}")
+            if use_cases:
+                lines.append(f"    - Best for: {'; '.join(use_cases[:3])}")
+            if keywords:
+                lines.append(f"    - Keywords: {', '.join(keywords[:5])}")
+
+        return "\n".join(lines)
+
     async def create_plan(self, goal: str, context: str = "") -> TaskPlan:
         prompt = PLANNING_PROMPT.format(
             goal=goal,
             context=context,
             cli_subagent_info=self._cli_info(),
+            agent_subagent_info=self._agent_info(),
         )
         try:
             raw = self._llm.completion(

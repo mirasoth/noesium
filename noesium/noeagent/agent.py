@@ -89,12 +89,17 @@ class NoeAgent(BaseGraphicAgent):
         if self.config.mode == NoeMode.AGENT:
             await self._setup_capabilities()
             cli_names = [c.name for c in self.config.cli_subagents]
+            enabled_agent_subagents = self.config.get_enabled_agent_subagents()
+            agent_names = [s.name for s in enabled_agent_subagents]
             self._planner = TaskPlanner(
                 self.llm,
                 planning_llm=self._get_planning_llm(),
                 cli_subagent_names=cli_names,
+                agent_subagent_names=agent_names,
+                agent_subagent_configs=enabled_agent_subagents,
             )
             await self._setup_cli_subagents()
+            await self._setup_agent_subagents()
         self._initialized = True
 
     async def reinitialize(self) -> None:
@@ -285,16 +290,97 @@ class NoeAgent(BaseGraphicAgent):
         self._cli_adapter = ExternalCliAdapter()
         for cli_cfg in self.config.cli_subagents:
             try:
+                # Register config and setup provider (supports both oneshot and daemon modes)
                 result = await self._cli_adapter.spawn_from_config(cli_cfg)
                 provider = CliAgentCapabilityProvider(
                     cli_cfg.name,
                     self._cli_adapter,
                     task_types=cli_cfg.task_types,
+                    mode=cli_cfg.mode,
                 )
                 self._registry.register(provider)
-                logger.info("CLI subagent setup: %s", result)
+                logger.info("CLI subagent '%s' registered (mode=%s): %s", cli_cfg.name, cli_cfg.mode, result)
             except Exception as exc:
-                logger.warning("Failed to spawn CLI subagent '%s': %s", cli_cfg.name, exc)
+                logger.warning("Failed to setup CLI subagent '%s': %s", cli_cfg.name, exc)
+
+    async def _setup_agent_subagents(self) -> None:
+        """Set up built-in agent subagents (browser_use, tacitus, etc.).
+
+        This method registers built-in subagents from the config.agent_subagents
+        list as capability providers in the registry, making them available
+        for the NoeAgent to invoke during task execution.
+        """
+        from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
+
+        enabled_subagents = self.config.get_enabled_agent_subagents()
+        if not enabled_subagents:
+            return
+
+        # Map agent_type to factory method
+        agent_factories = {
+            "browser_use": self._create_browser_use_agent,
+            "tacitus": self._create_tacitus_agent,
+        }
+
+        for subagent_cfg in enabled_subagents:
+            factory = agent_factories.get(subagent_cfg.agent_type)
+            if factory is None:
+                logger.warning(
+                    "Unknown agent type '%s' for subagent '%s'",
+                    subagent_cfg.agent_type,
+                    subagent_cfg.name,
+                )
+                continue
+
+            try:
+                provider = BuiltInAgentCapabilityProvider(
+                    name=subagent_cfg.name,
+                    agent_factory=factory,
+                    agent_type=subagent_cfg.agent_type,
+                    description=subagent_cfg.description or f"Built-in {subagent_cfg.agent_type} subagent",
+                    task_types=subagent_cfg.task_types,
+                )
+                self._registry.register(provider)
+                logger.info(
+                    "Registered built-in subagent: %s (type=%s, tasks=%s)",
+                    subagent_cfg.name,
+                    subagent_cfg.agent_type,
+                    subagent_cfg.task_types,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to register built-in subagent '%s': %s",
+                    subagent_cfg.name,
+                    exc,
+                )
+
+    def _create_browser_use_agent(self) -> Any:
+        """Factory method to create a BrowserUseAgent instance.
+
+        Returns:
+            BrowserUseAgent instance configured with the parent's LLM client.
+        """
+        try:
+            from noesium.subagents.bu import BrowserUseAgent
+
+            return BrowserUseAgent(llm=self.llm)
+        except ImportError as exc:
+            logger.error("Failed to import BrowserUseAgent: %s", exc)
+            raise RuntimeError(f"BrowserUseAgent not available: {exc}") from exc
+
+    def _create_tacitus_agent(self) -> Any:
+        """Factory method to create a TacitusAgent instance.
+
+        Returns:
+            TacitusAgent instance configured with the parent's LLM provider.
+        """
+        try:
+            from noesium.subagents.tacitus import TacitusAgent
+
+            return TacitusAgent(llm_provider=self.config.llm_provider)
+        except ImportError as exc:
+            logger.error("Failed to import TacitusAgent: %s", exc)
+            raise RuntimeError(f"TacitusAgent not available: {exc}") from exc
 
     async def _cleanup_subagents(self) -> None:
         self._subagents.clear()

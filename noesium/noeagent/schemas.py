@@ -20,15 +20,34 @@ class ToolCallAction(BaseModel):
 class SubagentAction(BaseModel):
     """Request to spawn or interact with a child agent or external CLI daemon."""
 
-    action: Literal["spawn", "interact", "spawn_cli", "interact_cli", "terminate_cli"] = Field(
+    action: Literal[
+        "spawn",
+        "interact",
+        "spawn_cli",
+        "interact_cli",
+        "terminate_cli",
+        "invoke_builtin",
+        "invoke_cli",
+    ] = Field(
         description=(
             "'spawn'/'interact' for in-process child agents; "
-            "'spawn_cli'/'interact_cli'/'terminate_cli' for external CLI daemon subagents"
+            "'spawn_cli'/'interact_cli'/'terminate_cli' for external CLI daemon subagents; "
+            "'invoke_builtin' for built-in specialized agents (browser_use, tacitus); "
+            "'invoke_cli' for CLI subagent execution (oneshot or daemon mode)"
         ),
     )
     name: str = Field(description="Subagent name (used as identifier)")
     message: str = Field(default="", description="Message/task to send to the subagent")
     mode: str = Field(default="agent", description="Subagent mode: 'ask' or 'agent'")
+    # Additional options for CLI invocation
+    allowed_tools: list[str] | None = Field(
+        default=None,
+        description="Tools to allow in CLI session (e.g., ['Bash', 'Edit', 'Read'])",
+    )
+    skip_permissions: bool | None = Field(
+        default=None,
+        description="Override default permission handling",
+    )
 
 
 class AgentAction(BaseModel):
