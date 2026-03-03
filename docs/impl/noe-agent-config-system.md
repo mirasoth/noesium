@@ -357,10 +357,10 @@ The `subagents` section configures subagent behavior:
 - `description` (string, optional): Description of subagent purpose
 
 **Available Agent Types:**
-- `browser_use` - Web automation and browser control (from `noesium.agents.browser_use`)
-- `tacitus` - Advanced research and analysis (from `noesium.agents.tacitus`)
-- `askura` - Conversation-style agent (from `noesium.agents.askura`)
-- `t2` - Task-specific agents (from `noesium.agents.t2`)
+- `browser_use` - Web automation and browser control (from `noesium.subagents.bu`)
+- `tacitus` - Advanced research and analysis (from `noesium.subagents.tacitus`)
+- `askura` - Conversation-style agent (from `noesium.subagents.askura`)
+- `t2` - Task-specific agents (from `noesium.subagents.t2`)
 
 **CLI Subagent Fields:**
 - `name` (string): Subagent identifier

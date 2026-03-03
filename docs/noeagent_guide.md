@@ -68,7 +68,7 @@ uv run pip install langchain-core langgraph
 
 ```python
 import asyncio
-from noesium.noe import NoeAgent
+from noesium.noeagent import NoeAgent
 
 async def main():
     agent = NoeAgent()
@@ -82,13 +82,13 @@ asyncio.run(main())
 
 ```bash
 # Run the interactive terminal UI
-python -m noesium.noe.tui
+python -m noesium.noeagent.tui
 ```
 
 Or using the environment variable:
 
 ```bash
-NOE_INTERFACE=tui python -m noesium.noe.tui
+NOE_INTERFACE=tui uv run python -m noesium.noeagent.tui
 ```
 
 ## Modes of Operation
@@ -102,7 +102,7 @@ NoeAgent supports three interface modes (configured via `NoeConfig.interface_mod
 
 **Exported Classes:**
 
-The `noesium.noe` module exports the following:
+The `noesium.noeagent` module exports the following:
 
 - `NoeAgent` - Main agent class
 - `NoeConfig` - Configuration class
@@ -132,7 +132,7 @@ The `NoeAgent` class provides a simple API for autonomous research tasks.
 #### Synchronous API
 
 ```python
-from noesium.noe import NoeAgent
+from noesium.noeagent import NoeAgent
 
 agent = NoeAgent()
 result = agent.run("Research the history of artificial intelligence")
@@ -143,7 +143,7 @@ print(result)
 
 ```python
 import asyncio
-from noesium.noe import NoeAgent
+from noesium.noeagent import NoeAgent
 
 async def main():
     agent = NoeAgent()
@@ -158,7 +158,7 @@ asyncio.run(main())
 Create a custom configuration using `NoeConfig`:
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig, NoeMode
+from noesium.noeagent import NoeAgent, NoeConfig, NoeMode
 
 config = NoeConfig(
     mode=NoeMode.AGENT,
@@ -187,7 +187,7 @@ result = agent.run("Your research question")
 | `reflection_interval` | `int` | `3` | Iterations between reflections |
 | `interface_mode` | `str` | `"library"` | `"library"` or `"tui"` |
 | `progress_callbacks` | `list[Callable]` | `[]` | Push-style ProgressCallback instances |
-| `session_log_dir` | `str` | `"~/.noe_agent/sessions"` | JSONL session log directory |
+| `session_log_dir` | `str` | `"~/.noeagent/sessions"` | JSONL session log directory |
 | `enable_session_logging` | `bool` | `True` | Enable JSONL session logging |
 | `enabled_toolkits` | `list[str]` | All 18 toolkits | Enabled toolkits |
 | `mcp_servers` | `list[dict]` | `[]` | MCP server configurations |
@@ -238,7 +238,7 @@ For real-time progress updates, use the `stream()` method (yields final answer t
 
 ```python
 import asyncio
-from noesium.noe import NoeAgent
+from noesium.noeagent import NoeAgent
 
 async def main():
     agent = NoeAgent()
@@ -255,7 +255,7 @@ The primary streaming API. Yields `ProgressEvent` objects with full typing:
 
 ```python
 import asyncio
-from noesium.noe import NoeAgent, ProgressEventType
+from noesium.noeagent import NoeAgent, ProgressEventType
 
 async def main():
     agent = NoeAgent()
@@ -344,7 +344,7 @@ async for event in agent.astream_events("Research AI trends"):
 Library consumers can register push-style callbacks:
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig, ProgressEvent, ProgressCallback
+from noesium.noeagent import NoeAgent, NoeConfig, ProgressEvent, ProgressCallback
 
 class MyCallback:
     async def on_progress(self, event: ProgressEvent) -> None:
@@ -360,11 +360,11 @@ await agent.arun("Research quantum computing")
 JSONL-based session logging that persists all progress events to disk:
 
 ```python
-from noesium.noe import NoeConfig
+from noesium.noeagent import NoeConfig
 
 config = NoeConfig(
     enable_session_logging=True,
-    session_log_dir="~/.noe_agent/sessions",
+    session_log_dir="~/.noeagent/sessions",
 )
 ```
 
@@ -375,7 +375,7 @@ Session logs are written as `.jsonl` files in the configured directory, one JSON
 Add custom Python functions as tools using the `custom_tools` configuration:
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig
+from noesium.noeagent import NoeAgent, NoeConfig
 
 def calculate_fibonacci(n: int) -> dict:
     """Calculate the nth Fibonacci number."""
@@ -404,7 +404,7 @@ result = agent.run("What's the 20th Fibonacci number and the weather in Tokyo?")
 Connect to Model Context Protocol (MCP) servers:
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig
+from noesium.noeagent import NoeAgent, NoeConfig
 
 config = NoeConfig(
     mcp_servers=[
@@ -430,7 +430,7 @@ agent = NoeAgent(config)
 The TUI provides a simple interactive terminal interface:
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig, NoeMode
+from noesium.noeagent import NoeAgent, NoeConfig, NoeMode
 
 agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, interface_mode="tui"))
 agent.run_tui()
@@ -439,7 +439,7 @@ agent.run_tui()
 Or run as a module:
 
 ```bash
-python -m noesium.noe.tui
+python -m noesium.noeagent.tui
 ```
 
 ### TUI Commands
@@ -496,7 +496,7 @@ The full-featured autonomous research mode with:
 - **Memory Persistence**: Stores research results for future reference
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig, NoeMode
+from noesium.noeagent import NoeAgent, NoeConfig, NoeMode
 
 config = NoeConfig(mode=NoeMode.AGENT)
 agent = NoeAgent(config)
@@ -538,7 +538,7 @@ A simplified read-only Q&A mode:
 - **Memory access**: Can retrieve previously stored information
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig, NoeMode
+from noesium.noeagent import NoeAgent, NoeConfig, NoeMode
 
 config = NoeConfig(mode=NoeMode.ASK)
 agent = NoeAgent(config)
@@ -565,7 +565,7 @@ NoeAgent supports two categories of child agents:
 Child `NoeAgent` instances spawned within the same process. The LLM decides when to delegate via the `SubagentAction` schema:
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig
+from noesium.noeagent import NoeAgent, NoeConfig
 
 config = NoeConfig(
     enable_subagents=True,
@@ -581,7 +581,7 @@ result = agent.run("Research both solar and wind energy advantages")
 Long-lived external CLI processes (e.g., Claude Code CLI) that run as persistent daemons. Configured via `CliSubagentConfig`:
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig, CliSubagentConfig
+from noesium.noeagent import NoeAgent, NoeConfig, CliSubagentConfig
 
 config = NoeConfig(
     cli_subagents=[
@@ -616,7 +616,7 @@ The LLM intelligently determines whether to use a tool, an in-process subagent, 
 The `TaskPlan` class represents the agent's execution plan:
 
 ```python
-from noesium.noe import TaskPlan, TaskStep
+from noesium.noeagent import TaskPlan, TaskStep
 
 # TaskPlan attributes
 plan.goal: str                          # The research goal
@@ -654,7 +654,7 @@ NoeAgent supports multiple memory providers:
 | `memu` | Memu long-term memory |
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig
+from noesium.noeagent import NoeAgent, NoeConfig
 
 config = NoeConfig(
     memory_providers=["working", "memu"],
@@ -671,7 +671,7 @@ agent = NoeAgent(config)
 Control what the agent can do with fine-grained permissions:
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig
+from noesium.noeagent import NoeAgent, NoeConfig
 
 # Read-only agent
 config = NoeConfig(
@@ -694,7 +694,7 @@ config = NoeConfig(
 ### Example 1: Simple Research Query
 
 ```python
-from noesium.noe import NoeAgent
+from noesium.noeagent import NoeAgent
 
 agent = NoeAgent()
 result = agent.run("What are the key differences between REST and GraphQL?")
@@ -704,7 +704,7 @@ print(result)
 ### Example 2: File Analysis
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig
+from noesium.noeagent import NoeAgent, NoeConfig
 
 config = NoeConfig(
     permissions=["fs:read"],
@@ -718,7 +718,7 @@ result = agent.run("Analyze the contents of /path/to/report.pdf and summarize ke
 ### Example 3: Data Analysis
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig
+from noesium.noeagent import NoeAgent, NoeConfig
 
 config = NoeConfig(
     enabled_toolkits=["python_executor", "tabular_data"],
@@ -734,7 +734,7 @@ result = agent.run(
 
 ```python
 import asyncio
-from noesium.noe import NoeAgent
+from noesium.noeagent import NoeAgent
 
 async def streaming_research():
     agent = NoeAgent()
@@ -751,7 +751,7 @@ asyncio.run(streaming_research())
 ### Example 5: Ask Mode for Memory Retrieval
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig, NoeMode
+from noesium.noeagent import NoeAgent, NoeConfig, NoeMode
 
 # First, do some research with memory enabled
 agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, persist_memory=True))
@@ -766,7 +766,7 @@ print(answer)
 ### Example 6: Custom Research Workflow
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig
+from noesium.noeagent import NoeAgent, NoeConfig
 
 def search_arxiv(query: str) -> dict:
     """Search arXiv for papers matching the query."""

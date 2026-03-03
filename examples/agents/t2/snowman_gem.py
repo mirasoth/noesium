@@ -2,7 +2,7 @@ import asyncio
 import logging
 from pathlib import Path
 
-from noesium.agents.t2 import T2Agent, parse_yaml_file
+from noesium.subagents.t2 import T2Agent, parse_yaml_file
 
 logger = logging.getLogger(__name__)
 

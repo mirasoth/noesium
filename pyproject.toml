@@ -44,7 +44,7 @@ dependencies = [
 ]
 
 [project.scripts]
-noe-agent = "noesium.noe.__main__:main"
+noeagent = "noesium.noeagent.__main__:main"
 
 [project.optional-dependencies]
 # AI Providers
@@ -136,8 +136,8 @@ include = ["noesium*"]
 
 [tool.setuptools.package-data]
 noesium = [
-    "agents/browser_use/**/*.md",
-    "agents/browser_use/**/*.json",
+    "subagents/bu/**/*.md",
+    "subagents/bu/**/*.json",
 ]
 
 [tool.black]

@@ -8,7 +8,7 @@ The main logic is: initialize → research → display results → save to file
 
 import asyncio
 
-from noesium.agents.tacitus.agent import TacitusAgent
+from noesium.subagents.tacitus.agent import TacitusAgent
 
 
 async def main():

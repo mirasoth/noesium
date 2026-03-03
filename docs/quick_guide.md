@@ -78,7 +78,7 @@ result = client.structured_completion(messages, Answer)
 Autonomous research assistant with planning capabilities:
 
 ```python
-from noesium.noe.agent import NoeAgent
+from noesium.noeagent.agent import NoeAgent
 
 agent = Noet()
 result = await agent.run("Research quantum computing applications")
@@ -89,7 +89,7 @@ result = await agent.run("Research quantum computing applications")
 Web automation agent:
 
 ```python
-from noesium.agents.browser_use.agent import BrowserUseAgent
+from noesium.subagents.bu.agent import BrowserUseAgent
 
 agent = BrowserUseAgent()
 result = await agent.run("Navigate to example.com and extract content")
@@ -100,7 +100,7 @@ result = await agent.run("Navigate to example.com and extract content")
 Advanced research agent with iterative refinement:
 
 ```python
-from noesium.agents.tacitus.agent import TacitusAgent
+from noesium.subagents.tacitus.agent import TacitusAgent
 
 agent = TacitusAgent(max_research_loops=3, number_of_initial_queries=2)
 result = await agent.research("Latest developments in renewable energy")

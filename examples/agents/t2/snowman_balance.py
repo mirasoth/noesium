@@ -4,7 +4,7 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
-from noesium.agents.t2 import T2Agent
+from noesium.subagents.t2 import T2Agent
 
 logger = logging.getLogger(__name__)
 

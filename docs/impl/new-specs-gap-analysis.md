@@ -205,7 +205,7 @@ The Noesium codebase provides a functional agent framework with LangGraph integr
 
 **Current State**: The entire Goalith module (`noesium/core/goalith/`) has been removed as it was deprecated and superseded by the TaskPlanner in `noesium/noe/planner.py`.
 
-**Replacement**: Use `TaskPlanner` from `noesium.noe.planner` for goal decomposition functionality.
+**Replacement**: Use `TaskPlanner` from `noesium.noeagent.planner` for goal decomposition functionality.
 
 ---
 

@@ -13,14 +13,15 @@ Covers:
 
 from __future__ import annotations
 
+import os
 from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
 import pytest
 
 from noesium.core.capability.models import CapabilityDescriptor, CapabilityType
-from noesium.noe.config import NoeConfig, NoeMode
-from noesium.noe.schemas import AgentAction, SubagentAction, ToolCallAction
-from noesium.noe.state import AgentState, TaskPlan, TaskStep
+from noesium.noeagent.config import NoeConfig, NoeMode
+from noesium.noeagent.schemas import AgentAction, SubagentAction, ToolCallAction
+from noesium.noeagent.state import AgentState, TaskPlan, TaskStep
 
 # ---------------------------------------------------------------------------
 # Schema tests
@@ -92,7 +93,7 @@ class TestAgentActionSchema:
 
 class TestRichTUIRendering:
     def test_render_plan_table(self):
-        from noesium.noe.tui import render_plan_table
+        from noesium.noeagent.tui import render_plan_table
 
         plan = TaskPlan(
             goal="Test goal",
@@ -104,12 +105,12 @@ class TestRichTUIRendering:
             ],
         )
         table = render_plan_table(plan)
-        assert table.title == "Plan: Test goal"
+        assert table.title == "📋 Plan: Test goal"
         assert table.row_count == 4
 
     def test_activity_line_tool_start(self):
-        from noesium.noe.progress import ProgressEvent, ProgressEventType
-        from noesium.noe.tui import _activity_line
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.noeagent.tui import _activity_line
 
         evt = ProgressEvent(
             type=ProgressEventType.TOOL_START,
@@ -121,8 +122,8 @@ class TestRichTUIRendering:
         assert "run_bash" in line.plain
 
     def test_activity_line_tool_end(self):
-        from noesium.noe.progress import ProgressEvent, ProgressEventType
-        from noesium.noe.tui import _activity_line
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.noeagent.tui import _activity_line
 
         evt = ProgressEvent(
             type=ProgressEventType.TOOL_END,
@@ -134,8 +135,8 @@ class TestRichTUIRendering:
         assert "run_bash" in line.plain
 
     def test_activity_line_subagent_start(self):
-        from noesium.noe.progress import ProgressEvent, ProgressEventType
-        from noesium.noe.tui import _activity_line
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.noeagent.tui import _activity_line
 
         evt = ProgressEvent(
             type=ProgressEventType.SUBAGENT_START,
@@ -146,6 +147,47 @@ class TestRichTUIRendering:
         assert line is not None
         assert "web-searcher" in line.plain
 
+    def test_render_compact_progress(self):
+        from noesium.noeagent.tui import render_compact_progress
+
+        plan = TaskPlan(
+            goal="Test goal",
+            steps=[
+                TaskStep(description="Step 1", status="completed"),
+                TaskStep(description="Step 2", status="in_progress"),
+                TaskStep(description="Step 3", status="pending"),
+            ],
+        )
+        # Test with completed steps
+        line = render_compact_progress(plan, "Step 2")
+        assert "1/3" in line.plain
+        assert "Step 2" in line.plain
+
+        # Test without current step
+        line = render_compact_progress(plan)
+        assert "1/3" in line.plain
+
+        # Test with no plan
+        line = render_compact_progress(None)
+        assert line.plain == ""
+
+    def test_dynamic_thinking_text(self):
+        from noesium.noeagent.tui import DynamicThinkingText
+
+        t = DynamicThinkingText()
+        # Default phase
+        assert "Thinking" in t.get_text()
+
+        # Planning phase
+        t.set_phase("planning")
+        text = t.get_text()
+        assert any(msg in text for msg in ["Planning", "Breaking", "Creating", "Analyzing"])
+
+        # With context
+        t.set_phase("executing", "step 1")
+        text = t.get_text()
+        assert "step 1" in text
+
 
 class TestSlashCommands:
     def test_exit_command(self):
@@ -153,7 +195,7 @@ class TestSlashCommands:
 
         from rich.console import Console
 
-        from noesium.noe.tui import handle_slash_command
+        from noesium.noeagent.tui import handle_slash_command
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -164,7 +206,7 @@ class TestSlashCommands:
 
         from rich.console import Console
 
-        from noesium.noe.tui import handle_slash_command
+        from noesium.noeagent.tui import handle_slash_command
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -175,7 +217,7 @@ class TestSlashCommands:
 
         from rich.console import Console
 
-        from noesium.noe.tui import handle_slash_command
+        from noesium.noeagent.tui import handle_slash_command
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -186,7 +228,7 @@ class TestSlashCommands:
 
         from rich.console import Console
 
-        from noesium.noe.tui import handle_slash_command
+        from noesium.noeagent.tui import handle_slash_command
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -199,7 +241,7 @@ class TestSlashCommands:
 
         from rich.console import Console
 
-        from noesium.noe.tui import handle_slash_command
+        from noesium.noeagent.tui import handle_slash_command
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -212,7 +254,7 @@ class TestSlashCommands:
 
         from rich.console import Console
 
-        from noesium.noe.tui import handle_slash_command
+        from noesium.noeagent.tui import handle_slash_command
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -223,7 +265,7 @@ class TestSlashCommands:
 
         from rich.console import Console
 
-        from noesium.noe.tui import handle_slash_command
+        from noesium.noeagent.tui import handle_slash_command
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -234,7 +276,7 @@ class TestSlashCommands:
 
         from rich.console import Console
 
-        from noesium.noe.tui import handle_slash_command
+        from noesium.noeagent.tui import handle_slash_command
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -246,7 +288,7 @@ class TestSlashCommands:
 
         from rich.console import Console
 
-        from noesium.noe.tui import handle_slash_command
+        from noesium.noeagent.tui import handle_slash_command
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -257,7 +299,7 @@ class TestSlashCommands:
 
         from rich.console import Console
 
-        from noesium.noe.tui import handle_slash_command
+        from noesium.noeagent.tui import handle_slash_command
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -277,7 +319,7 @@ class TestStreamEvents:
     @pytest.mark.asyncio
     async def test_plan_created_event(self):
         """astream_events yields plan.created when plan node emits a plan."""
-        from noesium.noe.agent import NoeAgent
+        from noesium.noeagent.agent import NoeAgent
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
         plan = TaskPlan(
@@ -311,7 +353,7 @@ class TestStreamEvents:
     @pytest.mark.asyncio
     async def test_final_answer_event(self):
         """astream_events yields final.answer."""
-        from noesium.noe.agent import NoeAgent
+        from noesium.noeagent.agent import NoeAgent
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
 
@@ -341,7 +383,7 @@ class TestStreamEvents:
         """astream_events yields tool.start from AIMessage.tool_calls."""
         from langchain_core.messages import AIMessage
 
-        from noesium.noe.agent import NoeAgent
+        from noesium.noeagent.agent import NoeAgent
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
 
@@ -375,7 +417,7 @@ class TestStreamEvents:
     @pytest.mark.asyncio
     async def test_reflection_event(self):
         """astream_events yields reflection event."""
-        from noesium.noe.agent import NoeAgent
+        from noesium.noeagent.agent import NoeAgent
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
 
@@ -403,7 +445,7 @@ class TestStreamEvents:
     @pytest.mark.asyncio
     async def test_session_lifecycle_events(self):
         """astream_events emits session.start at beginning and session.end at end."""
-        from noesium.noe.agent import NoeAgent
+        from noesium.noeagent.agent import NoeAgent
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
 
@@ -442,12 +484,34 @@ class TestNoeConfig:
         assert "document" in cfg.enabled_toolkits
         assert "image" in cfg.enabled_toolkits
         assert "tabular_data" in cfg.enabled_toolkits
-        assert "video" in cfg.enabled_toolkits
-        assert "user_interaction" in cfg.enabled_toolkits
-        assert "memory" in cfg.enabled_toolkits
         assert "wizsearch" in cfg.enabled_toolkits
+        assert "user_interaction" in cfg.enabled_toolkits
         assert cfg.enable_subagents is True
         assert cfg.interface_mode == "library"
+        assert cfg.load_dotenv is True
+        assert cfg.tui_history_size == 1000
+
+    def test_default_agent_subagents(self):
+        """Test that default agent subagents are loaded."""
+        cfg = NoeConfig()
+        assert len(cfg.agent_subagents) == 2
+
+        browser_use = cfg.get_agent_subagent("browser_use")
+        assert browser_use is not None
+        assert browser_use["agent_type"] == "browser_use"
+        assert browser_use["enabled"] is True
+
+        tacitus = cfg.get_agent_subagent("tacitus")
+        assert tacitus is not None
+        assert tacitus["agent_type"] == "tacitus"
+        assert tacitus["enabled"] is True
+
+    def test_get_enabled_agent_subagents(self):
+        """Test filtering enabled agent subagents."""
+        cfg = NoeConfig()
+        enabled = cfg.get_enabled_agent_subagents()
+        assert len(enabled) == 2
+        assert all(s.enabled for s in enabled)
 
     def test_ask_mode_overrides(self):
         cfg = NoeConfig(mode=NoeMode.ASK).effective()
@@ -460,6 +524,112 @@ class TestNoeConfig:
         cfg = NoeConfig(mode=NoeMode.AGENT).effective()
         assert cfg.max_iterations == 25
         assert len(cfg.enabled_toolkits) > 0
+
+    def test_config_priority_env_overrides_default(self, monkeypatch):
+        """Environment variables should override default values."""
+        monkeypatch.setenv("NOESIUM_LLM_PROVIDER", "ollama")
+        cfg = NoeConfig()
+        assert cfg.llm_provider == "ollama"
+        monkeypatch.delenv("NOESIUM_LLM_PROVIDER")
+
+    def test_load_dotenv_disabled(self, tmp_path, monkeypatch):
+        """Test that dotenv loading can be disabled."""
+        env_file = tmp_path / ".env"
+        env_file.write_text("TEST_VAR_FROM_DOTENV=from_dotenv_value")
+
+        # Make sure the env var is not set
+        monkeypatch.delenv("TEST_VAR_FROM_DOTENV", raising=False)
+
+        cfg = NoeConfig(load_dotenv=False, dotenv_path=str(env_file))
+        cfg.load_dotenv_if_enabled()
+        # Should not load the env file
+        assert os.getenv("TEST_VAR_FROM_DOTENV") is None
+
+    def test_load_dotenv_custom_path(self, tmp_path, monkeypatch):
+        """Test loading dotenv from custom path."""
+        env_file = tmp_path / "custom.env"
+        env_file.write_text("TEST_CUSTOM_DOTENV=custom_value")
+
+        # Make sure the env var is not set
+        monkeypatch.delenv("TEST_CUSTOM_DOTENV", raising=False)
+
+        try:
+            cfg = NoeConfig(load_dotenv=True, dotenv_path=str(env_file))
+            cfg.load_dotenv_if_enabled()
+            assert os.getenv("TEST_CUSTOM_DOTENV") == "custom_value"
+        finally:
+            monkeypatch.delenv("TEST_CUSTOM_DOTENV", raising=False)
+
+    def test_tui_history_config(self):
+        """Test TUI history configuration."""
+        cfg = NoeConfig()
+        assert cfg.tui_history_file.endswith("history.json")
+        assert cfg.tui_history_size == 1000
+
+        custom_cfg = NoeConfig(tui_history_file="/custom/path/history.json", tui_history_size=500)
+        assert custom_cfg.tui_history_file == "/custom/path/history.json"
+        assert custom_cfg.tui_history_size == 500
+
+
+class TestInputHistory:
+    def test_history_add_and_navigate(self, tmp_path):
+        """Test adding to history and navigating."""
+        from noesium.noeagent.tui import InputHistory
+
+        history_file = tmp_path / "history.json"
+        history = InputHistory(str(history_file))
+
+        history.add("first command")
+        history.add("second command")
+
+        # Navigate up
+        assert history.up("") == "second command"
+        assert history.up("") == "first command"
+
+        # Navigate down
+        assert history.down("") == "second command"
+        assert history.down("") == ""
+        assert history.down("") is None
+
+    def test_history_persistence(self, tmp_path):
+        """Test that history persists across instances."""
+        from noesium.noeagent.tui import InputHistory
+
+        history_file = tmp_path / "history.json"
+
+        history1 = InputHistory(str(history_file))
+        history1.add("saved command")
+
+        # Create new instance
+        history2 = InputHistory(str(history_file))
+        assert "saved command" in history2.history
+
+    def test_history_max_size(self, tmp_path):
+        """Test history respects max size."""
+        from noesium.noeagent.tui import InputHistory
+
+        history_file = tmp_path / "history.json"
+        history = InputHistory(str(history_file), max_size=5)
+
+        for i in range(10):
+            history.add(f"command {i}")
+
+        assert len(history.history) == 5
+        assert history.history[0] == "command 5"
+        assert history.history[-1] == "command 9"
+
+    def test_history_no_duplicates(self, tmp_path):
+        """Test that consecutive duplicates are not added."""
+        from noesium.noeagent.tui import InputHistory
+
+        history_file = tmp_path / "history.json"
+        history = InputHistory(str(history_file))
+
+        history.add("same command")
+        history.add("same command")
+        history.add("same command")
+
+        assert len(history.history) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -495,7 +665,7 @@ class TestExecuteStepNode:
     async def test_tool_call_produces_ai_message_with_tool_calls(self):
         from langchain_core.messages import AIMessage, HumanMessage
 
-        from noesium.noe.nodes import execute_step_node
+        from noesium.noeagent.nodes import execute_step_node
 
         mock_llm = MagicMock()
         mock_action = AgentAction(
@@ -526,7 +696,7 @@ class TestExecuteStepNode:
     async def test_text_response_produces_plain_ai_message(self):
         from langchain_core.messages import AIMessage, HumanMessage
 
-        from noesium.noe.nodes import execute_step_node
+        from noesium.noeagent.nodes import execute_step_node
 
         mock_llm = MagicMock()
         mock_action = AgentAction(
@@ -557,7 +727,7 @@ class TestExecuteStepNode:
     async def test_subagent_action_sets_additional_kwargs(self):
         from langchain_core.messages import HumanMessage
 
-        from noesium.noe.nodes import execute_step_node
+        from noesium.noeagent.nodes import execute_step_node
 
         mock_llm = MagicMock()
         mock_action = AgentAction(
@@ -587,7 +757,7 @@ class TestExecuteStepNode:
     async def test_fallback_on_structured_completion_failure(self):
         from langchain_core.messages import HumanMessage
 
-        from noesium.noe.nodes import execute_step_node
+        from noesium.noeagent.nodes import execute_step_node
 
         mock_llm = MagicMock()
         mock_llm.structured_completion = MagicMock(side_effect=Exception("Instructor failed"))
@@ -620,7 +790,7 @@ class TestSubagentNode:
     async def test_spawn_subagent(self):
         from langchain_core.messages import AIMessage, HumanMessage
 
-        from noesium.noe.nodes import subagent_node
+        from noesium.noeagent.nodes import subagent_node
 
         mock_agent = AsyncMock()
         mock_agent.spawn_subagent = AsyncMock(return_value="helper-1")
@@ -659,7 +829,7 @@ class TestSubagentNode:
 class TestTodoPersistence:
     @pytest.mark.asyncio
     async def test_plan_persisted_to_memory(self):
-        from noesium.noe.nodes import _persist_plan_to_memory
+        from noesium.noeagent.nodes import _persist_plan_to_memory
 
         plan = TaskPlan(
             goal="Test",
@@ -675,7 +845,7 @@ class TestTodoPersistence:
 
     @pytest.mark.asyncio
     async def test_plan_persist_skips_when_no_memory(self):
-        from noesium.noe.nodes import _persist_plan_to_memory
+        from noesium.noeagent.nodes import _persist_plan_to_memory
 
         plan = TaskPlan(goal="x", steps=[TaskStep(description="y")])
         await _persist_plan_to_memory(plan, None)
@@ -690,7 +860,7 @@ class TestRouting:
     """Tests for routing logic - require LLM API key for agent initialization."""
 
     def _make_agent(self):
-        from noesium.noe.agent import NoeAgent
+        from noesium.noeagent.agent import NoeAgent
 
         return NoeAgent(NoeConfig(mode=NoeMode.AGENT))
 
@@ -800,7 +970,7 @@ class TestRouting:
 
 class TestToolDescriptions:
     def test_build_tool_descriptions_with_tools(self):
-        from noesium.noe.nodes import _build_tool_descriptions
+        from noesium.noeagent.nodes import _build_tool_descriptions
 
         registry = _mock_registry_with_tools(
             [
@@ -822,7 +992,7 @@ class TestToolDescriptions:
         assert "(required)" in result
 
     def test_build_tool_descriptions_empty(self):
-        from noesium.noe.nodes import _build_tool_descriptions
+        from noesium.noeagent.nodes import _build_tool_descriptions
 
         assert _build_tool_descriptions(None) == "No tools available."
 

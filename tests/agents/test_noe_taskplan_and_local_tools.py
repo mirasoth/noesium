@@ -1,6 +1,6 @@
 """Legacy filename retained; local tools were replaced by toolkit-based tools."""
 
-from noesium.noe.state import TaskPlan, TaskStep
+from noesium.noeagent.state import TaskPlan, TaskStep
 
 
 def test_taskplan_todo_markdown_still_available():

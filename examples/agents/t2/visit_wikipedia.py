@@ -23,9 +23,9 @@ from typing import List
 
 from pydantic import BaseModel
 
-from noesium.agents.t2 import T2Agent
 from noesium.core.llm import get_llm_client
 from noesium.core.utils.logging import get_logger, setup_logging
+from noesium.subagents.t2 import T2Agent
 
 # Setup logging
 setup_logging()

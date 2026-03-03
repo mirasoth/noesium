@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from noesium.agents.t2 import T2Agent
+from noesium.subagents.t2 import T2Agent
 
 logger = logging.getLogger(__name__)
 

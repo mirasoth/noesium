@@ -11,7 +11,7 @@ import time
 from dotenv import load_dotenv
 
 # Noesium-style imports
-from noesium.agents.browser_use import BrowserProfile, BrowserUseAgent
+from noesium.subagents.bu import BrowserProfile, BrowserUseAgent
 
 load_dotenv()
 

@@ -1,5 +1,5 @@
 """
-Unit tests for the noesium.agents.t2.gem_parser module.
+Unit tests for the noesium.subagents.t2.gem_parser module.
 """
 
 import os
@@ -9,7 +9,7 @@ from datetime import datetime
 import pytest
 from pydantic import BaseModel
 
-from noesium.agents.t2 import (
+from noesium.subagents.t2 import (
     CircularReferenceError,
     GemParser,
     GemParserError,

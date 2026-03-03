@@ -93,7 +93,7 @@ NoeAgent
 ├── langgraph.graph.StateGraph
 ├── pydantic.BaseModel
 ├── rich (Console, Live, Panel, Markdown, Spinner, Table, Prompt)
-└── noesium.noe.cli_adapter.ExternalCliAdapter (new)
+└── noesium.noeagent.cli_adapter.ExternalCliAdapter (new)
 ```
 
 ### 2.3 Module Structure
@@ -101,7 +101,7 @@ NoeAgent
 ```
 noesium/noe/
 ├── __init__.py          # Exports NoeAgent, NoeConfig, schemas, progress types
-├── __main__.py          # CLI entrypoint: python -m noesium.noe
+├── __main__.py          # CLI entrypoint: python -m noesium.noeagent
 ├── agent.py             # NoeAgent class, graph building, astream_progress, subagent API
 ├── state.py             # AskState, AgentState, TaskPlan, TaskStep
 ├── schemas.py           # AgentAction, ToolCallAction, SubagentAction
@@ -152,7 +152,7 @@ class NoeConfig(BaseModel):
     custom_tools: list[Callable]
 
     memory_providers: list[str]       # working, event_sourced, memu
-    memu_memory_dir: str = "~/.noe_agent/memory"
+    memu_memory_dir: str = "~/.noeagent/memory"
     memu_user_id: str = "default_user"
     persist_memory: bool = True
 
@@ -164,7 +164,7 @@ class NoeConfig(BaseModel):
 
     # Progress reporting (§5.5, §5.9)
     progress_callbacks: list[Callable] = []
-    session_log_dir: str = "~/.noe_agent/sessions"
+    session_log_dir: str = "~/.noeagent/sessions"
     enable_session_logging: bool = True
 ```
 
@@ -448,7 +448,7 @@ The TUI (`tui.py`) consumes `ProgressEvent` objects from `astream_progress()` an
 ```
 ┌─ NoeAgent ─────────────────────────────────────────────┐
 │  Mode: agent  |  /help  |  /exit                       │
-│  Session log: ~/.noe_agent/sessions/01905b8a-....jsonl  │
+│  Session log: ~/.noeagent/sessions/01905b8a-....jsonl  │
 └────────────────────────────────────────────────────────┘
 
 noe|agent> Analyze the memory system architecture
@@ -549,7 +549,7 @@ class SessionLogger:
 **Auto-registration:** In TUI mode, `run_agent_tui()` automatically creates and registers a `SessionLogger` to the agent's `progress_callbacks`. In library mode, users register their own if desired:
 
 ```python
-from noesium.noe import SessionLogger
+from noesium.noeagent import SessionLogger
 logger = SessionLogger(log_dir="/tmp/my_logs")
 agent = NoeAgent(NoeConfig(progress_callbacks=[logger]))
 ```
@@ -561,7 +561,7 @@ The `ProgressEvent` Pydantic model IS the integration protocol. No separate prot
 **Pull-style** (async generator -- recommended):
 
 ```python
-from noesium.noe import NoeAgent, NoeConfig, ProgressEventType
+from noesium.noeagent import NoeAgent, NoeConfig, ProgressEventType
 
 agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
 async for event in agent.astream_progress("analyze the memory system"):
@@ -693,8 +693,8 @@ For each step, suggest an execution_hint.
 | `enabled_toolkits` | all 18 | Active toolkits |
 | `persist_memory` | `true` | Persist agent results to durable memory |
 | `progress_callbacks` | `[]` | List of async callables / `ProgressCallback` instances |
-| `session_log_dir` | `~/.noe_agent/sessions` | Directory for session JSONL logs |
-| `memu_memory_dir` | `~/.noe_agent/memory` | Directory for Memu persistent memory |
+| `session_log_dir` | `~/.noeagent/sessions` | Directory for session JSONL logs |
+| `memu_memory_dir` | `~/.noeagent/memory` | Directory for Memu persistent memory |
 | `enable_session_logging` | `true` | Auto-register `SessionLogger` in TUI mode |
 | `cli_subagents` | `[]` | External CLI subagent configurations |
 

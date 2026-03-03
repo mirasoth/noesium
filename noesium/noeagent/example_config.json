@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "llm": {
+    "provider": "openai",
+    "providers": {
+      "openai": {
+        "api_key": null,
+        "base_url": null,
+        "chat_model": "gpt-4o",
+        "vision_model": "gpt-4o",
+        "embed_model": "text-embedding-3-small",
+        "structured_output": true
+      },
+      "openrouter": {
+        "api_key": null,
+        "base_url": "https://openrouter.ai/api/v1",
+        "chat_model": "anthropic/claude-sonnet-4",
+        "vision_model": "anthropic/claude-sonnet-4"
+      },
+      "ollama": {
+        "base_url": "http://localhost:11434",
+        "chat_model": "llama3.2",
+        "vision_model": "llava",
+        "embed_model": "nomic-embed-text"
+      }
+    }
+  },
+  "agent": {
+    "mode": "agent",
+    "max_iterations": 25,
+    "max_tool_calls_per_step": 5,
+    "reflection_interval": 3,
+    "planning_model": null,
+    "load_dotenv": true,
+    "dotenv_path": null,
+    "verbose": false
+  },
+  "tools": {
+    "enabled_toolkits": [
+      "bash",
+      "file_edit",
+      "document",
+      "image",
+      "python_executor",
+      "tabular_data",
+      "wizsearch",
+      "user_interaction"
+    ],
+    "toolkit_configs": {},
+    "mcp_servers": [],
+    "permissions": [
+      "fs:read",
+      "fs:write",
+      "net:outbound",
+      "shell:execute"
+    ]
+  },
+  "subagents": {
+    "enabled": true,
+    "max_depth": 2,
+    "agent_subagents": [
+      {
+        "name": "browser_use",
+        "agent_type": "browser_use",
+        "description": "Web automation agent for browser interaction and DOM manipulation",
+        "enabled": true
+      },
+      {
+        "name": "tacitus",
+        "agent_type": "tacitus",
+        "description": "Research agent with iterative query generation and web search",
+        "enabled": true
+      }
+    ],
+    "cli_subagents": []
+  },
+  "memory": {
+    "providers": ["working", "event_sourced", "memu"],
+    "persist": true,
+    "session_logging": true,
+    "session_log_dir": "~/.noeagent/sessions",
+    "memu": {
+      "memory_dir": "~/.noeagent/memory",
+      "user_id": "default_user"
+    },
+    "event_sourced": {
+      "db_path": "~/.noeagent/data/events.db"
+    }
+  },
+  "tracing": {
+    "enabled": false,
+    "provider": "opik",
+    "opik": {
+      "use_local": true,
+      "local_url": "http://localhost:5173",
+      "project_name": "noesium-llm"
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "~/.noeagent/logs/noeagent.log",
+    "rotation": "10 MB",
+    "retention": "7 days"
+  },
+  "tui": {
+    "history_file": "~/.noeagent/history.json",
+    "history_size": 1000
+  },
+  "working_directory": null
+}

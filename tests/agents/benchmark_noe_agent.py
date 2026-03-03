@@ -27,9 +27,9 @@ from typing import Any
 
 import pytest
 
-from noesium.noe.agent import NoeAgent
-from noesium.noe.config import NoeConfig, NoeMode
-from noesium.noe.progress import ProgressEvent, ProgressEventType
+from noesium.noeagent.agent import NoeAgent
+from noesium.noeagent.config import NoeConfig, NoeMode
+from noesium.noeagent.progress import ProgressEvent, ProgressEventType
 
 logger = logging.getLogger(__name__)
 
