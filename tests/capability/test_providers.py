@@ -173,13 +173,42 @@ class TestCliAgentCapabilityProvider:
         assert "code" in d.tags
 
     @pytest.mark.asyncio
-    async def test_invoke_calls_adapter_interact(self):
+    async def test_invoke_calls_adapter_execute_oneshot(self):
+        """Test that invoke prefers execute_oneshot when available."""
         adapter = MagicMock()
+        # Mock execute_oneshot result (preferred path)
+        exec_result = MagicMock()
+        exec_result.success = True
+        exec_result.content = "cli-result"
+        adapter.execute_oneshot = AsyncMock(return_value=exec_result)
+        p = CliAgentCapabilityProvider("claude", adapter)
+        result = await p.invoke(message="Write code")
+        adapter.execute_oneshot.assert_awaited_once_with("claude", "Write code")
+        assert result == "cli-result"
+
+    @pytest.mark.asyncio
+    async def test_invoke_falls_back_to_interact(self):
+        """Test that invoke falls back to interact when execute_oneshot not available."""
+        adapter = MagicMock()
+        # No execute_oneshot method - should fall back to interact
+        del adapter.execute_oneshot
         adapter.interact = AsyncMock(return_value="cli-result")
         p = CliAgentCapabilityProvider("claude", adapter)
         result = await p.invoke(message="Write code")
         adapter.interact.assert_awaited_once_with("claude", "Write code")
         assert result == "cli-result"
+
+    @pytest.mark.asyncio
+    async def test_invoke_handles_oneshot_error(self):
+        """Test that invoke handles execute_oneshot errors."""
+        adapter = MagicMock()
+        exec_result = MagicMock()
+        exec_result.success = False
+        exec_result.error = "Command failed"
+        adapter.execute_oneshot = AsyncMock(return_value=exec_result)
+        p = CliAgentCapabilityProvider("claude", adapter)
+        result = await p.invoke(message="Write code")
+        assert result == "Error: Command failed"
 
     @pytest.mark.asyncio
     async def test_health_delegates_to_adapter(self):

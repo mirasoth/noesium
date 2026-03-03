@@ -58,7 +58,7 @@
   "subagents": {
     "enabled": true,
     "max_depth": 2,
-    "agent_subagents": [
+    "builtin": [
       {
         "name": "browser_use",
         "agent_type": "browser_use",
@@ -74,7 +74,7 @@
         "enabled": true
       }
     ],
-    "cli_subagents": [
+    "external": [
       {
         "name": "claude",
         "command": "claude",

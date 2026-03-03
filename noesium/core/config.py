@@ -204,14 +204,14 @@ class SubagentsConfig(BaseModel):
     Attributes:
         enabled: Enable subagent spawning
         max_depth: Maximum nesting depth
-        agent_subagents: Built-in agent subagent configurations
-        cli_subagents: External CLI subagent daemon configurations
+        builtin: Built-in agent subagent configurations (in-process agents)
+        external: External CLI subagent configurations (spawned processes)
     """
 
     enabled: bool = True
     max_depth: int = 2
-    agent_subagents: List[AgentSubagentConfig] = Field(default_factory=list)
-    cli_subagents: List[CliSubagentConfig] = Field(default_factory=list)
+    builtin: List[AgentSubagentConfig] = Field(default_factory=list)
+    external: List[CliSubagentConfig] = Field(default_factory=list)
 
 
 class MemuMemoryConfig(BaseModel):
@@ -385,15 +385,15 @@ def _normalize_config_data(data: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Normalized configuration data
     """
-    # Ensure subagents.agent_subagents is a list
+    # Ensure subagents.builtin is a list
     subagents = data.get("subagents", {})
-    if isinstance(subagents.get("agent_subagents"), dict):
+    if isinstance(subagents.get("builtin"), dict):
         # Convert dict to empty list (old format had nested config here)
-        subagents["agent_subagents"] = []
+        subagents["builtin"] = []
 
-    # Ensure subagents.cli_subagents is a list
-    if isinstance(subagents.get("cli_subagents"), dict):
-        subagents["cli_subagents"] = []
+    # Ensure subagents.external is a list
+    if isinstance(subagents.get("external"), dict):
+        subagents["external"] = []
 
     # Ensure memory.providers is a list
     memory = data.get("memory", {})

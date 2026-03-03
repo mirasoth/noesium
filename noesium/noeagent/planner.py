@@ -18,7 +18,7 @@ from .state import TaskPlan, TaskStep
 
 logger = logging.getLogger(__name__)
 
-_VALID_HINTS = {"tool", "subagent", "cli_subagent", "builtin_agent", "auto"}
+_VALID_HINTS = {"tool", "subagent", "external_subagent", "builtin_agent", "auto"}
 
 
 class TaskPlanner:
@@ -29,33 +29,33 @@ class TaskPlanner:
         llm_client: BaseLLMClient,
         *,
         planning_llm: BaseLLMClient | None = None,
-        cli_subagent_names: list[str] | None = None,
-        agent_subagent_names: list[str] | None = None,
-        agent_subagent_configs: list[Any] | None = None,
+        external_subagent_names: list[str] | None = None,
+        builtin_subagent_names: list[str] | None = None,
+        builtin_subagent_configs: list[Any] | None = None,
     ) -> None:
         self._llm = planning_llm or llm_client
-        self._cli_subagent_names = cli_subagent_names or []
-        self._agent_subagent_names = agent_subagent_names or []
-        self._agent_subagent_configs = agent_subagent_configs or []
+        self._external_subagent_names = external_subagent_names or []
+        self._builtin_subagent_names = builtin_subagent_names or []
+        self._builtin_subagent_configs = builtin_subagent_configs or []
 
-    def _cli_info(self) -> str:
-        if not self._cli_subagent_names:
+    def _external_info(self) -> str:
+        if not self._external_subagent_names:
             return ""
-        names = ", ".join(self._cli_subagent_names)
+        names = ", ".join(self._external_subagent_names)
         return f" (available: {names})"
 
-    def _agent_info(self) -> str:
+    def _builtin_info(self) -> str:
         """Format detailed subagent capability information for the planning prompt."""
-        if not self._agent_subagent_configs:
+        if not self._builtin_subagent_configs:
             # Fallback to simple names if no configs available
-            if not self._agent_subagent_names:
+            if not self._builtin_subagent_names:
                 return ""
-            names = ", ".join(self._agent_subagent_names)
+            names = ", ".join(self._builtin_subagent_names)
             return f" (available: {names})"
 
         # Build rich capability descriptions
         lines = []
-        for cfg in self._agent_subagent_configs:
+        for cfg in self._builtin_subagent_configs:
             # Get attributes safely (handles both dict and object)
             if isinstance(cfg, dict):
                 name = cfg.get("name", "unknown")
@@ -84,8 +84,8 @@ class TaskPlanner:
         prompt = PLANNING_PROMPT.format(
             goal=goal,
             context=context,
-            cli_subagent_info=self._cli_info(),
-            agent_subagent_info=self._agent_info(),
+            external_subagent_info=self._external_info(),
+            builtin_subagent_info=self._builtin_info(),
         )
         try:
             raw = self._llm.completion(

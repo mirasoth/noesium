@@ -187,11 +187,11 @@ class NoeConfig(BaseModel):
     )
     enable_subagents: bool = True
     subagent_max_depth: int = 2
-    # Built-in agent subagents (browser_use, tacitus, etc.)
-    agent_subagents: list[AgentSubagentConfig] = Field(
+    # Built-in agent subagents (browser_use, tacitus, etc.) - in-process agents
+    builtin: list[AgentSubagentConfig] = Field(
         default_factory=lambda: [AgentSubagentConfig(**s.model_dump()) for s in DEFAULT_AGENT_SUBAGENTS]
     )
-    cli_subagents: list[CliSubagentConfig] = Field(default_factory=list)
+    external: list[CliSubagentConfig] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -224,23 +224,23 @@ class NoeConfig(BaseModel):
         except ImportError:
             pass
 
-    def get_agent_subagent(self, name: str) -> Optional[dict]:
-        """Get agent subagent configuration by name.
+    def get_builtin_subagent(self, name: str) -> Optional[dict]:
+        """Get built-in subagent configuration by name.
 
         Args:
-            name: Name of the agent subagent to retrieve
+            name: Name of the built-in subagent to retrieve
 
         Returns:
             Subagent configuration dict or None if not found
         """
-        for subagent in self.agent_subagents:
+        for subagent in self.builtin:
             if subagent.name == name:
                 return subagent.model_dump()
         return None
 
-    def get_enabled_agent_subagents(self) -> list[AgentSubagentConfig]:
-        """Get list of enabled agent subagents."""
-        return [s for s in self.agent_subagents if s.enabled]
+    def get_enabled_builtin_subagents(self) -> list[AgentSubagentConfig]:
+        """Get list of enabled built-in subagents."""
+        return [s for s in self.builtin if s.enabled]
 
     @classmethod
     def from_global_config(cls) -> "NoeConfig":
@@ -297,15 +297,15 @@ class NoeConfig(BaseModel):
             permissions=global_config.tools.permissions,
             enable_subagents=global_config.subagents.enabled,
             subagent_max_depth=global_config.subagents.max_depth,
-            agent_subagents=[
+            builtin=[
                 AgentSubagentConfig(
                     name=s.name,
                     agent_type=s.agent_type,
                     description=s.description,
                     enabled=True,
                 )
-                for s in global_config.subagents.agent_subagents
+                for s in global_config.subagents.builtin
             ]
             or [AgentSubagentConfig(**s.model_dump()) for s in DEFAULT_AGENT_SUBAGENTS],
-            cli_subagents=[CliSubagentConfig(**s.model_dump()) for s in global_config.subagents.cli_subagents],
+            external=[CliSubagentConfig(**s.model_dump()) for s in global_config.subagents.external],
         )

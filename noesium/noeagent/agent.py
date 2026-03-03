@@ -88,18 +88,18 @@ class NoeAgent(BaseGraphicAgent):
         await self._setup_memory()
         if self.config.mode == NoeMode.AGENT:
             await self._setup_capabilities()
-            cli_names = [c.name for c in self.config.cli_subagents]
-            enabled_agent_subagents = self.config.get_enabled_agent_subagents()
-            agent_names = [s.name for s in enabled_agent_subagents]
+            external_names = [c.name for c in self.config.external]
+            enabled_builtin_subagents = self.config.get_enabled_builtin_subagents()
+            builtin_names = [s.name for s in enabled_builtin_subagents]
             self._planner = TaskPlanner(
                 self.llm,
                 planning_llm=self._get_planning_llm(),
-                cli_subagent_names=cli_names,
-                agent_subagent_names=agent_names,
-                agent_subagent_configs=enabled_agent_subagents,
+                external_subagent_names=external_names,
+                builtin_subagent_names=builtin_names,
+                builtin_subagent_configs=enabled_builtin_subagents,
             )
-            await self._setup_cli_subagents()
-            await self._setup_agent_subagents()
+            await self._setup_external_subagents()
+            await self._setup_builtin_subagents()
         self._initialized = True
 
     async def reinitialize(self) -> None:
@@ -282,13 +282,13 @@ class NoeAgent(BaseGraphicAgent):
         provider = ToolCapabilityProvider(tool, self._tool_executor, self._tool_context)
         self._registry.register(provider)
 
-    async def _setup_cli_subagents(self) -> None:
-        if not self.config.cli_subagents:
+    async def _setup_external_subagents(self) -> None:
+        if not self.config.external:
             return
         from .cli_adapter import ExternalCliAdapter
 
         self._cli_adapter = ExternalCliAdapter()
-        for cli_cfg in self.config.cli_subagents:
+        for cli_cfg in self.config.external:
             try:
                 # Register config and setup provider (supports both oneshot and daemon modes)
                 result = await self._cli_adapter.spawn_from_config(cli_cfg)
@@ -303,16 +303,16 @@ class NoeAgent(BaseGraphicAgent):
             except Exception as exc:
                 logger.warning("Failed to setup CLI subagent '%s': %s", cli_cfg.name, exc)
 
-    async def _setup_agent_subagents(self) -> None:
+    async def _setup_builtin_subagents(self) -> None:
         """Set up built-in agent subagents (browser_use, tacitus, etc.).
 
-        This method registers built-in subagents from the config.agent_subagents
+        This method registers built-in subagents from the config.builtin
         list as capability providers in the registry, making them available
         for the NoeAgent to invoke during task execution.
         """
         from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
 
-        enabled_subagents = self.config.get_enabled_agent_subagents()
+        enabled_subagents = self.config.get_enabled_builtin_subagents()
         if not enabled_subagents:
             return
 

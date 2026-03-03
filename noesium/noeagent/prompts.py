@@ -44,13 +44,13 @@ Each step should be one concrete action (search, analyze, compute, write, etc.).
 
 Return a JSON object with a "steps" array where each element has:
 - "description": string describing the step
-- "execution_hint": one of "tool", "subagent", "cli_subagent", "builtin_agent", or "auto"
+- "execution_hint": one of "tool", "subagent", "external_subagent", "builtin_agent", or "auto"
 
 Available execution modes:
 - tool: Use a tool for atomic operations (search, read, compute)
 - subagent: Delegate to a child agent for multi-step reasoning
-- cli_subagent: Delegate to an external CLI agent (e.g., Claude Code) for specialized tasks{cli_subagent_info}
-- builtin_agent: Delegate to a built-in specialized agent. Choose based on capability match:{agent_subagent_info}
+- external_subagent: Delegate to an external CLI agent (e.g., Claude Code) for specialized tasks{external_subagent_info}
+- builtin_agent: Delegate to a built-in specialized agent. Choose based on capability match:{builtin_subagent_info}
 - auto: Let the agent decide based on context
 
 **Built-in agent selection guidelines:**
@@ -58,8 +58,8 @@ Available execution modes:
 - Use browser_use for: real-time web data, form filling, interactive websites
 - Use tacitus for: multi-source research, information synthesis, complex questions
 
-CLI subagent usage guidelines:
-- Use cli_subagent for tasks requiring external agent capabilities (code review, refactoring)
+External subagent usage guidelines:
+- Use external_subagent for tasks requiring external agent capabilities (code review, refactoring)
 - CLI agents like Claude Code have full file system and shell access
 - They are ideal for code-heavy tasks, multi-file editing, and complex reasoning
 
@@ -95,7 +95,7 @@ Completed results: {completed_results}
 
 Return a revised JSON object with a "steps" array where each element has:
 - "description": string describing the step
-- "execution_hint": one of "tool", "subagent", "cli_subagent", "builtin_agent", or "auto"
+- "execution_hint": one of "tool", "subagent", "external_subagent", "builtin_agent", or "auto"
 """
 
 FINALIZE_PROMPT = """\
