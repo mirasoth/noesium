@@ -10,6 +10,7 @@ from typing import Callable, Dict
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_VIDEO
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -26,7 +27,7 @@ except ImportError:
     GOOGLE_GENAI_AVAILABLE = False
 
 
-@register_toolkit("video")
+@register_toolkit(TOOLKIT_VIDEO)
 class VideoToolkit(AsyncBaseToolkit):
     """
     Toolkit for video analysis and understanding.

@@ -12,6 +12,31 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
+from noesium.core.library_consts import (
+    SUBAGENT_ASKURA,
+    SUBAGENT_BROWSER_USE,
+    SUBAGENT_CLAUDE,
+    SUBAGENT_TACITUS,
+    TOOLKIT_ARXIV,
+    TOOLKIT_AUDIO,
+    TOOLKIT_AUDIO_ALIYUN,
+    TOOLKIT_BASH,
+    TOOLKIT_DOCUMENT,
+    TOOLKIT_FILE_EDIT,
+    TOOLKIT_GITHUB,
+    TOOLKIT_GMAIL,
+    TOOLKIT_IMAGE,
+    TOOLKIT_JINA_RESEARCH,
+    TOOLKIT_MEMORY,
+    TOOLKIT_PYTHON_EXECUTOR,
+    TOOLKIT_SERPER,
+    TOOLKIT_TABULAR_DATA,
+    TOOLKIT_USER_INTERACTION,
+    TOOLKIT_VIDEO,
+    TOOLKIT_WEB_SEARCH,
+    TOOLKIT_WIKIPEDIA,
+)
+
 if TYPE_CHECKING:
     from .agent import NoeAgent
 
@@ -22,36 +47,36 @@ if TYPE_CHECKING:
 # Toolkit display names: technical_name -> (DisplayName, description)
 TOOLKIT_DISPLAY_NAMES: dict[str, tuple[str, str]] = {
     # Search & Research
-    "web_search": ("WebSearch", "Web search with multiple engines"),
-    "jina_research": ("JinaResearch", "Jina AI research tools"),
-    "arxiv": ("ArXiv", "Academic paper search"),
-    "serper": ("Serper", "Google search via Serper API"),
-    "wikipedia": ("Wikipedia", "Wikipedia search and retrieval"),
+    TOOLKIT_WEB_SEARCH: ("WebSearch", "Web search with multiple engines"),
+    TOOLKIT_JINA_RESEARCH: ("JinaResearch", "Jina AI research tools"),
+    TOOLKIT_ARXIV: ("ArXiv", "Academic paper search"),
+    TOOLKIT_SERPER: ("Serper", "Google search via Serper API"),
+    TOOLKIT_WIKIPEDIA: ("Wikipedia", "Wikipedia search and retrieval"),
     # File & Code
-    "file_edit": ("File", "File editing operations"),
-    "bash": ("Bash", "Shell command execution"),
-    "python_executor": ("Python", "Python code execution"),
+    TOOLKIT_FILE_EDIT: ("File", "File editing operations"),
+    TOOLKIT_BASH: ("Bash", "Shell command execution"),
+    TOOLKIT_PYTHON_EXECUTOR: ("Python", "Python code execution"),
     # Data Processing
-    "document": ("Document", "Document processing (PDF, Word)"),
-    "tabular_data": ("Data", "CSV/Excel data processing"),
-    "image": ("Image", "Image processing and generation"),
-    "video": ("Video", "Video processing"),
-    "audio": ("Audio", "Audio processing"),
-    "audio_aliyun": ("AliyunAudio", "Aliyun audio services (TTS/STT)"),
+    TOOLKIT_DOCUMENT: ("Document", "Document processing (PDF, Word)"),
+    TOOLKIT_TABULAR_DATA: ("Data", "CSV/Excel data processing"),
+    TOOLKIT_IMAGE: ("Image", "Image processing and generation"),
+    TOOLKIT_VIDEO: ("Video", "Video processing"),
+    TOOLKIT_AUDIO: ("Audio", "Audio processing"),
+    TOOLKIT_AUDIO_ALIYUN: ("AliyunAudio", "Aliyun audio services (TTS/STT)"),
     # External Services
-    "github": ("GitHub", "GitHub API operations"),
-    "gmail": ("Gmail", "Email operations"),
+    TOOLKIT_GITHUB: ("GitHub", "GitHub API operations"),
+    TOOLKIT_GMAIL: ("Gmail", "Email operations"),
     # Agent Utilities
-    "memory": ("Memory", "Memory management"),
-    "user_interaction": ("UserInteraction", "User input/output"),
+    TOOLKIT_MEMORY: ("Memory", "Memory management"),
+    TOOLKIT_USER_INTERACTION: ("UserInteraction", "User input/output"),
 }
 
 # Subagent display names: technical_name -> DisplayName
 SUBAGENT_DISPLAY_NAMES: dict[str, str] = {
-    "browser_use": "BrowserUse",
-    "tacitus": "Tacitus",
-    "claude": "Claude",
-    "askura": "Askura",
+    SUBAGENT_BROWSER_USE: "BrowserUse",
+    SUBAGENT_TACITUS: "Tacitus",
+    SUBAGENT_CLAUDE: "Claude",
+    SUBAGENT_ASKURA: "Askura",
 }
 
 
@@ -124,7 +149,7 @@ class SubagentCommandType(str, Enum):
 
     BROWSER = "browser"
     RESEARCH = "research"
-    CLAUDE = "claude"
+    CLAUDE = SUBAGENT_CLAUDE
 
 
 @dataclass
@@ -132,16 +157,16 @@ class InlineCommand:
     """Explicit subagent invocation: (subagent_name, message). Built via inline_command_from_subagent."""
 
     command_type: SubagentCommandType
-    subagent_name: str  # Technical name (e.g., "browser_use", "tacitus")
+    subagent_name: str  # Technical name (e.g., SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS)
     message: str  # The message/task for the subagent
     original_input: str  # For display (e.g. "/research <message>")
 
 
 # Map technical subagent name to command type (for explicit invocation)
 _SUBAGENT_NAME_TO_COMMAND_TYPE: dict[str, SubagentCommandType] = {
-    "browser_use": SubagentCommandType.BROWSER,
-    "tacitus": SubagentCommandType.RESEARCH,
-    "claude": SubagentCommandType.CLAUDE,
+    SUBAGENT_BROWSER_USE: SubagentCommandType.BROWSER,
+    SUBAGENT_TACITUS: SubagentCommandType.RESEARCH,
+    SUBAGENT_CLAUDE: SubagentCommandType.CLAUDE,
 }
 
 # Ordered list for TUI selector (1=Main, 2=Browser, 3=Research, 4=Claude)
@@ -184,8 +209,8 @@ def parse_subagent_prefix_from_input(user_input: str) -> tuple[list[str], str]:
     The rest is the message. If no leading digits, returns ([], user_input).
 
     Examples:
-        "2 3 雪球" -> (["browser_use", "tacitus"], "雪球")
-        "2 雪球" -> (["browser_use"], "雪球")
+        "2 3 雪球" -> ([SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS], "雪球")
+        "2 雪球" -> ([SUBAGENT_BROWSER_USE], "雪球")
         "雪球" -> ([], "雪球")
     """
     tokens = user_input.strip().split()
@@ -207,7 +232,7 @@ def inline_command_from_subagent(subagent_name: str, message: str) -> InlineComm
     API field) so the message is never parsed for /command.
 
     Args:
-        subagent_name: Technical name (e.g. "browser_use", "tacitus", "claude")
+        subagent_name: Technical name (e.g. SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS, SUBAGENT_CLAUDE)
         message: Task message for the subagent
 
     Returns:

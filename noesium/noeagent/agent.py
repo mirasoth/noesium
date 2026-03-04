@@ -211,6 +211,7 @@ class NoeAgent(BaseGraphicAgent):
 
         from noesium.core.toolify.base import AsyncBaseToolkit
         from noesium.core.toolify.config import ToolkitConfig
+        from noesium.core.library_consts import SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS
         from noesium.core.toolify.registry import ToolkitRegistry
 
         producer = AgentRef(agent_id=self._agent_id, agent_type="noe")
@@ -372,8 +373,8 @@ class NoeAgent(BaseGraphicAgent):
 
         # Map agent_type to factory method
         agent_factories = {
-            "browser_use": self._create_browser_use_agent,
-            "tacitus": self._create_tacitus_agent,
+            SUBAGENT_BROWSER_USE: self._create_browser_use_agent,
+            SUBAGENT_TACITUS: self._create_tacitus_agent,
         }
 
         for subagent_cfg in enabled_subagents:

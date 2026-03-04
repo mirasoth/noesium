@@ -37,6 +37,7 @@ except ImportError:
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_WEB_SEARCH
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -72,7 +73,7 @@ def _apply_tavily_api_key_from_config(config: dict) -> None:
         os.environ["TAVILY_API_KEY"] = key.strip()
 
 
-@register_toolkit("web_search")
+@register_toolkit(TOOLKIT_WEB_SEARCH)
 class WebSearchToolkit(AsyncBaseToolkit):
     """
     Toolkit for multi-engine web search and page crawling via the wizsearch library.

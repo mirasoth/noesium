@@ -20,6 +20,7 @@ from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_TABULAR_DATA
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -54,7 +55,7 @@ You should extract the file structure (e.g. the delimiter), and provide detailed
 </output_format>"""
 
 
-@register_toolkit("tabular_data")
+@register_toolkit(TOOLKIT_TABULAR_DATA)
 class TabularDataToolkit(AsyncBaseToolkit):
     """
     Toolkit for tabular data analysis and processing.
@@ -104,7 +105,7 @@ class TabularDataToolkit(AsyncBaseToolkit):
         # Configuration
         self.max_file_size = self.config.config.get("max_file_size", 100 * 1024 * 1024)  # 100MB
         self.max_rows_preview = self.config.config.get("max_rows_preview", 1000)
-        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir("tabular_data", "cache")))
+        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir(TOOLKIT_TABULAR_DATA, "cache")))
 
         # Create cache directory
         self.cache_dir.mkdir(parents=True, exist_ok=True)

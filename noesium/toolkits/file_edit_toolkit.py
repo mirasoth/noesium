@@ -15,12 +15,13 @@ from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_FILE_EDIT
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 
-@register_toolkit("file_edit")
+@register_toolkit(TOOLKIT_FILE_EDIT)
 class FileEditToolkit(AsyncBaseToolkit):
     """
     Toolkit for file operations and content management.
@@ -59,7 +60,7 @@ class FileEditToolkit(AsyncBaseToolkit):
 
         # Configuration
         self.work_dir = Path(
-            self.config.config.get("work_dir", get_toolkit_tmp_dir("file_edit", "workspace"))
+            self.config.config.get("work_dir", get_toolkit_tmp_dir(TOOLKIT_FILE_EDIT, "workspace"))
         ).resolve()
         self.default_encoding = self.config.config.get("default_encoding", "utf-8")
         self.backup_enabled = self.config.config.get("backup_enabled", True)
