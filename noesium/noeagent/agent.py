@@ -256,6 +256,11 @@ class NoeAgent(BaseGraphicAgent):
                     toolkit_session_dir = toolkit_session_base / toolkit_name
                     for key, subdir in overrides.items():
                         base_config[key] = str(toolkit_session_dir / subdir)
+
+                # Merge toolkit-specific config from self.config.toolkit_configs
+                toolkit_specific_config = self.config.toolkit_configs.get(toolkit_name, {})
+                base_config.update(toolkit_specific_config)
+
                 toolkit_config = ToolkitConfig(
                     name=toolkit_name,
                     config=base_config,

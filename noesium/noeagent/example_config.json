@@ -45,7 +45,18 @@
       "wizsearch",
       "user_interaction"
     ],
-    "toolkit_configs": {},
+    "toolkit_configs": {
+      "wizsearch": {
+        "enabled_engines": ["tavily"],
+        "max_results_per_engine": 10,
+        "search_timeout": 30,
+        "content_format": "markdown"
+      },
+      "bash": {
+        "timeout": 600,
+        "shell": "/bin/bash"
+      }
+    },
     "mcp_servers": [],
     "permissions": [
       "fs:read",

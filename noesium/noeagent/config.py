@@ -187,6 +187,10 @@ class NoeConfig(BaseModel):
             "user_interaction",
         ],
     )
+    toolkit_configs: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Toolkit-specific configuration overrides. Keys are toolkit names, values are config dicts.",
+    )
     mcp_servers: list[dict[str, Any]] = Field(default_factory=list)
     custom_tools: list[Callable] = Field(default_factory=list)
 
@@ -307,6 +311,10 @@ class NoeConfig(BaseModel):
             tui_history_file=_tui_field(global_config, "history_file", str(_NOE_HOME / "history.json")),
             tui_history_size=_tui_field(global_config, "history_size", 1000),
             enabled_toolkits=global_config.tools.enabled_toolkits,
+            toolkit_configs={
+                name: entry.model_dump(exclude_none=True, exclude={"timeout", "shell", "max_output_length"})
+                for name, entry in global_config.tools.toolkit_configs.items()
+            },
             mcp_servers=[s.model_dump() for s in global_config.tools.mcp_servers],
             memory_providers=global_config.memory.providers,
             memu_memory_dir=global_config.memory.memu.memory_dir,

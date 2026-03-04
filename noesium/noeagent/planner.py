@@ -13,7 +13,7 @@ from typing import Any
 from noesium.core.exceptions import PlanningError
 from noesium.core.llm.base import BaseLLMClient
 
-from .prompts import PLANNING_PROMPT, REVISE_PLAN_PROMPT
+from .prompts import get_prompt_manager
 from .state import TaskPlan, TaskStep
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,9 @@ class TaskPlanner:
         return "\n".join(lines)
 
     async def create_plan(self, goal: str, context: str = "") -> TaskPlan:
-        prompt = PLANNING_PROMPT.format(
+        pm = get_prompt_manager()
+        prompt = pm.render(
+            "planning",
             goal=goal,
             context=context,
             external_subagent_info=self._external_info(),
@@ -114,7 +116,9 @@ class TaskPlanner:
         completed_results: list[str],
     ) -> TaskPlan:
         original_steps = "\n".join(f"  {i + 1}. [{s.status}] {s.description}" for i, s in enumerate(plan.steps))
-        prompt = REVISE_PLAN_PROMPT.format(
+        pm = get_prompt_manager()
+        prompt = pm.render(
+            "revise_plan",
             goal=plan.goal,
             original_steps=original_steps,
             feedback=feedback,

@@ -10,154 +10,121 @@
 
 </div>
 
-**Noesium** is a computation-driven cognitive agentic framework providing foundational abstractions for building autonomous AI agents with planning, memory, tools, and orchestration capabilities.
+**Noesium** is a computation-driven cognitive agentic framework. Use it as a **ready-to-run multi-agent system** (NoeAgent plus subagents) or as a **foundation** to build custom agents with core abstractions and 17+ toolkits.
 
 ## Design Philosophy
 
-Noesium is built on an **Event-Sourced Multi-Agent Kernel Architecture** that prioritizes durability, replayability, and distributed coordination. The core principles include:
+Noesium follows an **event-sourced multi-agent kernel architecture** for durability, replayability, and distributed coordination:
 
-### Single Execution Authority
-Each agent contains exactly one execution authority: the Agent Kernel. All reasoning, planning, branching, retries, tool invocation, and delegation logic occur inside this kernel. No external orchestration layer is permitted to mutate agent state.
+- **Single execution authority** — One Agent Kernel per agent; all reasoning, planning, tool use, and delegation happen inside it. No external layer mutates agent state.
+- **Event-sourced state** — State is derived from an append-only event log. Enables replay, deterministic reconstruction, audit, and crash recovery.
+- **Delegation via events** — Agents publish task events to capability topics; subscribers process them. Loose coupling, capability-based coordination.
+- **Separation of concerns** — Cognition (Kernel), transport (Event Bus), persistence (Event Store), memory (Projection), routing (Topic subscriptions).
 
-### Event-Sourced State
-State is not stored as mutable objects. Instead, every state transition emits an event, the event log is the source of truth, and current state is a projection derived from event history. This ensures replayability, deterministic reconstruction, auditable cognition, and crash recovery.
+Goals: long-running autonomous agents, durable/resumable execution, multi-agent collaboration, horizontal scalability.
 
-### Delegation via Events
-Delegation is modeled as event emission, not direct invocation. An agent expresses intent by publishing a task event to a capability topic. Any agent subscribed to that topic may process the task, enforcing loose coupling and capability-based coordination.
+## Architecture
 
-### Separation of Concerns
-- **Cognition** → Agent Kernel
-- **Transport** → Event Bus
-- **Persistence** → Event Store
-- **Memory Projection** → Projection Layer
-- **Capability Routing** → Topic Subscriptions
+```mermaid
+flowchart TB
+  subgraph framework [Framework]
+    core[core: agent base, llm, toolify, memory, event, vector_store]
+    toolkits[toolkits: 17+ built-in]
+  end
+  subgraph builtin [Built-in multi-agent system]
+    noeAgent[NoeAgent]
+    subagents[BrowserUseAgent, TacitusAgent, AskuraAgent]
+  end
+  framework --> builtin
+  framework -.-> yourAgents[Your custom agents]
+```
 
-### Architectural Goals
-The system supports long-running autonomous agents, infinite reasoning loops, durable/resumable execution, distributed multi-agent collaboration, deterministic replayability, horizontal scalability, and explicit separation of cognition, transport, and persistence.
+- **Framework** — Core modules (`agent` base classes, `llm`, `toolify`, `memory`, `event`, `vector_store`) and 17+ toolkits provide the agentic building blocks.
+- **Built-in multi-agent system** — NoeAgent (orchestrator) and subagents (BrowserUseAgent, TacitusAgent, AskuraAgent) are a reference implementation and directly usable. See [AGENTS.md](AGENTS.md) for details.
 
-## Installation
+## Install
 
 ```bash
 pip install -U noesium
 ```
 
-### Optional Dependencies
+Recommended for full features:
 
 ```bash
-# Recommended: all features
 pip install noesium[all]
+```
 
-# AI providers
+Optional extras:
+
+```bash
 pip install noesium[llm]             # OpenAI, LiteLLM, Instructor
 pip install noesium[local-llm]       # Ollama, LlamaCPP
-pip install noesium[ai-providers-all] # All AI providers
-
-# Frameworks
-pip install noesium[agents]          # LangChain + Bubus
-
-# Tools & data
+pip install noesium[agents]          # LangChain, LangGraph
 pip install noesium[tools]           # 17+ toolkits
-pip install noesium[datascience]     # Pandas, NetworkX
 pip install noesium[browser-use]     # Browser automation
 ```
 
+Use `uv run` for scripts when developing with the repo.
+
 ## Quick Start
 
-### LLM Client
+### 1. Common user — NoeAgent
+
+**Library:**
 
 ```python
-from noesium.core.llm import get_llm_client
+import asyncio
+from noesium import NoeAgent
 
-# Create client (supports openai, openrouter, ollama, llamacpp)
-client = get_llm_client(provider="openai", api_key="sk-...")
+async def main():
+    agent = NoeAgent()
+    result = await agent.arun("What are the latest developments in quantum computing?")
+    print(result)
 
-# Chat completion
-response = client.completion([{"role": "user", "content": "Hello!"}])
-
-# Structured output
-from pydantic import BaseModel
-
-class Answer(BaseModel):
-    text: str
-    confidence: float
-
-client = get_llm_client(provider="openai", structured_output=True)
-result = client.structured_completion(messages, Answer)
+asyncio.run(main())
 ```
 
-### Build an Agent
+**TUI:**
+
+```bash
+python -m noesium.noeagent.tui
+```
+
+Full NoeAgent options, streaming, subagents, and config: [docs/noeagent_guide.md](docs/noeagent_guide.md).
+
+### 2. Developer — Framework
+
+Build a custom agent on the framework:
 
 ```python
-from noesium.core.agent.base import BaseGraphicAgent
+from noesium.core.agent import BaseGraphicAgent
 from noesium.core.llm import get_llm_client
+from noesium.core.toolify import get_toolkit
 
 class MyAgent(BaseGraphicAgent):
     def __init__(self, llm_client=None):
         super().__init__(llm_client or get_llm_client())
 
     def build_graph(self):
-        # Define your agent's workflow graph
+        # Define your LangGraph workflow
         pass
 
 agent = MyAgent()
-result = await agent.run("What is the meaning of life?")
+result = await agent.run("Your task")
 ```
 
-### Use Toolkits
+For full framework usage, custom agents, and toolkits: **[docs/dev_guide.md](docs/dev_guide.md)**.
 
-```python
-from noesium.core.toolify import get_toolkit, ToolkitConfig
-
-# Search toolkit
-search_config = ToolkitConfig(name="search", config={"SERPER_API_KEY": "..."})
-search = get_toolkit("search", search_config)
-results = await search.search_google_api("Python async programming")
-
-# Bash toolkit
-bash = get_toolkit("bash")
-files = await bash.list_directory(".")
-```
-
-## Core Modules
-
-| Module | Description |
-|--------|-------------|
-| **Agents** (`noesium.core.agent`) | BaseAgent, BaseGraphicAgent, BaseHitlAgent, BaseResearcher |
-| **LLM** (`noesium.core.llm`) | Multi-provider support, structured output, token tracking |
-| **Toolify** (`noesium.core.toolify`) | Unified tool system with 17+ built-in toolkits |
-| **Memory** (`noesium.core.memory`) | Multi-tier memory with semantic search |
-| **Event** (`noesium.core.event`) | Domain events, message bus, tracing |
-| **Vector Store** (`noesium.core.vector_store`) | PGVector, Weaviate support |
-
-## Built-in Agents
-
-- **Noe** - Autonomous research assistant with planning, execution, reflection cycles
-- **BrowserUseAgent** - Web automation with DOM interaction and code execution
-- **TacitusAgent** - Advanced research agent with iterative query generation, web search, reflection, and answer synthesis
-
-## Built-in Toolkits
-
-Search, Bash, Memory, Python Executor, ArXiv, Audio, Document, File Edit, GitHub, Gmail, Image, Tabular Data, Video, Wikipedia, and more.
-
-See [AGENTS.md](AGENTS.md) for detailed documentation.
-
-## Environment Variables
+## Environment variables
 
 ```bash
-# LLM Provider
-export NOE_LLM_PROVIDER="openai"
+export NOE_LLM_PROVIDER="openai"   # or openrouter, ollama, llamacpp
 export OPENAI_API_KEY="sk-..."
-
-# Search
-export SERPER_API_KEY="..."
+export SERPER_API_KEY="..."        # for search toolkit
 ```
 
-## Documentation
+## License and support
 
-- **[AGENTS.md](AGENTS.md)** - Detailed agent and toolkit documentation
-- **`specs/`** - Design specifications (RFCs)
-- **`examples/`** - Usage examples
-
-## License
-
-MIT License
+- **License** — MIT.
+- **Documentation** — [AGENTS.md](AGENTS.md), [docs/dev_guide.md](docs/dev_guide.md), [docs/specs/](docs/specs/), [examples/](examples/).
+- **Issues and repo** — [GitHub](https://github.com/mirasoth/noesium).

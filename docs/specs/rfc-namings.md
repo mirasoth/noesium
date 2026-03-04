@@ -2,7 +2,7 @@
 
 Authoritative terminology reference for noesium RFC specifications.
 
-**Last Updated**: 2026-03-03
+**Last Updated**: 2026-03-04
 
 ---
 
@@ -49,6 +49,7 @@ Authoritative terminology reference for noesium RFC specifications.
 | Event Store | RFC-0001 §5.3 | Append-only event log per agent |
 | EventSourcedProvider | RFC-2002 §6.2 | Persistent memory provider wrapping EventStore and CognitiveProjection |
 | Execution Mode | RFC-1001 §12.3 | Configuration: strict (event-mediated), pragmatic (direct), or sandbox |
+| GitHub Client | RFC-9001 §9.3 | Backend service for Git operations (clone, pull, commit, push) |
 | Execution Projection | RFC-0004 §4.3.1 | Strict deterministic projection for workflow state, task graph, retry counters |
 | Federated Projection | RFC-0004 §6.3 | Composite projection across multiple agents |
 | GraphMemoryProvider | RFC-2002 §6.4 | Future memory provider for entity-relation graph storage |
@@ -61,6 +62,7 @@ Authoritative terminology reference for noesium RFC specifications.
 | Memory Provider | RFC-2001 §6.1 | Abstract contract for memory backends with write/read/search/delete |
 | Memory Tier | RFC-2001 §5 | Classification: working, persistent, or indexed |
 | MemuProvider | RFC-2002 §6.3 | Persistent memory provider wrapping MemU file-based memory system |
+| NoeCoder | RFC-9000 §1 | Personal coding assistant webserver built on NoeAgent |
 | Node Result | RFC-1001 §7.1 | Output from a graph node: state_delta + emitted events |
 | OpenSandbox Executor | RFC-1003 §5.3 | Data plane component providing hardened container isolation for tool execution |
 | Partition Key | RFC-0002 §8.2 | Determines event stream partition for ordering guarantees |
@@ -70,10 +72,14 @@ Authoritative terminology reference for noesium RFC specifications.
 | Projection Layer | RFC-0001 §5.4 | Derives current agent state from the event log |
 | Recall Protocol | RFC-2001 §9 | Unified query interface across all memory providers with result merging |
 | Recall Query | RFC-2002 §4.3 | Structured query with scope, content_types, and metadata filters |
+| Repository | RFC-9001 §6.1 | Cloned Git repository with URL, local path, and sync state |
 | Research Agent | RFC-1002 §5.3 | Agent archetype for iterative multi-step research |
 | Semantic Memory | RFC-0004 §5.3 | Indexed retrieval layer derived from durable memory via embeddings |
 | Semantic Projection | RFC-0004 §4.3.3 | Index-based projection constructed from deterministic projection output |
+| Session | RFC-9001 §6.1 | NoeAgent execution session linked to a task |
+| Session Manager | RFC-9001 §10.1 | Service managing NoeAgent instances per repository |
 | Session Worker | RFC-1003 §5.2 | Logical worker representing a user session with memory namespace, execution stack, and capability scope |
+| State Manager | RFC-9001 §9.4 | File-based persistence service for tasks, sessions, and configuration |
 | Side-Effect Class | RFC-0005 §4.1 | Classification: pure, idempotent, or external |
 | Signature Block | RFC-0002 §11 | Optional cryptographic signature covering the canonicalized envelope |
 | Skill | RFC-2003 §9 | Named composition of AtomicTools with input/output contract and orchestration logic |
@@ -81,6 +87,10 @@ Authoritative terminology reference for noesium RFC specifications.
 | State Graph | RFC-0003 §4 | Directed graph declaring workflow nodes and allowed transitions |
 | Subagent | RFC-0006 §5.2 | Isolated execution unit running inside sandbox runtime for external tool execution |
 | SubagentAction | RFC-1005 §12.1 | NoeAgent action for spawning, interacting with, or terminating subagents |
+| Task | RFC-9000 §6.1 | Primary abstraction in NoeCoder; discrete unit of coding work with lifecycle |
+| Task Orchestrator | RFC-9001 §9.2 | Service managing task lifecycle and NoeAgent integration |
+| Task Status | RFC-9001 §6.1 | Lifecycle state: created, planning, executing, reflecting, completed, failed |
+| Task Step | RFC-9001 §6.1 | Individual execution step within a task with status and result |
 | Subagent Call | RFC-1005 §5.1 | Execution modality delegating autonomous reasoning to a cognitive worker |
 | Task Agent | RFC-1002 §5.4 | Agent archetype for linear or branching task execution |
 | Tool Call | RFC-1005 §5.1 | Execution modality invoking a stateless capability as a procedure |
@@ -96,6 +106,8 @@ Authoritative terminology reference for noesium RFC specifications.
 | Trace Context | RFC-0002 §6 | Distributed tracing structure: trace_id, span_id, parent_span_id, depth |
 | Working Memory | RFC-2001 §5.1 | Session-scoped ephemeral memory tier, dict-backed, no IO |
 | WorkingMemoryProvider | RFC-2002 §6.1 | Working memory provider wrapping in-process dict storage |
+| Artifact | RFC-9001 §6.1 | Generated output from a task (code, document, image) with content or file path |
+| CodeChange | RFC-9001 §6.1 | Record of file modification with diff, lines added/removed, and change type |
 
 ---
 

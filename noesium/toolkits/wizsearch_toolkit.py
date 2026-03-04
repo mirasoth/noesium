@@ -54,7 +54,7 @@ class WizSearchToolkit(AsyncBaseToolkit):
     - Web page content crawling via Crawl4AI
 
     Configuration keys (via ToolkitConfig.config):
-    - enabled_engines: list of engine names (default: ["tavily", "duckduckgo"])
+    - enabled_engines: list of engine names (default: ["tavily"])
     - max_results_per_engine: int (default: 10)
     - search_timeout: int seconds (default: 30)
     - content_format: "markdown" | "html" | "text" (default: "markdown")
@@ -63,7 +63,7 @@ class WizSearchToolkit(AsyncBaseToolkit):
     def __init__(self, config: ToolkitConfig = None):
         super().__init__(config)
 
-        self.enabled_engines: List[str] = self.config.config.get("enabled_engines", ["tavily", "duckduckgo"])
+        self.enabled_engines: List[str] = self.config.config.get("enabled_engines", ["tavily"])
         self.max_results_per_engine: int = self.config.config.get("max_results_per_engine", 10)
         self.search_timeout: int = self.config.config.get("search_timeout", 30)
         self.content_format: str = self.config.config.get("content_format", "markdown")

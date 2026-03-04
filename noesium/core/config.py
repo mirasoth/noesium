@@ -110,15 +110,22 @@ class MCPServerConfig(BaseModel):
 class ToolkitConfigEntry(BaseModel):
     """Toolkit-specific configuration.
 
+    Supports both common toolkit settings and toolkit-specific parameters.
+    Toolkit-specific configs are passed directly to the toolkit's config dict.
+
     Attributes:
         timeout: Timeout in seconds
         shell: Shell to use (for bash toolkit)
         max_output_length: Maximum output length
+        **kwargs: Toolkit-specific configuration parameters (e.g., wizsearch.enabled_engines)
     """
 
     timeout: Optional[int] = None
     shell: Optional[str] = None
     max_output_length: Optional[int] = None
+
+    class Config:
+        extra = "allow"  # Allow toolkit-specific fields
 
 
 class ToolsConfig(BaseModel):

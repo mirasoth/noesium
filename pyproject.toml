@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "noesium"
-version = "0.3.2"
+version = "0.3.3"
 description = "Towards a cognitive agentic framework"
 readme = "README.md"
 license = "MIT"
@@ -57,7 +57,7 @@ google = [
 aliyun = ["aliyun-python-sdk-core>=2.13.1,<3.0.0"]
 llm = ["litellm>=1.0.0", "openai>=1.0.0", "instructor>=1.10.0"]
 local-llm = ["ollama>=0.5.3", "llama-cpp-python>=0.3.16", "huggingface-hub>=0.34.4"]
-ai-providers-all = ["noesium[google,aliyun,llm,local-llm]"]
+all-llm = ["noesium[google,aliyun,llm,local-llm]"]
 
 # Frameworks
 langchain = [
@@ -108,7 +108,7 @@ browser-use = [
 
 # Full installation for power users
 all = [
-    "noesium[ai-providers-all,agents,postgres,weaviate,tools,browser-use]"
+    "noesium[all-llm,agents,postgres,weaviate,tools,browser-use]"
 ]
 
 dev = [
@@ -137,6 +137,7 @@ include = ["noesium*"]
 
 [tool.setuptools.package-data]
 noesium = [
+    "noeagent/prompts/*.md",
     "subagents/bu/**/*.md",
     "subagents/bu/**/*.json",
 ]

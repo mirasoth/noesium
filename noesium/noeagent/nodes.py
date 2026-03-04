@@ -8,12 +8,7 @@ from typing import Any
 
 from noesium.core.memory.provider import MemoryTier, RecallQuery, RecallScope
 
-from .prompts import (
-    AGENT_SYSTEM_PROMPT,
-    ASK_SYSTEM_PROMPT,
-    FINALIZE_PROMPT,
-    REFLECTION_PROMPT,
-)
+from .prompts import get_prompt_manager
 from .schemas import AgentAction
 from .state import AgentState, AskState, TaskPlan
 
@@ -116,7 +111,8 @@ async def generate_answer_node(
 ) -> dict[str, Any]:
     mem_ctx = state.get("memory_context") or []
     mem_text = "\n".join(f"- {m['key']}: {m['value']}" for m in mem_ctx) or "No memory context."
-    system = ASK_SYSTEM_PROMPT.format(memory_context=mem_text)
+    pm = get_prompt_manager()
+    system = pm.render("ask_system", memory_context=mem_text)
     user_msg = state["messages"][-1].content if state["messages"] else ""
     answer = await _run_llm_async(
         llm,
@@ -185,7 +181,9 @@ async def execute_step_node(
     completed = "\n".join(f"- {r['tool']}: {str(r['result'])[:200]}" for r in state.get("tool_results", []))
     tool_desc = tool_desc_cache if tool_desc_cache is not None else _build_tool_descriptions(registry)
 
-    system = AGENT_SYSTEM_PROMPT.format(
+    pm = get_prompt_manager()
+    system = pm.render(
+        "agent_system",
         plan=step_desc,
         execution_hint=hint_text,
         completed_results=completed or "None yet.",
@@ -462,7 +460,9 @@ async def reflect_node(
     if plan:
         plan_steps = "\n".join(f"  {i + 1}. [{s.status}] {s.description}" for i, s in enumerate(plan.steps))
     completed = "\n".join(f"- {r['tool']}: {str(r['result'])[:200]}" for r in state.get("tool_results", []))
-    prompt = REFLECTION_PROMPT.format(
+    pm = get_prompt_manager()
+    prompt = pm.render(
+        "reflection",
         goal=goal,
         plan_steps=plan_steps or "No plan.",
         completed_results=completed or "None.",
@@ -503,7 +503,8 @@ async def finalize_node(
         last_msg = state["messages"][-1].content if state["messages"] else ""
         results = last_msg
 
-    prompt = FINALIZE_PROMPT.format(goal=goal, results=results)
+    pm = get_prompt_manager()
+    prompt = pm.render("finalize", goal=goal, results=results)
     answer = await _run_llm_async(
         llm,
         "completion",
