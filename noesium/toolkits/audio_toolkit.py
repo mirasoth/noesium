@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 import aiohttp
 
+from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
@@ -56,8 +57,8 @@ class AudioToolkit(AsyncBaseToolkit):
 
         # Configuration
         self.audio_model = self.config.config.get("audio_model", "whisper-1")
-        self.cache_dir = Path(self.config.config.get("cache_dir", "./audio_cache"))
-        self.download_dir = Path(self.config.config.get("download_dir", "./audio_downloads"))
+        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir("audio", "cache")))
+        self.download_dir = Path(self.config.config.get("download_dir", get_toolkit_tmp_dir("audio", "downloads")))
 
         # Create directories
         self.cache_dir.mkdir(parents=True, exist_ok=True)

@@ -19,3 +19,14 @@ NOE_AGENT_LOGS_DIR = NOE_AGENT_HOME / "logs"
 NOE_AGENT_MEMORY_DIR = NOE_AGENT_HOME / "memory"
 NOE_AGENT_DATA_DIR = NOE_AGENT_HOME / "data"
 NOE_AGENT_SESSIONS_DIR = NOE_AGENT_HOME / "sessions"
+
+# Library temp/cache base (toolkits default here when used standalone)
+NOE_TMP_BASE = Path("/tmp/noesium")
+
+
+def get_toolkit_tmp_dir(toolkit_name: str, subdir: str = "") -> str:
+    """Return toolkit temp dir under NOE_TMP_BASE, optionally with a subdir."""
+    base = NOE_TMP_BASE / toolkit_name
+    if subdir:
+        base = base / subdir
+    return str(base)

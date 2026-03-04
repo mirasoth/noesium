@@ -649,10 +649,10 @@ class NoesiumConfig(BaseModel):
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `NOESIUM_RUNTIME_ID` | Runtime identifier for agent refs | `"local"` |
-| `NOESIUM_EXECUTION_MODE` | Default execution mode | `"pragmatic"` |
-| `NOESIUM_EVENT_STORE` | Event store backend | `"memory"` |
-| `NOESIUM_EVENT_STORE_PATH` | Path for file-based event store | `None` |
+| `NOE_RUNTIME_ID` | Runtime identifier for agent refs | `"local"` |
+| `NOE_EXECUTION_MODE` | Default execution mode | `"pragmatic"` |
+| `NOE_EVENT_STORE` | Event store backend | `"memory"` |
+| `NOE_EVENT_STORE_PATH` | Path for file-based event store | `None` |
 
 ---
 

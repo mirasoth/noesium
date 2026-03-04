@@ -1317,7 +1317,6 @@ class TestNoeAgentBuiltinStreaming:
     @pytest.mark.unit
     async def test_execute_builtin_subagent_streaming(self):
         """execute_builtin_subagent_streaming should stream events and return result."""
-        from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
         from noesium.noeagent.agent import NoeAgent
         from noesium.noeagent.progress import ProgressEvent, ProgressEventType
 
@@ -1357,9 +1356,7 @@ class TestNoeAgentBuiltinStreaming:
 
         mock_provider.invoke_streaming = mock_invoke_streaming
 
-        result = await agent.execute_builtin_subagent_streaming(
-            mock_provider, "Navigate to example.com", "browser_use"
-        )
+        result = await agent.execute_builtin_subagent_streaming(mock_provider, "Navigate to example.com", "browser_use")
 
         assert result == "Browser task completed successfully"
 
@@ -1378,7 +1375,6 @@ class TestNoeAgentBuiltinStreaming:
         from noesium.core.capability.registry import CapabilityRegistry
         from noesium.noeagent.agent import NoeAgent
         from noesium.noeagent.nodes import subagent_node
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
         from noesium.noeagent.state import AgentState
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
@@ -1530,9 +1526,7 @@ class TestTacitusAgentProgressStreaming:
 
         # Create agent with mock LLM
         mock_llm = MagicMock()
-        mock_llm.structured_completion = MagicMock(
-            return_value=MagicMock(query=["query1", "query2"], rationale="test")
-        )
+        mock_llm.structured_completion = MagicMock(return_value=MagicMock(query=["query1", "query2"], rationale="test"))
         mock_llm.completion = MagicMock(return_value="Test response")
 
         agent = TacitusAgent(query_generation_llm=mock_llm, reflection_llm=mock_llm)

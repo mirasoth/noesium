@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 if TYPE_CHECKING:
     import pandas as pd
 
+from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
@@ -103,7 +104,7 @@ class TabularDataToolkit(AsyncBaseToolkit):
         # Configuration
         self.max_file_size = self.config.config.get("max_file_size", 100 * 1024 * 1024)  # 100MB
         self.max_rows_preview = self.config.config.get("max_rows_preview", 1000)
-        self.cache_dir = Path(self.config.config.get("cache_dir", "./tabular_cache"))
+        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir("tabular_data", "cache")))
 
         # Create cache directory
         self.cache_dir.mkdir(parents=True, exist_ok=True)

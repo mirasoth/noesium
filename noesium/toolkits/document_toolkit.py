@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 import aiohttp
 
+from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
@@ -79,8 +80,8 @@ class DocumentToolkit(AsyncBaseToolkit):
         # Configuration
         self.parser_type = self.config.config.get("parser", "pymupdf")
         self.text_limit = self.config.config.get("text_limit", 100000)
-        self.cache_dir = Path(self.config.config.get("cache_dir", "./document_cache"))
-        self.download_dir = Path(self.config.config.get("download_dir", "./document_downloads"))
+        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir("document", "cache")))
+        self.download_dir = Path(self.config.config.get("download_dir", get_toolkit_tmp_dir("document", "downloads")))
 
         # Create directories
         self.cache_dir.mkdir(parents=True, exist_ok=True)

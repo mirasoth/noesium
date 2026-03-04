@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
+from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
@@ -57,7 +58,9 @@ class FileEditToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # Configuration
-        self.work_dir = Path(self.config.config.get("work_dir", "./file_workspace")).resolve()
+        self.work_dir = Path(
+            self.config.config.get("work_dir", get_toolkit_tmp_dir("file_edit", "workspace"))
+        ).resolve()
         self.default_encoding = self.config.config.get("default_encoding", "utf-8")
         self.backup_enabled = self.config.config.get("backup_enabled", True)
         self.max_file_size = self.config.config.get("max_file_size", 10 * 1024 * 1024)  # 10MB

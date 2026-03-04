@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
+from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
@@ -57,7 +58,7 @@ class MemoryToolkit(AsyncBaseToolkit):
 
         # Configuration
         self.storage_type = self.config.config.get("storage_type", "memory")  # "memory" or "file"
-        self.storage_dir = Path(self.config.config.get("storage_dir", "./memory_storage"))
+        self.storage_dir = Path(self.config.config.get("storage_dir", get_toolkit_tmp_dir("memory", "storage")))
         self.max_memory_size = self.config.config.get("max_memory_size", 1024 * 1024)  # 1MB
         self.enable_versioning = self.config.config.get("enable_versioning", False)
 

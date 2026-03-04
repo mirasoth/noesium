@@ -21,7 +21,7 @@ class TestBashToolkitInitialization:
         """Test initialization with default configuration."""
         toolkit = BashToolkit()
 
-        assert toolkit.workspace_root == "/tmp/noesium_workspace"
+        assert toolkit.workspace_root == "/tmp/noesium/bash/workspace"
         assert toolkit.timeout == 60
         assert toolkit.max_output_length == 10000
         assert toolkit.child is None

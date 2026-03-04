@@ -7,6 +7,7 @@ using the arXiv API with advanced query capabilities.
 
 from typing import Callable, Dict, Generator, List, Optional
 
+from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
@@ -64,7 +65,9 @@ class ArxivToolkit(AsyncBaseToolkit):
         # Configuration
         self.default_max_results = self.config.config.get("default_max_results", 5)
         self.default_sort_by = self.config.config.get("default_sort_by", "Relevance")
-        self.default_download_dir = self.config.config.get("default_download_dir", "./arxiv_papers")
+        self.default_download_dir = self.config.config.get(
+            "default_download_dir", get_toolkit_tmp_dir("arxiv", "papers")
+        )
 
     def _get_search_results(
         self,

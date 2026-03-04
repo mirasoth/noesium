@@ -29,6 +29,7 @@ from rich.rule import Rule
 from rich.spinner import Spinner
 from rich.table import Table
 from rich.text import Text
+from rich.tree import Tree
 
 # Thinking messages for different phases
 THINKING_MESSAGES = {
@@ -71,7 +72,7 @@ if TYPE_CHECKING:
     from .agent import NoeAgent
     from .state import TaskPlan
 
-from .config import NoeConfig, NoeMode
+from .config import _NOE_AGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
 from .progress import ProgressEvent, ProgressEventType
 from .session_log import SessionLogger
 
@@ -122,15 +123,15 @@ class DynamicThinkingText:
 _STATUS_MARKERS = {
     "pending": ("[ ]", "dim"),
     "in_progress": ("[>]", "bold yellow"),
-    "completed": ("[✓]", "bold green"),
-    "failed": ("[✗]", "bold red"),
+    "completed": ("[+]", "bold green"),
+    "failed": ("[x]", "bold red"),
 }
 
 
 def render_plan_table(plan: "TaskPlan") -> Table:
     """Build a Rich Table from a TaskPlan with Claude-style progress indicators."""
     table = Table(
-        title=f"📋 Plan: {plan.goal}",
+        title=f"Plan: {plan.goal}",
         title_style="bold cyan",
         show_lines=False,
         expand=False,
@@ -154,10 +155,26 @@ def render_plan_table(plan: "TaskPlan") -> Table:
     return table
 
 
+def render_plan_tree(plan: "TaskPlan", title: str | None = None) -> Tree:
+    """Build a Rich Tree from a TaskPlan with status markers. Simpler than table."""
+    root_label = title or f"Plan: {plan.goal}"
+    tree = Tree(Text(root_label, style="bold cyan"))
+    for idx, step in enumerate(plan.steps, start=1):
+        marker, style = _STATUS_MARKERS.get(step.status, ("[ ]", "dim"))
+        if step.status == "in_progress":
+            step_text = Text.assemble(Text(marker, style=style), " ", Text(step.description, style="yellow"))
+        elif step.status == "completed":
+            step_text = Text.assemble(Text(marker, style=style), " ", Text(step.description, style="green"))
+        else:
+            step_text = Text.assemble(Text(marker, style=style), " ", Text(step.description, style="dim"))
+        tree.add(step_text)
+    return tree
+
+
 def render_compact_progress(plan: "TaskPlan | None", current_step: str = "") -> Text:
     """Render a compact one-line progress indicator like Claude's.
 
-    Shows: "✓ Step 1/3 · In progress: Step 2"
+    Shows: "+ 1/3 · Step 2" or "o 0/3 · ..."
     """
     if not plan:
         return Text("")
@@ -168,9 +185,9 @@ def render_compact_progress(plan: "TaskPlan | None", current_step: str = "") -> 
     parts = []
     # Show completed count
     if completed > 0:
-        parts.append((f"✓ {completed}/{total}", "green"))
+        parts.append((f"+ {completed}/{total}", "green"))
     else:
-        parts.append((f"○ {completed}/{total}", "dim"))
+        parts.append((f"o {completed}/{total}", "dim"))
 
     # Show current step if any
     if current_step:
@@ -184,30 +201,30 @@ def render_compact_progress(plan: "TaskPlan | None", current_step: str = "") -> 
 # Compact activity rendering
 # ---------------------------------------------------------------------------
 
-# Action type to icon mapping for different agent types
+# Action type to simple prefix for different agent types (ASCII-friendly)
 BROWSER_ACTION_ICONS = {
-    "tool.start": "🔧",
-    "tool.end": "✓",
-    "step.start": "→",
-    "step.complete": "✓",
-    "navigate": "→",
-    "click": "👆",
-    "input_text": "⌨️",
-    "scroll": "📜",
-    "extract": "📄",
-    "download": "📥",
-    "switch_tab": "🔄",
-    "done": "✓",
+    "tool.start": ">",
+    "tool.end": "+",
+    "step.start": ">",
+    "step.complete": "+",
+    "navigate": ">",
+    "click": ">",
+    "input_text": ">",
+    "scroll": ">",
+    "extract": ">",
+    "download": ">",
+    "switch_tab": ">",
+    "done": "+",
 }
 
 RESEARCH_ACTION_ICONS = {
-    "plan.created": "📋",
-    "query_generation": "🔍",
-    "web_search": "🔎",
-    "reflection": "💭",
-    "answer": "📝",
-    "tool.start": "🔧",
-    "tool.end": "✓",
+    "plan.created": ">",
+    "query_generation": ">",
+    "web_search": ">",
+    "reflection": ">",
+    "answer": ">",
+    "tool.start": ">",
+    "tool.end": "+",
 }
 
 
@@ -354,13 +371,10 @@ class SubagentTracker:
             tag = st.subagent_id
             # Get agent type indicator
             type_indicator = ""
-            if st.agent_type == "browser_use":
-                type_indicator = "🌐 "
-            elif st.agent_type == "tacitus":
-                type_indicator = "🔬 "
+            type_indicator = ""
 
             if st.status == "done":
-                progress = f"✓ {st.completed_steps}/{st.plan_steps}" if st.plan_steps else "✓ done"
+                progress = f"+ {st.completed_steps}/{st.plan_steps}" if st.plan_steps else "+ done"
                 lines.append(
                     Text.assemble(
                         ("  ", ""),
@@ -459,7 +473,7 @@ def handle_slash_command(
 
     if command == "/plan":
         if current_plan:
-            console.print(render_plan_table(current_plan))
+            console.print(render_plan_tree(current_plan))
         else:
             console.print("[dim]No active plan.[/dim]")
         return False
@@ -684,11 +698,14 @@ async def _process_query(
     from .state import TaskPlan
 
     current_plan: TaskPlan | None = None
+    subagent_plans: dict[str, TaskPlan] = {}  # subagent_id -> plan (when plan_snapshot has steps)
     activity_lines: list[Text] = []
     partial_results: list[str] = []
     final_answer: str = ""
     current_step_summary: str = ""
-    step_details: list[Text] = []  # Step progress details
+    step_details: list[Text] = []  # Step progress details (not shown in live; kept for optional post-Live)
+    plan_created_appended: bool = False  # dedup: only one "Plan created with N steps" per run
+    subagent_plan_created_shown: set[str] = set()  # dedup: one "[tag] Plan created" per subagent
     sa_tracker = SubagentTracker(max_display=3)
 
     # Dynamic thinking text generator
@@ -700,24 +717,9 @@ async def _process_query(
         return Spinner("dots", text=thinking_gen.get_text(), style="cyan")
 
     def _build_display() -> Group:
-        """Assemble the live-updating renderable group."""
+        """Assemble the live-updating renderable group. Block A: streaming progress; Block B: plan + spinner."""
         parts: list[object] = []
-        # Show compact progress line at top
-        if current_plan:
-            compact = render_compact_progress(current_plan, current_step_summary)
-            if compact:
-                parts.append(compact)
-                parts.append(Text(""))
-        # Show full plan table (enabled by default)
-        if current_plan:
-            parts.append(render_plan_table(current_plan))
-            parts.append(Text(""))
-        # Show step details (enabled by default)
-        if step_details:
-            for detail in step_details[-5:]:
-                parts.append(detail)
-            parts.append(Text(""))
-        # Show subagent progress tracks
+        # Block A: Streaming progress (subagent tracks + activity lines; no step_details in live)
         sa_lines = sa_tracker.render()
         if sa_lines:
             for sa_line in sa_lines:
@@ -726,6 +728,13 @@ async def _process_query(
         for line in activity_lines[-15:]:
             parts.append(line)
         parts.append(Text(""))
+        # Block B: Persistent plan (plan tree(s) + spinner)
+        if current_plan:
+            parts.append(render_plan_tree(current_plan))
+            parts.append(Text(""))
+        for sid, sa_plan in subagent_plans.items():
+            parts.append(render_plan_tree(sa_plan, title=f"[{sid}] Plan: {sa_plan.goal}"))
+            parts.append(Text(""))
         parts.append(_get_spinner())
         return Group(*parts)
 
@@ -739,26 +748,35 @@ async def _process_query(
                 if event.plan_snapshot:
                     current_plan = TaskPlan(**event.plan_snapshot)
                 thinking_gen.set_phase("executing")
-                if current_plan:
-                    step_details.append(Text(f"📋 Plan created with {len(current_plan.steps)} steps", style="dim"))
+                if current_plan and not plan_created_appended:
+                    step_details.append(Text(f"Plan created with {len(current_plan.steps)} steps", style="dim"))
+                    plan_created_appended = True
 
             elif etype == ProgressEventType.PLAN_REVISED:
                 if event.plan_snapshot:
                     current_plan = TaskPlan(**event.plan_snapshot)
                 thinking_gen.set_phase("executing")
-                step_details.append(Text("📝 Plan revised", style="dim"))
+                step_details.append(Text("Plan revised", style="dim"))
 
             elif etype == ProgressEventType.STEP_START:
-                current_step_summary = event.summary or ""
+                event.summary or ""
                 if current_plan and event.step_index is not None:
                     idx = event.step_index
                     if idx < len(current_plan.steps):
                         current_plan.steps[idx].status = "in_progress"
                         thinking_gen.set_phase("executing", f"step {idx + 1}")
                         step_desc = current_plan.steps[idx].description[:60]
+                        total = len(current_plan.steps)
+                        completed = sum(1 for s in current_plan.steps if s.status == "completed")
                         step_details.append(
-                            Text.assemble((f"  [>] ", "bold yellow"), (f"Step {idx + 1}: ", "bold"), (step_desc, ""))
+                            Text.assemble(
+                                (f"o {completed}/{total} · ", "dim"),
+                                (f"Step {idx + 1}/{total}: ", "bold yellow"),
+                                (step_desc, "yellow"),
+                            )
                         )
+                        if len(step_details) > 8:
+                            step_details = step_details[-8:]
 
             elif etype == ProgressEventType.STEP_COMPLETE:
                 if current_plan and event.step_index is not None:
@@ -766,9 +784,17 @@ async def _process_query(
                     if idx < len(current_plan.steps):
                         current_plan.steps[idx].status = "completed"
                         step_desc = current_plan.steps[idx].description[:60]
+                        total = len(current_plan.steps)
+                        completed = sum(1 for s in current_plan.steps if s.status == "completed")
                         step_details.append(
-                            Text.assemble((f"  [✓] ", "bold green"), (f"Step {idx + 1}: ", "bold"), (step_desc, "dim"))
+                            Text.assemble(
+                                (f"o {completed}/{total} · ", "dim"),
+                                (f"Step {idx + 1}/{total}: ", "bold green"),
+                                (step_desc, "dim"),
+                            )
                         )
+                        if len(step_details) > 8:
+                            step_details = step_details[-8:]
 
             elif etype in (
                 ProgressEventType.TOOL_START,
@@ -796,11 +822,19 @@ async def _process_query(
                     step_details.append(Text.assemble(("    → ", "dim"), (f"Using tool: {event.tool_name}", "blue")))
                 elif etype == ProgressEventType.SUBAGENT_PROGRESS:
                     child_type = (event.metadata or {}).get("child_event_type", "")
-                    if child_type == "plan.created":
+                    if child_type == "plan.created" and event.plan_snapshot:
+                        steps = event.plan_snapshot.get("steps", [])
+                        if steps and event.subagent_id:
+                            try:
+                                subagent_plans[event.subagent_id] = TaskPlan(**event.plan_snapshot)
+                            except Exception:
+                                pass
                         tag = event.subagent_id or "subagent"
-                        step_details.append(
-                            Text.assemble(("    ", ""), (f"[{tag}] ", "magenta"), ("Plan created", "dim"))
-                        )
+                        if tag not in subagent_plan_created_shown:
+                            subagent_plan_created_shown.add(tag)
+                            step_details.append(
+                                Text.assemble(("    ", ""), (f"[{tag}] ", "magenta"), ("Plan created", "dim"))
+                            )
                     elif child_type == "tool.start" and event.tool_name:
                         tag = event.subagent_id or "subagent"
                         step_details.append(
@@ -839,7 +873,7 @@ async def _process_query(
             elif etype == ProgressEventType.REFLECTION:
                 activity_lines.append(Text.assemble(("  . ", "dim"), ("Reflected on progress", "dim italic")))
                 thinking_gen.set_phase("reflecting")
-                step_details.append(Text("  💭 Reflection completed", style="dim italic"))
+                step_details.append(Text("  Reflection completed", style="dim italic"))
 
             elif etype == ProgressEventType.FINAL_ANSWER:
                 final_answer = event.text or ""
@@ -850,7 +884,7 @@ async def _process_query(
                         if step.status in ("in_progress", "pending"):
                             step.status = "completed"
                     current_plan.is_complete = True
-                step_details.append(Text("  ✓ Final answer generated", style="bold green"))
+                step_details.append(Text("  + Final answer generated", style="bold green"))
 
             elif etype == ProgressEventType.SESSION_END:
                 # Ensure all steps are marked completed at session end
@@ -866,7 +900,9 @@ async def _process_query(
     # --- Post-processing: render static output ---
 
     if current_plan:
-        console.print(render_plan_table(current_plan))
+        console.print(render_plan_tree(current_plan))
+    for sid, sa_plan in subagent_plans.items():
+        console.print(render_plan_tree(sa_plan, title=f"[{sid}] Plan: {sa_plan.goal}"))
 
     for pr in partial_results:
         console.print()
@@ -903,7 +939,7 @@ def run_agent_tui(agent: "NoeAgent") -> None:
 
     session_logger: SessionLogger | None = None
     if agent.config.enable_session_logging:
-        session_logger = SessionLogger(log_dir=agent.config.session_log_dir)
+        session_logger = SessionLogger(session_dir=agent.config.session_dir)
         if session_logger not in agent.config.progress_callbacks:
             agent.config.progress_callbacks.append(session_logger)
 
@@ -965,6 +1001,11 @@ def run_agent_tui(agent: "NoeAgent") -> None:
                     break
                 continue
 
+            # Echo prompt so the run is self-contained
+            prompt_echo = user_input.split("\n")[0] + ("..." if "\n" in user_input else "")
+            console.print(
+                Text.assemble(("noe|", "bold cyan"), (f"{agent.config.mode.value}> ", "bold cyan"), (prompt_echo, ""))
+            )
             console.print()
 
             try:
@@ -993,8 +1034,6 @@ def run_agent_tui(agent: "NoeAgent") -> None:
 
 def main() -> None:
     """CLI entrypoint for NoeAgent TUI."""
-    import os
-
     from noesium.core.utils.logging import setup_logging
 
     # Try to load from global config file first, fall back to defaults
@@ -1002,25 +1041,30 @@ def main() -> None:
         config = NoeConfig.from_global_config()
         config = config.model_copy(update={"interface_mode": "tui"})
     except Exception:
-        # Fall back to defaults if global config doesn't exist or is invalid
         config = NoeConfig(mode=NoeMode.AGENT, interface_mode="tui")
 
-    # Load dotenv if enabled
     config.load_dotenv_if_enabled()
 
-    # Set logging level based on verbose setting
-    log_level = "INFO" if config.verbose else "WARNING"
-    log_file = os.getenv("NOESIUM_TUI_LOG_FILE")
+    # effective() resolves session_dir from session_id
+    config = config.effective()
+
+    # Session-isolated logging: console fixed at ERROR, file at configured level.
+    # This must run BEFORE NoeAgent so the agent skips its own setup_logging.
+    from pathlib import Path as _Path
+
+    session_dir = _Path(config.session_dir)
+    session_dir.mkdir(parents=True, exist_ok=True)
     setup_logging(
-        level=log_level,
-        log_file=log_file,
-        log_file_level="DEBUG",
+        console_level=_NOE_AGENT_CONSOLE_LOG_LEVEL,
+        log_file=str(session_dir / "noeagent.log"),
+        log_file_level=config.file_log_level,
         enable_colors=False,
         third_party_level="ERROR",
     )
 
     from .agent import NoeAgent
 
+    NoeAgent._logging_configured = True  # prevent agent from re-configuring
     agent = NoeAgent(config)
     run_agent_tui(agent)
 

@@ -39,7 +39,7 @@ from noesium.core.toolify.atomic import ToolContext, ToolPermission
 from noesium.core.toolify.executor import ToolExecutor
 
 from . import nodes
-from .config import NoeConfig, NoeMode
+from .config import _NOE_AGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
 from .planner import TaskPlanner
 from .progress import ProgressEvent, ProgressEventType
 from .state import AgentState, AskState
@@ -57,7 +57,7 @@ class NoeAgent(BaseGraphicAgent):
     def __init__(self, config: NoeConfig | None = None) -> None:
         self.config = (config or NoeConfig()).effective()
 
-        # Configure logging based on verbose setting
+        # Configure logging
         self._setup_logging()
 
         super().__init__(
@@ -133,28 +133,26 @@ class NoeAgent(BaseGraphicAgent):
         return self._planning_llm
 
     def _setup_logging(self) -> None:
-        """Configure logging based on verbose setting.
+        """Configure session-isolated logging.
 
-        If verbose=True, set logging level to INFO.
-        If verbose=False (default), set logging level to WARNING.
-        This only configures logging once per process.
+        Console/TUI output is fixed at ERROR for UX simplicity.
+        File-based logging goes to the session directory at a configurable level
+        (default INFO), affecting noeagent, core, all subagents, and tools.
         """
-        import os
-
-        # Check if logging has already been configured by NoeAgent
         if hasattr(NoeAgent, "_logging_configured"):
             return
 
-        # Determine log level from config or environment
-        if self.config.verbose:
-            level = "INFO"
-        else:
-            # Respect LOG_LEVEL env var if set, otherwise WARNING
-            level = os.getenv("LOG_LEVEL", "WARNING").upper()
+        session_dir = Path(self.config.session_dir)
+        session_dir.mkdir(parents=True, exist_ok=True)
 
         from noesium.core.utils.logging import setup_logging
 
-        setup_logging(level=level, third_party_level="WARNING")
+        setup_logging(
+            console_level=_NOE_AGENT_CONSOLE_LOG_LEVEL,
+            log_file=str(session_dir / "noeagent.log"),
+            log_file_level=self.config.file_log_level,
+            third_party_level=_NOE_AGENT_CONSOLE_LOG_LEVEL,
+        )
         NoeAgent._logging_configured = True
 
     def _get_compiled_graph(self) -> Any:
@@ -230,17 +228,37 @@ class NoeAgent(BaseGraphicAgent):
         )
 
         work_dir = self.config.working_directory or os.getcwd()
+        session_dir = Path(self.config.session_dir)
+        toolkit_session_base = session_dir / "toolkits"
+
+        # Per-toolkit session-scoped directory overrides (under session_dir/toolkits/<name>/)
+        _SESSION_DIR_OVERRIDES: dict[str, dict[str, str]] = {
+            "document": {"cache_dir": "cache", "download_dir": "downloads"},
+            "audio": {"cache_dir": "cache", "download_dir": "downloads"},
+            "tabular_data": {"cache_dir": "cache"},
+            "python_executor": {"default_workdir": "workdir"},
+            "arxiv": {"default_download_dir": "papers"},
+            "bash": {"workspace_root": "workspace"},
+            "memory": {"storage_dir": "storage"},
+            "file_edit": {"work_dir": "workspace"},
+        }
 
         # Load toolkits in parallel for better performance
         async def _load_toolkit(toolkit_name: str) -> list:
             """Load a single toolkit and return its providers."""
             try:
+                base_config: dict[str, Any] = {
+                    "workspace_root": work_dir,
+                    "work_dir": work_dir,
+                }
+                overrides = _SESSION_DIR_OVERRIDES.get(toolkit_name)
+                if overrides:
+                    toolkit_session_dir = toolkit_session_base / toolkit_name
+                    for key, subdir in overrides.items():
+                        base_config[key] = str(toolkit_session_dir / subdir)
                 toolkit_config = ToolkitConfig(
                     name=toolkit_name,
-                    config={
-                        "workspace_root": work_dir,
-                        "work_dir": work_dir,
-                    },
+                    config=base_config,
                 )
                 toolkit = ToolkitRegistry.create_toolkit(toolkit_name, toolkit_config)
                 if isinstance(toolkit, AsyncBaseToolkit):
@@ -352,8 +370,8 @@ class NoeAgent(BaseGraphicAgent):
         }
 
         for subagent_cfg in enabled_subagents:
-            factory = agent_factories.get(subagent_cfg.agent_type)
-            if factory is None:
+            factory_callable = agent_factories.get(subagent_cfg.agent_type)
+            if factory_callable is None:
                 logger.warning(
                     "Unknown agent type '%s' for subagent '%s'",
                     subagent_cfg.agent_type,
@@ -361,10 +379,17 @@ class NoeAgent(BaseGraphicAgent):
                 )
                 continue
 
+            # Bind subagent config so the factory receives it when invoked (no args)
+            def make_factory(cfg: Any) -> Any:
+                def factory() -> Any:
+                    return factory_callable(cfg)
+
+                return factory
+
             try:
                 provider = BuiltInAgentCapabilityProvider(
                     name=subagent_cfg.name,
-                    agent_factory=factory,
+                    agent_factory=make_factory(subagent_cfg),
                     agent_type=subagent_cfg.agent_type,
                     description=subagent_cfg.description or f"Built-in {subagent_cfg.agent_type} subagent",
                     task_types=subagent_cfg.task_types,
@@ -383,22 +408,37 @@ class NoeAgent(BaseGraphicAgent):
                     exc,
                 )
 
-    def _create_browser_use_agent(self) -> Any:
+    def _create_browser_use_agent(self, subagent_cfg: Any) -> Any:
         """Factory method to create a BrowserUseAgent instance.
 
+        Args:
+            subagent_cfg: Built-in subagent config (AgentSubagentConfig); may contain
+                config.headless for headless/headed browser mode.
+
         Returns:
-            BrowserUseAgent instance configured with the parent's LLM client.
+            BrowserUseAgent instance configured with the parent's LLM client,
+            session directory, and optional headless from config.
         """
         try:
             from noesium.subagents.bu import BrowserUseAgent
 
-            return BrowserUseAgent(llm=self.llm)
+            opts = (subagent_cfg.config or {}).copy()
+            headless = opts.pop("headless", True)
+
+            return BrowserUseAgent(
+                llm=self.llm,
+                parent_session_dir=self.config.session_dir,
+                headless=headless,
+            )
         except ImportError as exc:
             logger.error("Failed to import BrowserUseAgent: %s", exc)
             raise RuntimeError(f"BrowserUseAgent not available: {exc}") from exc
 
-    def _create_tacitus_agent(self) -> Any:
+    def _create_tacitus_agent(self, subagent_cfg: Any = None) -> Any:
         """Factory method to create a TacitusAgent instance.
+
+        Args:
+            subagent_cfg: Built-in subagent config (optional; reserved for future options).
 
         Returns:
             TacitusAgent instance configured with the parent's LLM provider.
@@ -693,15 +733,45 @@ class NoeAgent(BaseGraphicAgent):
         _prev_tool_count = 0
         _prev_step_index: int = -1
 
+        # Concurrent event merging: run LangGraph in a background task so that
+        # subagent progress events are yielded in real-time while a node executes.
+        # Previously, the queue was only drained *between* node executions, causing
+        # tacitus/browser_use events to pile up and only appear after completion.
+        _merged_q: asyncio.Queue = asyncio.Queue()
+        _fwd_stop = object()  # sentinel to stop the forward task
+
+        async def _run_graph() -> None:
+            """Run LangGraph stream in background, forwarding raw events to _merged_q."""
+            try:
+                async for _raw in compiled.astream(initial):
+                    await _merged_q.put(("graph", _raw))
+            except Exception as _exc:
+                await _merged_q.put(("error", _exc))
+            finally:
+                await _merged_q.put(("done", None))
+
+        async def _forward_subagent_events() -> None:
+            """Forward subagent events from _subagent_event_queue to _merged_q in real-time."""
+            while True:
+                _item = await self._subagent_event_queue.get()
+                if _item is _fwd_stop:
+                    break
+                await _merged_q.put(("subagent", _item))
+
+        _bg_graph = asyncio.create_task(_run_graph())
+        _bg_fwd = asyncio.create_task(_forward_subagent_events())
+
         try:
-            async for raw_event in compiled.astream(initial):
-                # Drain subagent events queued by interact_with_subagent()
-                while self._subagent_event_queue and not self._subagent_event_queue.empty():
-                    try:
-                        queued = self._subagent_event_queue.get_nowait()
-                        yield queued
-                    except asyncio.QueueEmpty:
-                        break
+            while True:
+                _kind, _data = await _merged_q.get()
+                if _kind == "done":
+                    break
+                elif _kind == "error":
+                    raise _data
+                elif _kind == "subagent":
+                    yield _data
+                    continue
+                raw_event = _data  # _kind == "graph"
 
                 for node_name, node_output in raw_event.items():
                     if not isinstance(node_output, dict):
@@ -884,11 +954,20 @@ class NoeAgent(BaseGraphicAgent):
             yield err_evt
             raise
         finally:
-            # Drain any remaining subagent events
-            while self._subagent_event_queue and not self._subagent_event_queue.empty():
+            # Stop background tasks
+            _bg_graph.cancel()
+            # Signal the forward task to stop and wait for it
+            await self._subagent_event_queue.put(_fwd_stop)
+            try:
+                await asyncio.gather(_bg_fwd, return_exceptions=True)
+            except Exception:
+                pass
+            # Drain any remaining subagent events from the merged queue
+            while not _merged_q.empty():
                 try:
-                    queued = self._subagent_event_queue.get_nowait()
-                    yield queued
+                    _k, _d = _merged_q.get_nowait()
+                    if _k == "subagent":
+                        yield _d
                 except asyncio.QueueEmpty:
                     break
             self._subagent_event_queue = None

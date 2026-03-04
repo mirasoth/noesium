@@ -26,6 +26,7 @@ except ImportError:
     plt = None
     MATPLOTLIB_AVAILABLE = False
 
+from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
@@ -207,7 +208,9 @@ class PythonExecutorToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # Get configuration parameters
-        self.default_workdir = self.config.config.get("default_workdir", "./run_workdir")
+        self.default_workdir = self.config.config.get(
+            "default_workdir", get_toolkit_tmp_dir("python_executor", "workdir")
+        )
         self.default_timeout = self.config.config.get("default_timeout", 30)
         self.max_timeout = self.config.config.get("max_timeout", 300)  # 5 minutes max
 

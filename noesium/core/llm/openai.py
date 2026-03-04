@@ -11,6 +11,7 @@ This module provides:
 
 import base64
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
@@ -48,7 +49,7 @@ from noesium.core.utils.logging import get_logger
 OPIK_AVAILABLE = False
 track = lambda func: func  # Default no-op decorator
 track_openai = lambda client: client  # Default no-op function
-if os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true":
+if os.getenv("NOE_OPIK_TRACING", "false").lower() == "true":
     try:
         from opik import track
         from opik.integrations.openai import track_openai
@@ -137,6 +138,18 @@ class LLMClient(BaseLLMClient):
                 mode=Mode.JSON,
             )
 
+    def _is_max_tokens_range_error(self, e: Exception) -> bool:
+        """Check if the exception is a max_tokens out-of-range API error."""
+        error_str = str(e)
+        return "max_tokens" in error_str and "Range of" in error_str
+
+    def _extract_max_tokens_upper_limit(self, e: Exception, default: int = 65536) -> int:
+        """Parse the upper bound from a max_tokens range error message, e.g. '[1, 65536]'."""
+        match = re.search(r"\[(\d+),\s*(\d+)\]", str(e))
+        if match:
+            return int(match.group(2))
+        return default
+
     @track
     def completion(
         self,
@@ -160,24 +173,39 @@ class LLMClient(BaseLLMClient):
             Generated text response or streaming response
         """
 
-        try:
-            if self.debug:
-                logger.debug(f"Chat completion: {messages}")
-            response = self.client.chat.completions.create(
+        def _do_request(mt: Optional[int]):
+            return self.client.chat.completions.create(
                 model=self.chat_model,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=max_tokens,
+                max_tokens=mt,
                 stream=stream,
                 **kwargs,
             )
+
+        try:
+            if self.debug:
+                logger.debug(f"Chat completion: {messages}")
+            response = _do_request(max_tokens)
             if stream:
                 return response
             else:
-                # Log token usage if available
                 self._log_token_usage_if_available(response)
                 return response.choices[0].message.content
         except Exception as e:
+            if self._is_max_tokens_range_error(e):
+                capped = self._extract_max_tokens_upper_limit(e)
+                logger.warning(f"max_tokens value out of range, capping to {capped} and retrying")
+                try:
+                    response = _do_request(capped)
+                    if stream:
+                        return response
+                    else:
+                        self._log_token_usage_if_available(response)
+                        return response.choices[0].message.content
+                except Exception as retry_e:
+                    logger.error(f"Error in chat completion after max_tokens adjustment: {retry_e}")
+                    raise
             logger.error(f"Error in chat completion: {e}")
             raise
 
@@ -213,6 +241,7 @@ class LLMClient(BaseLLMClient):
         if self.debug:
             logger.debug(f"Structured completion: {messages}")
 
+        effective_max_tokens = max_tokens
         last_err = None
         for i in range(attempts):
             try:
@@ -225,7 +254,7 @@ class LLMClient(BaseLLMClient):
                     messages=messages,
                     response_model=response_model,
                     temperature=temperature,
-                    max_tokens=max_tokens,
+                    max_tokens=effective_max_tokens,
                     **kwargs_with_usage,
                 )
 
@@ -249,6 +278,11 @@ class LLMClient(BaseLLMClient):
 
                 return result
             except Exception as e:
+                if self._is_max_tokens_range_error(e):
+                    capped = self._extract_max_tokens_upper_limit(e)
+                    logger.warning(f"max_tokens value out of range, capping to {capped} and retrying")
+                    effective_max_tokens = capped
+                    continue
                 last_err = e
                 if i < attempts - 1:
                     time.sleep(backoff * (2**i))
@@ -432,7 +466,7 @@ class LLMClient(BaseLLMClient):
             if len(embedding) != expected_dims:
                 logger.warning(
                     f"Embedding has {len(embedding)} dimensions, expected {expected_dims}. "
-                    f"Consider setting NOESIUM_EMBEDDING_DIMS={len(embedding)} or "
+                    f"Consider setting NOE_EMBEDDING_DIMS={len(embedding)} or "
                     f"using a different embedding model."
                 )
 
@@ -485,7 +519,7 @@ class LLMClient(BaseLLMClient):
                 if len(embedding) != expected_dims:
                     logger.warning(
                         f"Embedding at index {i} has {len(embedding)} dimensions, expected {expected_dims}. "
-                        f"Consider setting NOESIUM_EMBEDDING_DIMS={len(embedding)} or "
+                        f"Consider setting NOE_EMBEDDING_DIMS={len(embedding)} or "
                         f"using a different embedding model."
                     )
 

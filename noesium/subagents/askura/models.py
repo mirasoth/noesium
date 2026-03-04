@@ -5,7 +5,7 @@ Schemas for AskuraAgent - Flexible data structures for dynamic conversations.
 from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Type, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 try:
     from langchain_core.messages import BaseMessage
@@ -114,10 +114,7 @@ class InformationSlot(BaseModel):
     validation_rules: List[str] = Field(default_factory=list)
     dependencies: List[str] = Field(default_factory=list, description="Other slots this depends on")
 
-    class Config:
-        """Pydantic configuration."""
-
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class ConversationContext(BaseModel):
@@ -136,10 +133,7 @@ class ConversationContext(BaseModel):
     conversation_momentum: ConversationMomentum = Field(default=ConversationMomentum.POSITIVE)
     last_message_sentiment: ConversationSentiment = Field(default=ConversationSentiment.NEUTRAL)
 
-    class Config:
-        """Pydantic configuration."""
-
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -198,10 +192,7 @@ class AskuraState(BaseModel):
     # Custom fields (for specific agents)
     custom_data: Dict[str, Any] = Field(default_factory=dict)
 
-    class Config:
-        """Pydantic configuration."""
-
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class AskuraConfig(BaseModel):

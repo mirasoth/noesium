@@ -72,7 +72,7 @@ class TestConfigModels:
 
     def test_llm_config_defaults(self):
         """Test LLMConfig default values."""
-        with patch.dict(os.environ, {"NOESIUM_LLM_PROVIDER": "openai"}):
+        with patch.dict(os.environ, {"NOE_LLM_PROVIDER": "openai"}):
             config = LLMConfig()
             assert config.provider == "openai"
             assert config.providers == {}
@@ -148,6 +148,17 @@ class TestConfigModels:
         assert config.name == "browser_use"
         assert config.agent_type == "browser_use"
         assert config.description == "Web automation agent"
+        assert config.config is None
+
+    def test_agent_subagent_config_with_config(self):
+        """Test AgentSubagentConfig with optional config (e.g. headless for browser_use)."""
+        config = AgentSubagentConfig(
+            name="browser_use",
+            agent_type="browser_use",
+            description="Web automation agent",
+            config={"headless": False},
+        )
+        assert config.config == {"headless": False}
 
     def test_cli_subagent_config(self):
         """Test CliSubagentConfig."""
@@ -175,7 +186,7 @@ class TestConfigModels:
 
     def test_tracing_config_defaults(self):
         """Test TracingConfig default values."""
-        with patch.dict(os.environ, {"NOESIUM_OPIK_TRACING": "false"}):
+        with patch.dict(os.environ, {"NOE_OPIK_TRACING": "false"}):
             config = TracingConfig()
             assert config.enabled is False
             assert config.provider == "opik"
@@ -183,10 +194,10 @@ class TestConfigModels:
 
     def test_logging_config_defaults(self):
         """Test LoggingConfig default values."""
-        with patch.dict(os.environ, {"LOG_LEVEL": "INFO"}):
+        with patch.dict(os.environ, {"LOG_LEVEL": "INFO"}, clear=False):
             config = LoggingConfig()
             assert config.level == "INFO"
-            assert "noeagent.log" in config.file
+            assert config.file_level is None
             assert config.rotation == "10 MB"
             assert config.retention == "7 days"
 
@@ -291,7 +302,7 @@ class TestConfigLoading:
                 json.dump(config_data, f)
 
             # Override with environment variable
-            with patch.dict(os.environ, {"NOESIUM_LLM_PROVIDER": "openai", "OPENAI_API_KEY": "test-key"}):
+            with patch.dict(os.environ, {"NOE_LLM_PROVIDER": "openai", "OPENAI_API_KEY": "test-key"}):
                 config = load_config(config_path)
                 assert config.llm.provider == "openai"
                 # Note: API key from env should be in providers config
@@ -301,9 +312,9 @@ class TestEnvironmentOverrides:
     """Test environment variable overrides."""
 
     def test_apply_env_overrides_llm_provider(self):
-        """Test NOESIUM_LLM_PROVIDER override."""
+        """Test NOE_LLM_PROVIDER override."""
         data = {}
-        with patch.dict(os.environ, {"NOESIUM_LLM_PROVIDER": "ollama"}):
+        with patch.dict(os.environ, {"NOE_LLM_PROVIDER": "ollama"}):
             result = apply_env_overrides(data)
             assert result["llm"]["provider"] == "ollama"
 
@@ -334,18 +345,23 @@ class TestEnvironmentOverrides:
             assert result["llm"]["providers"]["ollama"]["chat_model"] == "llama3.2"
 
     def test_apply_env_overrides_tracing(self):
-        """Test NOESIUM_OPIK_TRACING override."""
+        """Test NOE_OPIK_TRACING override."""
         data = {}
-        with patch.dict(os.environ, {"NOESIUM_OPIK_TRACING": "true"}):
+        with patch.dict(os.environ, {"NOE_OPIK_TRACING": "true"}):
             result = apply_env_overrides(data)
             assert result["tracing"]["enabled"] is True
 
     def test_apply_env_overrides_logging(self):
-        """Test LOG_LEVEL override."""
+        """Test LOG_LEVEL and NOE_FILE_LOG_LEVEL overrides."""
         data = {}
-        with patch.dict(os.environ, {"LOG_LEVEL": "DEBUG"}):
+        with patch.dict(os.environ, {"LOG_LEVEL": "WARNING"}, clear=False):
             result = apply_env_overrides(data)
-            assert result["logging"]["level"] == "DEBUG"
+            assert result["logging"]["level"] == "WARNING"
+
+        data = {}
+        with patch.dict(os.environ, {"NOE_FILE_LOG_LEVEL": "DEBUG"}, clear=False):
+            result = apply_env_overrides(data)
+            assert result["logging"]["file_level"] == "DEBUG"
 
 
 class TestConfigMigration:

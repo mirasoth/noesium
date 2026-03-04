@@ -24,7 +24,7 @@ This ensures all RFC changes are tracked chronologically for audit and reference
 
 ### 3. Work Progress Documentation
 
-**AI agents MUST record work progress in `.agents/worklogs/` before completing any session.**
+**AI agents MUST record work progress in `docs/worklogs/` before completing any session.**
 
 #### File Naming
 
@@ -32,7 +32,7 @@ Format: `progress-YYYY-MM-DD-NNN.md`
 - `YYYY-MM-DD`: Session date
 - `NNN`: Sequence number (001, 002, etc.)
 
-Example: `.agents/worklogs/progress-2026-01-21-001.md`
+Example: `docs/worklogs/progress-2026-01-21-001.md`
 
 #### Required Format
 
@@ -62,13 +62,13 @@ status: completed | in-progress | blocked
 
 Before ending a session, AI agents MUST:
 
-1. [ ] Create progress file in `.agents/worklogs/`
+1. [ ] Create progress file in `docs/worklogs/`
 2. [ ] Document all files changed
 3. [ ] Record test results when code changes are made
 4. [ ] Note next steps (even if "none")
 5. [ ] If RFC files were modified, update `specs/rfc-history.md`
 
-Template: `.agents/worklogs/_template.md`
+Template: `docs/worklogs/_template.md`
 
 ---
 
@@ -445,7 +445,7 @@ Do not use `python`, `python3`, or `pip` directly - use `uv run` instead.
 
 ```bash
 # LLM Provider
-export NOESIUM_LLM_PROVIDER="openai"  # or "openrouter", "ollama", "llamacpp"
+export NOE_LLM_PROVIDER="openai"  # or "openrouter", "ollama", "llamacpp"
 
 # OpenAI
 export OPENAI_API_KEY="sk-..."

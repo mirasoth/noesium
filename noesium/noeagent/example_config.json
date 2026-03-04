@@ -32,8 +32,7 @@
     "reflection_interval": 3,
     "planning_model": null,
     "load_dotenv": true,
-    "dotenv_path": null,
-    "verbose": false
+    "dotenv_path": null
   },
   "tools": {
     "enabled_toolkits": [
@@ -64,7 +63,10 @@
         "agent_type": "browser_use",
         "description": "Web automation agent for browser interaction and DOM manipulation",
         "task_types": ["web_automation", "form_filling", "scraping"],
-        "enabled": true
+        "enabled": true,
+        "config": {
+          "headless": false
+        }
       },
       {
         "name": "tacitus",
@@ -111,7 +113,7 @@
   },
   "logging": {
     "level": "INFO",
-    "file": "~/.noeagent/logs/noeagent.log",
+    "file_level": null,
     "rotation": "10 MB",
     "retention": "7 days"
   },

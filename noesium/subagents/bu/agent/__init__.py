@@ -30,24 +30,31 @@ def _get_progress_types():
 
 T = TypeVar("T")
 
-# Base directory for browser-use session data
+# Fallback base directory when no parent session dir is provided
 _NOEAGENT_DIR = Path.home() / ".noeagent"
 _BROWSER_USE_SESSIONS_DIR = _NOEAGENT_DIR / "browser-use-sessions"
 
 
-def _create_session_dir(session_id: str) -> Path:
+def _create_session_dir(session_id: str, *, parent_session_dir: str | Path | None = None) -> Path:
     """Create an isolated session directory for browser-use.
+
+    When ``parent_session_dir`` is supplied (the noeagent session directory),
+    the browser-use data is placed under ``<parent_session_dir>/browser-use/``.
+    Otherwise falls back to ``~/.noeagent/browser-use-sessions/<session_id>/``.
 
     Args:
         session_id: Unique identifier for the session.
+        parent_session_dir: NoeAgent-level session directory (preferred).
 
     Returns:
         Path to the created session directory.
     """
-    session_dir = _BROWSER_USE_SESSIONS_DIR / session_id
+    if parent_session_dir is not None:
+        session_dir = Path(parent_session_dir) / "browser-use"
+    else:
+        session_dir = _BROWSER_USE_SESSIONS_DIR / session_id
     session_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create subdirectories
     (session_dir / "user-data").mkdir(exist_ok=True)
     (session_dir / "downloads").mkdir(exist_ok=True)
 
@@ -74,6 +81,7 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         headless: bool = True,
         session_id: str | None = None,
         cleanup_on_close: bool = True,
+        parent_session_dir: str | Path | None = None,
         **kwargs,
     ):
         """Initialize the BrowserUseAgent.
@@ -85,6 +93,8 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
             headless: Whether to run browser in headless mode (default: True).
             session_id: Unique session identifier. If None, generates one automatically.
             cleanup_on_close: Whether to delete session directory on close (default: True).
+            parent_session_dir: NoeAgent session directory. When provided, BU temp data is
+                placed under ``<parent_session_dir>/browser-use/`` for session isolation.
             **kwargs: Additional arguments passed to the underlying Agent.
         """
         super().__init__(llm_provider="openai", model_name=None)  # Will be overridden
@@ -94,18 +104,16 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
 
             llm = get_llm_client(structured_output=True)
 
-        # Generate session ID if not provided
         if session_id is None:
             from uuid_extensions import uuid7str
 
-            session_id = uuid7str()[:12]  # Short ID for directory names
+            session_id = uuid7str()[:12]
 
         self._session_id = session_id
         self._cleanup_on_close = cleanup_on_close
         self._session_dir: Path | None = None
 
-        # Create isolated session directory
-        self._session_dir = _create_session_dir(session_id)
+        self._session_dir = _create_session_dir(session_id, parent_session_dir=parent_session_dir)
 
         # Create default browser profile with isolated session directory
         if browser_profile is None:
@@ -438,7 +446,7 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         elif hasattr(action, "text") and action.text:
             text_preview = str(action.text)[:30]
             context = f": {text_preview}..."
-        elif hasattr(action, "index") and action.index is not None:
+        elif hasattr(action, "index") and isinstance(getattr(action, "index", None), int):
             context = f" (element {action.index})"
         elif hasattr(action, "query") and action.query:
             context = f": {action.query[:40]}"

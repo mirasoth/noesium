@@ -51,30 +51,27 @@
 
 ### 1.5 Live Display Composition
 
-`_build_display()` at `tui.py:524-546` assembles a `Group` of renderables refreshed at 8fps:
+`_build_display()` assembles a `Group` of renderables refreshed at 8fps in two blocks (see **§4. TUI Output Layout**):
+
+- **Block A – Streaming progress**: Subagent tracks (`sa_tracker.render()`), then activity lines (last 15). Step details (Plan created, o N/M · Step K/M, → Using tool, etc.) are not shown in the live display.
+- **Block B – Persistent plan**: Main plan tree, subagent plan trees (if any), then spinner.
 
 ```
 ┌──────────────────────────────────────┐
-│ ✓ 2/3 · Current step description     │  ← compact progress
+│   [browser_use] + 2/5 · step desc     │  ← subagent tracks
+│   . Using tool(...)                   │  ← activity lines (last 15)
+│   > web_search  result snippet...    │
 │                                      │
-│ ┌─── 📋 Plan: goal ──────────────┐  │  ← plan table
-│ │ # │ Status │ Step              │  │
-│ │ 1 │  [✓]   │ First step        │  │
-│ │ 2 │  [>]   │ Second step       │  │
-│ │ 3 │  [ ]   │ Third step        │  │
-│ └────────────────────────────────┘  │
+│   Plan: goal                          │  ← plan tree
+│   ├── [>] First step                  │
+│   ├── [+] Second step                 │
+│   └── [ ] Third step                  │
 │                                      │
-│ [>] Step 2: Second step              │  ← step details (last 5)
-│   → Using tool: web_search           │
-│                                      │
-│   . Using web_search(query="...")     │  ← activity lines (last 15)
-│   > web_search  result snippet...     │
-│                                      │
-│ ⠋ Working on task... step 2          │  ← spinner
+│ ⠋ Processing...                      │  ← spinner
 └──────────────────────────────────────┘
 ```
 
-The `Live` context (`tui.py:550`) uses `transient=True` so the live display is replaced by static post-processing output after completion.
+The `Live` context uses `transient=True` so the live display is replaced by static post-processing output after completion.
 
 ### 1.6 Post-Processing Output
 
@@ -343,7 +340,54 @@ This ensures subagent progress events are yielded to TUI consumers while also re
 
 ---
 
-## 4. Implementation Roadmap
+## 4. TUI Output Layout (Streaming vs Persistent Plan)
+
+**Goal**: Match a clear two-block layout: streaming progress first, then the persistent plan and spinner. No section headers in the UI (any "## ..." in examples are 提示词 only).
+
+### 4.1 Desired Layout
+
+```text
+noe|agent> <prompt>
+
+  [browser_use] > Browser step 13/15
+  [browser_use] > Browser action
+  [browser_use] + Action completed
+  ...
+  [browser_use] Browser task completed
+  [browser_use] completed
+  > subagent:browser_use  <result summary>
+
+  Plan: <goal>
+  ├── [>] step 1
+  └── [ ] step 2
+
+  <spinner>
+```
+
+### 4.2 Live Display Order (`_build_display()`)
+
+- **Block A – Streaming progress** (no section header): `sa_tracker.render()` then `activity_lines` (last 15). All subagent/activity lines appear together.
+- **Block B – Persistent plan** (no section header): Main plan tree, subagent plan trees (if any), then spinner.
+
+**step_details** (Plan created, o N/M · Step K/M, → Using tool, [tag] Plan created, Reflection, etc.) are **omitted from the live display** (Option A) so the streaming block shows only subagent/activity lines; the plan tree already conveys the plan.
+
+### 4.3 Deduplication
+
+- **"Plan created with N steps"**: Append at most once per run (e.g. only on first `PLAN_CREATED` when `current_plan` becomes non-None).
+- **"[tag] Plan created"**: Append at most once per subagent (e.g. do not append again if `subagent_plans` already has that tag).
+
+### 4.4 Post-Live
+
+Plan tree(s), then partial_results, then final_answer. No section headers. Optionally reprint last K activity lines above the plan tree for consistency.
+
+### 4.5 Reference
+
+- Plan: TUI output layout sections (streaming block first, plan block second, no headers, dedup).
+- Module: `noesium/noeagent/tui.py` — `_build_display()`, PLAN_CREATED/SUBAGENT_PROGRESS handling.
+
+---
+
+## 5. Implementation Roadmap
 
 ### Phase 1: Subagent Event Emission (agent.py)
 
@@ -382,7 +426,7 @@ This ensures subagent progress events are yielded to TUI consumers while also re
 
 ---
 
-## 5. Design Principles Summary
+## 6. Design Principles Summary
 
 | Principle | How It's Applied |
 |-----------|-----------------|

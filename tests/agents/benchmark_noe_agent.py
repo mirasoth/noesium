@@ -8,7 +8,7 @@ Usage:
     uv run pytest tests/agents/benchmark_noe_agent.py -v -k "test_tool_wizsearch"
 
 Environment variables required:
-    NOESIUM_LLM_PROVIDER / OPENAI_API_KEY / OPENROUTER_API_KEY  (LLM)
+    NOE_LLM_PROVIDER / OPENAI_API_KEY / OPENROUTER_API_KEY  (LLM)
     TAVILY_API_KEY        (wizsearch toolkit)
     JINA_API_KEY          (jina_research toolkit)
     SERPER_API_KEY        (serper toolkit)

@@ -1,8 +1,8 @@
-"""NoeAgent Configuration System
+"""Noesium Core Configuration System
 
 This module provides a centralized, flexible, and hierarchical configuration
-management system for NoeAgent. Configuration values are loaded with the
-following precedence (highest to lowest):
+management system for the noesium agentic framework. Configuration values
+are loaded with the following precedence (highest to lowest):
 
 1. Environment Variables - Always take highest precedence
 2. Config File - JSON configuration file at ~/.noeagent/config.json
@@ -63,7 +63,7 @@ class LLMConfig(BaseModel):
         providers: Provider-specific configurations
     """
 
-    provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
+    provider: str = Field(default_factory=lambda: os.getenv("NOE_LLM_PROVIDER", "openai"))
     providers: Dict[str, LLMProviderConfig] = Field(default_factory=dict)
 
 
@@ -153,13 +153,15 @@ class AgentSubagentConfig(BaseModel):
 
     Attributes:
         name: Subagent identifier
-        agent_type: Agent type (browser_use, tacitus, askura, t2)
+        agent_type: Agent type (browser_use, tacitus, askura)
         description: Description of subagent purpose
+        config: Optional agent-type-specific options (e.g. browser_use headless)
     """
 
     name: str
-    agent_type: str  # browser_use, tacitus, askura, t2
+    agent_type: str  # browser_use, tacitus, askura
     description: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None
 
 
 class CliSubagentConfig(BaseModel):
@@ -285,44 +287,38 @@ class TracingConfig(BaseModel):
         opik: OPIK-specific config
     """
 
-    enabled: bool = Field(default_factory=lambda: os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true")
+    enabled: bool = Field(default_factory=lambda: os.getenv("NOE_OPIK_TRACING", "false").lower() == "true")
     provider: str = "opik"
     opik: OpikTracingConfig = Field(default_factory=OpikTracingConfig)
 
 
 class LoggingConfig(BaseModel):
-    """Logging configuration.
+    """Common logging configuration (core layer).
+
+    Both console and file default to the same ``level`` (INFO).
+    Application layers (e.g. NoeAgent TUI) may override the console level
+    for their own UX needs via ``setup_logging(console_level=...)``.
 
     Attributes:
-        level: Log level (DEBUG, INFO, WARNING, ERROR)
-        file: Log file path
-        rotation: Rotation size/time
-        retention: Retention period
+        level: Default log level for both console and file.
+        file_level: Optional file-only override. When None, falls back to ``level``.
+        rotation: Rotation size/time (reserved for future use).
+        retention: Retention period (reserved for future use).
     """
 
     level: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
-    file: str = str(NOE_AGENT_HOME / "logs" / "noeagent.log")
+    file_level: Optional[str] = Field(default_factory=lambda: os.getenv("NOE_FILE_LOG_LEVEL"))
     rotation: str = "10 MB"
     retention: str = "7 days"
 
 
-class TUIConfig(BaseModel):
-    """TUI-specific configuration.
-
-    Attributes:
-        history_file: Path to command history file
-        history_size: Maximum number of history entries
-    """
-
-    history_file: str = str(NOE_AGENT_HOME / "history.json")
-    history_size: int = 1000
-
-
 class NoeAgentConfig(BaseModel):
-    """Main NoeAgent configuration.
+    """Top-level configuration model.
 
-    This is the top-level configuration model that contains all
-    configuration sections for NoeAgent.
+    Contains core framework sections (LLM, tools, memory, logging, etc.).
+    Application-specific sections (e.g. ``tui``) are accepted via
+    ``extra = "allow"`` but not modeled here — they are handled by
+    the application layer (e.g. ``NoeConfig.from_global_config()``).
 
     Attributes:
         version: Configuration schema version
@@ -333,7 +329,6 @@ class NoeAgentConfig(BaseModel):
         memory: Memory configuration
         tracing: Tracing configuration
         logging: Logging configuration
-        tui: TUI-specific configuration
         working_directory: Default working directory
     """
 
@@ -345,7 +340,6 @@ class NoeAgentConfig(BaseModel):
     memory: MemoryConfig = Field(default_factory=MemoryConfig)
     tracing: TracingConfig = Field(default_factory=TracingConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
-    tui: TUIConfig = Field(default_factory=TUIConfig)
     working_directory: Optional[str] = None
 
     class Config:
@@ -412,6 +406,10 @@ def _normalize_config_data(data: Dict[str, Any]) -> Dict[str, Any]:
     # Ensure tools.mcp_servers is a list
     if isinstance(tools.get("mcp_servers"), dict):
         tools["mcp_servers"] = []
+
+    # Remove obsolete logging.file (log path is now session-isolated)
+    logging_section = data.get("logging", {})
+    logging_section.pop("file", None)
 
     return data
 
@@ -486,7 +484,7 @@ def apply_env_overrides(data: Dict[str, Any]) -> Dict[str, Any]:
     data["llm"].setdefault("providers", {})
 
     # LLM Provider
-    if provider := os.getenv("NOESIUM_LLM_PROVIDER"):
+    if provider := os.getenv("NOE_LLM_PROVIDER"):
         data["llm"]["provider"] = provider
 
     # OpenAI
@@ -539,12 +537,14 @@ def apply_env_overrides(data: Dict[str, Any]) -> Dict[str, Any]:
         llamacpp_config["chat_model"] = model
 
     # Tracing
-    if tracing := os.getenv("NOESIUM_OPIK_TRACING"):
+    if tracing := os.getenv("NOE_OPIK_TRACING"):
         data.setdefault("tracing", {})["enabled"] = tracing.lower() == "true"
 
     # Logging
     if log_level := os.getenv("LOG_LEVEL"):
         data.setdefault("logging", {})["level"] = log_level
+    if file_level := os.getenv("NOE_FILE_LOG_LEVEL"):
+        data.setdefault("logging", {})["file_level"] = file_level
 
     return data
 
@@ -626,7 +626,6 @@ __all__ = [
     "TracingConfig",
     "OpikTracingConfig",
     "LoggingConfig",
-    "TUIConfig",
     # Functions
     "load_config",
     "save_config",

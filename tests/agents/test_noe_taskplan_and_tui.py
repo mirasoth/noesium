@@ -53,6 +53,25 @@ def test_render_plan_table_columns():
     assert len(table.columns) == 3
 
 
+def test_render_plan_tree():
+    from rich.tree import Tree as RichTree
+
+    from noesium.noeagent.tui import render_plan_tree
+
+    plan = TaskPlan(
+        goal="Build app",
+        steps=[
+            TaskStep(description="Setup", status="completed"),
+            TaskStep(description="Code", status="in_progress"),
+        ],
+    )
+    tree = render_plan_tree(plan)
+    assert isinstance(tree, RichTree)
+    assert "Plan: Build app" in str(tree.label)
+    assert tree.children is not None
+    assert len(tree.children) == 2
+
+
 def test_slash_commands_constant():
     from noesium.noeagent.tui import SLASH_COMMANDS
 

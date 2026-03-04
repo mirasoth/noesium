@@ -112,7 +112,7 @@ Set environment variables for configuration:
 
 ```bash
 # LLM Provider
-export NOESIUM_LLM_PROVIDER="openai"  # or "openrouter", "ollama", "llamacpp"
+export NOE_LLM_PROVIDER="openai"  # or "openrouter", "ollama", "llamacpp"
 export OPENAI_API_KEY="sk-..."
 
 # Search Toolkit
@@ -300,7 +300,7 @@ Agents support crash recovery and resumable execution:
 ### Common Issues
 
 **LLM Provider Configuration**
-- Ensure the correct provider is set in `NOESIUM_LLM_PROVIDER`
+- Ensure the correct provider is set in `NOE_LLM_PROVIDER`
 - Verify API keys are properly configured as environment variables
 
 **Toolkit Activation**

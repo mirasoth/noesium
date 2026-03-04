@@ -4,6 +4,32 @@
 
 This document describes the configuration system for NoeAgent, providing a centralized, flexible, and hierarchical configuration management approach.
 
+## Module Layering: `noesium.core` vs `noesium.noeagent`
+
+`noesium.core` is a **general-purpose agentic framework** module. It provides
+reusable infrastructure (LLM clients, toolkits, memory, config loading, logging)
+that any multi-agent system can build on. NoeAgent is one **exemplified
+implementation** of a multi-agent system built on top of `noesium.core`.
+
+**Layering rules:**
+
+| Concern | Belongs in | NOT in |
+|---------|-----------|--------|
+| LLM config, tool config, memory config, tracing, logging | `noesium.core` | — |
+| TUI config (history file, history size) | `noesium.noeagent` | `noesium.core` |
+| Default logging levels (INFO/INFO for console/file) | `noesium.core` | — |
+| NoeAgent-specific console logging policy (WARNING) | `noesium.noeagent` | `noesium.core` |
+| Session isolation, session_id, session_dir | `noesium.noeagent` | `noesium.core` |
+| Subagent routing descriptors, planning models | `noesium.noeagent` | `noesium.core` |
+
+**Core `LoggingConfig`** provides two common knobs:
+- `level` — default log level for both console and file (default `"INFO"`)
+- `file_level` — optional override for file handler only (default `null` → uses `level`)
+
+The NoeAgent layer applies its own policy on top: **console is pinned to WARNING**
+for UX simplicity during TUI interaction. This override happens in
+`NoeAgent._setup_logging()` and `tui.main()`, not in core.
+
 ## Configuration Hierarchy
 
 Configuration values are loaded with the following precedence (highest to lowest):
@@ -30,12 +56,23 @@ The configuration file location is determined in this order:
 
 ```
 ~/.noeagent/
-├── config.json           # Unified configuration file
-├── memory/              # Memory storage (memu)
-├── sessions/              # Session storage
-├── logs/                # Log files
-└── data/                # Other persistent data
+├── config.json                       # Unified configuration file
+├── history.json                      # TUI command history
+├── memory/                           # Memory storage (memu)
+├── data/                             # Other persistent data (event-sourced DB)
+└── sessions/                         # Session-isolated storage
+    └── <session_id>/                 # One directory per TUI/library session
+        ├── noeagent.log              # File-based logging (INFO by default)
+        ├── session.jsonl             # JSONL progress events
+        └── browser-use/             # Browser-use subagent temp data
+            ├── user-data/           # Browser profile
+            └── downloads/           # Browser downloads
 ```
+
+**Session Isolation Principle**: All per-session artefacts (logs, progress events,
+subagent temp data) live under `~/.noeagent/sessions/<session_id>/`. Each TUI
+run or library-mode `NoeAgent` instance creates its own session directory. This
+keeps sessions cleanly separated and makes debugging, replay, and cleanup trivial.
 
 ## Configuration File Format
 
@@ -166,14 +203,23 @@ The configuration file location is determined in this order:
 
   "logging": {
     "level": "INFO",
-    "file": "~/.noeagent/logs/noeagent.log",
+    "file_level": null,
     "rotation": "10 MB",
     "retention": "7 days"
+  },
+
+  "tui": {
+    "history_file": "~/.noeagent/history.json",
+    "history_size": 1000
   },
 
   "working_directory": null
 }
 ```
+
+> **Note on `tui` section:** The `tui` block is NoeAgent-specific and is **not**
+> modeled in `noesium.core.config`. It is parsed by `NoeConfig.from_global_config()`
+> in the noeagent layer. The core config model accepts it via `extra = "allow"`.
 
 ## Environment Variables
 
@@ -182,8 +228,8 @@ The configuration file location is determined in this order:
 | Environment Variable | Config Path | Description | Default |
 |---------------------|-------------|-------------|---------|
 | `NOE_AGENT_CONFIG` | - | Path to config file | `~/.noeagent/config.json` |
-| `NOESIUM_LLM_PROVIDER` | `llm.provider` | Default LLM provider | `openai` |
-| `NOESIUM_EMBEDDING_DIMS` | - | Embedding dimensions | `768` |
+| `NOE_LLM_PROVIDER` | `llm.provider` | Default LLM provider | `openai` |
+| `NOE_EMBEDDING_DIMS` | - | Embedding dimensions | `768` |
 
 ### LLM Provider Configuration
 
@@ -217,10 +263,11 @@ Provider-specific environment variables override config file values:
 - `LLAMACPP_CHAT_MODEL` - Model name
 
 ### Tracing
-- `NOESIUM_OPIK_TRACING` - Enable OPIK tracing (`true`/`false`)
+- `NOE_OPIK_TRACING` - Enable OPIK tracing (`true`/`false`)
 
 ### Logging
-- `LOG_LEVEL` - Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+- `LOG_LEVEL` - Common log level for console and file (default `INFO`)
+- `NOE_FILE_LOG_LEVEL` - Optional file-only override (when set, file uses this instead of `LOG_LEVEL`)
 
 ## Configuration Sections
 
@@ -355,12 +402,12 @@ The `subagents` section configures subagent behavior:
 - `name` (string): Subagent identifier
 - `agent_type` (string): Agent type from available agents (e.g., "browser_use", "tacitus")
 - `description` (string, optional): Description of subagent purpose
+- `config` (object, optional): Agent-type-specific options. For **browser_use**, supported option is **`headless`** (boolean, default `true`). Use `"headless": false` for a visible (headed) browser window. Omitting `config` or `headless` defaults to headless mode. Other built-in types (e.g. tacitus) may use `config` for their own options in the future. Note: MCP-based browser-use uses its own config (e.g. `BROWSER_USE_HEADLESS`, BU config file), not this `config`.
 
 **Available Agent Types:**
 - `browser_use` - Web automation and browser control (from `noesium.subagents.bu`)
 - `tacitus` - Advanced research and analysis (from `noesium.subagents.tacitus`)
 - `askura` - Conversation-style agent (from `noesium.subagents.askura`)
-- `t2` - Task-specific agents (from `noesium.subagents.t2`)
 
 **External Subagent Fields:**
 - `name` (string): Subagent identifier
@@ -376,6 +423,19 @@ The `subagents` section configures subagent behavior:
 - **Depth tracking**: Prevents infinite recursion with `max_depth` limit
 - **Agent delegation**: Specific agent types (browser_use, tacitus) can be delegated tasks
 - **External daemons**: External processes that run as daemons for specific task types
+
+**Subagent Session Isolation:**
+
+All built-in subagents place their temporary data under the parent NoeAgent's
+session directory. This ensures session-level isolation and easy cleanup:
+
+- **browser_use**: Stores browser profile, downloads, screenshots under
+  `<session_dir>/browser-use/` instead of creating separate directories in `/tmp/`
+  or `~/.noeagent/browser-use-sessions/`.
+- **tacitus / askura**: No persistent temp data; no directory needed.
+
+The parent NoeAgent passes its `session_dir` to subagent factory methods.
+Subagents that produce temp data must create their subdirectory under this path.
 
 ### 5. Memory Configuration
 
@@ -403,7 +463,9 @@ The `memory` section configures memory systems:
 - `providers` (list): Enabled memory providers
 - `persist` (bool): Persist memory across sessions
 - `session_logging` (bool): Enable session logging
-- `session_log_dir` (string): Directory for session logs
+- `session_log_dir` (string): Parent directory for session directories.
+  Each session creates `<session_log_dir>/<session_id>/` containing logs,
+  progress events, and subagent temp data.
 - `memu` (object): Memu-specific config
 - `event_sourced` (object): Event-sourced memory config
 
@@ -446,7 +508,7 @@ The `tracing` section configures observability:
 ```
 
 **Fields:**
-- `enabled` (bool): Enable Opik tracing (maps to `NOESIUM_OPIK_TRACING`)
+- `enabled` (bool): Enable Opik tracing (maps to `NOE_OPIK_TRACING`)
 - `provider` (string): Tracing provider (currently only "opik" supported)
 - `opik` (object): OPIK-specific config
 
@@ -459,7 +521,7 @@ The `tracing` section configures observability:
 - `url` (string, optional): Custom Opik URL for cloud deployment
 
 **Environment Variable Overrides:**
-- `NOESIUM_OPIK_TRACING`: Global toggle for Opik tracing (default: false)
+- `NOE_OPIK_TRACING`: Global toggle for Opik tracing (default: false)
 - `OPIK_USE_LOCAL`: Use local Opik deployment (default: true)
 - `OPIK_LOCAL_URL`: Local Opik URL
 - `OPIK_API_KEY`: API key for Comet ML/Opik (only needed for cloud)
@@ -474,24 +536,55 @@ The `tracing` section configures observability:
 
 ### 7. Logging Configuration
 
-The `logging` section configures logging:
+Logging uses a **two-layer architecture** that separates the framework's common
+defaults from application-specific policy.
+
+#### Core layer (`noesium.core.config.LoggingConfig`)
+
+The core config provides two **common** knobs with sensible defaults:
 
 ```json
 {
   "logging": {
     "level": "INFO",
-    "file": "~/.noeagent/logs/noeagent.log",
+    "file_level": null,
     "rotation": "10 MB",
     "retention": "7 days"
   }
 }
 ```
 
-**Fields:**
-- `level` (string): Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
-- `file` (string): Log file path
-- `rotation` (string): Rotation size/time
-- `retention` (string): Retention period
+**Fields (core):**
+- `level` (string): Default log level for **both** console and file (default `"INFO"`).
+- `file_level` (string | null): Optional override for file handler only. When `null`,
+  falls back to `level`. Set to e.g. `"DEBUG"` to get more detail in log files
+  without changing console verbosity.
+- `rotation` (string): Rotation size/time (reserved for future use).
+- `retention` (string): Retention period (reserved for future use).
+
+**Environment Variable Overrides:**
+- `LOG_LEVEL` — Sets the common `level` (affects both console and file).
+- `NOE_FILE_LOG_LEVEL` — Sets `file_level` (file-only override).
+
+#### NoeAgent layer (application-specific policy)
+
+NoeAgent applies its own **console override** on top of core:
+
+- **Console / TUI**: Pinned to `WARNING` regardless of `logging.level`. This keeps
+  the terminal clean during interactive TUI use.
+- **File-based session log**: Uses `logging.file_level` (or `logging.level` when
+  `file_level` is null). Written to `~/.noeagent/sessions/<session_id>/noeagent.log`.
+
+This override is applied in `NoeAgent._setup_logging()` and `tui.main()` via
+`setup_logging(console_level="WARNING", ...)`. The core `setup_logging()` API
+accepts `console_level` as an optional parameter — when not set, it defaults to
+`level`, making the core logging symmetric by default.
+
+**Design Rationale:**
+1. Core is a generic framework — symmetric INFO/INFO is the right default for any
+   agent built on top.
+2. NoeAgent's TUI is a specific UX surface that benefits from quiet console output.
+3. Other agents built on `noesium.core` are free to choose their own console policy.
 
 ## Implementation Guide
 
@@ -526,7 +619,7 @@ class LLMProviderConfig(BaseModel):
 
 class LLMConfig(BaseModel):
     """LLM configuration"""
-    provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
+    provider: str = Field(default_factory=lambda: os.getenv("NOE_LLM_PROVIDER", "openai"))
     providers: Dict[str, LLMProviderConfig] = Field(default_factory=dict)
 
 
@@ -627,15 +720,19 @@ class OpikTracingConfig(BaseModel):
 
 class TracingConfig(BaseModel):
     """Tracing configuration"""
-    enabled: bool = Field(default_factory=lambda: os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true")
+    enabled: bool = Field(default_factory=lambda: os.getenv("NOE_OPIK_TRACING", "false").lower() == "true")
     provider: str = "opik"
     opik: OpikTracingConfig = Field(default_factory=OpikTracingConfig)
 
 
 class LoggingConfig(BaseModel):
-    """Logging configuration"""
+    """Common logging configuration (core layer).
+
+    Both console and file default to INFO. Application layers (e.g. NoeAgent)
+    may override console level for their own UX needs.
+    """
     level: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
-    file: str = str(NOE_AGENT_HOME / "logs" / "noeagent.log")
+    file_level: Optional[str] = Field(default_factory=lambda: os.getenv("NOE_FILE_LOG_LEVEL"))
     rotation: str = "10 MB"
     retention: str = "7 days"
 
@@ -702,7 +799,7 @@ def apply_env_overrides(data: Dict[str, Any]) -> Dict[str, Any]:
     """Apply environment variable overrides to config data"""
 
     # LLM Provider
-    if provider := os.getenv("NOESIUM_LLM_PROVIDER"):
+    if provider := os.getenv("NOE_LLM_PROVIDER"):
         data.setdefault("llm", {})["provider"] = provider
 
     # OpenAI
@@ -980,7 +1077,7 @@ def set(key: str, value: str):
 
 ```bash
 # Set LLM provider
-export NOESIUM_LLM_PROVIDER=openai
+export NOE_LLM_PROVIDER=openai
 
 # Set OpenAI configuration
 export OPENAI_API_KEY=sk-...

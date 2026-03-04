@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 def setup_logging(
     level: Optional[str] = None,
+    console_level: Optional[str] = None,
     log_file: Optional[str] = None,
     log_file_level: Optional[str] = None,
     enable_colors: Optional[bool] = None,
@@ -41,33 +42,37 @@ def setup_logging(
     """Initialize logging for noesium and third-party libs.
 
     Args:
-        level: Log level (INFO, DEBUG, etc.)
-        log_file: Path to log file
-        log_file_level: Log level for file handler
-        enable_colors: Whether to enable colored output
-        log_format: Custom log format string
-        custom_colors: Custom color mapping
-        third_party_level: Log level for third-party libraries
-        clear_existing: Whether to clear existing handlers
+        level: Default log level; used as console level when console_level is not set.
+        console_level: Explicit console handler level (overrides ``level`` for console).
+        log_file: Path to log file.
+        log_file_level: Log level for file handler.
+        enable_colors: Whether to enable colored output.
+        log_format: Custom log format string.
+        custom_colors: Custom color mapping.
+        third_party_level: Log level for third-party libraries.
+        clear_existing: Whether to clear existing handlers.
     """
-    # Set defaults for any remaining None values
     level = level or "INFO"
-    log_file_level = log_file_level or "DEBUG"
+    log_file_level = log_file_level or "INFO"
     enable_colors = enable_colors if enable_colors is not None else True
     third_party_level = third_party_level or "WARNING"
+
+    effective_console = console_level or level
+    console_num = getattr(logging, effective_console.upper(), logging.INFO)
+    file_num = getattr(logging, log_file_level.upper(), logging.INFO) if log_file else logging.WARNING
 
     root_logger = logging.getLogger()
     if clear_existing:
         root_logger.handlers.clear()
 
-    log_level = getattr(logging, level.upper(), logging.INFO)
-    root_logger.setLevel(log_level)
+    # Root level = minimum of console and file so both handlers can receive
+    root_logger.setLevel(min(console_num, file_num) if log_file else console_num)
 
     fmt = log_format or "%(log_color)s%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     datefmt = "%H:%M:%S"
 
     if enable_colors and colorlog:
-        formatter = colorlog.ColoredFormatter(
+        console_formatter = colorlog.ColoredFormatter(
             fmt=fmt,
             datefmt=datefmt,
             log_colors=custom_colors
@@ -81,20 +86,21 @@ def setup_logging(
             style="%",
         )
     else:
-        formatter = logging.Formatter(fmt.replace("%(log_color)s", ""), datefmt=datefmt)
+        console_formatter = logging.Formatter(fmt.replace("%(log_color)s", ""), datefmt=datefmt)
 
-    # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(log_level)
+    console_handler.setFormatter(console_formatter)
+    console_handler.setLevel(console_num)
     root_logger.addHandler(console_handler)
 
-    # Optional file handler
     if log_file:
         Path(log_file).parent.mkdir(parents=True, exist_ok=True)
+        file_formatter = logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        )
         file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(formatter)
-        file_handler.setLevel(getattr(logging, log_file_level.upper(), logging.DEBUG))
+        file_handler.setFormatter(file_formatter)
+        file_handler.setLevel(file_num)
         root_logger.addHandler(file_handler)
 
 

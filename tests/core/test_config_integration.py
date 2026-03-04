@@ -64,7 +64,7 @@ class TestConfigIntegration:
             # Override with environment variable
             env = {
                 "NOE_AGENT_CONFIG": str(config_path),
-                "NOESIUM_LLM_PROVIDER": "openai",
+                "NOE_LLM_PROVIDER": "openai",
                 "OPENAI_API_KEY": "test-key",
             }
             with patch.dict(os.environ, env):
@@ -110,6 +110,32 @@ class TestConfigIntegration:
             assert len(loaded.subagents.builtin) == 1
             assert loaded.subagents.builtin[0].name == "browser_use"
             assert loaded.subagents.builtin[0].agent_type == "browser_use"
+
+    def test_config_with_subagents_builtin_config(self):
+        """Test that builtin subagent config (e.g. headless) round-trips and is available via NoeConfig."""
+        config = NoeAgentConfig()
+        config.subagents.builtin = [
+            AgentSubagentConfig(
+                name="browser_use",
+                agent_type="browser_use",
+                description="Web automation agent",
+                config={"headless": False},
+            )
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "config.json"
+            save_config(config, config_path)
+
+            loaded = load_config(config_path)
+            assert len(loaded.subagents.builtin) == 1
+            assert loaded.subagents.builtin[0].config == {"headless": False}
+
+            with patch.dict(os.environ, {"NOE_AGENT_CONFIG": str(config_path)}):
+                noe_config = NoeConfig.from_global_config()
+                subagent = noe_config.get_builtin_subagent("browser_use")
+                assert subagent is not None
+                assert subagent["config"] == {"headless": False}
 
     def test_config_with_toolkit_configs(self):
         """Test configuration with toolkit-specific settings."""
@@ -160,13 +186,14 @@ class TestNoeConfigIntegration:
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"
 
-            # Create global config with subagent
+            # Create global config with subagent (optional config for headless/headed)
             global_config = NoeAgentConfig()
             global_config.subagents.builtin = [
                 AgentSubagentConfig(
                     name="browser_use",
                     agent_type="browser_use",
                     description="Web automation",
+                    config={"headless": False},
                 )
             ]
             save_config(global_config, config_path)
@@ -179,6 +206,7 @@ class TestNoeConfigIntegration:
                 assert subagent is not None
                 assert subagent["name"] == "browser_use"
                 assert subagent["agent_type"] == "browser_use"
+                assert subagent["config"] == {"headless": False}
 
     def test_noe_config_ask_mode_overrides(self):
         """Test that ask mode applies correct overrides."""
@@ -377,6 +405,6 @@ class TestProviderConfiguration:
 
             # Test switching to different providers
             for provider in ["openai", "ollama", "openrouter"]:
-                with patch.dict(os.environ, {"NOE_AGENT_CONFIG": str(config_path), "NOESIUM_LLM_PROVIDER": provider}):
+                with patch.dict(os.environ, {"NOE_AGENT_CONFIG": str(config_path), "NOE_LLM_PROVIDER": provider}):
                     loaded = load_config()
                     assert loaded.llm.provider == provider

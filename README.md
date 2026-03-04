@@ -145,7 +145,7 @@ See [AGENTS.md](AGENTS.md) for detailed documentation.
 
 ```bash
 # LLM Provider
-export NOESIUM_LLM_PROVIDER="openai"
+export NOE_LLM_PROVIDER="openai"
 export OPENAI_API_KEY="sk-..."
 
 # Search

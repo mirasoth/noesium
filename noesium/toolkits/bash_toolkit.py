@@ -8,6 +8,7 @@ with comprehensive error handling and security features.
 import re
 from typing import Callable, Dict, Optional
 
+from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
@@ -52,7 +53,7 @@ class BashToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # Configuration
-        self.workspace_root = self.config.config.get("workspace_root", "/tmp/noesium_workspace")
+        self.workspace_root = self.config.config.get("workspace_root", get_toolkit_tmp_dir("bash", "workspace"))
         self.timeout = self.config.config.get("timeout", 60)
         self.max_output_length = self.config.config.get("max_output_length", 10000)
 
@@ -120,7 +121,7 @@ class BashToolkit(AsyncBaseToolkit):
             self.child = pexpect.spawn("/bin/bash", encoding="utf-8", echo=False, timeout=self.timeout)
 
             # Set up a unique prompt for reliable command detection
-            self.custom_prompt = "NOESIUM_BASH_PROMPT>> "
+            self.custom_prompt = "NOE_BASH_PROMPT>> "
 
             # Configure shell for better interaction
             self.child.sendline("stty -onlcr")  # Disable automatic newline conversion

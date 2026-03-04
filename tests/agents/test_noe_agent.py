@@ -105,8 +105,30 @@ class TestRichTUIRendering:
             ],
         )
         table = render_plan_table(plan)
-        assert table.title == "📋 Plan: Test goal"
+        assert table.title == "Plan: Test goal"
         assert table.row_count == 4
+
+    def test_render_plan_tree(self):
+        from rich.tree import Tree as RichTree
+
+        from noesium.noeagent.tui import render_plan_tree
+
+        plan = TaskPlan(
+            goal="Test goal",
+            steps=[
+                TaskStep(description="Step 1", status="completed"),
+                TaskStep(description="Step 2", status="in_progress"),
+                TaskStep(description="Step 3", status="pending"),
+            ],
+        )
+        tree = render_plan_tree(plan)
+        assert isinstance(tree, RichTree)
+        assert "Plan: Test goal" in str(tree.label)
+        assert tree.children is not None
+        assert len(tree.children) == 3
+        # Custom title
+        tree2 = render_plan_tree(plan, title="[sub] Plan: custom")
+        assert "[sub] Plan: custom" in str(tree2.label)
 
     def test_activity_line_tool_start(self):
         from noesium.noeagent.progress import ProgressEvent, ProgressEventType
@@ -513,6 +535,41 @@ class TestNoeConfig:
         assert len(enabled) == 2
         assert all(s.enabled for s in enabled)
 
+    def test_create_browser_use_agent_respects_headless_config(self):
+        """Test that _create_browser_use_agent passes config.headless to BrowserUseAgent."""
+        from noesium.noeagent.agent import NoeAgent
+        from noesium.noeagent.config import AgentSubagentConfig
+
+        agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
+
+        # Headed mode: config.headless = False
+        cfg_headed = AgentSubagentConfig(
+            name="browser_use",
+            agent_type="browser_use",
+            description="Web automation",
+            config={"headless": False},
+        )
+        bu_headed = agent._create_browser_use_agent(cfg_headed)
+        assert bu_headed.browser_profile.headless is False
+
+        # Headless mode (default): no config or headless True
+        cfg_headless = AgentSubagentConfig(
+            name="browser_use",
+            agent_type="browser_use",
+            description="Web automation",
+            config={"headless": True},
+        )
+        bu_headless = agent._create_browser_use_agent(cfg_headless)
+        assert bu_headless.browser_profile.headless is True
+
+        cfg_default = AgentSubagentConfig(
+            name="browser_use",
+            agent_type="browser_use",
+            description="Web automation",
+        )
+        bu_default = agent._create_browser_use_agent(cfg_default)
+        assert bu_default.browser_profile.headless is True
+
     def test_ask_mode_overrides(self):
         cfg = NoeConfig(mode=NoeMode.ASK).effective()
         assert cfg.max_iterations == 1
@@ -527,10 +584,10 @@ class TestNoeConfig:
 
     def test_config_priority_env_overrides_default(self, monkeypatch):
         """Environment variables should override default values."""
-        monkeypatch.setenv("NOESIUM_LLM_PROVIDER", "ollama")
+        monkeypatch.setenv("NOE_LLM_PROVIDER", "ollama")
         cfg = NoeConfig()
         assert cfg.llm_provider == "ollama"
-        monkeypatch.delenv("NOESIUM_LLM_PROVIDER")
+        monkeypatch.delenv("NOE_LLM_PROVIDER")
 
     def test_load_dotenv_disabled(self, tmp_path, monkeypatch):
         """Test that dotenv loading can be disabled."""

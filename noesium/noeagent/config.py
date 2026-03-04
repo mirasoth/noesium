@@ -8,8 +8,10 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+from uuid_extensions import uuid7str
 
 _NOE_HOME = Path.home() / ".noeagent"
+_NOE_AGENT_CONSOLE_LOG_LEVEL = "ERROR"
 
 
 class NoeMode(str, Enum):
@@ -21,7 +23,7 @@ class AgentSubagentConfig(BaseModel):
     """Configuration for a built-in agent subagent."""
 
     name: str
-    agent_type: str  # browser_use, tacitus, askura, t2
+    agent_type: str  # browser_use, tacitus, askura
     description: str | None = None
     enabled: bool = True
     # Enhanced capability descriptors for intelligent routing
@@ -40,6 +42,10 @@ class AgentSubagentConfig(BaseModel):
     preferred_for: list[str] = Field(
         default_factory=list,
         description="Query patterns this subagent is preferred for (e.g., ['real-time data', 'interactive web'])",
+    )
+    config: dict[str, Any] | None = Field(
+        default=None,
+        description="Agent-type-specific options (e.g. browser_use: headless)",
     )
 
 
@@ -117,6 +123,16 @@ DEFAULT_AGENT_SUBAGENTS = [
 ]
 
 
+def _tui_field(global_config: Any, key: str, default: Any) -> Any:
+    """Read a TUI config field from the global config (extra='allow' dict)."""
+    tui = getattr(global_config, "tui", None)
+    if tui is None:
+        return default
+    if isinstance(tui, dict):
+        return tui.get(key, default)
+    return getattr(tui, key, default)
+
+
 class NoeConfig(BaseModel):
     """Configuration for Noe.
 
@@ -130,7 +146,7 @@ class NoeConfig(BaseModel):
     """
 
     mode: NoeMode = NoeMode.AGENT
-    llm_provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
+    llm_provider: str = Field(default_factory=lambda: os.getenv("NOE_LLM_PROVIDER", "openai"))
     model_name: str | None = None
     planning_model: str | None = None
 
@@ -143,12 +159,17 @@ class NoeConfig(BaseModel):
     load_dotenv: bool = True
     dotenv_path: str | None = None  # None means auto-detect .env in current directory
 
-    # Logging verbosity
-    verbose: bool = False  # If True, set logging level to INFO (default WARNING)
-
     progress_callbacks: list[Callable] = Field(default_factory=list)
     session_log_dir: str = Field(default_factory=lambda: str(_NOE_HOME / "sessions"))
     enable_session_logging: bool = True
+
+    # Session isolation — all per-session artefacts live under session_dir
+    session_id: str = Field(default_factory=uuid7str)
+    session_dir: str | None = None  # Derived from session_id when None
+
+    # File-based logging level (console is always WARNING for UX simplicity).
+    # This is global, affecting noeagent, core, all subagents, and tools.
+    file_log_level: str = "INFO"
 
     # TUI settings
     tui_history_file: str = Field(default_factory=lambda: str(_NOE_HOME / "history.json"))
@@ -197,8 +218,9 @@ class NoeConfig(BaseModel):
 
     def effective(self) -> NoeConfig:
         """Return config with ask-mode overrides applied."""
-        if self.mode == NoeMode.ASK:
-            return self.model_copy(
+        cfg = self
+        if cfg.mode == NoeMode.ASK:
+            cfg = cfg.model_copy(
                 update={
                     "max_iterations": 1,
                     "enabled_toolkits": [],
@@ -206,7 +228,10 @@ class NoeConfig(BaseModel):
                     "persist_memory": False,
                 }
             )
-        return self
+        # Resolve session_dir from session_id when not explicitly set
+        if cfg.session_dir is None:
+            cfg = cfg.model_copy(update={"session_dir": str(Path(cfg.session_log_dir) / cfg.session_id)})
+        return cfg
 
     def load_dotenv_if_enabled(self) -> None:
         """Load .env file if enabled."""
@@ -276,17 +301,11 @@ class NoeConfig(BaseModel):
             interface_mode="library",
             load_dotenv=getattr(global_config.agent, "load_dotenv", True),
             dotenv_path=getattr(global_config.agent, "dotenv_path", None),
-            verbose=getattr(global_config.agent, "verbose", False),
             session_log_dir=global_config.memory.session_log_dir,
             enable_session_logging=global_config.memory.session_logging,
-            tui_history_file=(
-                getattr(global_config.tui, "history_file", str(_NOE_HOME / "history.json"))
-                if hasattr(global_config, "tui")
-                else str(_NOE_HOME / "history.json")
-            ),
-            tui_history_size=(
-                getattr(global_config.tui, "history_size", 1000) if hasattr(global_config, "tui") else 1000
-            ),
+            file_log_level=global_config.logging.file_level or global_config.logging.level,
+            tui_history_file=_tui_field(global_config, "history_file", str(_NOE_HOME / "history.json")),
+            tui_history_size=_tui_field(global_config, "history_size", 1000),
             enabled_toolkits=global_config.tools.enabled_toolkits,
             mcp_servers=[s.model_dump() for s in global_config.tools.mcp_servers],
             memory_providers=global_config.memory.providers,
@@ -302,7 +321,8 @@ class NoeConfig(BaseModel):
                     name=s.name,
                     agent_type=s.agent_type,
                     description=s.description,
-                    enabled=True,
+                    enabled=getattr(s, "enabled", True),
+                    config=getattr(s, "config", None),
                 )
                 for s in global_config.subagents.builtin
             ]

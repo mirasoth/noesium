@@ -943,9 +943,9 @@ WARNING: Failed to initialize memu provider: ...
 
 ### LLM Provider Configuration
 
-Make sure your LLM provider credentials are configured. The default provider is OpenAI (set via `NOESIUM_LLM_PROVIDER` env var):
+Make sure your LLM provider credentials are configured. The default provider is OpenAI (set via `NOE_LLM_PROVIDER` env var):
 
 ```bash
-export NOESIUM_LLM_PROVIDER="openai"
+export NOE_LLM_PROVIDER="openai"
 export OPENAI_API_KEY="your_key"
 ```

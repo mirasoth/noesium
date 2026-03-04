@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
+from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.toolkits.file_edit_toolkit import FileEditToolkit
 
@@ -22,7 +23,7 @@ class TestFileEditToolkitInitialization:
         """Test initialization with default configuration."""
         toolkit = FileEditToolkit()
 
-        assert toolkit.work_dir == Path("./file_workspace").resolve()
+        assert toolkit.work_dir == Path(get_toolkit_tmp_dir("file_edit", "workspace")).resolve()
         assert toolkit.default_encoding == "utf-8"
         assert toolkit.backup_enabled is True
         assert toolkit.max_file_size == 10 * 1024 * 1024  # 10MB
