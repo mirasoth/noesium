@@ -653,6 +653,42 @@ class TestBuiltInBuiltinSubagentSetup:
         # Registry should be empty
         assert len(agent._registry.list_providers()) == 0
 
+    @pytest.mark.asyncio
+    @pytest.mark.unit
+    async def test_setup_builtin_subagents_binds_correct_factory_per_subagent(self):
+        """Each built-in provider should keep its own factory callable."""
+        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.noeagent.agent import NoeAgent
+
+        config = NoeConfig(
+            mode=NoeMode.AGENT,
+            builtin=[
+                AgentSubagentConfig(name="browser_use", agent_type="browser_use", enabled=True),
+                AgentSubagentConfig(name="tacitus", agent_type="tacitus", enabled=True),
+            ],
+            enable_session_logging=False,
+        )
+
+        agent = NoeAgent(config)
+        agent._registry = CapabilityRegistry()
+        agent.llm = MagicMock()
+
+        browser_factory = MagicMock(return_value="browser-instance")
+        tacitus_factory = MagicMock(return_value="tacitus-instance")
+        agent._create_browser_use_agent = browser_factory
+        agent._create_tacitus_agent = tacitus_factory
+
+        await agent._setup_builtin_subagents()
+
+        browser_provider = agent._registry.get_by_name("builtin_agent:browser_use")
+        tacitus_provider = agent._registry.get_by_name("builtin_agent:tacitus")
+
+        assert browser_provider.agent_factory() == "browser-instance"
+        assert tacitus_provider.agent_factory() == "tacitus-instance"
+
+        browser_factory.assert_called_once()
+        tacitus_factory.assert_called_once()
+
 
 class TestInvokeBuiltinAction:
     """Tests for invoke_builtin subagent action."""
