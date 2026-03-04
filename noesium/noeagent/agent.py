@@ -33,6 +33,7 @@ from noesium.core.memory.provider_manager import ProviderMemoryManager
 from noesium.core.memory.providers.event_sourced import EventSourcedProvider
 from noesium.core.memory.providers.memu import MemuProvider
 from noesium.core.memory.providers.working import WorkingMemoryProvider
+from noesium.core.library_consts import SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS
 from noesium.core.toolify.adapters.builtin_adapter import BuiltinAdapter
 from noesium.core.toolify.adapters.function_adapter import FunctionAdapter
 from noesium.core.toolify.atomic import ToolContext, ToolPermission

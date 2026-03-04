@@ -157,7 +157,7 @@ class InlineCommand:
     """Explicit subagent invocation: (subagent_name, message). Built via inline_command_from_subagent."""
 
     command_type: SubagentCommandType
-    subagent_name: str  # Technical name (e.g., SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS)
+    subagent_name: str  # Technical name (e.g., "browser_use", "tacitus")
     message: str  # The message/task for the subagent
     original_input: str  # For display (e.g. "/research <message>")
 
@@ -209,8 +209,8 @@ def parse_subagent_prefix_from_input(user_input: str) -> tuple[list[str], str]:
     The rest is the message. If no leading digits, returns ([], user_input).
 
     Examples:
-        "2 3 雪球" -> ([SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS], "雪球")
-        "2 雪球" -> ([SUBAGENT_BROWSER_USE], "雪球")
+        "2 3 雪球" -> (["browser_use", "tacitus"], "雪球")
+        "2 雪球" -> (["browser_use"], "雪球")
         "雪球" -> ([], "雪球")
     """
     tokens = user_input.strip().split()
@@ -232,7 +232,7 @@ def inline_command_from_subagent(subagent_name: str, message: str) -> InlineComm
     API field) so the message is never parsed for /command.
 
     Args:
-        subagent_name: Technical name (e.g. SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS, SUBAGENT_CLAUDE)
+        subagent_name: Technical name (e.g. "browser_use", "tacitus", "claude")
         message: Task message for the subagent
 
     Returns:
