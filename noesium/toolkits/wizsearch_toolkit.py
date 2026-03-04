@@ -3,8 +3,13 @@ WizSearch toolkit for multi-engine web search and page crawling.
 
 Wraps the wizsearch library to provide unified search across multiple engines
 (Tavily, DuckDuckGo, Google AI, Brave, Bing, etc.) and web page content extraction.
+
+Engine-specific API keys (e.g. Tavily) are read from toolkit config or environment.
+Set TAVILY_API_KEY in config or env for Tavily to work; otherwise Tavily may fail
+silently and only other engines (e.g. DuckDuckGo) return results.
 """
 
+import os
 from typing import Callable, Dict, List, Optional
 
 try:
@@ -42,6 +47,31 @@ def _require_wizsearch():
         raise ImportError("wizsearch package is not installed. Install it with: pip install 'noesium[tools]'")
 
 
+def _normalize_engine_list(value: Optional[List[str]], default: List[str]) -> List[str]:
+    """Ensure enabled_engines is a list of strings. Accepts list or comma-separated string (e.g. from config or LLM)."""
+    if value is None:
+        return default
+    if isinstance(value, list):
+        return [str(x).strip() for x in value if str(x).strip()]
+    if isinstance(value, str):
+        return [x.strip() for x in value.split(",") if x.strip()]
+    return default
+
+
+def _apply_tavily_api_key_from_config(config: dict) -> None:
+    """Set TAVILY_API_KEY in environment from toolkit config if not already set.
+
+    The wizsearch library uses LangchainTavilySearch, which only reads TAVILY_API_KEY
+    from the environment. Without it, Tavily fails and (with fail_silently=True)
+    only other engines return results.
+    """
+    if os.environ.get("TAVILY_API_KEY"):
+        return
+    key = config.get("TAVILY_API_KEY") or config.get("tavily_api_key")
+    if isinstance(key, str) and key.strip():
+        os.environ["TAVILY_API_KEY"] = key.strip()
+
+
 @register_toolkit("wizsearch")
 class WizSearchToolkit(AsyncBaseToolkit):
     """
@@ -58,12 +88,13 @@ class WizSearchToolkit(AsyncBaseToolkit):
     - max_results_per_engine: int (default: 10)
     - search_timeout: int seconds (default: 30)
     - content_format: "markdown" | "html" | "text" (default: "markdown")
+    - TAVILY_API_KEY or tavily_api_key: Tavily API key (optional; can also set env TAVILY_API_KEY)
     """
 
     def __init__(self, config: ToolkitConfig = None):
         super().__init__(config)
 
-        self.enabled_engines: List[str] = self.config.config.get("enabled_engines", ["tavily"])
+        self.enabled_engines: List[str] = _normalize_engine_list(self.config.config.get("enabled_engines"), ["tavily"])
         self.max_results_per_engine: int = self.config.config.get("max_results_per_engine", 10)
         self.search_timeout: int = self.config.config.get("search_timeout", 30)
         self.content_format: str = self.config.config.get("content_format", "markdown")
@@ -92,10 +123,12 @@ class WizSearchToolkit(AsyncBaseToolkit):
             SearchResult with merged sources from all engines, optional AI answer, and metadata.
         """
         _require_wizsearch()
+        _apply_tavily_api_key_from_config(self.config.config)
         self.logger.info(f"Multi-engine web search for: {query}")
 
+        engine_list = _normalize_engine_list(engines, self.enabled_engines)
         wiz_config = WizSearchConfig(
-            enabled_engines=engines or self.enabled_engines,
+            enabled_engines=engine_list,
             max_results_per_engine=max_results or self.max_results_per_engine,
             timeout=self.search_timeout,
             fail_silently=True,
@@ -136,6 +169,7 @@ class WizSearchToolkit(AsyncBaseToolkit):
             SearchResult with sources, optional AI answer, and query metadata.
         """
         _require_wizsearch()
+        _apply_tavily_api_key_from_config(self.config.config)
         self.logger.info(f"Tavily search for: {query}")
 
         tavily_config = TavilySearchConfig(

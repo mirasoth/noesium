@@ -52,20 +52,20 @@ class TacitusAgent(BaseResearcher):
         llm_provider: str = "openai",
         query_generation_llm: BaseLLMClient | None = None,
         reflection_llm: BaseLLMClient | None = None,
-        number_of_initial_queries: int = 3,
-        max_research_loops: int = 3,
+        number_of_initial_queries: int = 2,
+        max_research_loops: int = 2,
         query_generation_temperature: float = 0.7,
         query_generation_max_tokens: int = 1000,
         web_search_temperature: float = 0.2,
-        web_search_max_tokens: int = 10000,
+        web_search_max_tokens: int = 3000,
         web_search_citation_enabled: bool = True,
         reflection_temperature: float = 0.5,
         reflection_max_tokens: int = 1000,
         answer_temperature: float = 0.3,
-        answer_max_tokens: int = 100000,
-        search_engines: List[str] = ["tavily", "duckduckgo"],
+        answer_max_tokens: int = 10000,
+        search_engines: List[str] = ["tavily"],
         max_results_per_engine: int = 5,
-        search_timeout: int = 30,
+        search_timeout: int = 20,
     ):
         """
         Initialize the TacitusAgent.
@@ -543,12 +543,29 @@ class TacitusAgent(BaseResearcher):
                             )
                         else:
                             gap_text = knowledge_gap[:50] if knowledge_gap else "more research needed"
-                            yield ProgressEvent(
-                                type=ProgressEventType.PLAN_REVISED,
-                                session_id=session_id,
-                                summary=f"Need more research: {gap_text}",
-                                detail=knowledge_gap,
-                            )
+                            follow_up_queries = node_output.get("follow_up_queries", [])
+                            if follow_up_queries:
+                                # Emit plan snapshot so TUI can show second-round (follow-up) steps
+                                yield ProgressEvent(
+                                    type=ProgressEventType.PLAN_REVISED,
+                                    session_id=session_id,
+                                    summary=f"Need more research: {gap_text}",
+                                    detail=knowledge_gap,
+                                    plan_snapshot={
+                                        "steps": [
+                                            {"description": f"Search: {q[:50]}", "status": "pending"}
+                                            for q in follow_up_queries
+                                        ],
+                                        "goal": user_message,
+                                    },
+                                )
+                            else:
+                                yield ProgressEvent(
+                                    type=ProgressEventType.PLAN_REVISED,
+                                    session_id=session_id,
+                                    summary=f"Need more research: {gap_text}",
+                                    detail=knowledge_gap,
+                                )
 
                     # Finalize answer node
                     elif node_name == "finalize_answer":

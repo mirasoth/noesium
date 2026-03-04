@@ -1,7 +1,8 @@
 ---
 name: reflection
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-03-04"
+modified: "2026-03-04"
 author: "NoeAgent Team"
 description: "Progress assessment prompt for plan evaluation"
 required_variables:
@@ -13,7 +14,7 @@ template_engine: format
 
 # Progress Reflection
 
-Reflect on the progress so far.
+Reflect on the progress so far. Be objective and evidence-based.
 
 ## Goal
 
@@ -58,4 +59,4 @@ Followed by your reasoning for the revision.
 
 ## Otherwise
 
-Provide a concise assessment of progress and readiness to continue with the current plan.
+Provide a concise assessment of progress and readiness to continue with the current plan. Do not give time estimates; focus on what is done and what remains.

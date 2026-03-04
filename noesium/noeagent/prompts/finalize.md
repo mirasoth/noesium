@@ -1,7 +1,8 @@
 ---
 name: finalize
-version: "1.0.0"
+version: "1.2.0"
 created: "2026-03-04"
+modified: "2026-03-04"
 author: "NoeAgent Team"
 description: "Answer synthesis prompt for final output generation"
 required_variables:
@@ -12,7 +13,7 @@ template_engine: format
 
 # Final Answer Synthesis
 
-Synthesize a comprehensive final answer from all the results gathered.
+Synthesize an answer from the gathered results. **Prefer a simple, direct answer.** Use the optional structure below only when the goal or results are complex and need multiple sections.
 
 ## Goal
 
@@ -22,47 +23,14 @@ Synthesize a comprehensive final answer from all the results gathered.
 
 {results}
 
-## Synthesis Guidelines
+## Quality and Safety
 
-### Structure Your Answer
-
-1. **Direct Answer**: Lead with the primary finding or answer
-2. **Supporting Details**: Provide evidence and context
-3. **Key Insights**: Highlight important discoveries
-4. **Limitations**: Acknowledge what couldn't be determined
-5. **Recommendations**: Suggest next steps if relevant
-
-### Quality Standards
-
-- **Clarity**: Use clear, accessible language
-- **Accuracy**: Only include verified information
-- **Completeness**: Address all aspects of the original goal
-- **Relevance**: Focus on what matters to the user
-- **Actionability**: Provide concrete, useful information
-
-### Formatting
-
-- Use markdown for readability
-- Include code blocks for technical content
-- Add links or references when available
-- Structure with headers and bullet points
-- Highlight critical findings
-
-## Answer Construction
-
-Build your answer by:
-
-1. Reviewing all gathered results
-2. Identifying the most relevant findings
-3. Connecting related pieces of information
-4. Drawing conclusions supported by evidence
-5. Addressing the original goal directly
+- **Accuracy**: Only include information supported by the gathered results. Do not fabricate URLs, numbers, or facts.
+- **Sources**: When results came from web search or external sources, add a brief "Sources" or "References" section with relevant links.
+- **Limitations**: Briefly note what could not be determined only if relevant.
 
 ## Final Output
 
-Provide a clear, well-structured answer that:
-- Directly addresses the user's goal
-- Synthesizes information from multiple sources
-- Presents findings in an organized, readable format
-- Adds value through insight and context
-- Remains focused and relevant
+- **Default**: Give a clear, concise answer that directly addresses the goal. One short paragraph or a few bullet points is often enough. Do not pad with extra sections.
+- **Only when necessary** (e.g. multi-part research, many findings): you may structure with 1) Direct answer, 2) Supporting details, 3) Key insights, 4) Limitations, 5) Recommendations. Otherwise omit this structure.
+- Use markdown for readability; use code blocks for technical content; cite sources when applicable. Do not give time estimates.

@@ -271,6 +271,34 @@ class TestConfigLoading:
                 assert config.llm.providers["ollama"].chat_model == "llama3.2"
                 assert config.agent.max_iterations == 50
 
+    def test_load_config_empty_file_uses_defaults(self):
+        """Test that empty config file {} is merged with defaults (e.g. ~/.noeagent/config.json = {})."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "config.json"
+            config_path.write_text("{}")
+
+            with patch.dict(os.environ, {}, clear=True):
+                config = load_config(config_path)
+
+            assert isinstance(config, NoeAgentConfig)
+            assert config.version == CONFIG_VERSION
+            assert config.llm.provider == "openai"
+            assert "bash" in config.tools.enabled_toolkits
+            assert config.agent.max_iterations == 25
+
+    def test_load_config_invalid_json_uses_defaults(self):
+        """Test that invalid JSON in config file falls back to defaults."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "config.json"
+            config_path.write_text("{ invalid }")
+
+            with patch.dict(os.environ, {}, clear=True):
+                config = load_config(config_path)
+
+            assert isinstance(config, NoeAgentConfig)
+            assert config.llm.provider == "openai"
+            assert "bash" in config.tools.enabled_toolkits
+
     def test_save_config(self):
         """Test saving configuration to file."""
         with tempfile.TemporaryDirectory() as tmpdir:

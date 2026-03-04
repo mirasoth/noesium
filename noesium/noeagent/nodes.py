@@ -49,19 +49,22 @@ def _build_tool_descriptions(registry: Any) -> str:
         return "No tools available."
     lines: list[str] = []
     for p in providers:
-        d = p.descriptor
-        params = ""
-        schema = d.input_schema or {}
+        d = getattr(p, "descriptor", None)
+        if not d:
+            continue
+        schema = getattr(d, "input_schema", None) or {}
         props = schema.get("properties", {})
         required = set(schema.get("required", []))
+        params = ""
         if props:
             parts = []
             for pname, pinfo in props.items():
                 req = " (required)" if pname in required else ""
                 parts.append(f"    - {pname}: {pinfo.get('type', 'any')}{req}")
             params = "\n" + "\n".join(parts)
-        desc = (d.description or "").split("\n")[0].strip()
-        lines.append(f"- **{d.capability_id}**: {desc}{params}")
+        desc = (getattr(d, "description", None) or "").split("\n")[0].strip()
+        cap_id = getattr(d, "capability_id", "unknown")
+        lines.append(f"- **{cap_id}**: {desc}{params}")
     return "\n".join(lines)
 
 
@@ -110,7 +113,7 @@ async def generate_answer_node(
     llm: Any,
 ) -> dict[str, Any]:
     mem_ctx = state.get("memory_context") or []
-    mem_text = "\n".join(f"- {m['key']}: {m['value']}" for m in mem_ctx) or "No memory context."
+    mem_text = "\n".join(f"- {m.get('key', '')}: {m.get('value', '')}" for m in mem_ctx) or "No memory context."
     pm = get_prompt_manager()
     system = pm.render("ask_system", memory_context=mem_text)
     user_msg = state["messages"][-1].content if state["messages"] else ""
@@ -178,7 +181,9 @@ async def execute_step_node(
         "auto": "Choose the best approach (tool, subagent, or direct answer).",
     }.get(hint, "Choose the best approach.")
 
-    completed = "\n".join(f"- {r['tool']}: {str(r['result'])[:200]}" for r in state.get("tool_results", []))
+    completed = "\n".join(
+        f"- {r.get('tool', 'unknown')}: {str(r.get('result', ''))[:200]}" for r in state.get("tool_results", [])
+    )
     tool_desc = tool_desc_cache if tool_desc_cache is not None else _build_tool_descriptions(registry)
 
     pm = get_prompt_manager()
@@ -459,7 +464,9 @@ async def reflect_node(
     plan_steps = ""
     if plan:
         plan_steps = "\n".join(f"  {i + 1}. [{s.status}] {s.description}" for i, s in enumerate(plan.steps))
-    completed = "\n".join(f"- {r['tool']}: {str(r['result'])[:200]}" for r in state.get("tool_results", []))
+    completed = "\n".join(
+        f"- {r.get('tool', 'unknown')}: {str(r.get('result', ''))[:200]}" for r in state.get("tool_results", [])
+    )
     pm = get_prompt_manager()
     prompt = pm.render(
         "reflection",
@@ -485,10 +492,28 @@ async def revise_plan_node(
     plan: TaskPlan | None = state.get("plan")
     if plan is None:
         return {}
-    completed = [str(r["result"])[:200] for r in state.get("tool_results", [])]
+    completed = [str(r.get("result", ""))[:200] for r in state.get("tool_results", [])]
     new_plan = await planner.revise_plan(plan, state.get("reflection", ""), completed)
     await _persist_plan_to_memory(new_plan, memory_manager)
     return {"plan": new_plan}
+
+
+def _is_no_task_finalize(goal: str, results: str) -> bool:
+    """True when goal/results indicate no real task — skip full synthesis and return a short message."""
+    goal_blank = not (goal and goal.strip())
+    results_blank = not (results and results.strip())
+    # Results often contain agent's own "no question" reply when user input was empty
+    no_task_phrases = (
+        "no specific question",
+        "no specific task",
+        "no specific research",
+        "don't see a specific question",
+        "lacks the necessary directives",
+        "absence of a defined goal",
+    )
+    results_lower = (results or "").lower()
+    results_say_no_task = any(p in results_lower for p in no_task_phrases)
+    return goal_blank or results_blank or results_say_no_task
 
 
 async def finalize_node(
@@ -498,10 +523,20 @@ async def finalize_node(
 ) -> dict[str, Any]:
     plan: TaskPlan | None = state.get("plan")
     goal = plan.goal if plan else ""
-    results = "\n".join(f"- {r['tool']}: {str(r['result'])[:300]}" for r in state.get("tool_results", []))
+    results = "\n".join(
+        f"- {r.get('tool', 'unknown')}: {str(r.get('result', ''))[:300]}" for r in state.get("tool_results", [])
+    )
     if not results:
         last_msg = state["messages"][-1].content if state["messages"] else ""
         results = last_msg
+
+    # Skip full synthesis for empty/error prompts to avoid redundant long output
+    if _is_no_task_finalize(goal, results):
+        if goal and goal.strip():
+            answer = "No results to synthesize. Please provide a specific question or task."
+        else:
+            answer = "No question or task was provided. Please enter a specific request (e.g. a topic to research, a file to analyze, or code to run)."
+        return {"final_answer": answer}
 
     pm = get_prompt_manager()
     prompt = pm.render("finalize", goal=goal, results=results)

@@ -104,6 +104,8 @@ class NoeAgent(BaseGraphicAgent):
             )
             await self._setup_external_subagents()
             await self._setup_builtin_subagents()
+            # Warm up LLM connection to reduce first-query latency
+            await self._warmup_llm()
         self._initialized = True
 
     async def reinitialize(self) -> None:
@@ -412,6 +414,28 @@ class NoeAgent(BaseGraphicAgent):
                     subagent_cfg.name,
                     exc,
                 )
+
+    async def _warmup_llm(self) -> None:
+        """Send lightweight request to pre-load LLM model and warm connection.
+
+        Non-blocking, non-fatal - logs warning on failure.
+        This reduces the 71-second first-call latency by pre-loading the model
+        during initialization rather than waiting for the first user query.
+        """
+        if not self.config.llm_warmup_on_init:
+            return
+
+        try:
+            logger.info("Warming up LLM connection...")
+            await asyncio.wait_for(
+                asyncio.to_thread(self.llm.completion, [{"role": "user", "content": "Ready"}]),
+                timeout=self.config.llm_warmup_timeout,
+            )
+            logger.info("LLM warm-up complete")
+        except asyncio.TimeoutError:
+            logger.warning(f"LLM warm-up timed out after {self.config.llm_warmup_timeout}s")
+        except Exception as e:
+            logger.warning(f"LLM warm-up failed (non-fatal): {e}")
 
     def _create_browser_use_agent(self, subagent_cfg: Any) -> Any:
         """Factory method to create a BrowserUseAgent instance.

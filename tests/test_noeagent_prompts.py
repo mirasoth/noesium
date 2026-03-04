@@ -170,11 +170,11 @@ def test_prompt_metadata_in_content():
 
 
 def test_all_toolkits_mentioned():
-    """Test that agent_system mentions all 18 registered toolkits."""
+    """Test that agent_system mentions default built-in toolkits (NoeConfig.enabled_toolkits)."""
     pm = get_prompt_manager()
     agent_prompt = pm.render("agent_system", **get_test_variables("agent_system"))
 
-    expected_toolkits = [
+    default_builtin_toolkits = [
         "bash",
         "file_edit",
         "document",
@@ -182,20 +182,11 @@ def test_all_toolkits_mentioned():
         "python_executor",
         "tabular_data",
         "wizsearch",
-        "arxiv",
-        "serper",
-        "wikipedia",
-        "github",
-        "gmail",
-        "memory",
         "user_interaction",
-        "video",
-        "audio",
-        "jina_research",
     ]
 
-    for toolkit in expected_toolkits:
-        assert toolkit in agent_prompt, f"agent_system missing toolkit: {toolkit}"
+    for toolkit in default_builtin_toolkits:
+        assert toolkit in agent_prompt, f"agent_system missing default built-in toolkit: {toolkit}"
 
 
 def test_execution_modes_documented():

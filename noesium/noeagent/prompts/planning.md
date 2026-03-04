@@ -1,7 +1,8 @@
 ---
 name: planning
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-03-04"
+modified: "2026-03-04"
 author: "NoeAgent Team"
 description: "Task planning prompt with execution hints"
 required_variables:
@@ -28,50 +29,37 @@ Return a JSON object with a "steps" array where each element has:
 ## Execution Modes
 
 ### tool
-Use for atomic operations requiring single tool invocations:
-- Search operations (wizsearch, serper, arxiv, wikipedia)
-- File operations (read, write, edit)
-- Data processing (python_executor, tabular_data)
-- API calls (github, gmail, jina_research)
+Use for atomic operations with a single toolkit:
+- Search: wizsearch (default built-in web search)
+- File: file_edit (read, write, edit)
+- Shell: bash (when no specialized tool fits)
+- Data: python_executor, tabular_data, document, image
+- User input: user_interaction
 
 ### subagent
-Delegate to a child agent for multi-step reasoning:
-- Complex analysis requiring multiple steps
-- Tasks needing persistent context
-- Workflows with conditional logic
+Delegate to an in-process child agent for multi-step reasoning (complex analysis, persistent context, conditional workflows). Execution hint only; the agent will choose spawn/interact as needed.
 
 ### external_subagent
-Delegate to an external CLI agent (e.g., Claude Code):
-- Code review and refactoring
-- Complex multi-file editing
-- Tasks requiring full shell access
-- Specialized reasoning tasks
+Delegate to an external CLI agent (e.g., Claude Code). Use when:
+- Code review, refactoring, complex multi-file editing
+- Tasks requiring full shell access or specialized CLI tools
 
 {external_subagent_info}
 
 ### builtin_agent
-Delegate to a built-in specialized agent:
-- **browser_use**: Real-time web data, form filling, interactive websites
-- **tacitus**: Multi-source research, information synthesis, complex questions
+Delegate to a **default built-in** subagent. Only two are available; choose by capability match:
+
+| Built-in | Name       | Use for |
+|----------|------------|---------|
+| browser_use | `browser_use` | Real-time web data, form filling, DOM interaction, interactive websites, screenshots |
+| tacitus  | `tacitus`  | Multi-source research, information synthesis, fact-checking, complex questions |
+
+**Selection:** Match task keywords to capabilities (e.g., "stock price", "form", "click" → browser_use; "research", "synthesize", "multiple sources" → tacitus). The executor uses subagent with action `invoke_builtin` and this name.
 
 {builtin_subagent_info}
 
-**Selection guidelines:**
-- Match task keywords to agent capabilities (e.g., "stock price" → browser_use, "research" → tacitus)
-- Use browser_use for: real-time data, DOM interaction, form submissions
-- Use tacitus for: research synthesis, multi-source analysis, complex questions
-
 ### auto
-Let the agent decide based on context. Use when:
-- The best approach is unclear
-- Multiple modes could work
-- Flexibility is needed
-
-## External Subagent Usage
-
-- Use for tasks requiring external agent capabilities (code review, refactoring)
-- CLI agents like Claude Code have full file system and shell access
-- Ideal for code-heavy tasks, multi-file editing, and complex reasoning
+Let the agent decide based on context when the best approach is unclear or multiple modes could work.
 
 ## Goal
 
@@ -83,8 +71,7 @@ Let the agent decide based on context. Use when:
 
 ## Planning Guidelines
 
-1. Keep steps atomic and actionable
-2. Order steps logically (dependencies before dependents)
-3. Choose appropriate execution hints
-4. Consider error handling and fallback strategies
-5. Estimate complexity accurately for delegation decisions
+1. Keep steps atomic and actionable.
+2. Order steps logically (dependencies before dependents).
+3. Choose execution hints that match default built-in tools and subagents only.
+4. Consider fallbacks; do not over-specify or estimate time.

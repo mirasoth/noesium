@@ -3,14 +3,15 @@
 import importlib.resources
 from typing import Any, Dict
 
-from noesium.core.llm.prompt import PromptManager
+from noesium.core.llm.prompt import PromptLoader, PromptManager
 
 
 class NoePromptManager:
     """Load and render prompts from noeagent.prompts package resources.
 
     Wraps the existing PromptManager to provide simple access to versioned
-    markdown prompt files shipped with the noeagent package.
+    markdown prompt files shipped with the noeagent package. Uses frontmatter
+    for template_engine, required_variables, and optional_variables.
     """
 
     def __init__(self):
@@ -20,6 +21,10 @@ class NoePromptManager:
 
     def render(self, name: str, **variables: Any) -> str:
         """Load and render a prompt from package resources.
+
+        Parses YAML frontmatter so that only the body is sent to the LLM,
+        template_engine (e.g. format) is applied, and required/optional
+        variables are validated and defaulted.
 
         Args:
             name: Prompt name without .md extension (e.g., "agent_system")
@@ -40,9 +45,15 @@ class NoePromptManager:
             except Exception as exc:
                 raise FileNotFoundError(f"Prompt '{name}' not found in noeagent.prompts package: {exc}") from exc
 
-        # Use PromptManager to process
-        template = self._manager.load_prompt(content=self._cache[name], name=name)
-        messages = self._manager.render_prompt(template, variables)
+        # Parse frontmatter and body so template_engine, required_variables, optional_variables apply
+        template = PromptLoader.from_markdown_string(self._cache[name], name=name)
+        try:
+            messages = self._manager.render_prompt(template, variables)
+        except ValueError as exc:
+            msg = str(exc)
+            if "required" in msg.lower() or "missing" in msg.lower():
+                raise ValueError(f"Prompt '{name}' missing required variable(s): {msg}") from exc
+            raise
         return messages[0].content if messages else ""
 
     def clear_cache(self) -> None:

@@ -347,7 +347,7 @@ class SubagentTracker:
             state.status = "done"
             state.last_activity = event.summary or "completed"
         elif event.type == ProgressEventType.SUBAGENT_PROGRESS:
-            if child_type == "plan.created" and event.plan_snapshot:
+            if child_type in ("plan.created", "plan.revised") and event.plan_snapshot:
                 steps = event.plan_snapshot.get("steps", [])
                 state.plan_steps = len(steps)
                 state.completed_steps = sum(1 for s in steps if s.get("status") == "completed")
@@ -364,10 +364,28 @@ class SubagentTracker:
                 summary = summary[len(f"[{sid}]") :].strip()
             state.last_activity = summary
 
-    def render(self) -> list[Text]:
+    def _sids_with_recent_activity(self, activity_lines: list[Text], last_n: int) -> set[str]:
+        """Return subagent ids that appear in the last_n activity lines."""
+        sids: set[str] = set()
+        for line in activity_lines[-last_n:]:
+            line_str = str(line)
+            for sid in self._states:
+                if f"[{sid}]" in line_str:
+                    sids.add(sid)
+                    break
+        return sids
+
+    def render_filtered(self, activity_lines: list[Text], last_n: int = 15) -> list[Text]:
+        """Render tracker lines, omitting subagents that have recent activity (avoids duplicate status)."""
+        return self.render(exclude_sids=self._sids_with_recent_activity(activity_lines, last_n))
+
+    def render(self, exclude_sids: set[str] | None = None) -> list[Text]:
         lines: list[Text] = []
+        exclude = exclude_sids or set()
         items = list(self._states.values())[-self._max_display :]
         for st in items:
+            if st.subagent_id in exclude:
+                continue
             tag = st.subagent_id
             # Get agent type indicator
             type_indicator = ""
@@ -610,10 +628,11 @@ def read_user_input(console: Console, mode: str = "agent", history: InputHistory
 
         # Use InMemoryHistory populated from our InputHistory
         # (FileHistory uses plain text format, incompatible with our JSON format)
+        # InMemoryHistory.insert(0, ...) puts each new item at index 0, so we append
+        # oldest-first; the last append (newest) ends up at 0 and is shown on first Up.
         ptk_history = InMemoryHistory()
         if history:
-            # Pre-populate with existing history (in reverse order so most recent is first)
-            for entry in reversed(history.history):
+            for entry in history.history:
                 ptk_history.append_string(entry)
 
         session = PromptSession(history=ptk_history)
@@ -706,6 +725,7 @@ async def _process_query(
     step_details: list[Text] = []  # Step progress details (not shown in live; kept for optional post-Live)
     plan_created_appended: bool = False  # dedup: only one "Plan created with N steps" per run
     subagent_plan_created_shown: set[str] = set()  # dedup: one "[tag] Plan created" per subagent
+    active_subagent_id: str | None = None  # subagent currently running (for pinned "Live" plan)
     sa_tracker = SubagentTracker(max_display=3)
 
     # Dynamic thinking text generator
@@ -717,10 +737,14 @@ async def _process_query(
         return Spinner("dots", text=thinking_gen.get_text(), style="cyan")
 
     def _build_display() -> Group:
-        """Assemble the live-updating renderable group. Block A: streaming progress; Block B: plan + spinner."""
+        """Assemble the live-updating renderable group.
+
+        Layout (top to bottom): 1. Streaming block, 2. Pinned block (global + subagent plans),
+        3. Spinner. Prompt is rendered above Live by the caller.
+        """
         parts: list[object] = []
-        # Block A: Streaming progress (subagent tracks + activity lines; no step_details in live)
-        sa_lines = sa_tracker.render()
+        # 1. Streaming block (subagent tracks + activity lines)
+        sa_lines = sa_tracker.render_filtered(activity_lines, last_n=15)
         if sa_lines:
             for sa_line in sa_lines:
                 parts.append(sa_line)
@@ -728,13 +752,15 @@ async def _process_query(
         for line in activity_lines[-15:]:
             parts.append(line)
         parts.append(Text(""))
-        # Block B: Persistent plan (plan tree(s) + spinner)
+        # 2. Pinned block (global + live subagent plan)
         if current_plan:
             parts.append(render_plan_tree(current_plan))
             parts.append(Text(""))
-        for sid, sa_plan in subagent_plans.items():
-            parts.append(render_plan_tree(sa_plan, title=f"[{sid}] Plan: {sa_plan.goal}"))
+        if active_subagent_id and active_subagent_id in subagent_plans:
+            sa_plan = subagent_plans[active_subagent_id]
+            parts.append(render_plan_tree(sa_plan, title=f"Live: [{active_subagent_id}] {sa_plan.goal}"))
             parts.append(Text(""))
+        # 3. Spinner
         parts.append(_get_spinner())
         return Group(*parts)
 
@@ -811,6 +837,17 @@ async def _process_query(
                     ProgressEventType.SUBAGENT_END,
                 ):
                     sa_tracker.update(event)
+                    if event.subagent_id:
+                        if etype == ProgressEventType.SUBAGENT_START or etype == ProgressEventType.SUBAGENT_PROGRESS:
+                            active_subagent_id = event.subagent_id
+                        elif etype == ProgressEventType.SUBAGENT_END:
+                            active_subagent_id = None
+                            # Mark all remaining steps of this subagent completed
+                            if event.subagent_id in subagent_plans:
+                                plan = subagent_plans[event.subagent_id]
+                                for step in plan.steps:
+                                    if step.status in ("in_progress", "pending"):
+                                        step.status = "completed"
                     if sa_tracker.has_active:
                         thinking_gen.set_phase("executing", f"[{event.subagent_id or 'subagent'}]")
 
@@ -822,7 +859,7 @@ async def _process_query(
                     step_details.append(Text.assemble(("    → ", "dim"), (f"Using tool: {event.tool_name}", "blue")))
                 elif etype == ProgressEventType.SUBAGENT_PROGRESS:
                     child_type = (event.metadata or {}).get("child_event_type", "")
-                    if child_type == "plan.created" and event.plan_snapshot:
+                    if child_type in ("plan.created", "plan.revised") and event.plan_snapshot:
                         steps = event.plan_snapshot.get("steps", [])
                         if steps and event.subagent_id:
                             try:
@@ -830,11 +867,29 @@ async def _process_query(
                             except Exception:
                                 pass
                         tag = event.subagent_id or "subagent"
-                        if tag not in subagent_plan_created_shown:
+                        if child_type == "plan.created" and tag not in subagent_plan_created_shown:
                             subagent_plan_created_shown.add(tag)
                             step_details.append(
                                 Text.assemble(("    ", ""), (f"[{tag}] ", "magenta"), ("Plan created", "dim"))
                             )
+                    elif child_type == "step.start" and event.subagent_id is not None and event.step_index is not None:
+                        sid = event.subagent_id
+                        if sid in subagent_plans:
+                            plan = subagent_plans[sid]
+                            idx = event.step_index
+                            if 0 <= idx < len(plan.steps):
+                                plan.steps[idx].status = "in_progress"
+                                if idx > 0:
+                                    plan.steps[idx - 1].status = "completed"
+                    elif (
+                        child_type == "step.complete" and event.subagent_id is not None and event.step_index is not None
+                    ):
+                        sid = event.subagent_id
+                        if sid in subagent_plans:
+                            plan = subagent_plans[sid]
+                            idx = event.step_index
+                            if 0 <= idx < len(plan.steps):
+                                plan.steps[idx].status = "completed"
                     elif child_type == "tool.start" and event.tool_name:
                         tag = event.subagent_id or "subagent"
                         step_details.append(
@@ -897,12 +952,7 @@ async def _process_query(
             # Refresh the live display after every event
             live.update(_build_display())
 
-    # --- Post-processing: render static output ---
-
-    if current_plan:
-        console.print(render_plan_tree(current_plan))
-    for sid, sa_plan in subagent_plans.items():
-        console.print(render_plan_tree(sa_plan, title=f"[{sid}] Plan: {sa_plan.goal}"))
+    # --- Post-processing: partial results + final answer only (no plan reprint) ---
 
     for pr in partial_results:
         console.print()

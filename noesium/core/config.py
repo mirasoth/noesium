@@ -374,6 +374,19 @@ def get_config_path() -> Path:
     return DEFAULT_CONFIG_PATH
 
 
+def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """Deep-merge override into base. Override values take precedence. Lists and non-dicts replace base."""
+    result = dict(base)
+    for key, override_value in override.items():
+        if key not in result:
+            result[key] = override_value
+        elif isinstance(override_value, dict) and isinstance(result[key], dict):
+            result[key] = _deep_merge(result[key], override_value)
+        else:
+            result[key] = override_value
+    return result
+
+
 def _normalize_config_data(data: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize configuration data to match expected schema.
 
@@ -425,7 +438,9 @@ def load_config(config_path: Optional[Path] = None) -> NoeAgentConfig:
     """Load configuration from file.
 
     If the config file doesn't exist, creates a default configuration
-    and saves it to the config path.
+    and saves it to the config path. If the file is empty or invalid JSON,
+    it is treated as empty config and merged with defaults so that e.g. ``{}``
+    yields the same behavior as a full default config.
 
     Args:
         config_path: Optional path to config file. If not provided,
@@ -443,9 +458,21 @@ def load_config(config_path: Optional[Path] = None) -> NoeAgentConfig:
         save_config(config, config_path)
         return config
 
-    # Load from file
-    with open(config_path, "r") as f:
-        data = json.load(f)
+    # Load from file; treat empty or invalid content as {}
+    raw = config_path.read_text().strip()
+    if not raw:
+        data = {}
+    else:
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+
+    # Merge with defaults so empty {} gets full default structure
+    default_dict = NoeAgentConfig().model_dump()
+    data = _deep_merge(default_dict, data)
 
     # Normalize data to handle format variations
     data = _normalize_config_data(data)

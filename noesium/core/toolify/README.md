@@ -56,7 +56,7 @@ configs = {
     ),
     "wizsearch": ToolkitConfig(
         config={
-            "enabled_engines": ["tavily", "duckduckgo"],
+            "enabled_engines": ["tavily"],
             "max_results_per_engine": 10,
         }
     )
@@ -112,7 +112,7 @@ Multi-engine web search and page crawling via the wizsearch library.
 
 ```python
 config = ToolkitConfig(config={
-    "enabled_engines": ["tavily", "duckduckgo"],
+    "enabled_engines": ["tavily"],
     "max_results_per_engine": 10,
 })
 

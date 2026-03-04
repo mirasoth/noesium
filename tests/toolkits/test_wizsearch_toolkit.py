@@ -11,11 +11,11 @@ from noesium.core.toolify import ToolkitConfig, get_toolkit
 
 @pytest.fixture
 def wizsearch_config():
-    """Create a test configuration for WizSearchToolkit."""
+    """Create a test configuration for WizSearchToolkit (default: enabled_engines tavily)."""
     return ToolkitConfig(
         name="wizsearch",
         config={
-            "enabled_engines": ["tavily", "duckduckgo"],
+            "enabled_engines": ["tavily"],
             "max_results_per_engine": 5,
             "search_timeout": 20,
             "content_format": "markdown",
@@ -48,11 +48,21 @@ class TestWizSearchToolkit:
 
     @pytest.mark.asyncio
     async def test_toolkit_config_defaults(self, wizsearch_toolkit):
-        """Test that configuration values are read correctly."""
-        assert wizsearch_toolkit.enabled_engines == ["tavily", "duckduckgo"]
+        """Test that configuration values are read correctly (default enabled_engines: tavily)."""
+        assert wizsearch_toolkit.enabled_engines == ["tavily"]
         assert wizsearch_toolkit.max_results_per_engine == 5
         assert wizsearch_toolkit.search_timeout == 20
         assert wizsearch_toolkit.content_format == "markdown"
+
+    @pytest.mark.asyncio
+    async def test_enabled_engines_string_normalized_to_list(self):
+        """Regression: enabled_engines as comma-separated string (config or LLM) is normalized to list."""
+        config = ToolkitConfig(
+            name="wizsearch",
+            config={"enabled_engines": "google,bing", "max_results_per_engine": 5},
+        )
+        toolkit = get_toolkit("wizsearch", config)
+        assert toolkit.enabled_engines == ["google", "bing"]
 
     @pytest.mark.asyncio
     async def test_get_tools_map(self, wizsearch_toolkit):
@@ -81,7 +91,7 @@ class TestWizSearchToolkit:
 
         mock_instance = MagicMock()
         mock_instance.search = AsyncMock(return_value=mock_result)
-        mock_instance.get_enabled_engines.return_value = ["tavily", "duckduckgo"]
+        mock_instance.get_enabled_engines.return_value = ["tavily"]
         mock_wiz_cls.return_value = mock_instance
 
         result = await wizsearch_toolkit.web_search("test query")
@@ -90,6 +100,26 @@ class TestWizSearchToolkit:
         assert result.query == "test query"
         assert len(result.sources) == 2
         mock_instance.search.assert_called_once_with(query="test query")
+
+    @pytest.mark.asyncio
+    @patch("noesium.toolkits.wizsearch_toolkit.WizSearch")
+    @patch("noesium.toolkits.wizsearch_toolkit.WizSearchConfig")
+    async def test_web_search_engines_string_normalized(self, mock_config_cls, mock_wiz_cls, wizsearch_toolkit):
+        """Regression: engines passed as comma-separated string (e.g. from LLM) is normalized to list."""
+        from unittest.mock import MagicMock
+
+        from wizsearch import SearchResult
+
+        mock_instance = MagicMock()
+        mock_instance.search = AsyncMock(return_value=SearchResult(query="q", sources=[]))
+        mock_instance.get_enabled_engines.return_value = ["google", "bing"]
+        mock_wiz_cls.return_value = mock_instance
+
+        await wizsearch_toolkit.web_search("q", engines="google,bing")
+
+        mock_config_cls.assert_called_once()
+        call_kw = mock_config_cls.call_args[1]
+        assert call_kw["enabled_engines"] == ["google", "bing"]
 
     @pytest.mark.asyncio
     @patch("noesium.toolkits.wizsearch_toolkit.WizSearch")

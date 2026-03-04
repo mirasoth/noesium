@@ -218,6 +218,12 @@ class NoeConfig(BaseModel):
     )
     external: list[CliSubagentConfig] = Field(default_factory=list)
 
+    # LLM warm-up configuration
+    llm_warmup_on_init: bool = Field(
+        default=True, description="Send warm-up request to LLM during initialization to reduce first-query latency"
+    )
+    llm_warmup_timeout: int = Field(default=30, description="Timeout in seconds for LLM warm-up request")
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def effective(self) -> NoeConfig:

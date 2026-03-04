@@ -81,7 +81,7 @@ mcp = ["mcp>=1.0.0"]
 # Toolkits
 tools = [
     "noesium[google,aliyun,datascience,mcp]",
-    "wizsearch>=1.0.1,<2.0.0",
+    "wizsearch>=1.1.2,<2.0.0",
     "arxiv>=2.2.0",
     "pillow>=10.1.0,<12.0",
     "pymupdf>=1.23.0",

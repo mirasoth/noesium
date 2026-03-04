@@ -1,10 +1,8 @@
 """Tests for toolkit-specific configuration integration."""
 
-import pytest
 from noesium.core.config import (
     NoeAgentConfig,
     ToolkitConfigEntry,
-    ToolsConfig,
 )
 from noesium.noeagent.config import NoeConfig
 
@@ -51,10 +49,7 @@ class TestToolkitConfigEntry:
             max_results_per_engine=20,
         )
         # Exclude common fields to get only toolkit-specific config
-        toolkit_specific = entry.model_dump(
-            exclude_none=True,
-            exclude={"timeout", "shell", "max_output_length"}
-        )
+        toolkit_specific = entry.model_dump(exclude_none=True, exclude={"timeout", "shell", "max_output_length"})
         assert toolkit_specific == {
             "enabled_engines": ["tavily"],
             "max_results_per_engine": 20,
@@ -123,10 +118,7 @@ class TestToolkitConfigIntegration:
         )
 
         # Simulate what NoeConfig.from_global_config does
-        toolkit_specific = entry.model_dump(
-            exclude_none=True,
-            exclude={"timeout", "shell", "max_output_length"}
-        )
+        toolkit_specific = entry.model_dump(exclude_none=True, exclude={"timeout", "shell", "max_output_length"})
 
         # Common field should not be in the extracted config
         assert "timeout" not in toolkit_specific

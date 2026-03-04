@@ -60,13 +60,17 @@ template_engine: format
 
 ## Capabilities Documented
 
-Prompts reflect actual NoeAgent capabilities:
+Prompts document **default built-in** capabilities only; additional toolkits or subagents may be configured at runtime.
 
-- **18 Registered Toolkits**: bash, file_edit, document, image, python_executor, tabular_data, wizsearch, arxiv, serper, wikipedia, github, gmail, memory, user_interaction, video, audio, audio_aliyun, jina_research
+- **Default built-in toolkits** (from `NoeConfig.enabled_toolkits`): bash, file_edit, document, image, python_executor, tabular_data, wizsearch, user_interaction. The actual tool list shown to the agent is built at runtime from the capability registry and injected as `{tool_descriptions}` in the agent system prompt.
 
-- **Built-in Subagents**: browser_use (web automation), tacitus (research synthesis)
+- **Default built-in subagents** (from `DEFAULT_AGENT_SUBAGENTS`): **browser_use** (web automation, form filling, DOM interaction), **tacitus** (research, multi-source synthesis). Invocation uses subagent action `invoke_builtin` with `name` set to the built-in name and `message` for the task.
 
-- **Execution Modes**: tool, subagent, external_subagent, builtin_agent, auto
+- **Execution modes** (planning/revise): tool, subagent, external_subagent, builtin_agent, auto.
+
+## Safety and Optimization
+
+Prompts align with safety and optimization practices similar to Claude Code: no time estimates, professional objectivity, safe tool use (no destructive actions without user request, prefer specialized tools over bash for file operations), and quality standards (accuracy, no fabrication, cite sources in finalize). Security-related guidance supports authorized testing and refuses malicious or destructive requests.
 
 ## Versioning
 
