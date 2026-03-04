@@ -10,7 +10,7 @@ silently and only other engines (e.g. DuckDuckGo) return results.
 """
 
 import os
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 try:
     from wizsearch import (
@@ -141,6 +141,21 @@ class WizSearchToolkit(AsyncBaseToolkit):
         )
         return result
 
+    async def _web_search_for_agent(
+        self,
+        query: str,
+        max_results: Optional[int] = None,
+        **kwargs: Any,
+    ) -> SearchResult:
+        """Agent-facing web search: uses toolkit-configured engines only (no engines argument).
+
+        This entry point is exposed to the agent so that engine selection is controlled
+        solely by config (e.g. enabled_engines in toolkit_configs). With empty config,
+        the default is tavily. Any engines passed in kwargs are ignored. The full
+        web_search(..., engines=...) remains available for programmatic use.
+        """
+        return await self.web_search(query=query, engines=None, max_results=max_results)
+
     async def tavily_search(
         self,
         query: str,
@@ -260,7 +275,7 @@ class WizSearchToolkit(AsyncBaseToolkit):
 
     async def get_tools_map(self) -> Dict[str, Callable]:
         return {
-            "web_search": self.web_search,
+            "web_search": self._web_search_for_agent,
             "tavily_search": self.tavily_search,
             "google_ai_search": self.google_ai_search,
             "crawl_page": self.crawl_page,

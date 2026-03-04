@@ -124,6 +124,28 @@ class TestWizSearchToolkit:
     @pytest.mark.asyncio
     @patch("noesium.toolkits.wizsearch_toolkit.WizSearch")
     @patch("noesium.toolkits.wizsearch_toolkit.WizSearchConfig")
+    async def test_web_search_for_agent_uses_configured_engines_only(
+        self, mock_config_cls, mock_wiz_cls, wizsearch_toolkit
+    ):
+        """Agent-facing web_search uses toolkit config (e.g. tavily when config is empty); no engines arg."""
+        from unittest.mock import MagicMock
+
+        from wizsearch import SearchResult
+
+        mock_instance = MagicMock()
+        mock_instance.search = AsyncMock(return_value=SearchResult(query="q", sources=[]))
+        mock_instance.get_enabled_engines.return_value = ["tavily"]
+        mock_wiz_cls.return_value = mock_instance
+
+        await wizsearch_toolkit._web_search_for_agent("q")
+
+        mock_config_cls.assert_called_once()
+        call_kw = mock_config_cls.call_args[1]
+        assert call_kw["enabled_engines"] == ["tavily"]
+
+    @pytest.mark.asyncio
+    @patch("noesium.toolkits.wizsearch_toolkit.WizSearch")
+    @patch("noesium.toolkits.wizsearch_toolkit.WizSearchConfig")
     async def test_web_search_with_custom_engines(self, mock_config_cls, mock_wiz_cls, wizsearch_toolkit):
         """Test web search with overridden engine list."""
         from unittest.mock import MagicMock
