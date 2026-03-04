@@ -170,7 +170,7 @@ config = NoeConfig(
     model_name="anthropic/claude-3-5-sonnet",
     max_iterations=15,
     reflection_interval=3,
-    enabled_toolkits=["wizsearch", "bash", "python_executor"],
+    enabled_toolkits=["web_search", "bash", "python_executor"],
     permissions=["fs:read", "net:outbound"],
 )
 
@@ -209,7 +209,7 @@ result = agent.run("Your research question")
 
 All 18 registered toolkits are enabled by default in AGENT mode:
 
-- `wizsearch` - Multi-engine web search
+- `web_search` - Multi-engine web search
 - `jina_research` - Research via Jina Reader
 - `bash` - Shell command execution
 - `python_executor` - Python code execution

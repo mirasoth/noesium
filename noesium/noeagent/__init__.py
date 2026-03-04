@@ -15,6 +15,16 @@ except ImportError:
     pass
 
 from .agent import NoeAgent
+from .commands import (
+    InlineCommand,
+    SubagentCommandType,
+    execute_subagent_command,
+    get_subagent_commands_help,
+    get_subagent_display_name,
+    get_toolkit_display_name,
+    is_subagent_command,
+    parse_inline_command,
+)
 from .config import CliSubagentConfig, NoeConfig, NoeMode
 from .progress import ProgressCallback, ProgressEvent, ProgressEventType
 from .schemas import AgentAction, SubagentAction, ToolCallAction
@@ -35,4 +45,13 @@ __all__ = [
     "ProgressEventType",
     "ProgressCallback",
     "SessionLogger",
+    # Commands module
+    "InlineCommand",
+    "SubagentCommandType",
+    "parse_inline_command",
+    "is_subagent_command",
+    "execute_subagent_command",
+    "get_subagent_commands_help",
+    "get_toolkit_display_name",
+    "get_subagent_display_name",
 ]

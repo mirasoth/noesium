@@ -94,7 +94,7 @@ The parallel loading via `asyncio.gather()` helps, but the sequential steps with
 
 **Measured impact**:
 - `bash` toolkit: ~50-100ms (shell session setup)
-- `wizsearch` toolkit: ~10-30ms (just config)
+- `web_search` toolkit: ~10-30ms (just config)
 - `memory` toolkit: ~10-20ms (file I/O check)
 - MCP server connection: ~200-1000ms per server (stdio/SSE transport handshake)
 

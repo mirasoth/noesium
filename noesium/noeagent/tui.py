@@ -72,6 +72,13 @@ if TYPE_CHECKING:
     from .agent import NoeAgent
     from .state import TaskPlan
 
+from .commands import (
+    execute_subagent_command,
+    get_subagent_commands_help,
+    get_subagent_display_name,
+    get_toolkit_display_name,
+    parse_inline_command,
+)
 from .config import _NOE_AGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
 from .progress import ProgressEvent, ProgressEventType
 from .session_log import SessionLogger
@@ -237,20 +244,56 @@ def _get_action_icon(child_event_type: str, agent_type: str) -> str:
     return ""
 
 
+def _get_tool_display_name(tool_name: str) -> str:
+    """Convert tool name to display name.
+
+    Handles formats like 'toolkit:tool_name' or just 'tool_name'.
+    """
+    if ":" in tool_name:
+        toolkit_name, actual_tool = tool_name.split(":", 1)
+        display_toolkit = get_toolkit_display_name(toolkit_name)
+        return f"{display_toolkit}:{actual_tool}"
+    return tool_name
+
+
+def _get_subagent_display_tag(subagent_id: str) -> str:
+    """Convert subagent ID to display name.
+
+    Handles formats like 'browser_use-1' or 'tacitus'.
+    """
+    # Remove any numeric suffix (e.g., browser_use-1 -> browser_use)
+    base_name = subagent_id.rsplit("-", 1)[0] if "-" in subagent_id else subagent_id
+    display_name = get_subagent_display_name(base_name)
+    # Reattach numeric suffix if present
+    if "-" in subagent_id:
+        suffix = subagent_id.rsplit("-", 1)[1]
+        if suffix.isdigit():
+            return f"{display_name}-{suffix}"
+    return display_name
+
+
 def _activity_line(event: ProgressEvent, thinking_gen: DynamicThinkingText | None = None) -> Text | None:
-    """Produce a compact one-liner for an activity event, or None to skip."""
+    """Produce a compact one-liner for an activity event, or None to skip.
+
+    Uses display names for better readability (e.g., 'WebSearch' instead of 'web_search').
+    """
     etype = event.type
 
     if etype == ProgressEventType.TOOL_START:
-        label = event.summary or f"Using {event.tool_name or 'tool'}"
+        tool_name = event.tool_name or "tool"
+        # Use display name for tool
+        display_tool = _get_tool_display_name(tool_name)
+        label = event.summary or f"Using {display_tool}"
         if thinking_gen:
-            thinking_gen.set_phase("tool_use", f"({event.tool_name or 'tool'})")
+            thinking_gen.set_phase("tool_use", f"({display_tool})")
         return Text.assemble(("  . ", "dim"), (label, "blue"))
 
     if etype == ProgressEventType.TOOL_END:
-        label = event.tool_name or "tool"
+        tool_name = event.tool_name or "tool"
+        # Use display name for tool
+        display_tool = _get_tool_display_name(tool_name)
         brief = (event.tool_result or "")[:100].replace("\n", " ")
-        parts: list[tuple[str, str] | str] = [("  > ", "dim green"), (f"{label}", "green")]
+        parts: list[tuple[str, str] | str] = [("  > ", "dim green"), (f"{display_tool}", "green")]
         if brief:
             parts.append(("  ", ""))
             parts.append((brief[:80], "dim"))
@@ -258,15 +301,20 @@ def _activity_line(event: ProgressEvent, thinking_gen: DynamicThinkingText | Non
 
     if etype == ProgressEventType.SUBAGENT_START:
         tag = event.subagent_id or "subagent"
+        # Use display name for subagent
+        display_tag = _get_subagent_display_tag(tag)
         msg = event.summary or "spawned"
         if thinking_gen:
-            thinking_gen.set_phase("executing", f"[{tag}]")
+            thinking_gen.set_phase("executing", f"[{display_tag}]")
+        # Strip tag prefix if present
         if msg.startswith(f"[{tag}]"):
-            return Text.assemble(("  ", ""), (f"[{tag}] ", "bold magenta"), (msg[len(f"[{tag}]") :].strip(), ""))
-        return Text.assemble(("  ", ""), (f"[{tag}] ", "bold magenta"), (msg, ""))
+            msg = msg[len(f"[{tag}]") :].strip()
+        return Text.assemble(("  ", ""), (f"[{display_tag}] ", "bold magenta"), (msg, ""))
 
     if etype == ProgressEventType.SUBAGENT_PROGRESS:
         tag = event.subagent_id or "subagent"
+        # Use display name for subagent
+        display_tag = _get_subagent_display_tag(tag)
         metadata = event.metadata or {}
         child_type = metadata.get("child_event_type", "")
         agent_type = metadata.get("agent_type", "")
@@ -283,15 +331,17 @@ def _activity_line(event: ProgressEvent, thinking_gen: DynamicThinkingText | Non
         if icon:
             return Text.assemble(
                 ("  ", ""),
-                (f"[{tag}] ", "magenta"),
+                (f"[{display_tag}] ", "magenta"),
                 (f"{icon} ", ""),
                 (summary, "dim"),
             )
-        return Text.assemble(("  ", ""), (f"[{tag}] ", "magenta"), (summary, "dim"))
+        return Text.assemble(("  ", ""), (f"[{display_tag}] ", "magenta"), (summary, "dim"))
 
     if etype == ProgressEventType.SUBAGENT_END:
         tag = event.subagent_id or "subagent"
-        return Text.assemble(("  ", ""), (f"[{tag}] ", "green"), (event.summary or "done", "green"))
+        # Use display name for subagent
+        display_tag = _get_subagent_display_tag(tag)
+        return Text.assemble(("  ", ""), (f"[{display_tag}] ", "green"), (event.summary or "done", "green"))
 
     if etype == ProgressEventType.THINKING:
         return Text.assemble(("  . ", "dim"), (event.summary or "Thinking...", "dim italic"))
@@ -387,6 +437,8 @@ class SubagentTracker:
             if st.subagent_id in exclude:
                 continue
             tag = st.subagent_id
+            # Get display name for subagent
+            display_tag = _get_subagent_display_tag(tag)
             # Get agent type indicator
             type_indicator = ""
             type_indicator = ""
@@ -396,7 +448,7 @@ class SubagentTracker:
                 lines.append(
                     Text.assemble(
                         ("  ", ""),
-                        (f"[{tag}] ", "green"),
+                        (f"[{display_tag}] ", "green"),
                         (type_indicator, ""),
                         (progress, "green"),
                     )
@@ -405,7 +457,7 @@ class SubagentTracker:
                 lines.append(
                     Text.assemble(
                         ("  ", ""),
-                        (f"[{tag}] ", "red"),
+                        (f"[{display_tag}] ", "red"),
                         ("error", "red"),
                     )
                 )
@@ -421,7 +473,7 @@ class SubagentTracker:
                 lines.append(
                     Text.assemble(
                         ("  ", ""),
-                        (f"[{tag}] ", "magenta"),
+                        (f"[{display_tag}] ", "magenta"),
                         (type_indicator, ""),
                         (progress, "yellow"),
                     )
@@ -437,6 +489,7 @@ class SubagentTracker:
 # Slash commands
 # ---------------------------------------------------------------------------
 
+# System slash commands (TUI control)
 SLASH_COMMANDS = {
     "/exit": "Exit the TUI",
     "/quit": "Exit the TUI",
@@ -447,6 +500,9 @@ SLASH_COMMANDS = {
     "/help": "Show available commands",
     "/session": "Show current session log path",
 }
+
+# Subagent commands - merged into help display
+SUBAGENT_COMMANDS_HELP = get_subagent_commands_help()
 
 
 def handle_slash_command(
@@ -473,6 +529,13 @@ def handle_slash_command(
         for k, v in SLASH_COMMANDS.items():
             table.add_row(k, v)
         console.print(table)
+        # Also show subagent commands
+        sa_table = Table(title="Subagent Commands", show_lines=False)
+        sa_table.add_column("Command", style="bold magenta")
+        sa_table.add_column("Description")
+        for k, v in SUBAGENT_COMMANDS_HELP.items():
+            sa_table.add_row(k, v)
+        console.print(sa_table)
         return False
 
     if command == "/mode":
@@ -693,6 +756,74 @@ def read_user_input(console: Console, mode: str = "agent", history: InputHistory
             history.add(result)
 
         return result
+
+
+# ---------------------------------------------------------------------------
+# Subagent command processing
+# ---------------------------------------------------------------------------
+
+
+async def _process_subagent_command(
+    agent: "NoeAgent",
+    command: "InlineCommand",
+    console: Console,
+    session_logger: SessionLogger | None = None,
+) -> None:
+    """Process a subagent command with live progress display.
+
+    Args:
+        agent: The NoeAgent instance
+        command: The parsed inline command
+        console: Rich console for output
+        session_logger: Optional session logger
+    """
+
+    subagent_display = get_subagent_display_name(command.subagent_name)
+    activity_lines: list[Text] = []
+    final_result: str = ""
+
+    # Dynamic thinking text generator
+    thinking_gen = DynamicThinkingText()
+    thinking_gen.set_phase("executing", f"[{subagent_display}]")
+
+    def _get_spinner() -> Spinner:
+        return Spinner("dots", text=thinking_gen.get_text(), style="cyan")
+
+    def _build_display() -> Group:
+        parts: list[object] = []
+        # Activity lines
+        for line in activity_lines[-15:]:
+            parts.append(line)
+        if activity_lines:
+            parts.append(Text(""))
+        # Spinner
+        parts.append(_get_spinner())
+        return Group(*parts)
+
+    # Execute the subagent command
+    success, result = await execute_subagent_command(agent, command)
+
+    if not success:
+        console.print(Text(f"  ! {result}", style="bold red"))
+        return
+
+    # Display the result
+    console.print(
+        Text.assemble(
+            ("  ", ""),
+            (f"[{subagent_display}] ", "green"),
+            ("completed", "green"),
+        )
+    )
+    console.print()
+
+    if result:
+        from rich.markdown import Markdown
+        from rich.rule import Rule
+
+        console.print(Rule(style="dim"))
+        console.print(Markdown(result))
+        console.print()
 
 
 # ---------------------------------------------------------------------------
@@ -1040,6 +1171,45 @@ def run_agent_tui(agent: "NoeAgent") -> None:
                 continue
 
             if user_input.startswith("/"):
+                # Check if it's a subagent command first
+                inline_cmd = parse_inline_command(user_input)
+                if inline_cmd is not None:
+                    # Process subagent command
+                    subagent_display = get_subagent_display_name(inline_cmd.subagent_name)
+                    console.print(
+                        Text.assemble(
+                            ("noe|", "bold cyan"),
+                            (f"{agent.config.mode.value}> ", "bold cyan"),
+                            (f"/{inline_cmd.command_type.value} ", "bold magenta"),
+                            (inline_cmd.message[:60] + ("..." if len(inline_cmd.message) > 60 else ""), ""),
+                        )
+                    )
+                    console.print()
+                    console.print(
+                        Text.assemble(
+                            ("  ", ""),
+                            (f"[{subagent_display}] ", "bold magenta"),
+                            ("Starting...", "yellow"),
+                        )
+                    )
+                    try:
+                        task = loop.create_task(
+                            _process_subagent_command(agent, inline_cmd, console, session_logger=session_logger)
+                        )
+                        loop.run_until_complete(task)
+                    except KeyboardInterrupt:
+                        console.print(f"\n[yellow]{subagent_display} task cancelled.[/yellow]")
+                        last_ctrl_c_time = time.time()
+                        ctrl_c_count = 1
+                    except asyncio.CancelledError:
+                        console.print(f"\n[yellow]{subagent_display} task cancelled.[/yellow]")
+                        last_ctrl_c_time = time.time()
+                        ctrl_c_count = 1
+                    except Exception as exc:
+                        console.print(Text(f"  ! {exc}", style="bold red"))
+                    continue
+
+                # Not a subagent command, try system slash command
                 should_exit = handle_slash_command(
                     user_input,
                     agent,

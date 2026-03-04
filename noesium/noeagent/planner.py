@@ -45,7 +45,11 @@ class TaskPlanner:
         return f" (available: {names})"
 
     def _builtin_info(self) -> str:
-        """Format detailed subagent capability information for the planning prompt."""
+        """Format detailed subagent capability information for the planning prompt.
+
+        Excludes subagents that require_explicit_command=True (they can only be
+        invoked via explicit /command, not auto-routed by LLM).
+        """
         if not self._builtin_subagent_configs:
             # Fallback to simple names if no configs available
             if not self._builtin_subagent_names:
@@ -53,7 +57,7 @@ class TaskPlanner:
             names = ", ".join(self._builtin_subagent_names)
             return f" (available: {names})"
 
-        # Build rich capability descriptions
+        # Build rich capability descriptions (exclude requires_explicit_command=True)
         lines = []
         for cfg in self._builtin_subagent_configs:
             # Get attributes safely (handles both dict and object)
@@ -63,12 +67,18 @@ class TaskPlanner:
                 task_types = cfg.get("task_types", [])
                 use_cases = cfg.get("use_cases", [])
                 keywords = cfg.get("keywords", [])
+                requires_explicit = cfg.get("requires_explicit_command", False)
             else:
                 name = getattr(cfg, "name", "unknown")
                 desc = getattr(cfg, "description", "")
                 task_types = getattr(cfg, "task_types", [])
                 use_cases = getattr(cfg, "use_cases", [])
                 keywords = getattr(cfg, "keywords", [])
+                requires_explicit = getattr(cfg, "requires_explicit_command", False)
+
+            # Skip subagents that require explicit command (e.g., tacitus)
+            if requires_explicit:
+                continue
 
             lines.append(f"\n  **{name}**: {desc}")
             if task_types:

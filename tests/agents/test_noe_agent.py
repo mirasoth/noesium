@@ -162,12 +162,13 @@ class TestRichTUIRendering:
 
         evt = ProgressEvent(
             type=ProgressEventType.SUBAGENT_START,
-            subagent_id="web-searcher",
-            summary="[web-searcher] searching for patterns",
+            subagent_id="browser_use-1",
+            summary="[browser_use-1] searching for patterns",
         )
         line = _activity_line(evt)
         assert line is not None
-        assert "web-searcher" in line.plain
+        # Display name "BrowserUse" should appear, with numeric suffix "-1"
+        assert "BrowserUse-1" in line.plain
 
     def test_render_compact_progress(self):
         from noesium.noeagent.tui import render_compact_progress
@@ -506,7 +507,7 @@ class TestNoeConfig:
         assert "document" in cfg.enabled_toolkits
         assert "image" in cfg.enabled_toolkits
         assert "tabular_data" in cfg.enabled_toolkits
-        assert "wizsearch" in cfg.enabled_toolkits
+        assert "web_search" in cfg.enabled_toolkits
         assert "user_interaction" in cfg.enabled_toolkits
         assert cfg.enable_subagents is True
         assert cfg.interface_mode == "library"

@@ -49,7 +49,7 @@ Return a revised JSON object with a "steps" array where each element has:
 
 ## Execution Modes (Default Built-in Only)
 
-- **tool**: Atomic operations using default toolkits (bash, file_edit, document, image, python_executor, tabular_data, wizsearch, user_interaction).
+- **tool**: Atomic operations using default toolkits (bash, file_edit, document, image, python_executor, tabular_data, web_search, user_interaction).
 - **subagent**: Multi-step reasoning with in-process child agent.
 - **external_subagent**: External CLI agent (e.g., Claude Code), when configured.
 - **builtin_agent**: Default built-in subagents only — **browser_use** (web automation, forms, real-time data) or **tacitus** (research, synthesis, multi-source).

@@ -132,6 +132,27 @@ class LLMClient(BaseLLMClient):
         litellm.drop_params = True  # Drop unsupported parameters
         litellm.set_verbose = False  # Reduce verbosity
 
+    def _is_content_filter_error(self, e: Exception) -> bool:
+        """Check if the exception is a content filtering/policy error (non-retryable).
+
+        These errors indicate the request was rejected due to content policy violations,
+        and retrying the same request will always fail.
+        """
+        error_str = str(e).lower()
+        # Dashscope/Alibaba Cloud content inspection
+        if "data_inspection_failed" in error_str:
+            return True
+        if "inappropriate content" in error_str:
+            return True
+        # OpenAI/other providers content filter
+        if "content_filter" in error_str:
+            return True
+        if "content_policy" in error_str:
+            return True
+        if "safety" in error_str and "violation" in error_str:
+            return True
+        return False
+
     @track
     def completion(
         self,
@@ -210,6 +231,10 @@ class LLMClient(BaseLLMClient):
                 return response.choices[0].message.content
 
         except Exception as e:
+            # Content filter errors are non-retryable
+            if self._is_content_filter_error(e):
+                logger.error(f"Content policy violation (non-retryable): {e}")
+                raise
             logger.error(f"Error in LiteLLM completion: {e}")
             raise
 
@@ -291,6 +316,10 @@ class LLMClient(BaseLLMClient):
                 return result
 
             except Exception as e:
+                # Content filter errors are non-retryable - skip the loop
+                if self._is_content_filter_error(e):
+                    logger.error(f"Content policy violation in structured completion (non-retryable): {e}")
+                    raise
                 last_err = e
                 if i < attempts - 1:
                     time.sleep(backoff * (2**i))

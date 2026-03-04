@@ -133,7 +133,7 @@ keeps sessions cleanly separated and makes debugging, replay, and cleanup trivia
       "image",
       "python_executor",
       "tabular_data",
-      "wizsearch",
+      "web_search",
       "user_interaction"
     ],
     "toolkit_configs": {
@@ -356,7 +356,7 @@ The `tools` section manages tool availability and behavior:
 - `image` - Image processing
 - `video` - Video processing
 - `audio` - Audio processing
-- `wizsearch` - Wiz search integration
+- `web_search` - Web search with multiple engines
 - `jina_research` - Jina research
 - `arxiv` - ArXiv paper search
 - `serper` - Serper search
@@ -650,7 +650,7 @@ class ToolkitConfigEntry(BaseModel):
 class ToolsConfig(BaseModel):
     """Tools configuration"""
     enabled_toolkits: List[str] = Field(default_factory=lambda: [
-        "wizsearch", "jina_research", "bash", "python_executor",
+        "web_search", "jina_research", "bash", "python_executor",
         "file_edit", "memory", "document", "image", "tabular_data",
         "user_interaction"
     ])

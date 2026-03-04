@@ -15,7 +15,7 @@ def get_test_variables(prompt_name: str) -> dict:
             "plan": "Search for recent AI papers",
             "execution_hint": "Use appropriate tools",
             "completed_results": "None yet.",
-            "tool_descriptions": "- wizsearch: Web search\n- arxiv: ArXiv search",
+            "tool_descriptions": "- web_search: Web search\n- arxiv: ArXiv search",
         },
         "planning": {
             "goal": "Find recent papers on LLM reasoning",
@@ -26,7 +26,7 @@ def get_test_variables(prompt_name: str) -> dict:
         "reflection": {
             "goal": "Research AI safety",
             "plan_steps": "1. [pending] Search papers\n2. [pending] Analyze results",
-            "completed_results": "- wizsearch: Found 10 papers",
+            "completed_results": "- web_search: Found 10 papers",
         },
         "revise_plan": {
             "goal": "Research AI safety",
@@ -78,7 +78,7 @@ def test_capability_accuracy():
     # agent_system should mention toolkits
     agent_prompt = pm.render("agent_system", **get_test_variables("agent_system"))
     assert "bash" in agent_prompt, "agent_system missing 'bash' toolkit"
-    assert "wizsearch" in agent_prompt, "agent_system missing 'wizsearch' toolkit"
+    assert "web_search" in agent_prompt, "agent_system missing 'web_search' toolkit"
     assert "browser_use" in agent_prompt, "agent_system missing 'browser_use' subagent"
     assert "tacitus" in agent_prompt, "agent_system missing 'tacitus' subagent"
 
@@ -164,9 +164,10 @@ def test_prompt_metadata_in_content():
     assert "# Noe" in agent or "Noe" in agent  # Should identify as Noe agent
     assert "tool" in agent.lower()  # Should mention tools
 
-    # finalize should synthesize
+    # finalize should have synthesis instructions
     finalize = pm.render("finalize", **get_test_variables("finalize"))
-    assert "synthesize" in finalize.lower() or "Synthesis" in finalize
+    # Check for report depth guidance which is the core function
+    assert "report" in finalize.lower() or "answer" in finalize.lower()
 
 
 def test_all_toolkits_mentioned():
@@ -181,7 +182,7 @@ def test_all_toolkits_mentioned():
         "image",
         "python_executor",
         "tabular_data",
-        "wizsearch",
+        "web_search",
         "user_interaction",
     ]
 

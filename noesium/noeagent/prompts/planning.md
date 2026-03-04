@@ -30,7 +30,7 @@ Return a JSON object with a "steps" array where each element has:
 
 ### tool
 Use for atomic operations with a single toolkit:
-- Search: wizsearch (default built-in web search)
+- Search: web_search (default built-in web search)
 - File: file_edit (read, write, edit)
 - Shell: bash (when no specialized tool fits)
 - Data: python_executor, tabular_data, document, image
@@ -47,14 +47,15 @@ Delegate to an external CLI agent (e.g., Claude Code). Use when:
 {external_subagent_info}
 
 ### builtin_agent
-Delegate to a **default built-in** subagent. Only two are available; choose by capability match:
+Delegate to a **default built-in** subagent. Available options:
 
-| Built-in | Name       | Use for |
-|----------|------------|---------|
+| Built-in | Name | Use for |
+|----------|------|--------|
 | browser_use | `browser_use` | Real-time web data, form filling, DOM interaction, interactive websites, screenshots |
-| tacitus  | `tacitus`  | Multi-source research, information synthesis, fact-checking, complex questions |
 
-**Selection:** Match task keywords to capabilities (e.g., "stock price", "form", "click" → browser_use; "research", "synthesize", "multiple sources" → tacitus). The executor uses subagent with action `invoke_builtin` and this name.
+**Note:** Some specialized agents (like `tacitus` for research) require explicit `/command` invocation and cannot be auto-routed.
+
+**Selection:** Match task keywords to capabilities (e.g., "stock price", "form", "click" → browser_use). The executor uses subagent with action `invoke_builtin` and this name.
 
 {builtin_subagent_info}
 

@@ -13,9 +13,9 @@ The global configuration file (`~/.noeagent/config.json`) supports toolkit-speci
 ```json
 {
   "tools": {
-    "enabled_toolkits": ["bash", "wizsearch", "file_edit", ...],
+    "enabled_toolkits": ["bash", "web_search", "file_edit", ...],
     "toolkit_configs": {
-      "wizsearch": {
+      "web_search": {
         "enabled_engines": ["tavily"],
         "max_results_per_engine": 10,
         "search_timeout": 30,
@@ -59,15 +59,15 @@ Global Config (config.json)
 
 ## Usage Examples
 
-### Example 1: Configure WizSearch to Use Tavily (Default)
+### Example 1: Configure WebSearch to Use Tavily (Default)
 
 **Global config (`~/.noeagent/config.json`):**
 ```json
 {
   "tools": {
-    "enabled_toolkits": ["wizsearch"],
+    "enabled_toolkits": ["web_search"],
     "toolkit_configs": {
-      "wizsearch": {
+      "web_search": {
         "enabled_engines": ["tavily"],
         "max_results_per_engine": 10,
         "search_timeout": 30,
@@ -88,9 +88,9 @@ agent = NoeAgent()
 
 # Or programmatically
 config = NoeConfig(
-    enabled_toolkits=["wizsearch"],
+    enabled_toolkits=["web_search"],
     toolkit_configs={
-        "wizsearch": {
+        "web_search": {
             "enabled_engines": ["tavily", "brave"],
             "max_results_per_engine": 20,
         }
@@ -121,7 +121,7 @@ agent = NoeAgent(config=config)
 {
   "tools": {
     "toolkit_configs": {
-      "wizsearch": {
+      "web_search": {
         "enabled_engines": ["tavily", "brave", "googleai"],
         "max_results_per_engine": 15,
         "search_timeout": 45,
@@ -132,9 +132,9 @@ agent = NoeAgent(config=config)
 }
 ```
 
-## WizSearch Configuration Options
+## WebSearch Configuration Options
 
-The WizSearch toolkit supports the following configuration fields:
+The WebSearch toolkit supports the following configuration fields:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -145,7 +145,7 @@ The WizSearch toolkit supports the following configuration fields:
 
 ### Default Configuration
 
-WizSearch now uses **Tavily** as the default search engine, providing:
+WebSearch now uses **Tavily** as the default search engine, providing:
 - AI-powered search summaries
 - High-quality, relevant results
 - Advanced search depth options
@@ -156,7 +156,7 @@ To override the default and use multiple engines:
 {
   "tools": {
     "toolkit_configs": {
-      "wizsearch": {
+      "web_search": {
         "enabled_engines": ["tavily", "duckduckgo", "brave"]
       }
     }
@@ -203,7 +203,7 @@ These fields are shared across multiple toolkits:
 - **NoeConfig.toolkit_configs**: `noesium/noeagent/config.py:180-185`
 - **Config Extraction**: `noesium/noeagent/config.py:313-316`
 - **Config Merging**: `noesium/noeagent/agent.py:250-261`
-- **WizSearch Defaults**: `noesium/toolkits/wizsearch_toolkit.py:66-69`
+- **WebSearch Defaults**: `noesium/toolkits/web_search_toolkit.py:66-69`
 
 ## Migration Guide
 
@@ -223,7 +223,7 @@ These fields are shared across multiple toolkits:
 {
   "tools": {
     "toolkit_configs": {
-      "wizsearch": {
+      "web_search": {
         "enabled_engines": ["tavily"]
       }
     }
@@ -233,16 +233,16 @@ These fields are shared across multiple toolkits:
 
 ### Default Search Engine Change
 
-**Before**: WizSearch defaulted to `["tavily", "duckduckgo"]`
+**Before**: WebSearch defaulted to `["tavily", "duckduckgo"]`
 
-**After**: WizSearch defaults to `["tavily"]`
+**After**: WebSearch defaults to `["tavily"]`
 
 To restore old behavior:
 ```json
 {
   "tools": {
     "toolkit_configs": {
-      "wizsearch": {
+      "web_search": {
         "enabled_engines": ["tavily", "duckduckgo"]
       }
     }

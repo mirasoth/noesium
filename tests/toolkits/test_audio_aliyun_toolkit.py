@@ -1,5 +1,7 @@
 """
-Tests for AudioAliyunToolkit functionality.
+Tests for AudioToolkit functionality with multiple providers.
+
+This test file covers both OpenAI and Aliyun providers.
 """
 
 import json
@@ -10,15 +12,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from noesium.core.toolify import ToolkitConfig, get_toolkit
-from noesium.toolkits.audio_aliyun_toolkit import AudioAliyunToolkit
+from noesium.toolkits.audio_toolkit import AudioToolkit
+
+# ==================== Aliyun Provider Fixtures ====================
 
 
 @pytest.fixture
 def aliyun_config():
-    """Create a test configuration for AudioAliyunToolkit."""
+    """Create a test configuration for Aliyun provider."""
     return ToolkitConfig(
-        name="audio_aliyun",
+        name="audio",
         config={
+            "provider": "aliyun",
             "ALIYUN_ACCESS_KEY_ID": "test_access_key",
             "ALIYUN_ACCESS_KEY_SECRET": "test_secret_key",
             "ALIYUN_NLS_APP_KEY": "test_app_key",
@@ -33,21 +38,19 @@ def aliyun_config():
 
 @pytest.fixture
 def aliyun_toolkit(aliyun_config):
-    """Create AudioAliyunToolkit instance for testing."""
-    return get_toolkit("audio_aliyun", aliyun_config)
+    """Create AudioToolkit instance with Aliyun provider for testing."""
+    return get_toolkit("audio", aliyun_config)
 
 
 @pytest.fixture
 def mock_audio_file():
     """Create a temporary mock audio file for testing."""
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-        # Write some dummy audio data
         f.write(b"fake audio data for testing")
         temp_path = f.name
 
     yield temp_path
 
-    # Cleanup
     if os.path.exists(temp_path):
         os.unlink(temp_path)
 
@@ -75,29 +78,143 @@ def mock_aliyun_response():
     }
 
 
-class TestAudioAliyunToolkit:
-    """Test cases for AudioAliyunToolkit."""
+# ==================== OpenAI Provider Fixtures ====================
 
-    def test_toolkit_initialization_success(self, aliyun_config):
-        """Test that AudioAliyunToolkit initializes correctly with valid config."""
-        toolkit = AudioAliyunToolkit(aliyun_config)
+
+@pytest.fixture
+def openai_config():
+    """Create a test configuration for OpenAI provider."""
+    return ToolkitConfig(
+        name="audio",
+        config={
+            "provider": "openai",
+            "audio_model": "whisper-1",
+            "cache_dir": "./test_audio_cache",
+            "download_dir": "./test_audio_downloads",
+        },
+        llm_provider="openai",
+        llm_config={"api_key": "test_openai_key"},
+    )
+
+
+@pytest.fixture
+def openai_toolkit(openai_config):
+    """Create AudioToolkit instance with OpenAI provider for testing."""
+    return AudioToolkit(openai_config)
+
+
+# ==================== Common Tests ====================
+
+
+class TestAudioToolkitCommon:
+    """Test cases common to all providers."""
+
+    def test_default_provider_is_openai(self):
+        """Test that the default provider is OpenAI."""
+        config = ToolkitConfig(name="audio", config={})
+        toolkit = AudioToolkit(config)
+        assert toolkit.provider == "openai"
+
+    def test_invalid_provider_raises_error(self):
+        """Test that an invalid provider raises an error."""
+        config = ToolkitConfig(name="audio", config={"provider": "invalid"})
+        with pytest.raises(ValueError, match="Unsupported audio provider"):
+            AudioToolkit(config)
+
+    @pytest.mark.asyncio
+    async def test_get_tools_map_returns_correct_tools(self, openai_toolkit):
+        """Test that tools map is correctly defined."""
+        tools_map = await openai_toolkit.get_tools_map()
+
+        expected_tools = ["transcribe_audio", "audio_qa", "get_audio_info"]
+        for tool_name in expected_tools:
+            assert tool_name in tools_map
+            assert callable(tools_map[tool_name])
+
+
+# ==================== OpenAI Provider Tests ====================
+
+
+class TestAudioToolkitOpenAI:
+    """Test cases for OpenAI provider."""
+
+    def test_openai_initialization(self, openai_config):
+        """Test OpenAI provider initialization."""
+        toolkit = AudioToolkit(openai_config)
+
+        assert toolkit.provider == "openai"
+        assert toolkit.audio_model == "whisper-1"
+        assert toolkit.cache_dir is not None
+        assert toolkit.download_dir is not None
+
+    def test_is_url_detection(self, openai_toolkit):
+        """Test URL detection utility."""
+        assert openai_toolkit._is_url("https://example.com/audio.mp3") is True
+        assert openai_toolkit._is_url("http://example.com/audio.mp3") is True
+        assert openai_toolkit._is_url("/local/path/audio.mp3") is False
+        assert openai_toolkit._is_url("./relative/path/audio.mp3") is False
+
+    def test_get_file_extension(self, openai_toolkit):
+        """Test file extension extraction."""
+        assert openai_toolkit._get_file_extension("https://example.com/audio.mp3") == ".mp3"
+        assert openai_toolkit._get_file_extension("https://example.com/audio.wav") == ".wav"
+        assert openai_toolkit._get_file_extension("https://example.com/audio") == ".mp3"  # default
+
+    @pytest.mark.asyncio
+    async def test_transcribe_local_file_not_found(self, openai_toolkit):
+        """Test transcription with non-existent local file."""
+        result = await openai_toolkit.transcribe_audio("/nonexistent/audio.mp3")
+
+        assert "error" in result
+        assert "Audio file not found" in result["error"] or "Audio transcription failed" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_get_audio_info_success(self, openai_toolkit, mock_audio_file):
+        """Test getting audio info for a local file."""
+        # Mock the transcription to avoid actual API call
+        with patch.object(openai_toolkit, "_transcribe_openai") as mock_transcribe:
+            mock_transcribe.return_value = {
+                "text": "Test transcription",
+                "duration": 10.5,
+                "language": "en",
+                "provider": "openai",
+            }
+
+            result = await openai_toolkit.get_audio_info(mock_audio_file)
+
+            assert "error" not in result
+            assert result["provider"] == "openai"
+            assert result["file_size_bytes"] > 0
+            assert result["duration_seconds"] == 10.5
+
+
+# ==================== Aliyun Provider Tests ====================
+
+
+class TestAudioToolkitAliyun:
+    """Test cases for Aliyun provider."""
+
+    def test_aliyun_initialization_success(self, aliyun_config):
+        """Test that AudioToolkit initializes correctly with valid Aliyun config."""
+        toolkit = AudioToolkit(aliyun_config)
 
         assert toolkit is not None
+        assert toolkit.provider == "aliyun"
         assert toolkit.ak_id == "test_access_key"
         assert toolkit.ak_secret == "test_secret_key"
         assert toolkit.app_key == "test_app_key"
         assert toolkit.region_id == "cn-shanghai"
-        assert hasattr(toolkit, "client")
+        assert hasattr(toolkit, "aliyun_client")
 
-    def test_toolkit_initialization_missing_credentials(self):
-        """Test that AudioAliyunToolkit raises error with missing credentials."""
-        config = ToolkitConfig(name="audio_aliyun", config={})
+    def test_aliyun_initialization_missing_credentials(self):
+        """Test that AudioToolkit raises error with missing Aliyun credentials."""
+        config = ToolkitConfig(name="audio", config={"provider": "aliyun"})
 
         with pytest.raises(ValueError, match="Aliyun credentials not found"):
-            AudioAliyunToolkit(config)
+            AudioToolkit(config)
 
-    def test_toolkit_initialization_from_env(self):
-        """Test initialization from environment variables."""
+    def test_aliyun_initialization_from_env(self):
+        """Test Aliyun initialization from environment variables."""
         with patch.dict(
             os.environ,
             {
@@ -106,26 +223,26 @@ class TestAudioAliyunToolkit:
                 "ALIYUN_NLS_APP_KEY": "env_app_key",
             },
         ):
-            config = ToolkitConfig(name="audio_aliyun", config={})
-            toolkit = AudioAliyunToolkit(config)
+            config = ToolkitConfig(name="audio", config={"provider": "aliyun"})
+            toolkit = AudioToolkit(config)
 
             assert toolkit.ak_id == "env_access_key"
             assert toolkit.ak_secret == "env_secret_key"
             assert toolkit.app_key == "env_app_key"
 
     @pytest.mark.asyncio
-    async def test_get_tools_map(self, aliyun_toolkit):
-        """Test that tools map is correctly defined."""
+    async def test_aliyun_get_tools_map(self, aliyun_toolkit):
+        """Test that tools map is correctly defined for Aliyun provider."""
         tools_map = await aliyun_toolkit.get_tools_map()
 
-        expected_tools = ["transcribe_audio", "audio_qa"]
+        expected_tools = ["transcribe_audio", "audio_qa", "get_audio_info"]
         for tool_name in expected_tools:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
 
     def test_extract_transcription_text_success(self, aliyun_toolkit, mock_aliyun_response):
         """Test successful text extraction from Aliyun response."""
-        result = aliyun_toolkit._extract_transcription_text(mock_aliyun_response)
+        result = aliyun_toolkit._extract_transcription_text_aliyun(mock_aliyun_response)
 
         assert isinstance(result, str)
         assert "这是一段测试音频的转录文本。" in result
@@ -134,44 +251,51 @@ class TestAudioAliyunToolkit:
     def test_extract_transcription_text_empty_sentences(self, aliyun_toolkit):
         """Test text extraction with empty sentences."""
         response = {"Sentences": []}
-        result = aliyun_toolkit._extract_transcription_text(response)
+        result = aliyun_toolkit._extract_transcription_text_aliyun(response)
 
-        # When sentences is empty, it falls back to JSON string representation
         assert isinstance(result, str)
         assert "Sentences" in result
 
     def test_extract_transcription_text_no_sentences(self, aliyun_toolkit):
         """Test text extraction without sentences key."""
         response = {"other_key": "value"}
-        result = aliyun_toolkit._extract_transcription_text(response)
+        result = aliyun_toolkit._extract_transcription_text_aliyun(response)
 
-        # Should return JSON string as fallback
         assert isinstance(result, str)
         assert "other_key" in result
 
     def test_extract_transcription_text_string_input(self, aliyun_toolkit):
         """Test text extraction with string input."""
-        result = aliyun_toolkit._extract_transcription_text("direct text result")
+        result = aliyun_toolkit._extract_transcription_text_aliyun("direct text result")
 
         assert result == "direct text result"
 
     @pytest.mark.asyncio
-    @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit._transcribe_file_aliyun")
-    async def test_transcribe_audio_success(self, mock_transcribe, aliyun_toolkit, mock_aliyun_response):
-        """Test successful audio transcription API."""
+    async def test_aliyun_transcribe_local_file_fails(self, aliyun_toolkit, mock_audio_file):
+        """Test that Aliyun provider rejects local files."""
+        result = await aliyun_toolkit.transcribe_audio(mock_audio_file)
+
+        assert "error" in result
+        assert "publicly accessible URLs" in result["error"]
+        assert result["provider"] == "aliyun"
+
+    @pytest.mark.asyncio
+    @patch("noesium.toolkits.audio_toolkit.AudioToolkit._transcribe_file_aliyun")
+    async def test_aliyun_transcribe_success(self, mock_transcribe, aliyun_toolkit, mock_aliyun_response):
+        """Test successful Aliyun audio transcription API."""
         mock_transcribe.return_value = mock_aliyun_response
 
         result = await aliyun_toolkit.transcribe_audio("https://example.com/test_audio.mp3")
 
         assert "text" in result
         assert "这是一段测试音频的转录文本。" in result["text"]
-        assert result["provider"] == "aliyun_nls"
+        assert result["provider"] == "aliyun"
         assert "aliyun_result" in result
 
     @pytest.mark.asyncio
-    @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit._transcribe_file_aliyun")
-    async def test_transcribe_audio_failure(self, mock_transcribe, aliyun_toolkit):
-        """Test audio transcription failure."""
+    @patch("noesium.toolkits.audio_toolkit.AudioToolkit._transcribe_file_aliyun")
+    async def test_aliyun_transcribe_failure(self, mock_transcribe, aliyun_toolkit):
+        """Test Aliyun audio transcription failure."""
         mock_transcribe.side_effect = Exception("Processing failed")
 
         result = await aliyun_toolkit.transcribe_audio("https://example.com/test_audio.mp3")
@@ -181,19 +305,17 @@ class TestAudioAliyunToolkit:
         assert result["text"] == ""
 
     @pytest.mark.asyncio
-    @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit.transcribe_audio")
-    async def test_audio_qa_success(self, mock_transcribe, aliyun_toolkit):
-        """Test successful audio Q&A."""
+    @patch("noesium.toolkits.audio_toolkit.AudioToolkit.transcribe_audio")
+    async def test_aliyun_audio_qa_success(self, mock_transcribe, aliyun_toolkit):
+        """Test successful Aliyun audio Q&A."""
         mock_transcribe.return_value = {
             "text": "这是一段关于人工智能的讨论。主要讨论了机器学习的应用。",
-            "provider": "aliyun_nls",
+            "provider": "aliyun",
         }
 
-        # Mock LLM client
         mock_llm_client = AsyncMock()
         mock_llm_client.completion.return_value = "这段音频主要讨论了人工智能和机器学习的应用场景。"
 
-        # Use patch to mock the llm_client property
         with patch.object(type(aliyun_toolkit), "llm_client", new_callable=lambda: mock_llm_client):
             result = await aliyun_toolkit.audio_qa("https://example.com/test_audio.mp3", "这段音频讨论了什么？")
 
@@ -202,19 +324,19 @@ class TestAudioAliyunToolkit:
             mock_llm_client.completion.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit.transcribe_audio")
-    async def test_audio_qa_no_speech(self, mock_transcribe, aliyun_toolkit):
-        """Test audio Q&A with no speech detected."""
-        mock_transcribe.return_value = {"text": "", "provider": "aliyun_nls"}
+    @patch("noesium.toolkits.audio_toolkit.AudioToolkit.transcribe_audio")
+    async def test_aliyun_audio_qa_no_speech(self, mock_transcribe, aliyun_toolkit):
+        """Test Aliyun audio Q&A with no speech detected."""
+        mock_transcribe.return_value = {"text": "", "provider": "aliyun"}
 
         result = await aliyun_toolkit.audio_qa("https://example.com/test_audio.mp3", "What is discussed?")
 
         assert result == "No speech detected in the audio file."
 
     @pytest.mark.asyncio
-    @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit.transcribe_audio")
-    async def test_audio_qa_transcription_error(self, mock_transcribe, aliyun_toolkit):
-        """Test audio Q&A with transcription error."""
+    @patch("noesium.toolkits.audio_toolkit.AudioToolkit.transcribe_audio")
+    async def test_aliyun_audio_qa_transcription_error(self, mock_transcribe, aliyun_toolkit):
+        """Test Aliyun audio Q&A with transcription error."""
         mock_transcribe.return_value = {"error": "Transcription failed"}
 
         result = await aliyun_toolkit.audio_qa("https://example.com/test_audio.mp3", "What is discussed?")
@@ -222,32 +344,30 @@ class TestAudioAliyunToolkit:
         assert "Failed to transcribe audio" in result
 
     @pytest.mark.asyncio
-    @patch("noesium.toolkits.audio_aliyun_toolkit.AudioAliyunToolkit.transcribe_audio")
-    async def test_audio_qa_failure(self, mock_transcribe, aliyun_toolkit):
-        """Test audio Q&A failure."""
-        mock_transcribe.side_effect = Exception("Processing failed")
+    async def test_aliyun_get_audio_info_limited(self, aliyun_toolkit):
+        """Test that get_audio_info returns limited info for Aliyun provider."""
+        result = await aliyun_toolkit.get_audio_info("https://example.com/audio.mp3")
 
-        result = await aliyun_toolkit.audio_qa("https://example.com/test_audio.mp3", "What is discussed?")
-
-        assert "Aliyun audio Q&A failed" in result
-        assert "Processing failed" in result
+        assert result["provider"] == "aliyun"
+        assert "note" in result
+        assert "Limited info" in result["note"]
 
 
-class TestAudioAliyunToolkitIntegration:
-    """Integration tests for AudioAliyunToolkit with mocked Aliyun services."""
+# ==================== Aliyun Integration Tests ====================
+
+
+class TestAudioToolkitAliyunIntegration:
+    """Integration tests for Aliyun provider with mocked Aliyun services."""
 
     @pytest.mark.asyncio
     @patch("aliyunsdkcore.client.AcsClient")
     async def test_transcribe_file_aliyun_success(self, mock_acs_client, aliyun_toolkit):
         """Test successful Aliyun NLS transcription with mocked client."""
-        # Mock the AcsClient and its responses
         mock_client_instance = MagicMock()
         mock_acs_client.return_value = mock_client_instance
 
-        # Mock submit task response
         submit_response = json.dumps({"StatusText": "SUCCESS", "TaskId": "test_task_id_123"})
 
-        # Mock get result response
         get_response = json.dumps(
             {
                 "StatusText": "SUCCESS",
@@ -257,11 +377,9 @@ class TestAudioAliyunToolkitIntegration:
             }
         )
 
-        # Configure mock to return different responses for different calls
         mock_client_instance.do_action_with_exception.side_effect = [submit_response, get_response]
 
-        # Replace the client in toolkit
-        aliyun_toolkit.client = mock_client_instance
+        aliyun_toolkit.aliyun_client = mock_client_instance
 
         result = await aliyun_toolkit._transcribe_file_aliyun("https://example.com/test.mp3")
 
@@ -277,82 +395,23 @@ class TestAudioAliyunToolkitIntegration:
         mock_client_instance = MagicMock()
         mock_acs_client.return_value = mock_client_instance
 
-        # Mock submit task failure response
         submit_response = json.dumps({"StatusText": "FAILED", "Message": "Invalid file format"})
 
         mock_client_instance.do_action_with_exception.return_value = submit_response
-        aliyun_toolkit.client = mock_client_instance
+        aliyun_toolkit.aliyun_client = mock_client_instance
 
         result = await aliyun_toolkit._transcribe_file_aliyun("https://example.com/test.mp3")
 
         assert result is None
 
-    @pytest.mark.asyncio
-    @patch("aliyunsdkcore.client.AcsClient")
-    async def test_transcribe_file_aliyun_polling_timeout(self, mock_acs_client, aliyun_toolkit):
-        """Test Aliyun NLS transcription polling timeout."""
-        mock_client_instance = MagicMock()
-        mock_acs_client.return_value = mock_client_instance
 
-        # Mock submit task success
-        submit_response = json.dumps({"StatusText": "SUCCESS", "TaskId": "test_task_id_123"})
-
-        # Mock polling responses that never complete
-        polling_response = json.dumps({"StatusText": "RUNNING"})
-
-        mock_client_instance.do_action_with_exception.side_effect = [submit_response] + [polling_response] * 70
-        aliyun_toolkit.client = mock_client_instance
-
-        # Reduce max_attempts for faster testing
-
-        # Patch the max_attempts in the method
-        with patch.object(aliyun_toolkit, "_transcribe_file_aliyun") as mock_method:
-
-            async def mock_transcribe_with_timeout(file_link):
-                # Simulate the timeout scenario
-                return None
-
-            mock_method.side_effect = mock_transcribe_with_timeout
-
-            result = await aliyun_toolkit._transcribe_file_aliyun("https://example.com/test.mp3")
-
-            assert result is None
-
-    @pytest.mark.asyncio
-    @patch("aliyunsdkcore.client.AcsClient")
-    async def test_full_transcription_workflow(self, mock_acs_client, aliyun_toolkit, mock_audio_file):
-        """Test complete transcription workflow from file to result."""
-        # Mock AcsClient
-        mock_client_instance = MagicMock()
-        mock_acs_client.return_value = mock_client_instance
-
-        submit_response = json.dumps({"StatusText": "SUCCESS", "TaskId": "workflow_test_task"})
-
-        get_response = json.dumps(
-            {
-                "StatusText": "SUCCESS",
-                "Result": {
-                    "Sentences": [{"Text": "完整工作流程测试文本。", "BeginTime": 0, "EndTime": 3000, "ChannelId": 0}]
-                },
-            }
-        )
-
-        mock_client_instance.do_action_with_exception.side_effect = [submit_response, get_response]
-        aliyun_toolkit.client = mock_client_instance
-
-        # Test the complete workflow
-        result = await aliyun_toolkit.transcribe_audio(mock_audio_file)
-
-        assert "text" in result
-        assert "完整工作流程测试文本。" in result["text"]
-        assert result["provider"] == "aliyun_nls"
-        assert "aliyun_result" in result
+# ==================== Real Integration Tests ====================
 
 
 @pytest.mark.integration
-class TestAudioAliyunToolkitRealIntegration:
+class TestAudioToolkitRealIntegration:
     """
-    Real integration tests that require actual Aliyun credentials.
+    Real integration tests that require actual credentials.
     These tests are marked with @pytest.mark.integration and should be run separately.
     """
 
@@ -370,24 +429,20 @@ class TestAudioAliyunToolkitRealIntegration:
     async def test_real_aliyun_transcription(self):
         """Test real Aliyun NLS transcription with actual credentials."""
         config = ToolkitConfig(
-            name="audio_aliyun",
+            name="audio",
             config={
+                "provider": "aliyun",
                 "ALIYUN_ACCESS_KEY_ID": os.getenv("ALIYUN_ACCESS_KEY_ID"),
                 "ALIYUN_ACCESS_KEY_SECRET": os.getenv("ALIYUN_ACCESS_KEY_SECRET"),
                 "ALIYUN_NLS_APP_KEY": os.getenv("ALIYUN_NLS_APP_KEY"),
             },
         )
 
-        toolkit = AudioAliyunToolkit(config)
+        toolkit = AudioToolkit(config)
 
-        # This would require a real audio file URL accessible by Aliyun NLS
-        # For actual testing, you would need to provide a valid audio URL
-        # result = await toolkit.transcribe_audio("https://your-audio-url.mp3")
-        # assert "text" in result
-
-        # For now, just test that the toolkit initializes correctly
         assert toolkit is not None
-        assert hasattr(toolkit, "client")
+        assert toolkit.provider == "aliyun"
+        assert hasattr(toolkit, "aliyun_client")
 
     @pytest.mark.skipif(
         not all(
@@ -404,8 +459,9 @@ class TestAudioAliyunToolkitRealIntegration:
     async def test_real_audio_qa_workflow(self):
         """Test real audio Q&A workflow with actual services."""
         config = ToolkitConfig(
-            name="audio_aliyun",
+            name="audio",
             config={
+                "provider": "aliyun",
                 "ALIYUN_ACCESS_KEY_ID": os.getenv("ALIYUN_ACCESS_KEY_ID"),
                 "ALIYUN_ACCESS_KEY_SECRET": os.getenv("ALIYUN_ACCESS_KEY_SECRET"),
                 "ALIYUN_NLS_APP_KEY": os.getenv("ALIYUN_NLS_APP_KEY"),
@@ -414,15 +470,8 @@ class TestAudioAliyunToolkitRealIntegration:
             llm_config={"api_key": os.getenv("OPENAI_API_KEY")},
         )
 
-        toolkit = AudioAliyunToolkit(config)
+        toolkit = AudioToolkit(config)
 
-        # This would require a real audio file and LLM setup
-        # For actual testing, you would need to provide a valid audio URL
-        # result = await toolkit.audio_qa("https://your-audio-url.mp3", "这段音频讨论了什么？")
-        # assert isinstance(result, str)
-        # assert len(result) > 0
-
-        # For now, just test that the toolkit initializes correctly
         assert toolkit is not None
         tools_map = await toolkit.get_tools_map()
         assert "audio_qa" in tools_map

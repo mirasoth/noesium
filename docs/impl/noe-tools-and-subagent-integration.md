@@ -1,25 +1,305 @@
-# NoeAgent ↔ Built-in Subagent Progress Integration
+# NoeAgent ↔ Tools & Subagent Integration
 
-> Detailed design for exposing BrowserUseAgent, TacitusAgent, and other built-in subagent progress 
-> to NoeAgent TUI with real-time visibility.
+> Comprehensive design for toolkit management, built-in subagent progress integration,
+> inline command system, and display name normalization.
 
-**Status**: Draft  
-**Created**: 2026-03-03  
+**Status**: Updated
+**Created**: 2026-03-03
+**Modified**: 2026-03-04
 **Related**: `noeagent-tui-analysis.md`, `RFC-1004`, `RFC-1005`
 
 ---
 
 ## Executive Summary
 
-This document describes the design for exposing detailed progress of built-in subagents 
-(BrowserUseAgent, TacitusAgent) to NoeAgent's TUI, enabling users to observe real-time 
-browser actions, research queries, and other subagent activities.
+This document describes:
+1. **Toolkit System**: Registration, display names, and LLM integration
+2. **Inline Command System**: Explicit `/research`, `/browser`, `/claude` commands
+3. **Subagent Routing**: Auto-routing vs explicit command requirements
+4. **Progress Streaming**: Real-time visibility for BrowserUseAgent and TacitusAgent
+5. **Display Name Normalization**: User-friendly names in TUI and prompts
 
 ---
 
-## 1. Current Architecture Analysis
+## Table of Contents
 
-### 1.1 Event Flow Overview
+1. [Inline Command System](#1-inline-command-system)
+2. [Subagent Routing Control](#2-subagent-routing-control)
+3. [Display Name Normalization](#3-display-name-normalization)
+4. [Toolkit System](#4-toolkit-system)
+5. [Progress Streaming Architecture](#5-progress-streaming-architecture)
+6. [Implementation Details](#6-implementation-details)
+
+---
+
+## 1. Inline Command System
+
+### 1.1 Overview
+
+Users can explicitly invoke subagents using inline commands, bypassing LLM-based routing.
+
+| Command | Subagent | Trigger Requirement |
+|---------|----------|---------------------|
+| `/browser <task>` | BrowserUse | Optional (can be auto-routed) |
+| `/research <task>` | Tacitus | **MUST** use explicit command |
+| `/deep_research <task>` | Tacitus | Alias for `/research` |
+| `/claude <task>` | Claude | Optional |
+
+### 1.2 Command Parsing
+
+**File**: `noesium/noeagent/commands.py`
+
+```python
+@dataclass
+class InlineCommand:
+    """Parsed inline command from user input."""
+    command_type: SubagentCommandType
+    subagent_name: str  # Technical name (e.g., "browser_use", "tacitus")
+    message: str  # The message/task for the subagent
+    original_input: str  # The original user input
+
+def parse_inline_command(user_input: str) -> Optional[InlineCommand]:
+    """Parse an inline command from user input.
+    
+    Supported commands:
+    - /browser <task> - Trigger BrowserUse subagent
+    - /research <task> - Trigger Tacitus research subagent
+    - /deep_research <task> - Alias for /research
+    - /claude <task> - Trigger Claude subagent
+    """
+```
+
+### 1.3 Library Mode Support
+
+Inline commands work in both TUI and library modes:
+
+```python
+from noesium.noeagent import NoeAgent
+
+agent = NoeAgent()
+
+# Direct command invocation - bypasses LLM routing
+result = await agent.arun("/research What is quantum computing?")
+
+# Or with streaming progress
+async for event in agent.astream_progress("/browser Book a flight to NYC"):
+    print(event.summary)
+```
+
+### 1.4 TUI Integration
+
+In TUI mode, commands are parsed before system slash commands:
+
+```
+noe|agent> /research Latest AI developments
+
+  [Tacitus] Starting...
+  [Tacitus] > Generated 2 search queries
+  [Tacitus] 🔍 Query 1/2: AI developments 2026
+  ...
+```
+
+---
+
+## 2. Subagent Routing Control
+
+### 2.1 requires_explicit_command Flag
+
+Each subagent can be configured with `requires_explicit_command`:
+
+```python
+class AgentSubagentConfig(BaseModel):
+    name: str
+    agent_type: str
+    enabled: bool = True
+    requires_explicit_command: bool = False  # Key flag
+    # ... other fields
+```
+
+### 2.2 Default Configuration
+
+| Subagent | requires_explicit_command | Behavior |
+|----------|--------------------------|----------|
+| `browser_use` | `False` | Can be auto-routed by LLM planner |
+| `tacitus` | `True` | **MUST** use `/research` command |
+
+### 2.3 How It Works
+
+**Planning Phase** (`TaskPlanner._builtin_info()`):
+- Subagents with `requires_explicit_command=True` are **excluded** from the planning prompt
+- LLM cannot choose to route to these subagents
+
+**Execution Phase** (`subagent_node()`):
+- If LLM somehow routes to a protected subagent, execution is blocked
+- Returns error message directing user to use explicit command
+
+```python
+if requires_explicit:
+    result = (
+        f"{display_name} requires explicit command invocation. "
+        f"Use /{subagent_name.replace('_use', '')} <your task> to invoke this subagent."
+    )
+```
+
+### 2.4 Why Tacitus Requires Explicit Command
+
+Tacitus is a heavy research agent that:
+- Makes multiple web searches
+- Generates iterative queries
+- Performs reflection and synthesis
+- Has high latency and API costs
+
+Users should explicitly opt-in to this expensive operation.
+
+---
+
+## 3. Display Name Normalization
+
+### 3.1 Overview
+
+Technical names are converted to user-friendly display names for TUI and LLM prompts.
+
+### 3.2 Toolkit Display Names
+
+| Technical Name | Display Name | Description |
+|---------------|--------------|-------------|
+| `web_search` | WebSearch | Web search with multiple engines |
+| `file_edit` | File | File editing operations |
+| `arxiv` | ArXiv | Academic paper search |
+| `github` | GitHub | GitHub API operations |
+| `python_executor` | Python | Python code execution |
+| `bash` | Bash | Shell command execution |
+| `document` | Document | Document processing (PDF, Word) |
+| `tabular_data` | Data | CSV/Excel data processing |
+| `image` | Image | Image processing and generation |
+| `video` | Video | Video processing |
+| `audio` | Audio | Audio processing |
+| `memory` | Memory | Memory management |
+| `user_interaction` | UserInteraction | User input/output |
+
+### 3.3 Subagent Display Names
+
+| Technical Name | Display Name |
+|---------------|-------------|
+| `browser_use` | BrowserUse |
+| `tacitus` | Tacitus |
+| `claude` | Claude |
+
+### 3.4 Usage in Code
+
+```python
+from noesium.noeagent.commands import (
+    get_toolkit_display_name,
+    get_subagent_display_name,
+)
+
+# Toolkit names
+display = get_toolkit_display_name("web_search")  # Returns "WebSearch"
+
+# Subagent names
+display = get_subagent_display_name("browser_use")  # Returns "BrowserUse"
+```
+
+### 3.5 Display in TUI
+
+Before:
+```
+  [browser_use-1] > 0/2 · working...
+  > wizsearch:web_search(query="AI news")
+```
+
+After:
+```
+  [BrowserUse-1] > 0/2 · working...
+  > WebSearch:web_search(query="AI news")
+```
+
+---
+
+## 4. Toolkit System
+
+### 4.1 Toolkit Registration
+
+Toolkits are registered via decorator:
+
+```python
+from noesium.core.toolify import register_toolkit, AsyncBaseToolkit
+
+@register_toolkit("web_search")
+class WebSearchToolkit(AsyncBaseToolkit):
+    async def get_tools_map(self) -> Dict[str, Callable]:
+        return {
+            "web_search": self.web_search,
+            "tavily_search": self.tavily_search,
+            "crawl_page": self.crawl_page,
+        }
+```
+
+### 4.2 Default Enabled Toolkits
+
+```python
+DEFAULT_ENABLED_TOOLKITS = [
+    "bash",
+    "file_edit",
+    "document",
+    "image",
+    "python_executor",
+    "tabular_data",
+    "web_search",
+    "user_interaction",
+]
+```
+
+### 4.3 Toolkit Configuration
+
+```python
+from noesium.core.toolify import ToolkitConfig
+
+config = ToolkitConfig(
+    name="web_search",
+    mode="builtin",
+    activated_tools=["web_search", "tavily_search"],  # None for all
+    config={"default_engine": "tavily"},
+    llm_provider="openai",
+    llm_model="gpt-4",
+)
+```
+
+### 4.4 Tool Descriptions for LLM
+
+Tools are formatted for LLM prompts with display names:
+
+```python
+def _build_tool_descriptions(registry: Any) -> str:
+    """Format registry providers into a prompt-friendly description block.
+    
+    Uses display names for better readability.
+    """
+    for p in providers:
+        cap_id = getattr(d, "capability_id", "unknown")
+        if ":" in cap_id:
+            toolkit_name, tool_name = cap_id.split(":", 1)
+            display_name = get_toolkit_display_name(toolkit_name)
+            display_cap_id = f"{display_name}:{tool_name}"
+        # ...
+```
+
+Output example:
+```
+- **Search:web_search**: Search the web using multiple engines
+    - query: string (required)
+    - engines: array
+- **File:read_file**: Read content from a file
+    - file_path: string (required)
+```
+
+---
+
+## 5. Progress Streaming Architecture
+
+### 5.1 Current Architecture Analysis
+
+#### Event Flow Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -48,7 +328,7 @@ browser actions, research queries, and other subagent activities.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 Component Analysis
+### 5.2 Component Analysis
 
 #### NoeAgent ([agent.py](../../noesium/noeagent/agent.py))
 
@@ -82,7 +362,7 @@ browser actions, research queries, and other subagent activities.
 | `astream_progress()` | ❌ Missing | Not implemented |
 | LangGraph graph | ✅ Present | Has `_generate_query_node`, `_research_node`, etc. |
 
-### 1.3 Event Type Coverage
+### 5.3 Event Type Coverage
 
 | Event Type | NoeAgent Emits | BrowserUseAgent | TacitusAgent |
 |------------|----------------|-----------------|--------------|
@@ -101,9 +381,9 @@ browser actions, research queries, and other subagent activities.
 
 ---
 
-## 2. Gap Analysis
+## 6. Gap Analysis
 
-### 2.1 Primary Gap: Built-in Subagent Opacity
+### 6.1 Primary Gap: Built-in Subagent Opacity
 
 **Problem**: When NoeAgent delegates to BrowserUseAgent or TacitusAgent, the TUI shows:
 
@@ -125,7 +405,7 @@ browser actions, research queries, and other subagent activities.
 - Research queries being generated
 - Web search results being processed
 
-### 2.2 Secondary Gaps
+### 6.2 Secondary Gaps
 
 1. **No Progress Protocol**: Built-in agents don't implement `astream_progress()`
 2. **Blocking Provider**: `BuiltInAgentCapabilityProvider.invoke()` doesn't stream
@@ -134,9 +414,9 @@ browser actions, research queries, and other subagent activities.
 
 ---
 
-## 3. Target Architecture
+## 7. Target Architecture
 
-### 3.1 Event Flow (After Implementation)
+### 7.1 Event Flow (After Implementation)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -175,7 +455,7 @@ browser actions, research queries, and other subagent activities.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 Component Responsibilities
+### 7.2 Component Responsibilities
 
 | Component | Responsibility |
 |-----------|---------------|
@@ -187,9 +467,9 @@ browser actions, research queries, and other subagent activities.
 
 ---
 
-## 4. Detailed Design
+## 8. Detailed Design
 
-### 4.1 Progress Protocol Interface
+### 8.1 Progress Protocol Interface
 
 All built-in subagents should implement this interface:
 
@@ -218,7 +498,7 @@ class ProgressStreamingAgent(Protocol):
         ...
 ```
 
-### 4.2 BrowserUseAgent Progress Streaming
+### 8.2 BrowserUseAgent Progress Streaming
 
 **File**: `noesium/subagents/bu/agent/__init__.py`
 
@@ -373,7 +653,7 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         return f"🔧 Browser action: {action_name}"
 ```
 
-### 4.3 TacitusAgent Progress Streaming
+### 8.3 TacitusAgent Progress Streaming
 
 **File**: `noesium/subagents/tacitus/agent.py`
 
@@ -542,7 +822,7 @@ class TacitusAgent(BaseResearcher):
             )
 ```
 
-### 4.4 BuiltInAgentCapabilityProvider Streaming
+### 8.4 BuiltInAgentCapabilityProvider Streaming
 
 **File**: `noesium/core/capability/providers.py`
 
@@ -614,7 +894,7 @@ class BuiltInAgentCapabilityProvider:
             )
 ```
 
-### 4.5 NoeAgent Integration
+### 8.5 NoeAgent Integration
 
 **File**: `noesium/noeagent/agent.py`
 
@@ -683,7 +963,7 @@ async def subagent_node(
     # ... rest of function ...
 ```
 
-### 4.6 TUI Display Enhancements
+### 8.6 TUI Display Enhancements
 
 **File**: `noesium/noeagent/tui.py`
 
@@ -738,7 +1018,7 @@ def _activity_line(event: ProgressEvent, thinking_gen: DynamicThinkingText | Non
 
 ---
 
-## 5. Implementation Phases
+## 9. Implementation Phases
 
 ### Phase 1: BrowserUseAgent Progress Streaming
 
@@ -826,9 +1106,9 @@ async def test_provider_streaming():
 
 ---
 
-## 6. API Contract
+## 10. API Contract
 
-### 6.1 Event Requirements
+### 10.1 Event Requirements
 
 All built-in subagent `astream_progress()` implementations MUST:
 
@@ -838,7 +1118,7 @@ All built-in subagent `astream_progress()` implementations MUST:
 4. **Provide meaningful summaries** suitable for TUI display (< 80 chars)
 5. **Include detail** for logging purposes
 
-### 6.2 Event Flow Guarantee
+### 10.2 Event Flow Guarantee
 
 ```
 SESSION_START
@@ -850,7 +1130,7 @@ SESSION_START
   └── SESSION_END
 ```
 
-### 6.3 Metadata Conventions
+### 10.3 Metadata Conventions
 
 | Field | Purpose | Example |
 |-------|---------|---------|
@@ -860,22 +1140,22 @@ SESSION_START
 
 ---
 
-## 7. Testing Strategy
+## 11. Testing Strategy
 
-### 7.1 Unit Tests
+### 11.1 Unit Tests
 
 - `test_browser_agent_progress_events`: Verify event sequence
 - `test_tacitus_agent_progress_events`: Verify research events
 - `test_provider_streaming_wrapping`: Verify event wrapping
 - `test_subagent_tracker_browser_events`: Verify TUI display
 
-### 7.2 Integration Tests
+### 11.2 Integration Tests
 
 - `test_noe_with_browser_subagent`: End-to-end with real browser
 - `test_noe_with_tacitus_subagent`: End-to-end research task
 - `test_parallel_subagent_progress`: Multiple concurrent subagents
 
-### 7.3 Manual Testing
+### 11.3 Manual Testing
 
 1. Run NoeAgent TUI: `noeagent`
 2. Submit browser task: "Browse to example.com and extract the title"
@@ -885,22 +1165,22 @@ SESSION_START
 
 ---
 
-## 8. Backward Compatibility
+## 12. Backward Compatibility
 
-### 8.1 Non-Streaming Agents
+### 12.1 Non-Streaming Agents
 
 Agents without `astream_progress()` will:
 - Emit `SUBAGENT_START` with "(no streaming)" note
 - Execute via blocking `invoke()`
 - Emit `SUBAGENT_END` with result
 
-### 8.2 Existing Tests
+### 12.2 Existing Tests
 
 All existing tests should pass without modification. The streaming path is additive.
 
 ---
 
-## 9. Future Enhancements
+## 13. Future Enhancements
 
 1. **Parallel Subagent Execution**: Run multiple subagents concurrently with interleaved events
 2. **Subagent Cancellation**: Cancel long-running browser tasks
@@ -909,7 +1189,69 @@ All existing tests should pass without modification. The streaming path is addit
 
 ---
 
-## 10. References
+## 14. Prompt System
+
+### 14.1 Architecture
+
+Prompts are stored as markdown files with YAML frontmatter in `noesium/noeagent/prompts/`:
+
+```
+noesium/noeagent/prompts/
+├── __init__.py          # NoePromptManager class
+├── agent_system.md      # Agent mode system prompt
+├── ask_system.md        # Ask mode system prompt
+├── planning.md          # Task planning prompt
+├── reflection.md        # Reflection prompt
+├── revise_plan.md       # Plan revision prompt
+└── finalize.md          # Answer synthesis prompt
+```
+
+### 14.2 Prompt Loading
+
+```python
+from noesium.noeagent.prompts import get_prompt_manager
+
+pm = get_prompt_manager()
+prompt = pm.render('planning', goal='My task', context='...')
+```
+
+### 14.3 Frontmatter Format
+
+```yaml
+---
+name: planning
+version: "1.1.0"
+created: "2026-03-04"
+modified: "2026-03-04"
+author: "NoeAgent Team"
+description: "Task planning prompt with execution hints"
+required_variables:
+  - goal
+optional_variables:
+  context: ""
+  external_subagent_info: ""
+  builtin_subagent_info: ""
+template_engine: format
+---
+
+# Prompt content...
+```
+
+### 14.4 Subagent-Aware Prompts
+
+The planning and agent_system prompts are configured to respect `requires_explicit_command`:
+
+**planning.md:**
+- Only lists `browser_use` as available for `builtin_agent` routing
+- Notes that `tacitus` requires explicit `/research` command
+
+**agent_system.md:**
+- Shows only `browser_use` for auto-routing
+- Documents that `tacitus` requires explicit command invocation
+
+---
+
+## 15. References
 
 - [NoeAgent TUI Analysis](./noeagent-tui-analysis.md)
 - [RFC-1004: Capability Registry](../specs/RFC-1004.md)

@@ -4,7 +4,7 @@
 # Each file is separated by "---" and blank lines
 
 OUTPUT_FILE="full-specs.md"
-SPECS_DIR="specs"
+SPECS_DIR="docs/specs"
 
 # Remove output file if it exists
 rm -f "$OUTPUT_FILE"

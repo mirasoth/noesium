@@ -54,7 +54,7 @@ configs = {
     "bash": ToolkitConfig(
         config={"workspace_root": "/tmp/workspace"}
     ),
-    "wizsearch": ToolkitConfig(
+    "web_search": ToolkitConfig(
         config={
             "enabled_engines": ["tavily"],
             "max_results_per_engine": 10,
@@ -63,7 +63,7 @@ configs = {
 }
 
 # Get all toolkits
-toolkits = get_toolkits_map(["python_executor", "bash", "wizsearch"], configs)
+toolkits = get_toolkits_map(["python_executor", "bash", "web_search"], configs)
 
 # Use them
 for name, toolkit in toolkits.items():
@@ -106,9 +106,9 @@ result = await toolkit.call_tool("execute_python_code",
 - Timeout protection
 - Comprehensive error handling
 
-### WizSearch Toolkit
+### Web Search Toolkit
 
-Multi-engine web search and page crawling via the wizsearch library.
+Multi-engine web search and page crawling.
 
 ```python
 config = ToolkitConfig(config={
@@ -116,7 +116,7 @@ config = ToolkitConfig(config={
     "max_results_per_engine": 10,
 })
 
-toolkit = get_toolkit("wizsearch", config)
+toolkit = get_toolkit("web_search", config)
 
 # Multi-engine web search
 search_result = await toolkit.call_tool("web_search",

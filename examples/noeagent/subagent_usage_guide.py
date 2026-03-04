@@ -33,7 +33,7 @@ async def pattern_research_delegation():
         mode=NoeMode.AGENT,
         enable_subagents=True,
         subagent_max_depth=2,
-        enabled_toolkits=["wizsearch", "bash"],
+        enabled_toolkits=["web_search", "bash"],
         max_iterations=5,
         enable_session_logging=False,
     )
@@ -283,7 +283,7 @@ async def pattern_config_templates():
         mode=NoeMode.AGENT,
         enable_subagents=True,
         subagent_max_depth=3,
-        enabled_toolkits=['bash', 'wizsearch'],
+        enabled_toolkits=['bash', 'web_search'],
         max_iterations=5,
     )
 

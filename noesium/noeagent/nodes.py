@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from noesium.core.memory.provider import MemoryTier, RecallQuery, RecallScope
@@ -15,9 +16,63 @@ from .state import AgentState, AskState, TaskPlan
 logger = logging.getLogger(__name__)
 
 
+def _get_current_datetime() -> str:
+    """Get the current datetime in explicit, prompt-friendly format.
+
+    Returns:
+        String like "Today's date: 2026-03-04. Current time (UTC): 14:30:00."
+        so the agent can compare source dates and avoid treating future-dated
+        results as current.
+    """
+    now = datetime.now(timezone.utc)
+    date_part = now.strftime("%Y-%m-%d")
+    time_part = now.strftime("%H:%M:%S")
+    return f"Today's date: {date_part}. Current time (UTC): {time_part}."
+
+
 # ---------------------------------------------------------------------------
 # Async Helper for Synchronous LLM Calls
 # ---------------------------------------------------------------------------
+
+
+def _is_content_filter_error(exc: Exception) -> bool:
+    """Check if the exception is a content filtering/policy error (non-retryable)."""
+    error_str = str(exc).lower()
+    if "data_inspection_failed" in error_str:
+        return True
+    if "inappropriate content" in error_str:
+        return True
+    if "content_filter" in error_str:
+        return True
+    if "content_policy" in error_str:
+        return True
+    if "safety" in error_str and "violation" in error_str:
+        return True
+    return False
+
+
+def _content_filter_error_message(exc: Exception) -> str:
+    """Generate a user-friendly error message for content filter errors."""
+    error_str = str(exc)
+    # Try to identify the provider
+    if "data_inspection_failed" in error_str.lower():
+        provider = "Dashscope/Alibaba Cloud"
+    elif "content_filter" in error_str.lower():
+        provider = "OpenAI"
+    else:
+        provider = "the LLM provider"
+
+    return (
+        f"⚠️ Content Policy Violation\n\n"
+        f"Your request was blocked by {provider}'s content safety system. "
+        f"This can happen with sensitive topics like wars, conflicts, or other content "
+        f"that may violate usage policies.\n\n"
+        f"Suggestions:\n"
+        f"• Rephrase your query in more neutral terms\n"
+        f"• Try using a different LLM provider (e.g., switch from Dashscope to OpenAI)\n"
+        f"• Use /research or /deep_research commands for web-based information gathering\n\n"
+        f"Technical details: {error_str[:200]}"
+    )
 
 
 async def _run_llm_async(llm: Any, method: str, **kwargs: Any) -> Any:
@@ -41,7 +96,12 @@ async def _run_llm_async(llm: Any, method: str, **kwargs: Any) -> Any:
 
 
 def _build_tool_descriptions(registry: Any) -> str:
-    """Format registry providers into a prompt-friendly description block."""
+    """Format registry providers into a prompt-friendly description block.
+
+    Uses display names for better readability (e.g., 'WebSearch' instead of 'web_search').
+    """
+    from .commands import get_toolkit_display_name
+
     if registry is None:
         return "No tools available."
     providers = registry.list_providers()
@@ -64,7 +124,15 @@ def _build_tool_descriptions(registry: Any) -> str:
             params = "\n" + "\n".join(parts)
         desc = (getattr(d, "description", None) or "").split("\n")[0].strip()
         cap_id = getattr(d, "capability_id", "unknown")
-        lines.append(f"- **{cap_id}**: {desc}{params}")
+        # Use display name if available
+        # cap_id format is usually "toolkit:tool_name" or just "tool_name"
+        if ":" in cap_id:
+            toolkit_name, tool_name = cap_id.split(":", 1)
+            display_name = get_toolkit_display_name(toolkit_name)
+            display_cap_id = f"{display_name}:{tool_name}"
+        else:
+            display_cap_id = cap_id
+        lines.append(f"- **{display_cap_id}**: {desc}{params}")
     return "\n".join(lines)
 
 
@@ -115,7 +183,7 @@ async def generate_answer_node(
     mem_ctx = state.get("memory_context") or []
     mem_text = "\n".join(f"- {m.get('key', '')}: {m.get('value', '')}" for m in mem_ctx) or "No memory context."
     pm = get_prompt_manager()
-    system = pm.render("ask_system", memory_context=mem_text)
+    system = pm.render("ask_system", memory_context=mem_text, current_datetime=_get_current_datetime())
     user_msg = state["messages"][-1].content if state["messages"] else ""
     answer = await _run_llm_async(
         llm,
@@ -193,6 +261,7 @@ async def execute_step_node(
         execution_hint=hint_text,
         completed_results=completed or "None yet.",
         tool_descriptions=tool_desc,
+        current_datetime=_get_current_datetime(),
     )
     user_msg = state["messages"][-1].content if state["messages"] else ""
 
@@ -208,17 +277,29 @@ async def execute_step_node(
             temperature=0.2,
         )
     except Exception as exc:
+        # Content filter errors should not be retried with fallback
+        if _is_content_filter_error(exc):
+            logger.error("Content policy violation: %s", exc)
+            return {"messages": [AIMessage(content=_content_filter_error_message(exc))]}
+
         logger.warning("Structured completion failed, falling back to text: %s", exc)
-        text = await _run_llm_async(
-            llm,
-            "completion",
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_msg},
-            ],
-            temperature=0.2,
-        )
-        return {"messages": [AIMessage(content=str(text))]}
+        try:
+            text = await _run_llm_async(
+                llm,
+                "completion",
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_msg},
+                ],
+                temperature=0.2,
+            )
+            return {"messages": [AIMessage(content=str(text))]}
+        except Exception as fallback_exc:
+            # Check if fallback also hit content filter
+            if _is_content_filter_error(fallback_exc):
+                logger.error("Content policy violation in fallback: %s", fallback_exc)
+                return {"messages": [AIMessage(content=_content_filter_error_message(fallback_exc))]}
+            raise
 
     if action.mark_step_complete and plan:
         plan.advance()
@@ -401,18 +482,44 @@ async def subagent_node(
             if registry is None:
                 result = "Capability registry not configured."
             else:
-                try:
-                    # Built-in agents are registered as "builtin_agent:{name}"
-                    cap_id = f"builtin_agent:{sa.name}"
-                    provider = registry.get_by_name(cap_id)
+                # Check if this subagent requires explicit command
+                from .commands import get_subagent_display_name
 
-                    # Use streaming if available for real-time progress
-                    if hasattr(provider, "invoke_streaming"):
-                        result = await agent.execute_builtin_subagent_streaming(provider, sa.message, sa.name)
-                    else:
-                        result = await provider.invoke(message=sa.message)
-                except Exception as exc:
-                    result = f"Failed to invoke built-in agent '{sa.name}': {exc}"
+                subagent_name = sa.name
+                requires_explicit = False
+
+                # Check config for requires_explicit_command flag
+                for cfg in agent.config.builtin:
+                    cfg_name = getattr(cfg, "name", None) if hasattr(cfg, "name") else cfg.get("name")
+                    if cfg_name == subagent_name:
+                        requires_explicit = (
+                            getattr(cfg, "requires_explicit_command", False)
+                            if hasattr(cfg, "requires_explicit_command")
+                            else cfg.get("requires_explicit_command", False)
+                        )
+                        break
+
+                if requires_explicit:
+                    display_name = get_subagent_display_name(subagent_name)
+                    result = (
+                        f"{display_name} cannot be auto-invoked. "
+                        f"It requires explicit user command (/research or /deep_research in the original message). "
+                        f"For this task, use web_search tool instead to search for information. "
+                        f"Do NOT try to invoke {display_name} again."
+                    )
+                else:
+                    try:
+                        # Built-in agents are registered as "builtin_agent:{name}"
+                        cap_id = f"builtin_agent:{subagent_name}"
+                        provider = registry.get_by_name(cap_id)
+
+                        # Use streaming if available for real-time progress
+                        if hasattr(provider, "invoke_streaming"):
+                            result = await agent.execute_builtin_subagent_streaming(provider, sa.message, subagent_name)
+                        else:
+                            result = await provider.invoke(message=sa.message)
+                    except Exception as exc:
+                        result = f"Failed to invoke built-in agent '{subagent_name}': {exc}"
         elif sa.action == "invoke_cli":
             # Invoke CLI subagent (oneshot or daemon mode via unified interface)
             cli_adapter = getattr(agent, "_cli_adapter", None)
@@ -539,7 +646,12 @@ async def finalize_node(
         return {"final_answer": answer}
 
     pm = get_prompt_manager()
-    prompt = pm.render("finalize", goal=goal, results=results)
+    prompt = pm.render(
+        "finalize",
+        goal=goal,
+        results=results,
+        current_datetime=_get_current_datetime(),
+    )
     answer = await _run_llm_async(
         llm,
         "completion",

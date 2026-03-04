@@ -26,6 +26,8 @@ class AgentSubagentConfig(BaseModel):
     agent_type: str  # browser_use, tacitus, askura
     description: str | None = None
     enabled: bool = True
+    # Whether this subagent can only be invoked via explicit /command (not auto-routed by LLM)
+    requires_explicit_command: bool = False
     # Enhanced capability descriptors for intelligent routing
     task_types: list[str] = Field(
         default_factory=list,
@@ -92,6 +94,7 @@ DEFAULT_AGENT_SUBAGENTS = [
         agent_type="browser_use",
         description="Web automation agent for browser interaction, form filling, and real-time web data extraction",
         enabled=True,
+        requires_explicit_command=False,  # Can be auto-routed by LLM
         task_types=["web_browsing", "form_filling", "web_scraping", "dom_interaction", "screenshot"],
         use_cases=[
             "Find real-time stock prices from financial websites",
@@ -109,6 +112,7 @@ DEFAULT_AGENT_SUBAGENTS = [
         agent_type="tacitus",
         description="Research agent with iterative query generation, multi-source web search, and answer synthesis",
         enabled=True,
+        requires_explicit_command=True,  # MUST be invoked via /research or /deep_research command
         task_types=["web_research", "information_synthesis", "multi_source_search", "fact_checking"],
         use_cases=[
             "Research a topic from multiple sources",
@@ -183,7 +187,7 @@ class NoeConfig(BaseModel):
             "image",
             "python_executor",
             "tabular_data",
-            "wizsearch",
+            "web_search",
             "user_interaction",
         ],
     )

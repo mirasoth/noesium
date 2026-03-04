@@ -1,5 +1,5 @@
 """
-WizSearch toolkit for multi-engine web search and page crawling.
+Web Search toolkit for multi-engine web search and page crawling.
 
 Wraps the wizsearch library to provide unified search across multiple engines
 (Tavily, DuckDuckGo, Google AI, Brave, Bing, etc.) and web page content extraction.
@@ -72,8 +72,8 @@ def _apply_tavily_api_key_from_config(config: dict) -> None:
         os.environ["TAVILY_API_KEY"] = key.strip()
 
 
-@register_toolkit("wizsearch")
-class WizSearchToolkit(AsyncBaseToolkit):
+@register_toolkit("web_search")
+class WebSearchToolkit(AsyncBaseToolkit):
     """
     Toolkit for multi-engine web search and page crawling via the wizsearch library.
 

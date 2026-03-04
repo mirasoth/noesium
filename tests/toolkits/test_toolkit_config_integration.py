@@ -63,7 +63,7 @@ class TestToolkitConfigIntegration:
         """Test global config with toolkit-specific configurations."""
         config = NoeAgentConfig()
         config.tools.toolkit_configs = {
-            "wizsearch": ToolkitConfigEntry(
+            "web_search": ToolkitConfigEntry(
                 enabled_engines=["tavily", "googleai"],
                 max_results_per_engine=15,
                 search_timeout=45,
@@ -74,11 +74,11 @@ class TestToolkitConfigIntegration:
             ),
         }
 
-        # Verify wizsearch config
-        wizsearch_entry = config.tools.toolkit_configs["wizsearch"]
-        assert wizsearch_entry.enabled_engines == ["tavily", "googleai"]
-        assert wizsearch_entry.max_results_per_engine == 15
-        assert wizsearch_entry.search_timeout == 45
+        # Verify web_search config
+        web_search_entry = config.tools.toolkit_configs["web_search"]
+        assert web_search_entry.enabled_engines == ["tavily", "googleai"]
+        assert web_search_entry.max_results_per_engine == 15
+        assert web_search_entry.search_timeout == 45
 
         # Verify bash config
         bash_entry = config.tools.toolkit_configs["bash"]
@@ -89,7 +89,7 @@ class TestToolkitConfigIntegration:
         """Test NoeConfig can receive toolkit_configs from dict."""
         noe_config = NoeConfig(
             toolkit_configs={
-                "wizsearch": {
+                "web_search": {
                     "enabled_engines": ["tavily"],
                     "max_results_per_engine": 20,
                 },
@@ -101,9 +101,9 @@ class TestToolkitConfigIntegration:
         )
 
         # Verify toolkit_configs are stored correctly
-        assert "wizsearch" in noe_config.toolkit_configs
-        assert noe_config.toolkit_configs["wizsearch"]["enabled_engines"] == ["tavily"]
-        assert noe_config.toolkit_configs["wizsearch"]["max_results_per_engine"] == 20
+        assert "web_search" in noe_config.toolkit_configs
+        assert noe_config.toolkit_configs["web_search"]["enabled_engines"] == ["tavily"]
+        assert noe_config.toolkit_configs["web_search"]["max_results_per_engine"] == 20
 
         assert "bash" in noe_config.toolkit_configs
         assert noe_config.toolkit_configs["bash"]["timeout"] == 500
@@ -127,17 +127,17 @@ class TestToolkitConfigIntegration:
         assert toolkit_specific["max_results_per_engine"] == 10
 
 
-class TestWizSearchToolkitDefaultConfig:
-    """Test WizSearch toolkit default configuration."""
+class TestWebSearchToolkitDefaultConfig:
+    """Test WebSearch toolkit default configuration."""
 
-    def test_wizsearch_default_uses_tavily(self):
-        """Test that WizSearch toolkit uses Tavily as default search engine."""
+    def test_web_search_default_uses_tavily(self):
+        """Test that WebSearch toolkit uses Tavily as default search engine."""
         from noesium.core.toolify.config import ToolkitConfig
-        from noesium.toolkits.wizsearch_toolkit import WizSearchToolkit
+        from noesium.toolkits.web_search_toolkit import WebSearchToolkit
 
         # Create toolkit with default config
-        config = ToolkitConfig(name="wizsearch", config={})
-        toolkit = WizSearchToolkit(config)
+        config = ToolkitConfig(name="web_search", config={})
+        toolkit = WebSearchToolkit(config)
 
         # Verify default uses Tavily
         assert toolkit.enabled_engines == ["tavily"]
@@ -145,14 +145,14 @@ class TestWizSearchToolkitDefaultConfig:
         assert toolkit.search_timeout == 30
         assert toolkit.content_format == "markdown"
 
-    def test_wizsearch_config_override(self):
-        """Test that WizSearch toolkit can override defaults."""
+    def test_web_search_config_override(self):
+        """Test that WebSearch toolkit can override defaults."""
         from noesium.core.toolify.config import ToolkitConfig
-        from noesium.toolkits.wizsearch_toolkit import WizSearchToolkit
+        from noesium.toolkits.web_search_toolkit import WebSearchToolkit
 
         # Create toolkit with custom config
         config = ToolkitConfig(
-            name="wizsearch",
+            name="web_search",
             config={
                 "enabled_engines": ["tavily", "brave", "googleai"],
                 "max_results_per_engine": 20,
@@ -160,7 +160,7 @@ class TestWizSearchToolkitDefaultConfig:
                 "content_format": "html",
             },
         )
-        toolkit = WizSearchToolkit(config)
+        toolkit = WebSearchToolkit(config)
 
         # Verify custom config is applied
         assert toolkit.enabled_engines == ["tavily", "brave", "googleai"]
@@ -168,20 +168,20 @@ class TestWizSearchToolkitDefaultConfig:
         assert toolkit.search_timeout == 60
         assert toolkit.content_format == "html"
 
-    def test_wizsearch_partial_config_override(self):
-        """Test that WizSearch toolkit can override some defaults while keeping others."""
+    def test_web_search_partial_config_override(self):
+        """Test that WebSearch toolkit can override some defaults while keeping others."""
         from noesium.core.toolify.config import ToolkitConfig
-        from noesium.toolkits.wizsearch_toolkit import WizSearchToolkit
+        from noesium.toolkits.web_search_toolkit import WebSearchToolkit
 
         # Create toolkit with partial custom config
         config = ToolkitConfig(
-            name="wizsearch",
+            name="web_search",
             config={
                 "enabled_engines": ["duckduckgo", "brave"],
                 # max_results_per_engine not specified, should use default
             },
         )
-        toolkit = WizSearchToolkit(config)
+        toolkit = WebSearchToolkit(config)
 
         # Verify custom config for specified fields
         assert toolkit.enabled_engines == ["duckduckgo", "brave"]

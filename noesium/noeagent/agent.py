@@ -709,10 +709,26 @@ class NoeAgent(BaseGraphicAgent):
         user_message: str,
         context: Dict[str, Any] | None = None,
     ) -> AsyncGenerator[ProgressEvent, None]:
-        """Canonical typed progress stream (impl guide §5.5)."""
+        """Canonical typed progress stream (impl guide §5.5).
+
+        Supports inline commands for direct subagent invocation:
+        - /research <task> or /deep_research <task> - Invoke Tacitus
+        - /browser <task> - Invoke BrowserUse
+        - /claude <task> - Invoke Claude subagent
+        """
+        from .commands import parse_inline_command
         from .state import TaskPlan
 
         await self.initialize()
+
+        # Check for inline subagent commands
+        inline_cmd = parse_inline_command(user_message)
+        if inline_cmd is not None:
+            # Delegate to command handler which yields progress events
+            async for event in self._handle_inline_command(inline_cmd):
+                yield event
+            return
+
         compiled = self._get_compiled_graph()
         self.graph = compiled
 
@@ -1146,3 +1162,181 @@ class NoeAgent(BaseGraphicAgent):
                 final_result = event.detail or event.summary or ""
 
         return final_result
+
+    async def _handle_inline_command(
+        self,
+        command: "InlineCommand",
+    ) -> AsyncGenerator[ProgressEvent, None]:
+        """Handle inline subagent command and yield progress events.
+
+        This method processes explicit subagent commands like /research, /browser,
+        and /claude, directly invoking the specified subagent without LLM routing.
+
+        Args:
+            command: Parsed inline command with subagent_name and message.
+
+        Yields:
+            ProgressEvent objects for session tracking and UI display.
+        """
+        from uuid_extensions import uuid7str
+
+        from .commands import get_subagent_display_name
+
+        session_id = uuid7str()
+        seq = 0
+
+        def _next_seq() -> int:
+            nonlocal seq
+            seq += 1
+            return seq
+
+        def _evt(tp: ProgressEventType, **kw: Any) -> ProgressEvent:
+            return ProgressEvent(type=tp, session_id=session_id, sequence=_next_seq(), **kw)
+
+        subagent_name = command.subagent_name
+        message = command.message
+        display_name = get_subagent_display_name(subagent_name)
+
+        # Emit session start
+        start_evt = _evt(
+            ProgressEventType.SESSION_START,
+            summary=f"Command: /{command.command_type.value} {message[:60]}",
+        )
+        await self._fire_callbacks(start_evt)
+        yield start_evt
+
+        if not message:
+            error_evt = _evt(
+                ProgressEventType.ERROR,
+                error=f"No task provided for {display_name}. Usage: /{command.command_type.value} <your task>",
+            )
+            await self._fire_callbacks(error_evt)
+            yield error_evt
+            end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
+            await self._fire_callbacks(end_evt)
+            yield end_evt
+            return
+
+        # Emit subagent start
+        sa_start_evt = _evt(
+            ProgressEventType.SUBAGENT_START,
+            subagent_id=subagent_name,
+            summary=f"[{display_name}] {message[:60]}",
+        )
+        await self._fire_callbacks(sa_start_evt)
+        yield sa_start_evt
+
+        # Try to find the subagent in the registry
+        registry = self._registry
+        if registry is None:
+            error_evt = _evt(
+                ProgressEventType.ERROR,
+                error="Agent not properly initialized (no capability registry)",
+            )
+            await self._fire_callbacks(error_evt)
+            yield error_evt
+            end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
+            await self._fire_callbacks(end_evt)
+            yield end_evt
+            return
+
+        # Check if it's a built-in subagent
+        cap_id = f"builtin_agent:{subagent_name}"
+        try:
+            provider = registry.get_by_name(cap_id)
+        except Exception:
+            provider = None
+
+        if provider is None:
+            # Check if the subagent is configured but not enabled
+            enabled_subagents = self.config.get_enabled_builtin_subagents()
+            subagent_types = [s.agent_type for s in enabled_subagents]
+            if subagent_name not in subagent_types:
+                error_msg = f"Subagent '{display_name}' is not enabled. Enable it in your config."
+            else:
+                error_msg = f"Subagent '{display_name}' not found in registry."
+
+            error_evt = _evt(ProgressEventType.ERROR, error=error_msg)
+            await self._fire_callbacks(error_evt)
+            yield error_evt
+
+            sa_end_evt = _evt(
+                ProgressEventType.SUBAGENT_END,
+                subagent_id=subagent_name,
+                summary=f"[{display_name}] failed",
+            )
+            await self._fire_callbacks(sa_end_evt)
+            yield sa_end_evt
+
+            end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
+            await self._fire_callbacks(end_evt)
+            yield end_evt
+            return
+
+        # Execute the subagent
+        final_result = ""
+        try:
+            if hasattr(provider, "invoke_streaming"):
+                # Stream progress events from the subagent
+                async for event in provider.invoke_streaming(message=message):
+                    # Tag events with subagent info and forward
+                    if event.subagent_id is None:
+                        event = ProgressEvent(**{**event.model_dump(), "subagent_id": subagent_name})
+                    await self._fire_callbacks(event)
+                    yield event
+
+                    if event.type == ProgressEventType.SUBAGENT_END:
+                        final_result = event.detail or event.summary or ""
+                    elif event.type == ProgressEventType.FINAL_ANSWER:
+                        final_result = event.text or ""
+            else:
+                # Non-streaming invocation
+                result = await provider.invoke(message=message)
+                final_result = str(result)
+
+                # Emit end event with result
+                sa_end_evt = _evt(
+                    ProgressEventType.SUBAGENT_END,
+                    subagent_id=subagent_name,
+                    summary=f"[{display_name}] completed",
+                    detail=final_result,
+                )
+                await self._fire_callbacks(sa_end_evt)
+                yield sa_end_evt
+        except Exception as exc:
+            logger.warning("Subagent '%s' execution failed: %s", subagent_name, exc)
+            error_evt = _evt(
+                ProgressEventType.ERROR,
+                error=f"Error executing {display_name}: {exc}",
+            )
+            await self._fire_callbacks(error_evt)
+            yield error_evt
+
+            sa_end_evt = _evt(
+                ProgressEventType.SUBAGENT_END,
+                subagent_id=subagent_name,
+                summary=f"[{display_name}] failed",
+            )
+            await self._fire_callbacks(sa_end_evt)
+            yield sa_end_evt
+
+            end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
+            await self._fire_callbacks(end_evt)
+            yield end_evt
+            return
+
+        # Emit final answer if we have a result
+        if final_result:
+            final_evt = _evt(
+                ProgressEventType.FINAL_ANSWER,
+                text=final_result,
+                summary="Final answer ready",
+                detail=final_result,
+            )
+            await self._fire_callbacks(final_evt)
+            yield final_evt
+
+        # Emit session end
+        end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended")
+        await self._fire_callbacks(end_evt)
+        yield end_evt

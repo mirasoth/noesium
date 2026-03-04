@@ -298,7 +298,7 @@ Default enabled toolkits (8 core toolkits):
 
 ```
 bash, file_edit, document, image, python_executor, tabular_data,
-wizsearch, user_interaction
+web_search, user_interaction
 ```
 
 Additional available toolkits (not enabled by default): `jina_research`, `memory`, `video`, `arxiv`, `serper`, `wikipedia`, `github`, `gmail`, `audio`, `audio_aliyun`
@@ -697,7 +697,7 @@ For each step, suggest an execution_hint.
 | `max_iterations` | `25` | Maximum graph iterations |
 | `max_tool_calls_per_step` | `5` | Max tool calls per execute_step |
 | `reflection_interval` | `3` | Steps between reflections |
-| `enabled_toolkits` | 8 core toolkits | Active toolkits (bash, file_edit, document, image, python_executor, tabular_data, wizsearch, user_interaction) |
+| `enabled_toolkits` | 8 core toolkits | Active toolkits (bash, file_edit, document, image, python_executor, tabular_data, web_search, user_interaction) |
 | `persist_memory` | `true` | Persist agent results to durable memory |
 | `progress_callbacks` | `[]` | List of async callables / `ProgressCallback` instances |
 | `session_log_dir` | `~/.noeagent/sessions` | Directory for session JSONL logs |

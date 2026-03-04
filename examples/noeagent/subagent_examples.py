@@ -316,7 +316,7 @@ async def example_complete():
                 task_types=["code_edit", "refactor"],
             ),
         ],
-        enabled_toolkits=["bash", "wizsearch"],
+        enabled_toolkits=["bash", "web_search"],
         max_iterations=10,
         reflection_interval=3,
         enable_session_logging=True,

@@ -15,7 +15,7 @@ This directory contains production-ready prompt templates used by NoeAgent in bo
 | `planning.md` | Task decomposition | `goal`, `context` (optional) |
 | `reflection.md` | Progress assessment | `goal`, `plan_steps`, `completed_results` |
 | `revise_plan.md` | Plan revision | `goal`, `original_steps`, `feedback`, `completed_results` |
-| `finalize.md` | Answer synthesis | `goal`, `results` |
+| `finalize.md` | Adaptive answer synthesis (simple / complex / full report) | `goal`, `results`; optional: `current_datetime` |
 
 ## Usage
 
@@ -30,7 +30,7 @@ system = pm.render(
     plan="Search for recent AI research papers",
     execution_hint="Use appropriate tools for search and analysis",
     completed_results="None yet.",
-    tool_descriptions="- wizsearch: Web search\n- arxiv: ArXiv paper search",
+    tool_descriptions="- web_search: Web search\n- arxiv: ArXiv paper search",
 )
 ```
 
@@ -62,7 +62,7 @@ template_engine: format
 
 Prompts document **default built-in** capabilities only; additional toolkits or subagents may be configured at runtime.
 
-- **Default built-in toolkits** (from `NoeConfig.enabled_toolkits`): bash, file_edit, document, image, python_executor, tabular_data, wizsearch, user_interaction. The actual tool list shown to the agent is built at runtime from the capability registry and injected as `{tool_descriptions}` in the agent system prompt.
+- **Default built-in toolkits** (from `NoeConfig.enabled_toolkits`): bash, file_edit, document, image, python_executor, tabular_data, web_search, user_interaction. The actual tool list shown to the agent is built at runtime from the capability registry and injected as `{tool_descriptions}` in the agent system prompt.
 
 - **Default built-in subagents** (from `DEFAULT_AGENT_SUBAGENTS`): **browser_use** (web automation, form filling, DOM interaction), **tacitus** (research, multi-source synthesis). Invocation uses subagent action `invoke_builtin` with `name` set to the built-in name and `message` for the task.
 

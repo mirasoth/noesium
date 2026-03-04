@@ -117,7 +117,7 @@ class ToolkitConfigEntry(BaseModel):
         timeout: Timeout in seconds
         shell: Shell to use (for bash toolkit)
         max_output_length: Maximum output length
-        **kwargs: Toolkit-specific configuration parameters (e.g., wizsearch.enabled_engines)
+        **kwargs: Toolkit-specific configuration parameters (e.g., web_search.enabled_engines)
     """
 
     timeout: Optional[int] = None
@@ -146,7 +146,7 @@ class ToolsConfig(BaseModel):
             "image",
             "python_executor",
             "tabular_data",
-            "wizsearch",
+            "web_search",
             "user_interaction",
         ]
     )

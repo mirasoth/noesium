@@ -5,11 +5,11 @@ tool invocations.  Requires API keys configured in the environment.
 
 Usage:
     uv run pytest tests/agents/benchmark_noe_agent.py -v -m benchmark
-    uv run pytest tests/agents/benchmark_noe_agent.py -v -k "test_tool_wizsearch"
+    uv run pytest tests/agents/benchmark_noe_agent.py -v -k "test_tool_web_search"
 
 Environment variables required:
     NOE_LLM_PROVIDER / OPENAI_API_KEY / OPENROUTER_API_KEY  (LLM)
-    TAVILY_API_KEY        (wizsearch toolkit)
+    TAVILY_API_KEY        (web_search toolkit)
     JINA_API_KEY          (jina_research toolkit)
     SERPER_API_KEY        (serper toolkit)
     GITHUB_TOKEN          (github toolkit, optional)
@@ -122,17 +122,17 @@ async def _run_benchmark(
 # ---------------------------------------------------------------------------
 
 
-class TestToolWizsearch:
-    """Validates wizsearch toolkit: web_search, tavily_search, crawl_page."""
+class TestToolWebSearch:
+    """Validates web_search toolkit: web_search, tavily_search, crawl_page."""
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
         not _has_api_key("TAVILY_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY"),
-        reason="Missing API keys for wizsearch",
+        reason="Missing API keys for web_search",
     )
     async def test_web_search_basic(self):
         """Agent performs a web search. Validates enabled_engines is passed as list (testerror.md regression)."""
-        config = _make_config(enabled_toolkits=["wizsearch"], max_iterations=5)
+        config = _make_config(enabled_toolkits=["web_search"], max_iterations=5)
         result = await _run_benchmark(
             "Search the web for 'Python asyncio best practices 2026'. Return a brief summary.",
             config=config,
@@ -151,7 +151,7 @@ class TestToolWizsearch:
     )
     async def test_tavily_search(self):
         """Agent uses tavily_search explicitly."""
-        config = _make_config(enabled_toolkits=["wizsearch"], max_iterations=5)
+        config = _make_config(enabled_toolkits=["web_search"], max_iterations=5)
         result = await _run_benchmark(
             "Use tavily_search to find information about 'noesium framework'. Summarize what you find.",
             config=config,
@@ -377,7 +377,7 @@ class TestSubagentOrchestration:
     async def test_parallel_subagents(self):
         """Agent spawns multiple subagents for parallel research."""
         config = _make_config(
-            enabled_toolkits=["bash", "wikipedia", "wizsearch"],
+            enabled_toolkits=["bash", "wikipedia", "web_search"],
             max_iterations=15,
             enable_subagents=True,
             subagent_max_depth=2,
@@ -431,7 +431,7 @@ class TestErrorResilience:
         a final answer, possibly using alternative tools or approaches.
         """
         config = _make_config(
-            enabled_toolkits=["wizsearch", "bash"],
+            enabled_toolkits=["web_search", "bash"],
             max_iterations=8,
         )
         result = await _run_benchmark(
@@ -492,7 +492,7 @@ class TestEndToEnd:
           - crawl_page: 30s timeout + playwright TargetClosedError
         """
         config = _make_config(
-            enabled_toolkits=["wizsearch", "bash", "python_executor"],
+            enabled_toolkits=["web_search", "bash", "python_executor"],
             max_iterations=10,
         )
         result = await _run_benchmark(
@@ -562,7 +562,7 @@ class TestBenchmarkReport:
     async def test_tool_loading_all_toolkits(self):
         """Verify all 18 toolkits can be loaded without errors."""
         all_toolkits = [
-            "wizsearch",
+            "web_search",
             "jina_research",
             "bash",
             "python_executor",

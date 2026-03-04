@@ -42,11 +42,11 @@
       "image",
       "python_executor",
       "tabular_data",
-      "wizsearch",
+      "web_search",
       "user_interaction"
     ],
     "toolkit_configs": {
-      "wizsearch": {
+      "web_search": {
         "enabled_engines": ["tavily"],
         "max_results_per_engine": 10,
         "search_timeout": 30,
