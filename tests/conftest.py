@@ -7,6 +7,9 @@ This file provides shared fixtures and configuration for both unit and integrati
 import os
 import uuid
 
+# Set dummy API key for tests to avoid ValueError during NoeAgent instantiation
+os.environ.setdefault("OPENAI_API_KEY", "sk-dummy")
+
 import pytest
 
 
