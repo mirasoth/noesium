@@ -340,6 +340,11 @@ class NoeConfig(BaseModel):
                     agent_type=s.agent_type,
                     description=s.description,
                     enabled=getattr(s, "enabled", True),
+                    requires_explicit_command=getattr(s, "requires_explicit_command", False),
+                    task_types=getattr(s, "task_types", []),
+                    use_cases=getattr(s, "use_cases", []),
+                    keywords=getattr(s, "keywords", []),
+                    preferred_for=getattr(s, "preferred_for", []),
                     config=getattr(s, "config", None),
                 )
                 for s in global_config.subagents.builtin

@@ -73,7 +73,6 @@ if TYPE_CHECKING:
     from .state import TaskPlan
 
 from .commands import (
-    execute_subagent_command,
     get_subagent_commands_help,
     get_subagent_display_name,
     get_toolkit_display_name,
@@ -777,10 +776,12 @@ async def _process_subagent_command(
         console: Rich console for output
         session_logger: Optional session logger
     """
+    from rich.live import Live
 
     subagent_display = get_subagent_display_name(command.subagent_name)
     activity_lines: list[Text] = []
     final_result: str = ""
+    error_message: str = ""
 
     # Dynamic thinking text generator
     thinking_gen = DynamicThinkingText()
@@ -800,14 +801,93 @@ async def _process_subagent_command(
         parts.append(_get_spinner())
         return Group(*parts)
 
-    # Execute the subagent command
-    success, result = await execute_subagent_command(agent, command)
+    # Ensure agent is initialized
+    await agent.initialize()
 
-    if not success:
-        console.print(Text(f"  ! {result}", style="bold red"))
+    subagent_name = command.subagent_name
+    message = command.message
+
+    if not message:
+        console.print(
+            Text(
+                f"  ! No task provided for {subagent_display}. Usage: /{command.command_type.value} <your task>",
+                style="bold red",
+            )
+        )
         return
 
+    # Try to find the subagent in the registry
+    registry = agent._registry
+    if registry is None:
+        console.print(Text("  ! Agent not properly initialized (no capability registry)", style="bold red"))
+        return
+
+    # Check if it's a built-in subagent
+    cap_id = f"builtin_agent:{subagent_name}"
+    try:
+        provider = registry.get_by_name(cap_id)
+    except Exception:
+        provider = None
+
+    if provider is None:
+        # Check if the subagent is configured but not enabled
+        enabled_subagents = agent.config.get_enabled_builtin_subagents()
+        subagent_names = [s.agent_type for s in enabled_subagents]
+        if subagent_name not in subagent_names:
+            console.print(
+                Text(
+                    f"  ! Subagent '{subagent_display}' is not enabled. Enable it in your config.",
+                    style="bold red",
+                )
+            )
+            return
+        console.print(Text(f"  ! Subagent '{subagent_display}' not found in registry.", style="bold red"))
+        return
+
+    # Execute with live progress display
+    with Live(_build_display(), console=console, refresh_per_second=8, transient=True) as live:
+        try:
+            # Use streaming if available for real-time progress
+            if hasattr(provider, "invoke_streaming"):
+                async for event in provider.invoke_streaming(message=message):
+                    # Fire to session logger if available
+                    if session_logger:
+                        await session_logger.on_progress(event)
+
+                    # Update display based on event type
+                    if event.type == ProgressEventType.SUBAGENT_PROGRESS:
+                        # Add progress line
+                        summary = event.summary or ""
+                        if summary:
+                            activity_lines.append(Text(f"  {summary}", style="dim"))
+                        # Update thinking context
+                        if event.tool_name:
+                            thinking_gen.set_phase("tool_use", event.tool_name)
+
+                    elif event.type == ProgressEventType.SUBAGENT_END:
+                        final_result = event.detail or event.summary or ""
+
+                    elif event.type == ProgressEventType.ERROR:
+                        error_message = event.error or event.summary or "Unknown error"
+                        activity_lines.append(Text(f"  ✗ Error: {error_message}", style="red"))
+
+                    # Update live display
+                    live.update(_build_display())
+            else:
+                # Fallback to non-streaming invocation
+                result = await provider.invoke(message=message)
+                final_result = str(result)
+
+        except Exception as exc:
+            error_message = str(exc)
+            activity_lines.append(Text(f"  ✗ Error: {error_message}", style="bold red"))
+            live.update(_build_display())
+
     # Display the result
+    if error_message:
+        console.print(Text(f"  ! {error_message}", style="bold red"))
+        return
+
     console.print(
         Text.assemble(
             ("  ", ""),
@@ -817,12 +897,12 @@ async def _process_subagent_command(
     )
     console.print()
 
-    if result:
+    if final_result:
         from rich.markdown import Markdown
         from rich.rule import Rule
 
         console.print(Rule(style="dim"))
-        console.print(Markdown(result))
+        console.print(Markdown(final_result))
         console.print()
 
 

@@ -78,7 +78,7 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         llm: BaseLLMClient | None = None,
         browser_profile: BrowserProfile | None = None,
         use_vision: bool = True,
-        headless: bool = True,
+        headless: bool = False,
         session_id: str | None = None,
         cleanup_on_close: bool = True,
         parent_session_dir: str | Path | None = None,
@@ -314,14 +314,14 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
                 register_new_step_callback=on_step,
             )
 
-            # Yield THINKING before starting
+            # Yield THINKING before starting - browser launch happens here
             yield ProgressEvent(
                 type=ProgressEventType.THINKING,
                 session_id=session_id,
-                summary="Starting browser session...",
+                summary="Launching browser... (this may take up to 30s)",
             )
 
-            # Run the agent
+            # Run the agent (browser starts inside run())
             result = await agent.run(max_steps=max_steps)
             self._last_result = result
 
