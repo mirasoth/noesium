@@ -451,9 +451,10 @@ class NoeAgent(BaseGraphicAgent):
         """
         try:
             from noesium.subagents.bu import BrowserUseAgent
+            from noesium.subagents.bu.config import DEFAULT_HEADLESS
 
             opts = (subagent_cfg.config or {}).copy()
-            headless = opts.pop("headless", True)
+            headless = opts.pop("headless", DEFAULT_HEADLESS)
 
             return BrowserUseAgent(
                 llm=self.llm,

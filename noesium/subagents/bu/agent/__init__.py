@@ -16,6 +16,7 @@ from noesium.core.llm import BaseLLMClient
 from noesium.core.utils.logging import get_logger
 
 from ..browser.profile import BrowserProfile
+from ..config import DEFAULT_HEADLESS
 from .service import Agent
 from .views import AgentHistoryList
 
@@ -78,7 +79,7 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         llm: BaseLLMClient | None = None,
         browser_profile: BrowserProfile | None = None,
         use_vision: bool = True,
-        headless: bool = False,
+        headless: bool = DEFAULT_HEADLESS,
         session_id: str | None = None,
         cleanup_on_close: bool = True,
         parent_session_dir: str | Path | None = None,

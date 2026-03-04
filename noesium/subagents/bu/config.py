@@ -15,6 +15,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
+# Default head mode: True = headless (no window), False = headed (visible browser window).
+# Used globally by BrowserUseAgent, MCP server, and default config.
+DEFAULT_HEADLESS: bool = False
+
 
 @cache
 def is_running_in_docker() -> bool:
@@ -263,7 +267,7 @@ def create_default_config() -> DBStyleConfigJSON:
 
     # Create default browser profile entry
     new_config.browser_profile[profile_id] = BrowserProfileEntry(
-        id=profile_id, default=True, headless=False, user_data_dir=None
+        id=profile_id, default=True, headless=DEFAULT_HEADLESS, user_data_dir=None
     )
 
     # Create default LLM entry
