@@ -45,6 +45,7 @@ class TaskOrchestrator:
         description: str,
         repository_id: str | None = None,
         branch: str | None = None,
+        subagents: list[str] | None = None,
     ) -> Task:
         """Create a new task."""
         task = Task(
@@ -52,6 +53,7 @@ class TaskOrchestrator:
             description=description,
             repository_id=repository_id,
             branch=branch,
+            subagents=subagents,
             status=TaskStatus.CREATED,
         )
         await self._state.save_task(task)
@@ -116,8 +118,12 @@ class TaskOrchestrator:
         # Build context
         context = await self._build_context(task)
 
-        # Stream progress events
-        async for event in agent.astream_progress(task.description, context):
+        # Stream progress events. Pass subagent_names when client specified subagents.
+        async for event in agent.astream_progress(
+            task.description,
+            context,
+            subagent_names=task.subagents,
+        ):
             # Check for cancellation
             if cancel_event.is_set():
                 raise asyncio.CancelledError()

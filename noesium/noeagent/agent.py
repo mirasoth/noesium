@@ -708,27 +708,52 @@ class NoeAgent(BaseGraphicAgent):
         self,
         user_message: str,
         context: Dict[str, Any] | None = None,
+        *,
+        subagent_name: str | None = None,
+        subagent_names: list[str] | None = None,
     ) -> AsyncGenerator[ProgressEvent, None]:
         """Canonical typed progress stream (impl guide §5.5).
 
-        Supports inline commands for direct subagent invocation:
-        - /research <task> or /deep_research <task> - Invoke Tacitus
-        - /browser <task> - Invoke BrowserUse
-        - /claude <task> - Invoke Claude subagent
+        Subagents are specified explicitly (no slash parsing). Pass one or more
+        subagent names; the same message is sent to each in sequence.
+
+        - **subagent_names**: List of technical names (e.g. ``["browser_use", "tacitus"]``).
+          The task is run by each subagent in order; all progress events are yielded.
+        - **subagent_name**: Single subagent (converted to a one-element list internally).
+        - If neither is set, the main graph runs (LLM routing, tools, etc.).
         """
-        from .commands import parse_inline_command
+        from .commands import inline_command_from_subagent
         from .state import TaskPlan
 
         await self.initialize()
 
-        # Check for inline subagent commands
-        inline_cmd = parse_inline_command(user_message)
-        if inline_cmd is not None:
-            # Delegate to command handler which yields progress events
-            async for event in self._handle_inline_command(inline_cmd):
-                yield event
+        # Normalize to list: subagent_names takes precedence, then subagent_name
+        names: list[str] = []
+        if subagent_names:
+            names = list(subagent_names)
+        elif subagent_name is not None:
+            names = [subagent_name]
+
+        if names:
+            logger.info(
+                "Explicit subagent(s): %s <- %.80s",
+                names,
+                user_message,
+            )
+            for name in names:
+                try:
+                    inline_cmd = inline_command_from_subagent(name, user_message)
+                except ValueError as e:
+                    logger.warning("Skipping unknown subagent '%s': %s", name, e)
+                    continue
+                async for event in self._handle_inline_command(inline_cmd):
+                    yield event
             return
 
+        logger.debug(
+            "Running main graph: %.80s",
+            user_message,
+        )
         compiled = self._get_compiled_graph()
         self.graph = compiled
 
@@ -1167,10 +1192,10 @@ class NoeAgent(BaseGraphicAgent):
         self,
         command: "InlineCommand",
     ) -> AsyncGenerator[ProgressEvent, None]:
-        """Handle inline subagent command and yield progress events.
+        """Handle explicit subagent invocation and yield progress events.
 
-        This method processes explicit subagent commands like /research, /browser,
-        and /claude, directly invoking the specified subagent without LLM routing.
+        Invokes the subagent specified in the command (e.g. browser_use, tacitus)
+        without LLM routing. The command is built via inline_command_from_subagent.
 
         Args:
             command: Parsed inline command with subagent_name and message.

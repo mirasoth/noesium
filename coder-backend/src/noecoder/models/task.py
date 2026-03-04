@@ -63,6 +63,9 @@ class Task(BaseModel):
     repository_id: str | None = None
     branch: str | None = None
 
+    # Optional: run with specific subagent(s); same message sent to each in sequence
+    subagents: list[str] | None = None
+
     # Execution state
     steps: list[TaskStep] = []
     current_step_index: int = 0
@@ -89,9 +92,13 @@ class TaskCreate(BaseModel):
     """Request body for creating a task."""
 
     title: str | None = None  # Optional, derived from description
-    description: str
+    description: str = Field(..., description="User message for the agent.")
     repository_id: str | None = None
     branch: str | None = None
+    subagents: list[str] | None = Field(
+        None,
+        description="Optional list of subagent names (e.g. ['browser_use', 'tacitus']). Same message is run by each in sequence.",
+    )
 
 
 class TaskUpdate(BaseModel):

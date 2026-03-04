@@ -18,7 +18,7 @@ class BaseLLMClient(ABC):
         Args:
             **kwargs: Additional arguments to pass to the LLM client
         """
-        self.debug = os.getenv("NOE_DEBUG", "false").lower() == "true"
+        self.debug = os.getenv("NOE_LLM_DEBUG", "false").lower() == "true"
 
     @abstractmethod
     def completion(

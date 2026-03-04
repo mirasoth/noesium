@@ -1,13 +1,13 @@
-"""Inline command parser and display name normalization for NoeAgent.
+"""Subagent selection and display name normalization for NoeAgent.
 
 This module provides:
-1. Inline command parsing for triggering subagents (/browser, /research, /claude)
-2. Display name normalization for toolkits and subagents
+1. Explicit subagent selection: subagent names, numeric prefix parsing (TUI), and
+   InlineCommand building (inline_command_from_subagent) for astream_progress.
+2. Display name normalization for toolkits and subagents.
 """
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
@@ -115,12 +115,12 @@ def get_subagent_technical_name(display_name: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
-# Inline Command System
+# Explicit subagent selection (no slash parsing)
 # ---------------------------------------------------------------------------
 
 
 class SubagentCommandType(str, Enum):
-    """Types of subagent commands."""
+    """Types of subagent commands (for display and InlineCommand)."""
 
     BROWSER = "browser"
     RESEARCH = "research"
@@ -129,82 +129,103 @@ class SubagentCommandType(str, Enum):
 
 @dataclass
 class InlineCommand:
-    """Parsed inline command from user input."""
+    """Explicit subagent invocation: (subagent_name, message). Built via inline_command_from_subagent."""
 
     command_type: SubagentCommandType
     subagent_name: str  # Technical name (e.g., "browser_use", "tacitus")
     message: str  # The message/task for the subagent
-    original_input: str  # The original user input
+    original_input: str  # For display (e.g. "/research <message>")
 
 
-# Command patterns and their mappings
-# Format: (command_pattern, SubagentCommandType, technical_subagent_name)
-SUBAGENT_COMMANDS: list[tuple[str, SubagentCommandType, str]] = [
-    ("/browser", SubagentCommandType.BROWSER, "browser_use"),
-    ("/deep_research", SubagentCommandType.RESEARCH, "tacitus"),
-    ("/research", SubagentCommandType.RESEARCH, "tacitus"),
-    ("/claude", SubagentCommandType.CLAUDE, "claude"),
-]
+# Map technical subagent name to command type (for explicit invocation)
+_SUBAGENT_NAME_TO_COMMAND_TYPE: dict[str, SubagentCommandType] = {
+    "browser_use": SubagentCommandType.BROWSER,
+    "tacitus": SubagentCommandType.RESEARCH,
+    "claude": SubagentCommandType.CLAUDE,
+}
 
-# Build regex pattern for command detection
-# Matches: /command <rest of message>
-_COMMAND_PATTERN = re.compile(
-    r"^(" + "|".join(re.escape(cmd) for cmd, _, _ in SUBAGENT_COMMANDS) + r")\s*(.*)", re.IGNORECASE | re.DOTALL
-)
+# Ordered list for TUI selector (1=Main, 2=Browser, 3=Research, 4=Claude)
+BUILTIN_SUBAGENT_NAMES: list[str] = list(_SUBAGENT_NAME_TO_COMMAND_TYPE.keys())
 
 
-def parse_inline_command(user_input: str) -> Optional[InlineCommand]:
-    """Parse an inline command from user input.
+def parse_subagent_selector(prefix: str) -> list[str]:
+    """Parse a selector string into a list of valid subagent names.
 
-    Inline commands start with a forward slash and specify which subagent to use.
-    The rest of the input becomes the task for that subagent.
-
-    Supported commands:
-    - /browser <task> - Trigger BrowserUse subagent (OPTIONAL - can also be auto-triggered)
-    - /research <task> - Trigger Tacitus research subagent (MUST use command)
-    - /deep_research <task> - Alias for /research
-    - /claude <task> - Trigger Claude subagent (OPTIONAL)
-
-    Args:
-        user_input: The raw user input
+    Accepts comma- or space-separated numbers: 1=Main (empty), 2=browser_use,
+    3=tacitus, 4=claude. Unknown numbers are skipped.
 
     Returns:
-        InlineCommand if a command was found, None otherwise
+        List of technical subagent names (may be empty for Main).
     """
-    user_input = user_input.strip()
-    if not user_input.startswith("/"):
-        return None
-
-    match = _COMMAND_PATTERN.match(user_input)
-    if not match:
-        return None
-
-    command_str = match.group(1).lower()
-    message = match.group(2).strip()
-
-    # Find the matching command
-    for cmd_pattern, cmd_type, subagent_name in SUBAGENT_COMMANDS:
-        if command_str == cmd_pattern.lower():
-            return InlineCommand(
-                command_type=cmd_type,
-                subagent_name=subagent_name,
-                message=message,
-                original_input=user_input,
-            )
-
-    return None
+    names: list[str] = []
+    for part in prefix.replace(",", " ").split():
+        part = part.strip()
+        if not part or not part.isdigit():
+            continue
+        idx = int(part)
+        if idx == 1:
+            continue  # Main
+        if 2 <= idx <= len(BUILTIN_SUBAGENT_NAMES) + 1:
+            names.append(BUILTIN_SUBAGENT_NAMES[idx - 2])
+    return list(dict.fromkeys(names))  # preserve order, dedupe
 
 
-def is_subagent_command(user_input: str) -> bool:
-    """Check if user input contains a subagent command.
+def validate_subagent_names(candidates: list[str]) -> list[str]:
+    """Return only known built-in subagent names from the list."""
+    known = set(_SUBAGENT_NAME_TO_COMMAND_TYPE)
+    return [n for n in candidates if n in known]
+
+
+def parse_subagent_prefix_from_input(user_input: str) -> tuple[list[str], str]:
+    """Parse leading numeric selector from input; return (subagent_names, message).
+
+    Leading tokens that are digits or comma-separated digits (e.g. "2", "3", "2,3")
+    are treated as subagent selector (1=Main, 2=Browser, 3=Research, 4=Claude).
+    The rest is the message. If no leading digits, returns ([], user_input).
+
+    Examples:
+        "2 3 雪球" -> (["browser_use", "tacitus"], "雪球")
+        "2 雪球" -> (["browser_use"], "雪球")
+        "雪球" -> ([], "雪球")
+    """
+    tokens = user_input.strip().split()
+    i = 0
+    while i < len(tokens) and tokens[i].replace(",", "").strip().isdigit():
+        i += 1
+    if i == 0:
+        return ([], user_input.strip())
+    prefix_str = " ".join(tokens[:i])
+    message = " ".join(tokens[i:]).strip()
+    names = parse_subagent_selector(prefix_str)
+    return (names, message)
+
+
+def inline_command_from_subagent(subagent_name: str, message: str) -> InlineCommand:
+    """Build an InlineCommand from explicit (subagent_name, message). No slash parsing.
+
+    Use this when the client has already chosen the subagent (e.g. UI dropdown,
+    API field) so the message is never parsed for /command.
 
     Args:
-        user_input: The raw user input
+        subagent_name: Technical name (e.g. "browser_use", "tacitus", "claude")
+        message: Task message for the subagent
 
     Returns:
-        True if the input starts with a subagent command
+        InlineCommand with inferred command_type
+
+    Raises:
+        ValueError: If subagent_name is not a known built-in subagent
     """
-    return parse_inline_command(user_input) is not None
+    message = message.strip()
+    cmd_type = _SUBAGENT_NAME_TO_COMMAND_TYPE.get(subagent_name)
+    if cmd_type is None:
+        raise ValueError(f"Unknown subagent '{subagent_name}'. Known: {list(_SUBAGENT_NAME_TO_COMMAND_TYPE.keys())}")
+    return InlineCommand(
+        command_type=cmd_type,
+        subagent_name=subagent_name,
+        message=message,
+        original_input=f"/{cmd_type.value} {message}",
+    )
 
 
 async def execute_subagent_command(
@@ -268,22 +289,3 @@ async def execute_subagent_command(
         return True, str(result)
     except Exception as exc:
         return False, f"Error executing {get_subagent_display_name(subagent_name)}: {exc}"
-
-
-# ---------------------------------------------------------------------------
-# TUI Command Help
-# ---------------------------------------------------------------------------
-
-
-def get_subagent_commands_help() -> dict[str, str]:
-    """Get help text for all subagent commands.
-
-    Returns:
-        Dict mapping command to description
-    """
-    return {
-        "/browser": f"Trigger {get_subagent_display_name('browser_use')} for web automation",
-        "/research": f"Trigger {get_subagent_display_name('tacitus')} for deep research",
-        "/deep_research": f"Alias for /research",
-        "/claude": f"Trigger {get_subagent_display_name('claude')} subagent",
-    }

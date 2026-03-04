@@ -16,14 +16,15 @@ except ImportError:
 
 from .agent import NoeAgent
 from .commands import (
+    BUILTIN_SUBAGENT_NAMES,
     InlineCommand,
     SubagentCommandType,
     execute_subagent_command,
-    get_subagent_commands_help,
     get_subagent_display_name,
     get_toolkit_display_name,
-    is_subagent_command,
-    parse_inline_command,
+    inline_command_from_subagent,
+    parse_subagent_prefix_from_input,
+    validate_subagent_names,
 )
 from .config import CliSubagentConfig, NoeConfig, NoeMode
 from .progress import ProgressCallback, ProgressEvent, ProgressEventType
@@ -46,12 +47,13 @@ __all__ = [
     "ProgressCallback",
     "SessionLogger",
     # Commands module
+    "BUILTIN_SUBAGENT_NAMES",
     "InlineCommand",
     "SubagentCommandType",
-    "parse_inline_command",
-    "is_subagent_command",
     "execute_subagent_command",
-    "get_subagent_commands_help",
     "get_toolkit_display_name",
     "get_subagent_display_name",
+    "inline_command_from_subagent",
+    "parse_subagent_prefix_from_input",
+    "validate_subagent_names",
 ]

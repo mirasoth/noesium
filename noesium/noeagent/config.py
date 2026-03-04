@@ -127,6 +127,41 @@ DEFAULT_AGENT_SUBAGENTS = [
 ]
 
 
+def _builtin_from_global_config(
+    core_builtin: list[Any],
+) -> list[AgentSubagentConfig]:
+    """Build NoeConfig builtin list from global config, merging with defaults.
+
+    Core's AgentSubagentConfig has only name, agent_type, description, config.
+    Merge each item with DEFAULT_AGENT_SUBAGENTS by name so that
+    requires_explicit_command, enabled, task_types, etc. are preserved (e.g.
+    Tacitus keeps requires_explicit_command=True).
+    """
+    if not core_builtin:
+        return [AgentSubagentConfig(**s.model_dump()) for s in DEFAULT_AGENT_SUBAGENTS]
+    defaults_by_name = {c.name: c for c in DEFAULT_AGENT_SUBAGENTS}
+    result: list[AgentSubagentConfig] = []
+    for s in core_builtin:
+        d = defaults_by_name.get(s.name)
+        result.append(
+            AgentSubagentConfig(
+                name=s.name,
+                agent_type=s.agent_type,
+                description=s.description or (d.description if d else None),
+                enabled=getattr(s, "enabled", d.enabled if d else True),
+                requires_explicit_command=getattr(
+                    s, "requires_explicit_command", d.requires_explicit_command if d else False
+                ),
+                task_types=list(getattr(s, "task_types", d.task_types if d else [])),
+                use_cases=list(getattr(s, "use_cases", d.use_cases if d else [])),
+                keywords=list(getattr(s, "keywords", d.keywords if d else [])),
+                preferred_for=list(getattr(s, "preferred_for", d.preferred_for if d else [])),
+                config=getattr(s, "config", None) or (d.config.copy() if d and d.config else None),
+            )
+        )
+    return result
+
+
 def _tui_field(global_config: Any, key: str, default: Any) -> Any:
     """Read a TUI config field from the global config (extra='allow' dict)."""
     tui = getattr(global_config, "tui", None)
@@ -334,21 +369,6 @@ class NoeConfig(BaseModel):
             permissions=global_config.tools.permissions,
             enable_subagents=global_config.subagents.enabled,
             subagent_max_depth=global_config.subagents.max_depth,
-            builtin=[
-                AgentSubagentConfig(
-                    name=s.name,
-                    agent_type=s.agent_type,
-                    description=s.description,
-                    enabled=getattr(s, "enabled", True),
-                    requires_explicit_command=getattr(s, "requires_explicit_command", False),
-                    task_types=getattr(s, "task_types", []),
-                    use_cases=getattr(s, "use_cases", []),
-                    keywords=getattr(s, "keywords", []),
-                    preferred_for=getattr(s, "preferred_for", []),
-                    config=getattr(s, "config", None),
-                )
-                for s in global_config.subagents.builtin
-            ]
-            or [AgentSubagentConfig(**s.model_dump()) for s in DEFAULT_AGENT_SUBAGENTS],
+            builtin=_builtin_from_global_config(global_config.subagents.builtin),
             external=[CliSubagentConfig(**s.model_dump()) for s in global_config.subagents.external],
         )

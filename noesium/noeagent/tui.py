@@ -7,7 +7,8 @@ Provides a Claude Code-style compact progress display with:
   * Dynamic "thinking..." progress with context-aware messages
   * Partial results and final answer as markdown
   * Session-level JSONL logging for full detail
-  * Slash commands for mode switching, plan display, memory stats
+  * Slash commands for mode switching, plan display, memory stats (/help, /exit, /mode, etc.)
+  * Subagent selector: numeric prefix (2=Browser, 3=Research, 4=Claude; e.g. 2 3 message for multiple)
   * Multiline input (backslash continuation)
   * Command history with up/down arrow navigation
 """
@@ -73,10 +74,10 @@ if TYPE_CHECKING:
     from .state import TaskPlan
 
 from .commands import (
-    get_subagent_commands_help,
+    BUILTIN_SUBAGENT_NAMES,
     get_subagent_display_name,
     get_toolkit_display_name,
-    parse_inline_command,
+    parse_subagent_prefix_from_input,
 )
 from .config import _NOE_AGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
 from .progress import ProgressEvent, ProgressEventType
@@ -500,9 +501,6 @@ SLASH_COMMANDS = {
     "/session": "Show current session log path",
 }
 
-# Subagent commands - merged into help display
-SUBAGENT_COMMANDS_HELP = get_subagent_commands_help()
-
 
 def handle_slash_command(
     cmd: str,
@@ -528,13 +526,15 @@ def handle_slash_command(
         for k, v in SLASH_COMMANDS.items():
             table.add_row(k, v)
         console.print(table)
-        # Also show subagent commands
-        sa_table = Table(title="Subagent Commands", show_lines=False)
-        sa_table.add_column("Command", style="bold magenta")
-        sa_table.add_column("Description")
-        for k, v in SUBAGENT_COMMANDS_HELP.items():
-            sa_table.add_row(k, v)
-        console.print(sa_table)
+        # Subagent selector: prefix with numbers (e.g. 2 3 message)
+        sel_table = Table(title="Subagent Selector (prefix before message)", show_lines=False)
+        sel_table.add_column("Prefix", style="bold magenta")
+        sel_table.add_column("Subagent")
+        sel_table.add_row("1", "Main (default)")
+        for idx, name in enumerate(BUILTIN_SUBAGENT_NAMES, start=2):
+            sel_table.add_row(str(idx), get_subagent_display_name(name))
+        sel_table.add_row("2 3 or 2,3", "Multiple (e.g. Browser + Research)")
+        console.print(sel_table)
         return False
 
     if command == "/mode":
@@ -758,155 +758,6 @@ def read_user_input(console: Console, mode: str = "agent", history: InputHistory
 
 
 # ---------------------------------------------------------------------------
-# Subagent command processing
-# ---------------------------------------------------------------------------
-
-
-async def _process_subagent_command(
-    agent: "NoeAgent",
-    command: "InlineCommand",
-    console: Console,
-    session_logger: SessionLogger | None = None,
-) -> None:
-    """Process a subagent command with live progress display.
-
-    Args:
-        agent: The NoeAgent instance
-        command: The parsed inline command
-        console: Rich console for output
-        session_logger: Optional session logger
-    """
-    from rich.live import Live
-
-    subagent_display = get_subagent_display_name(command.subagent_name)
-    activity_lines: list[Text] = []
-    final_result: str = ""
-    error_message: str = ""
-
-    # Dynamic thinking text generator
-    thinking_gen = DynamicThinkingText()
-    thinking_gen.set_phase("executing", f"[{subagent_display}]")
-
-    def _get_spinner() -> Spinner:
-        return Spinner("dots", text=thinking_gen.get_text(), style="cyan")
-
-    def _build_display() -> Group:
-        parts: list[object] = []
-        # Activity lines
-        for line in activity_lines[-15:]:
-            parts.append(line)
-        if activity_lines:
-            parts.append(Text(""))
-        # Spinner
-        parts.append(_get_spinner())
-        return Group(*parts)
-
-    # Ensure agent is initialized
-    await agent.initialize()
-
-    subagent_name = command.subagent_name
-    message = command.message
-
-    if not message:
-        console.print(
-            Text(
-                f"  ! No task provided for {subagent_display}. Usage: /{command.command_type.value} <your task>",
-                style="bold red",
-            )
-        )
-        return
-
-    # Try to find the subagent in the registry
-    registry = agent._registry
-    if registry is None:
-        console.print(Text("  ! Agent not properly initialized (no capability registry)", style="bold red"))
-        return
-
-    # Check if it's a built-in subagent
-    cap_id = f"builtin_agent:{subagent_name}"
-    try:
-        provider = registry.get_by_name(cap_id)
-    except Exception:
-        provider = None
-
-    if provider is None:
-        # Check if the subagent is configured but not enabled
-        enabled_subagents = agent.config.get_enabled_builtin_subagents()
-        subagent_names = [s.agent_type for s in enabled_subagents]
-        if subagent_name not in subagent_names:
-            console.print(
-                Text(
-                    f"  ! Subagent '{subagent_display}' is not enabled. Enable it in your config.",
-                    style="bold red",
-                )
-            )
-            return
-        console.print(Text(f"  ! Subagent '{subagent_display}' not found in registry.", style="bold red"))
-        return
-
-    # Execute with live progress display
-    with Live(_build_display(), console=console, refresh_per_second=8, transient=True) as live:
-        try:
-            # Use streaming if available for real-time progress
-            if hasattr(provider, "invoke_streaming"):
-                async for event in provider.invoke_streaming(message=message):
-                    # Fire to session logger if available
-                    if session_logger:
-                        await session_logger.on_progress(event)
-
-                    # Update display based on event type
-                    if event.type == ProgressEventType.SUBAGENT_PROGRESS:
-                        # Add progress line
-                        summary = event.summary or ""
-                        if summary:
-                            activity_lines.append(Text(f"  {summary}", style="dim"))
-                        # Update thinking context
-                        if event.tool_name:
-                            thinking_gen.set_phase("tool_use", event.tool_name)
-
-                    elif event.type == ProgressEventType.SUBAGENT_END:
-                        final_result = event.detail or event.summary or ""
-
-                    elif event.type == ProgressEventType.ERROR:
-                        error_message = event.error or event.summary or "Unknown error"
-                        activity_lines.append(Text(f"  ✗ Error: {error_message}", style="red"))
-
-                    # Update live display
-                    live.update(_build_display())
-            else:
-                # Fallback to non-streaming invocation
-                result = await provider.invoke(message=message)
-                final_result = str(result)
-
-        except Exception as exc:
-            error_message = str(exc)
-            activity_lines.append(Text(f"  ✗ Error: {error_message}", style="bold red"))
-            live.update(_build_display())
-
-    # Display the result
-    if error_message:
-        console.print(Text(f"  ! {error_message}", style="bold red"))
-        return
-
-    console.print(
-        Text.assemble(
-            ("  ", ""),
-            (f"[{subagent_display}] ", "green"),
-            ("completed", "green"),
-        )
-    )
-    console.print()
-
-    if final_result:
-        from rich.markdown import Markdown
-        from rich.rule import Rule
-
-        console.print(Rule(style="dim"))
-        console.print(Markdown(final_result))
-        console.print()
-
-
-# ---------------------------------------------------------------------------
 # Async event-driven display loop
 # ---------------------------------------------------------------------------
 
@@ -916,6 +767,7 @@ async def _process_query(
     user_input: str,
     console: Console,
     session_logger: SessionLogger | None = None,
+    subagent_names: list[str] | None = None,
 ) -> "TaskPlan | None":
     """Process a single user query with compact Claude Code-style output.
 
@@ -924,6 +776,7 @@ async def _process_query(
         user_input: User's query
         console: Rich console for output
         session_logger: Optional session logger
+        subagent_names: Optional list of subagent names to run (same message to each in sequence)
     """
     from .state import TaskPlan
 
@@ -978,7 +831,7 @@ async def _process_query(
     from rich.live import Live
 
     with Live(_build_display(), console=console, refresh_per_second=8, transient=True) as live:
-        async for event in agent.astream_progress(user_input):
+        async for event in agent.astream_progress(user_input, subagent_names=subagent_names or None):
             etype = event.type
 
             if etype == ProgressEventType.PLAN_CREATED:
@@ -1214,8 +1067,8 @@ def run_agent_tui(agent: "NoeAgent") -> None:
         Panel(
             "[bold]NoeAgent[/bold] -- Autonomous Research Assistant\n"
             f"Mode: [cyan]{agent.config.mode.value}[/cyan]  |  "
-            "Type [bold cyan]/help[/bold cyan] for commands, "
-            "[bold cyan]/exit[/bold cyan] to quit."
+            "Prefix: [bold magenta]2[/]=Browser [bold magenta]3[/]=Research [bold magenta]4[/]=Claude  |  "
+            "[bold cyan]/help[/bold cyan] [bold cyan]/exit[/bold cyan]"
             + (f"\nSession log: [dim]{session_logger.log_path}[/dim]" if session_logger else ""),
             border_style="bright_blue",
         )
@@ -1251,45 +1104,7 @@ def run_agent_tui(agent: "NoeAgent") -> None:
                 continue
 
             if user_input.startswith("/"):
-                # Check if it's a subagent command first
-                inline_cmd = parse_inline_command(user_input)
-                if inline_cmd is not None:
-                    # Process subagent command
-                    subagent_display = get_subagent_display_name(inline_cmd.subagent_name)
-                    console.print(
-                        Text.assemble(
-                            ("noe|", "bold cyan"),
-                            (f"{agent.config.mode.value}> ", "bold cyan"),
-                            (f"/{inline_cmd.command_type.value} ", "bold magenta"),
-                            (inline_cmd.message[:60] + ("..." if len(inline_cmd.message) > 60 else ""), ""),
-                        )
-                    )
-                    console.print()
-                    console.print(
-                        Text.assemble(
-                            ("  ", ""),
-                            (f"[{subagent_display}] ", "bold magenta"),
-                            ("Starting...", "yellow"),
-                        )
-                    )
-                    try:
-                        task = loop.create_task(
-                            _process_subagent_command(agent, inline_cmd, console, session_logger=session_logger)
-                        )
-                        loop.run_until_complete(task)
-                    except KeyboardInterrupt:
-                        console.print(f"\n[yellow]{subagent_display} task cancelled.[/yellow]")
-                        last_ctrl_c_time = time.time()
-                        ctrl_c_count = 1
-                    except asyncio.CancelledError:
-                        console.print(f"\n[yellow]{subagent_display} task cancelled.[/yellow]")
-                        last_ctrl_c_time = time.time()
-                        ctrl_c_count = 1
-                    except Exception as exc:
-                        console.print(Text(f"  ! {exc}", style="bold red"))
-                    continue
-
-                # Not a subagent command, try system slash command
+                # System slash commands only (/help, /exit, etc.)
                 should_exit = handle_slash_command(
                     user_input,
                     agent,
@@ -1301,16 +1116,30 @@ def run_agent_tui(agent: "NoeAgent") -> None:
                     break
                 continue
 
+            # Parse optional subagent selector prefix (e.g. "2 3 message" -> Browser + Research)
+            subagent_names_parsed, message = parse_subagent_prefix_from_input(user_input)
+
             # Echo prompt so the run is self-contained
-            prompt_echo = user_input.split("\n")[0] + ("..." if "\n" in user_input else "")
+            prompt_echo = message.split("\n")[0] + ("..." if "\n" in message else "")
             console.print(
                 Text.assemble(("noe|", "bold cyan"), (f"{agent.config.mode.value}> ", "bold cyan"), (prompt_echo, ""))
             )
+            if subagent_names_parsed:
+                tags = " ".join(f"[{get_subagent_display_name(n)}]" for n in subagent_names_parsed)
+                console.print(Text.assemble(("  ", ""), (tags, "bold magenta"), (" selected", "dim")))
             console.print()
 
             try:
                 # Create a task for the query so we can cancel it
-                task = loop.create_task(_process_query(agent, user_input, console, session_logger=session_logger))
+                task = loop.create_task(
+                    _process_query(
+                        agent,
+                        message,
+                        console,
+                        session_logger=session_logger,
+                        subagent_names=subagent_names_parsed or None,
+                    )
+                )
                 current_plan = loop.run_until_complete(task)
             except KeyboardInterrupt:
                 # Task was cancelled by ctrl+c

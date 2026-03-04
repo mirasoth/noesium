@@ -102,7 +102,7 @@ One built-in subagent is available for auto-routing. To delegate, use **subagent
 - **Use for**: Real-time stock/data from sites, form filling, interactive websites, multi-step web workflows, screenshots.
 - **Task types**: web_browsing, form_filling, web_scraping, dom_interaction, screenshot.
 
-**Note:** The `tacitus` research subagent requires explicit `/research` or `/deep_research` command invocation and cannot be auto-routed.
+**Note:** The `tacitus` research subagent cannot be auto-routed; the user must explicitly select it (e.g. TUI prefix `3` or API `subagent_names: ["tacitus"]`).
 
 ## Decision Framework
 
@@ -143,7 +143,7 @@ Your execution hint will be one of:
 - **builtin_agent**: Delegate to browser_use (use subagent with action `invoke_builtin`).
 - **auto**: Choose the best approach from context.
 
-**Note:** The tacitus research subagent requires explicit `/research` command invocation.
+**Note:** The tacitus research subagent requires explicit selection by the user (e.g. subagent selector or API).
 
 ## Step Completion
 

@@ -14,8 +14,8 @@
 
 This document describes:
 1. **Toolkit System**: Registration, display names, and LLM integration
-2. **Inline Command System**: Explicit `/research`, `/browser`, `/claude` commands
-3. **Subagent Routing**: Auto-routing vs explicit command requirements
+2. **Explicit Subagent Selection**: No slash parsing; clients pass `subagent_name`/`subagent_names` (TUI numeric prefix or API)
+3. **Subagent Routing**: Auto-routing vs explicit selection (e.g. Tacitus requires explicit selection)
 4. **Progress Streaming**: Real-time visibility for BrowserUseAgent and TacitusAgent
 5. **Display Name Normalization**: User-friendly names in TUI and prompts
 
@@ -23,7 +23,7 @@ This document describes:
 
 ## Table of Contents
 
-1. [Inline Command System](#1-inline-command-system)
+1. [Explicit Subagent Selection](#1-explicit-subagent-selection)
 2. [Subagent Routing Control](#2-subagent-routing-control)
 3. [Display Name Normalization](#3-display-name-normalization)
 4. [Toolkit System](#4-toolkit-system)
@@ -32,70 +32,61 @@ This document describes:
 
 ---
 
-## 1. Inline Command System
+## 1. Explicit Subagent Selection
 
 ### 1.1 Overview
 
-Users can explicitly invoke subagents using inline commands, bypassing LLM-based routing.
+Subagents are invoked **only by explicit selection**; there is no slash parsing in the message. The client (TUI or API) specifies one or more subagent names; the same message is sent to each in sequence.
 
-| Command | Subagent | Trigger Requirement |
-|---------|----------|---------------------|
-| `/browser <task>` | BrowserUse | Optional (can be auto-routed) |
-| `/research <task>` | Tacitus | **MUST** use explicit command |
-| `/deep_research <task>` | Tacitus | Alias for `/research` |
-| `/claude <task>` | Claude | Optional |
+| Selector | Subagent | Notes |
+|----------|----------|-------|
+| `1` or none | Main | Default; LLM planning and tools |
+| `2` | browser_use | BrowserUse |
+| `3` | tacitus | Tacitus (research) |
+| `4` | claude | Claude |
+| `2 3` or `2,3` | multiple | Same message run by each in sequence |
 
-### 1.2 Command Parsing
+### 1.2 API
+
+**`astream_progress(user_message, context=..., subagent_name=..., subagent_names=...)`**
+
+- **subagent_names**: List of technical names (e.g. `["browser_use", "tacitus"]`). Each subagent runs the same message in sequence; all progress events are yielded in order.
+- **subagent_name**: Single subagent (converted to a one-element list).
+- If neither is set, the main graph runs.
 
 **File**: `noesium/noeagent/commands.py`
 
-```python
-@dataclass
-class InlineCommand:
-    """Parsed inline command from user input."""
-    command_type: SubagentCommandType
-    subagent_name: str  # Technical name (e.g., "browser_use", "tacitus")
-    message: str  # The message/task for the subagent
-    original_input: str  # The original user input
+- `inline_command_from_subagent(subagent_name, message)` → `InlineCommand` (for internal use).
+- `parse_subagent_prefix_from_input(user_input)` → `(subagent_names, message)` for TUI (e.g. `"2 3 雪球"` → `(["browser_use", "tacitus"], "雪球")`).
+- `BUILTIN_SUBAGENT_NAMES`, `validate_subagent_names()` for validation.
 
-def parse_inline_command(user_input: str) -> Optional[InlineCommand]:
-    """Parse an inline command from user input.
-    
-    Supported commands:
-    - /browser <task> - Trigger BrowserUse subagent
-    - /research <task> - Trigger Tacitus research subagent
-    - /deep_research <task> - Alias for /research
-    - /claude <task> - Trigger Claude subagent
-    """
-```
-
-### 1.3 Library Mode Support
-
-Inline commands work in both TUI and library modes:
+### 1.3 Library / API
 
 ```python
 from noesium.noeagent import NoeAgent
 
 agent = NoeAgent()
 
-# Direct command invocation - bypasses LLM routing
-result = await agent.arun("/research What is quantum computing?")
+# Single subagent
+async for event in agent.astream_progress("What is quantum computing?", subagent_name="tacitus"):
+    print(event.summary)
 
-# Or with streaming progress
-async for event in agent.astream_progress("/browser Book a flight to NYC"):
+# Multiple subagents (same message, run in sequence)
+async for event in agent.astream_progress("Summarize example.com", subagent_names=["browser_use", "tacitus"]):
     print(event.summary)
 ```
 
-### 1.4 TUI Integration
+### 1.4 TUI
 
-In TUI mode, commands are parsed before system slash commands:
+Prefix the message with numbers: `2` = Browser, `3` = Research, `4` = Claude. Use space or comma for multiple (e.g. `2 3 message` or `2,3 message`). System slash commands (`/help`, `/exit`) are unchanged.
 
 ```
-noe|agent> /research Latest AI developments
+noe|agent> 2 3 Latest AI developments
+  [BrowserUse] [Tacitus] selected
 
+  [BrowserUse] Starting...
+  ...
   [Tacitus] Starting...
-  [Tacitus] > Generated 2 search queries
-  [Tacitus] 🔍 Query 1/2: AI developments 2026
   ...
 ```
 
@@ -121,7 +112,7 @@ class AgentSubagentConfig(BaseModel):
 | Subagent | requires_explicit_command | Behavior |
 |----------|--------------------------|----------|
 | `browser_use` | `False` | Can be auto-routed by LLM planner |
-| `tacitus` | `True` | **MUST** use `/research` command |
+| `tacitus` | `True` | **MUST** be explicitly selected (TUI prefix or API) |
 
 ### 2.3 How It Works
 
@@ -131,17 +122,17 @@ class AgentSubagentConfig(BaseModel):
 
 **Execution Phase** (`subagent_node()`):
 - If LLM somehow routes to a protected subagent, execution is blocked
-- Returns error message directing user to use explicit command
+- Returns error message directing user to select the subagent explicitly (e.g. TUI prefix or API `subagent_names`)
 
 ```python
 if requires_explicit:
     result = (
-        f"{display_name} requires explicit command invocation. "
-        f"Use /{subagent_name.replace('_use', '')} <your task> to invoke this subagent."
+        f"{display_name} cannot be auto-invoked. "
+        f"It requires explicit selection (e.g. subagent selector or API subagent_names)."
     )
 ```
 
-### 2.4 Why Tacitus Requires Explicit Command
+### 2.4 Why Tacitus Requires Explicit Selection
 
 Tacitus is a heavy research agent that:
 - Makes multiple web searches
@@ -149,7 +140,7 @@ Tacitus is a heavy research agent that:
 - Performs reflection and synthesis
 - Has high latency and API costs
 
-Users should explicitly opt-in to this expensive operation.
+Users must explicitly select it (e.g. TUI prefix `3` or API `subagent_names: ["tacitus"]`) to opt in.
 
 ---
 
@@ -1243,7 +1234,7 @@ The planning and agent_system prompts are configured to respect `requires_explic
 
 **planning.md:**
 - Only lists `browser_use` as available for `builtin_agent` routing
-- Notes that `tacitus` requires explicit `/research` command
+- Notes that `tacitus` requires explicit selection (no auto-routing)
 
 **agent_system.md:**
 - Shows only `browser_use` for auto-routing

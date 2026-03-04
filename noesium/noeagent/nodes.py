@@ -70,7 +70,7 @@ def _content_filter_error_message(exc: Exception) -> str:
         f"Suggestions:\n"
         f"• Rephrase your query in more neutral terms\n"
         f"• Try using a different LLM provider (e.g., switch from Dashscope to OpenAI)\n"
-        f"• Use /research or /deep_research commands for web-based information gathering\n\n"
+        f"• Use the research subagent (explicit selection) for web-based information gathering\n\n"
         f"Technical details: {error_str[:200]}"
     )
 
@@ -503,7 +503,7 @@ async def subagent_node(
                     display_name = get_subagent_display_name(subagent_name)
                     result = (
                         f"{display_name} cannot be auto-invoked. "
-                        f"It requires explicit user command (/research or /deep_research in the original message). "
+                        f"It requires explicit user selection (e.g. subagent selector or API subagent_names). "
                         f"For this task, use web_search tool instead to search for information. "
                         f"Do NOT try to invoke {display_name} again."
                     )

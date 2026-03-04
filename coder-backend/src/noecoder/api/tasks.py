@@ -44,6 +44,7 @@ async def create_task(data: TaskCreate) -> Task:
         description=data.description,
         repository_id=data.repository_id,
         branch=data.branch,
+        subagents=data.subagents,
     )
 
 
