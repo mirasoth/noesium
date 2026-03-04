@@ -386,17 +386,17 @@ class NoeAgent(BaseGraphicAgent):
                 )
                 continue
 
-            # Bind subagent config so the factory receives it when invoked (no args)
-            def make_factory(cfg: Any) -> Any:
+            # Bind subagent config and factory so they are captured correctly in the closure
+            def make_factory(func: Any, cfg: Any) -> Any:
                 def factory() -> Any:
-                    return factory_callable(cfg)
+                    return func(cfg)
 
                 return factory
 
             try:
                 provider = BuiltInAgentCapabilityProvider(
                     name=subagent_cfg.name,
-                    agent_factory=make_factory(subagent_cfg),
+                    agent_factory=make_factory(factory_callable, subagent_cfg),
                     agent_type=subagent_cfg.agent_type,
                     description=subagent_cfg.description or f"Built-in {subagent_cfg.agent_type} subagent",
                     task_types=subagent_cfg.task_types,
