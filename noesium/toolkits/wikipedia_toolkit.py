@@ -13,6 +13,7 @@ import aiohttp
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_WIKIPEDIA
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -26,7 +27,7 @@ except ImportError:
     WIKIPEDIA_API_AVAILABLE = False
 
 
-@register_toolkit("wikipedia")
+@register_toolkit(TOOLKIT_WIKIPEDIA)
 class WikipediaToolkit(AsyncBaseToolkit):
     """
     Toolkit for Wikipedia search and content retrieval.

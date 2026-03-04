@@ -12,6 +12,7 @@ from noesium.core.utils.logging import get_logger
 from .base import AsyncBaseToolkit, MCPNotAvailableError
 from .config import ToolkitConfig
 from .registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_MCP
 
 try:
     import mcp.client.session as mcp_session
@@ -28,7 +29,7 @@ except ImportError:
 logger = get_logger(__name__)
 
 
-@register_toolkit("mcp")
+@register_toolkit(TOOLKIT_MCP)
 class MCPToolkit(AsyncBaseToolkit):
     """
     Toolkit for integrating external MCP (Model Context Protocol) servers.

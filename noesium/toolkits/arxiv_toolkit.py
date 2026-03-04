@@ -11,6 +11,7 @@ from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_ARXIV
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -24,7 +25,7 @@ except ImportError:
     ARXIV_AVAILABLE = False
 
 
-@register_toolkit("arxiv")
+@register_toolkit(TOOLKIT_ARXIV)
 class ArxivToolkit(AsyncBaseToolkit):
     """
     Toolkit for searching and downloading academic papers from arXiv.
@@ -66,7 +67,7 @@ class ArxivToolkit(AsyncBaseToolkit):
         self.default_max_results = self.config.config.get("default_max_results", 5)
         self.default_sort_by = self.config.config.get("default_sort_by", "Relevance")
         self.default_download_dir = self.config.config.get(
-            "default_download_dir", get_toolkit_tmp_dir("arxiv", "papers")
+            "default_download_dir", get_toolkit_tmp_dir(TOOLKIT_ARXIV, "papers")
         )
 
     def _get_search_results(

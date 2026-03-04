@@ -30,6 +30,7 @@ from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_PYTHON_EXECUTOR
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -181,7 +182,7 @@ def _execute_python_code_sync(code: str, workdir: str) -> Dict[str, Any]:
         os.chdir(original_dir)
 
 
-@register_toolkit("python_executor")
+@register_toolkit(TOOLKIT_PYTHON_EXECUTOR)
 class PythonExecutorToolkit(AsyncBaseToolkit):
     """
     Toolkit for executing Python code in a controlled environment.
@@ -209,7 +210,7 @@ class PythonExecutorToolkit(AsyncBaseToolkit):
 
         # Get configuration parameters
         self.default_workdir = self.config.config.get(
-            "default_workdir", get_toolkit_tmp_dir("python_executor", "workdir")
+            "default_workdir", get_toolkit_tmp_dir(TOOLKIT_PYTHON_EXECUTOR, "workdir")
         )
         self.default_timeout = self.config.config.get("default_timeout", 30)
         self.max_timeout = self.config.config.get("max_timeout", 300)  # 5 minutes max

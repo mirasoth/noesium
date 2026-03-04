@@ -38,6 +38,7 @@ import warnings
 
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_AUDIO_ALIYUN
 from noesium.toolkits.audio_toolkit import AudioToolkit as _AudioToolkit
 
 warnings.warn(
@@ -48,7 +49,7 @@ warnings.warn(
 )
 
 
-@register_toolkit("audio_aliyun")
+@register_toolkit(TOOLKIT_AUDIO_ALIYUN)
 class AudioAliyunToolkit(_AudioToolkit):
     """
     Deprecated: Aliyun audio toolkit.

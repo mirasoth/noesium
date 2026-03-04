@@ -13,12 +13,13 @@ from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_MEMORY
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 
-@register_toolkit("memory")
+@register_toolkit(TOOLKIT_MEMORY)
 class MemoryToolkit(AsyncBaseToolkit):
     """
     Toolkit for persistent memory storage and manipulation.
@@ -58,7 +59,7 @@ class MemoryToolkit(AsyncBaseToolkit):
 
         # Configuration
         self.storage_type = self.config.config.get("storage_type", "memory")  # "memory" or "file"
-        self.storage_dir = Path(self.config.config.get("storage_dir", get_toolkit_tmp_dir("memory", "storage")))
+        self.storage_dir = Path(self.config.config.get("storage_dir", get_toolkit_tmp_dir(TOOLKIT_MEMORY, "storage")))
         self.max_memory_size = self.config.config.get("max_memory_size", 1024 * 1024)  # 1MB
         self.enable_versioning = self.config.config.get("enable_versioning", False)
 

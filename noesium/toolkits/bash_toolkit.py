@@ -12,6 +12,7 @@ from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_BASH
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,7 +21,7 @@ logger = get_logger(__name__)
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
 
-@register_toolkit("bash")
+@register_toolkit(TOOLKIT_BASH)
 class BashToolkit(AsyncBaseToolkit):
     """
     Toolkit for executing bash commands in a persistent shell environment.
@@ -53,7 +54,7 @@ class BashToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # Configuration
-        self.workspace_root = self.config.config.get("workspace_root", get_toolkit_tmp_dir("bash", "workspace"))
+        self.workspace_root = self.config.config.get("workspace_root", get_toolkit_tmp_dir(TOOLKIT_BASH, "workspace"))
         self.timeout = self.config.config.get("timeout", 60)
         self.max_output_length = self.config.config.get("max_output_length", 10000)
 

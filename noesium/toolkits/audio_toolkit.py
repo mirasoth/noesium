@@ -35,6 +35,7 @@ from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_AUDIO
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -42,7 +43,7 @@ logger = get_logger(__name__)
 AudioProvider = Literal["openai", "aliyun"]
 
 
-@register_toolkit("audio")
+@register_toolkit(TOOLKIT_AUDIO)
 class AudioToolkit(AsyncBaseToolkit):
     """
     Unified toolkit for audio processing and analysis supporting multiple providers.
@@ -99,8 +100,8 @@ class AudioToolkit(AsyncBaseToolkit):
         self.provider: AudioProvider = self.config.config.get("provider", "openai")
 
         # Common directories
-        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir("audio", "cache")))
-        self.download_dir = Path(self.config.config.get("download_dir", get_toolkit_tmp_dir("audio", "downloads")))
+        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir(TOOLKIT_AUDIO, "cache")))
+        self.download_dir = Path(self.config.config.get("download_dir", get_toolkit_tmp_dir(TOOLKIT_AUDIO, "downloads")))
 
         # Create directories
         self.cache_dir.mkdir(parents=True, exist_ok=True)

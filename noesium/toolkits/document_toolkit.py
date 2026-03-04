@@ -17,6 +17,7 @@ from noesium.core.consts import get_toolkit_tmp_dir
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_DOCUMENT
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +34,7 @@ except ImportError:
 # Chunkr would be imported dynamically if configured
 
 
-@register_toolkit("document")
+@register_toolkit(TOOLKIT_DOCUMENT)
 class DocumentToolkit(AsyncBaseToolkit):
     """
     Toolkit for document processing and analysis.
@@ -80,8 +81,8 @@ class DocumentToolkit(AsyncBaseToolkit):
         # Configuration
         self.parser_type = self.config.config.get("parser", "pymupdf")
         self.text_limit = self.config.config.get("text_limit", 100000)
-        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir("document", "cache")))
-        self.download_dir = Path(self.config.config.get("download_dir", get_toolkit_tmp_dir("document", "downloads")))
+        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir(TOOLKIT_DOCUMENT, "cache")))
+        self.download_dir = Path(self.config.config.get("download_dir", get_toolkit_tmp_dir(TOOLKIT_DOCUMENT, "downloads")))
 
         # Create directories
         self.cache_dir.mkdir(parents=True, exist_ok=True)

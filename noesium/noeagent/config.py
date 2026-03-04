@@ -10,6 +10,19 @@ from typing import Any, Callable, Optional
 from pydantic import BaseModel, ConfigDict, Field
 from uuid_extensions import uuid7str
 
+from noesium.core.library_consts import (
+    SUBAGENT_BROWSER_USE,
+    SUBAGENT_TACITUS,
+    TOOLKIT_BASH,
+    TOOLKIT_DOCUMENT,
+    TOOLKIT_FILE_EDIT,
+    TOOLKIT_IMAGE,
+    TOOLKIT_PYTHON_EXECUTOR,
+    TOOLKIT_TABULAR_DATA,
+    TOOLKIT_USER_INTERACTION,
+    TOOLKIT_WEB_SEARCH,
+)
+
 _NOE_HOME = Path.home() / ".noeagent"
 _NOE_AGENT_CONSOLE_LOG_LEVEL = "ERROR"
 
@@ -90,8 +103,8 @@ class CliSubagentConfig(BaseModel):
 # Default agent subagents (browser_use and tacitus)
 DEFAULT_AGENT_SUBAGENTS = [
     AgentSubagentConfig(
-        name="browser_use",
-        agent_type="browser_use",
+        name=SUBAGENT_BROWSER_USE,
+        agent_type=SUBAGENT_BROWSER_USE,
         description="Web automation agent for browser interaction, form filling, and real-time web data extraction",
         enabled=True,
         requires_explicit_command=False,  # Can be auto-routed by LLM
@@ -108,8 +121,8 @@ DEFAULT_AGENT_SUBAGENTS = [
         preferred_for=["real-time data", "interactive websites", "form submission", "multi-step web workflows"],
     ),
     AgentSubagentConfig(
-        name="tacitus",
-        agent_type="tacitus",
+        name=SUBAGENT_TACITUS,
+        agent_type=SUBAGENT_TACITUS,
         description="Research agent with iterative query generation, multi-source web search, and answer synthesis",
         enabled=True,
         requires_explicit_command=True,  # MUST be invoked via /research or /deep_research command
@@ -216,14 +229,14 @@ class NoeConfig(BaseModel):
 
     enabled_toolkits: list[str] = Field(
         default_factory=lambda: [
-            "bash",
-            "file_edit",
-            "document",
-            "image",
-            "python_executor",
-            "tabular_data",
-            "web_search",
-            "user_interaction",
+            TOOLKIT_BASH,
+            TOOLKIT_FILE_EDIT,
+            TOOLKIT_DOCUMENT,
+            TOOLKIT_IMAGE,
+            TOOLKIT_PYTHON_EXECUTOR,
+            TOOLKIT_TABULAR_DATA,
+            TOOLKIT_WEB_SEARCH,
+            TOOLKIT_USER_INTERACTION,
         ],
     )
     toolkit_configs: dict[str, dict[str, Any]] = Field(

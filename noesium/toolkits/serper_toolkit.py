@@ -14,12 +14,13 @@ import aiohttp
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
+from noesium.core.library_consts import TOOLKIT_SERPER
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 
-@register_toolkit("serper")
+@register_toolkit(TOOLKIT_SERPER)
 class SerperToolkit(AsyncBaseToolkit):
     """
     Toolkit for comprehensive Google search using Serper API.
