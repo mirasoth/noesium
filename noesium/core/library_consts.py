@@ -7,7 +7,6 @@ registration, configuration, and runtime dispatch logic.
 # Toolkit registration names
 TOOLKIT_ARXIV = "arxiv"
 TOOLKIT_AUDIO = "audio"
-TOOLKIT_AUDIO_ALIYUN = "audio_aliyun"
 TOOLKIT_BASH = "bash"
 TOOLKIT_DOCUMENT = "document"
 TOOLKIT_FILE_EDIT = "file_edit"

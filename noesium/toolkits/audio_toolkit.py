@@ -32,10 +32,10 @@ except ImportError:
     ALIYUN_AVAILABLE = False
 
 from noesium.core.consts import get_toolkit_tmp_dir
+from noesium.core.library_consts import TOOLKIT_AUDIO
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
-from noesium.core.library_consts import TOOLKIT_AUDIO
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -101,7 +101,9 @@ class AudioToolkit(AsyncBaseToolkit):
 
         # Common directories
         self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir(TOOLKIT_AUDIO, "cache")))
-        self.download_dir = Path(self.config.config.get("download_dir", get_toolkit_tmp_dir(TOOLKIT_AUDIO, "downloads")))
+        self.download_dir = Path(
+            self.config.config.get("download_dir", get_toolkit_tmp_dir(TOOLKIT_AUDIO, "downloads"))
+        )
 
         # Create directories
         self.cache_dir.mkdir(parents=True, exist_ok=True)

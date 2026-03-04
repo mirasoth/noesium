@@ -19,7 +19,6 @@ from noesium.core.library_consts import (
     SUBAGENT_TACITUS,
     TOOLKIT_ARXIV,
     TOOLKIT_AUDIO,
-    TOOLKIT_AUDIO_ALIYUN,
     TOOLKIT_BASH,
     TOOLKIT_DOCUMENT,
     TOOLKIT_FILE_EDIT,
@@ -62,7 +61,6 @@ TOOLKIT_DISPLAY_NAMES: dict[str, tuple[str, str]] = {
     TOOLKIT_IMAGE: ("Image", "Image processing and generation"),
     TOOLKIT_VIDEO: ("Video", "Video processing"),
     TOOLKIT_AUDIO: ("Audio", "Audio processing"),
-    TOOLKIT_AUDIO_ALIYUN: ("AliyunAudio", "Aliyun audio services (TTS/STT)"),
     # External Services
     TOOLKIT_GITHUB: ("GitHub", "GitHub API operations"),
     TOOLKIT_GMAIL: ("Gmail", "Email operations"),

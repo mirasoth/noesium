@@ -17,10 +17,10 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from noesium.core.consts import get_toolkit_tmp_dir
+from noesium.core.library_consts import TOOLKIT_TABULAR_DATA
 from noesium.core.toolify.base import AsyncBaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
 from noesium.core.toolify.registry import register_toolkit
-from noesium.core.library_consts import TOOLKIT_TABULAR_DATA
 from noesium.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
