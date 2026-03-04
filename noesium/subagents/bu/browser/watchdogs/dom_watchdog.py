@@ -10,6 +10,7 @@ from noesium.subagents.bu.browser.events import (
     ScreenshotEvent,
     TabCreatedEvent,
 )
+from noesium.subagents.bu.browser.views import BrowserError
 from noesium.subagents.bu.browser.watchdog_base import BaseWatchdog
 from noesium.subagents.bu.dom.service import DomService
 from noesium.subagents.bu.dom.views import (
@@ -719,9 +720,12 @@ class DOMWatchdog(BaseWatchdog):
             self.logger.debug("🔍 DOMWatchdog._capture_clean_screenshot: ✅ Clean screenshot captured successfully")
             return str(screenshot_b64)
 
-        except TimeoutError:
-            self.logger.warning("📸 Clean screenshot timed out after 6 seconds - no handler registered or slow page?")
-            raise
+        except (TimeoutError, asyncio.CancelledError) as e:
+            self.logger.warning(
+                "📸 Clean screenshot timed out or was cancelled (CDP captureScreenshot may be slow or page unresponsive): %s",
+                e,
+            )
+            raise BrowserError("Screenshot capture timed out") from e
         except Exception as e:
             self.logger.warning(f"📸 Clean screenshot failed: {type(e).__name__}: {e}")
             raise
