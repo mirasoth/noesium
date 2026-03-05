@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "noeagent"
+version = "0.1.0"
+description = "Autonomous research assistant with dual modes (Ask/Agent)"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "Xiaming Chen", email = "chenxm35@gmail.com"}
+]
+maintainers = [
+    {name = "Xiaming Chen", email = "chenxm35@gmail.com"}
+]
+keywords = ["agents", "autonomous", "research", "assistant", "cli", "tui"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "noesium>=0.3.4",
+    "rich>=13.0.0",
+    "langchain-core>=0.3.72",
+    "langgraph>=0.5.4",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.1.1",
+    "uuid7>=0.1.0",
+]
+
+[project.scripts]
+noeagent = "noeagent.__main__:main"
+
+[project.optional-dependencies]
+all = [
+    "noesium[all]",
+]
+dev = [
+    "pytest>=8.2,<9",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=1.1.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.10.0",
+    "ruff>=0.8.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/mirasoth/noesium"
+Repository = "https://github.com/mirasoth/noesium"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+noeagent = [
+    "prompts/*.md",
+]
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.ruff]
+line-length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]

@@ -5,6 +5,20 @@ Two modes:
   * **Agent**: Iterative planning, tool execution, reflection, memory persistence.
 """
 
+# =============================================================================
+# CRITICAL: Override NOESIUM_HOME BEFORE any other imports (RFC-1007)
+# The noesium package exports NoeAgent, so it uses ~/.noeagent by default.
+# For core-only usage, import directly from noesium.core instead.
+# =============================================================================
+from pathlib import Path
+
+_NOEAGENT_HOME = Path.home() / ".noeagent"
+
+# Import and call set_noesium_home before any other noesium module imports
+from noesium.core.consts import set_noesium_home
+
+set_noesium_home(_NOEAGENT_HOME)
+
 # Automatically load .env file on module import
 try:
     from dotenv import load_dotenv
