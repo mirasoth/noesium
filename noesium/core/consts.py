@@ -1,4 +1,4 @@
-"""Global constants for NoeAgent"""
+"""Global constants for the Noesium framework."""
 
 from pathlib import Path
 
@@ -11,14 +11,15 @@ DEFAULT_EMBEDDING_DIMS = 768
 
 # Configuration Constants
 NOE_AGENT_HOME = Path.home() / ".noeagent"
-DEFAULT_CONFIG_PATH = NOE_AGENT_HOME / "config.json"
+FRAMEWORK_HOME = NOE_AGENT_HOME  # Alias for clarity (RFC-1007)
+DEFAULT_CONFIG_PATH = FRAMEWORK_HOME / "config.json"
 CONFIG_VERSION = "1.0"
 
 # Default Directories
-NOE_AGENT_LOGS_DIR = NOE_AGENT_HOME / "logs"
-NOE_AGENT_MEMORY_DIR = NOE_AGENT_HOME / "memory"
-NOE_AGENT_DATA_DIR = NOE_AGENT_HOME / "data"
-NOE_AGENT_SESSIONS_DIR = NOE_AGENT_HOME / "sessions"
+NOE_AGENT_LOGS_DIR = FRAMEWORK_HOME / "logs"
+NOE_AGENT_MEMORY_DIR = FRAMEWORK_HOME / "memory"
+NOE_AGENT_DATA_DIR = FRAMEWORK_HOME / "data"
+NOE_AGENT_SESSIONS_DIR = FRAMEWORK_HOME / "sessions"
 
 # Library temp/cache base (toolkits default here when used standalone)
 NOE_TMP_BASE = Path("/tmp/noesium")

@@ -477,10 +477,10 @@ async def subagent_node(
             else:
                 result = await cli_adapter.terminate(sa.name)
         elif sa.action == "invoke_builtin":
-            # Invoke a built-in specialized agent via the registry
-            registry = getattr(agent, "_registry", None)
-            if registry is None:
-                result = "Capability registry not configured."
+            # Invoke a built-in specialized agent via SubagentManager
+            subagent_manager = getattr(agent, "_subagent_manager", None)
+            if subagent_manager is None:
+                result = "SubagentManager not configured."
             else:
                 # Check if this subagent requires explicit command
                 from .commands import get_subagent_display_name
@@ -509,42 +509,34 @@ async def subagent_node(
                     )
                 else:
                     try:
-                        # Built-in agents are registered as "builtin_agent:{name}"
-                        cap_id = f"builtin_agent:{subagent_name}"
-                        provider = registry.get_by_name(cap_id)
-
-                        # Use streaming if available for real-time progress
-                        if hasattr(provider, "invoke_streaming"):
-                            result = await agent.execute_builtin_subagent_streaming(provider, sa.message, subagent_name)
-                        else:
-                            result = await provider.invoke(message=sa.message)
+                        result = await agent.invoke_subagent(subagent_name, sa.message)
                     except Exception as exc:
                         result = f"Failed to invoke built-in agent '{subagent_name}': {exc}"
         elif sa.action == "invoke_cli":
-            # Invoke CLI subagent (oneshot or daemon mode via unified interface)
-            cli_adapter = getattr(agent, "_cli_adapter", None)
-            if cli_adapter is None:
-                result = "CLI subagent adapter not configured."
-            else:
-                # Build kwargs from SubagentAction options
-                invoke_kwargs = {"message": sa.message}
-                if sa.allowed_tools is not None:
-                    invoke_kwargs["allowed_tools"] = sa.allowed_tools
-                if sa.skip_permissions is not None:
-                    invoke_kwargs["skip_permissions"] = sa.skip_permissions
-
-                try:
-                    # Try execute_oneshot first (preferred for CLI agents like Claude)
-                    if hasattr(cli_adapter, "execute_oneshot"):
-                        exec_result = await cli_adapter.execute_oneshot(sa.name, sa.message, **invoke_kwargs)
-                        # Handle CliExecutionResult
+            # Invoke CLI subagent via SubagentManager (oneshot mode)
+            subagent_manager = getattr(agent, "_subagent_manager", None)
+            if subagent_manager is None or subagent_manager.get_provider(sa.name) is None:
+                # Fallback: direct CLI adapter if SubagentManager has no entry
+                cli_adapter = getattr(agent, "_cli_adapter", None)
+                if cli_adapter is None:
+                    result = "CLI subagent adapter not configured."
+                else:
+                    try:
+                        cli_kwargs: dict[str, Any] = {}
+                        if sa.allowed_tools is not None:
+                            cli_kwargs["allowed_tools"] = sa.allowed_tools
+                        if sa.skip_permissions is not None:
+                            cli_kwargs["skip_permissions"] = sa.skip_permissions
+                        exec_result = await cli_adapter.execute_oneshot(sa.name, sa.message, **cli_kwargs)
                         if hasattr(exec_result, "success"):
                             result = exec_result.content if exec_result.success else f"Error: {exec_result.error}"
                         else:
                             result = str(exec_result)
-                    else:
-                        # Fallback to interact (daemon mode)
-                        result = await cli_adapter.interact(sa.name, sa.message)
+                    except Exception as exc:
+                        result = f"Failed to invoke CLI agent '{sa.name}': {exc}"
+            else:
+                try:
+                    result = await agent.invoke_subagent(sa.name, sa.message)
                 except Exception as exc:
                     logger.warning("CLI invocation '%s' failed: %s", sa.name, exc)
                     result = f"Failed to invoke CLI agent '{sa.name}': {exc}"

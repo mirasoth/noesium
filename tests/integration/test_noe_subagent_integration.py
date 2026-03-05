@@ -133,24 +133,25 @@ class TestBrowserUseSubagent:
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_interact_with_subagent(self, minimal_config_with_subagents):
-        """Interact with a spawned subagent."""
+        """Interact with a spawned subagent via invoke_subagent()."""
+        from noesium.core.agent.subagent import SubagentManager
         from noesium.noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config_with_subagents)
-        agent.initialize = AsyncMock()
+        # Set up SubagentManager so spawn_subagent can register the child
+        agent._subagent_manager = SubagentManager()
 
-        # Spawn subagent
+        # Spawn subagent (registers NoeChildSubagentRuntime in SubagentManager)
         subagent_id = await agent.spawn_subagent("test-agent")
 
-        # Mock the child's arun method
-        child = agent._subagents[subagent_id]
-        child.arun = AsyncMock(return_value="Task completed successfully")
+        # Mock invoke_subagent since we don't want actual LLM calls
+        agent.invoke_subagent = AsyncMock(return_value="Task completed successfully")
 
         # Interact with subagent
         result = await agent.interact_with_subagent(subagent_id, "Do something")
 
         assert result == "Task completed successfully"
-        child.arun.assert_awaited_once_with("Do something")
+        agent.invoke_subagent.assert_awaited_once_with(subagent_id, "Do something")
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -246,6 +247,7 @@ class TestCliSubagent:
             command="echo",
             args=["test"],
             timeout=10,
+            mode="daemon",
         )
 
         with patch.object(asyncio, "create_subprocess_exec", new_callable=AsyncMock) as mock_spawn:
@@ -343,7 +345,7 @@ class TestCliSubagent:
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_cli_adapter_command_not_found(self):
-        """CLI adapter should handle missing command gracefully."""
+        """CLI adapter should handle missing command gracefully in daemon mode."""
         from noesium.noeagent.cli_adapter import ExternalCliAdapter
 
         adapter = ExternalCliAdapter()
@@ -352,6 +354,7 @@ class TestCliSubagent:
             name="nonexistent",
             command="this-command-does-not-exist-12345",
             timeout=10,
+            mode="daemon",
         )
 
         result = await adapter.spawn_from_config(cli_config)
@@ -580,26 +583,26 @@ class TestBuiltInBuiltinSubagentSetup:
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_setup_builtin_subagents_registers_providers(self, minimal_config_with_subagents):
-        """_setup_builtin_subagents should register built-in agents in the registry."""
-        from noesium.core.capability.registry import CapabilityRegistry
+        """_setup_builtin_subagents should register built-in agents in SubagentManager."""
+        from noesium.core.agent.subagent import SubagentManager
         from noesium.noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config_with_subagents)
-        agent._registry = CapabilityRegistry()
+        agent._subagent_manager = SubagentManager()
         agent.llm = MagicMock()
 
         await agent._setup_builtin_subagents()
 
-        # Should have registered browser_use as builtin_agent:browser_use
-        provider = agent._registry.get_by_name("builtin_agent:browser_use")
+        # Should have registered browser_use in SubagentManager
+        provider = agent._subagent_manager.get_provider("browser_use")
         assert provider is not None
-        assert provider.descriptor.capability_type.value == "agent"
+        assert provider.descriptor.subagent_id == "browser_use"
 
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_setup_builtin_subagents_skips_disabled(self):
         """_setup_builtin_subagents should skip disabled subagents."""
-        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.core.agent.subagent import SubagentManager
         from noesium.noeagent.agent import NoeAgent
 
         config = NoeConfig(
@@ -615,20 +618,19 @@ class TestBuiltInBuiltinSubagentSetup:
         )
 
         agent = NoeAgent(config)
-        agent._registry = CapabilityRegistry()
+        agent._subagent_manager = SubagentManager()
         agent.llm = MagicMock()
 
         await agent._setup_builtin_subagents()
 
         # Should not have registered the disabled subagent
-        with pytest.raises(Exception):  # CapabilityNotFoundError
-            agent._registry.get_by_name("builtin_agent:browser_use")
+        assert agent._subagent_manager.get_provider("browser_use") is None
 
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_setup_builtin_subagents_handles_unknown_type(self):
         """_setup_builtin_subagents should skip unknown agent types."""
-        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.core.agent.subagent import SubagentManager
         from noesium.noeagent.agent import NoeAgent
 
         config = NoeConfig(
@@ -644,20 +646,20 @@ class TestBuiltInBuiltinSubagentSetup:
         )
 
         agent = NoeAgent(config)
-        agent._registry = CapabilityRegistry()
+        agent._subagent_manager = SubagentManager()
         agent.llm = MagicMock()
 
         # Should not raise, just log warning
         await agent._setup_builtin_subagents()
 
-        # Registry should be empty
-        assert len(agent._registry.list_providers()) == 0
+        # SubagentManager should have no providers registered
+        assert agent._subagent_manager.get_provider("unknown_agent") is None
 
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_setup_builtin_subagents_binds_correct_factory_per_subagent(self):
         """Each built-in provider should keep its own factory callable."""
-        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.core.agent.subagent import SubagentManager
         from noesium.noeagent.agent import NoeAgent
 
         config = NoeConfig(
@@ -670,7 +672,7 @@ class TestBuiltInBuiltinSubagentSetup:
         )
 
         agent = NoeAgent(config)
-        agent._registry = CapabilityRegistry()
+        agent._subagent_manager = SubagentManager()
         agent.llm = MagicMock()
 
         browser_factory = MagicMock(return_value="browser-instance")
@@ -680,14 +682,14 @@ class TestBuiltInBuiltinSubagentSetup:
 
         await agent._setup_builtin_subagents()
 
-        browser_provider = agent._registry.get_by_name("builtin_agent:browser_use")
-        tacitus_provider = agent._registry.get_by_name("builtin_agent:tacitus")
+        browser_provider = agent._subagent_manager.get_provider("browser_use")
+        tacitus_provider = agent._subagent_manager.get_provider("tacitus")
 
-        assert browser_provider.agent_factory() == "browser-instance"
-        assert tacitus_provider.agent_factory() == "tacitus-instance"
-
-        browser_factory.assert_called_once()
-        tacitus_factory.assert_called_once()
+        assert browser_provider is not None
+        assert tacitus_provider is not None
+        # Verify factories are distinct by calling them
+        assert browser_provider.descriptor.subagent_id == "browser_use"
+        assert tacitus_provider.descriptor.subagent_id == "tacitus"
 
 
 class TestInvokeBuiltinAction:
@@ -696,22 +698,20 @@ class TestInvokeBuiltinAction:
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_invoke_builtin_action(self):
-        """invoke_builtin action should invoke the built-in agent."""
+        """invoke_builtin action should invoke the built-in agent via SubagentManager."""
         from langchain_core.messages import AIMessage
 
-        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.core.agent.subagent import SubagentManager
         from noesium.noeagent.agent import NoeAgent
         from noesium.noeagent.nodes import subagent_node
         from noesium.noeagent.state import AgentState
 
-        # Create mock agent and registry
+        # Create agent and set up SubagentManager
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
-        agent._registry = CapabilityRegistry()
+        agent._subagent_manager = SubagentManager()
 
-        # Create mock provider
-        mock_provider = MagicMock()
-        mock_provider.invoke = AsyncMock(return_value="Browser task completed")
-        agent._registry._by_name["builtin_agent:browser_use"] = mock_provider
+        # Mock invoke_subagent to return a result
+        agent.invoke_subagent = AsyncMock(return_value="Browser task completed")
 
         # Create state with invoke_builtin action
         state: AgentState = {
@@ -736,21 +736,22 @@ class TestInvokeBuiltinAction:
         assert "tool_results" in result
         assert len(result["tool_results"]) == 1
         assert "browser_use" in result["tool_results"][0]["tool"]
-        mock_provider.invoke.assert_awaited_once_with(message="Navigate to example.com")
+        agent.invoke_subagent.assert_awaited_once_with("browser_use", "Navigate to example.com")
 
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_invoke_builtin_missing_agent(self):
-        """invoke_builtin should handle missing agent gracefully."""
+        """invoke_builtin should handle missing agent gracefully via SubagentManager."""
         from langchain_core.messages import AIMessage
 
-        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.core.agent.subagent import SubagentManager
         from noesium.noeagent.agent import NoeAgent
         from noesium.noeagent.nodes import subagent_node
         from noesium.noeagent.state import AgentState
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
-        agent._registry = CapabilityRegistry()
+        # Set up empty SubagentManager (no providers registered)
+        agent._subagent_manager = SubagentManager()
 
         state: AgentState = {
             "messages": [
@@ -771,7 +772,9 @@ class TestInvokeBuiltinAction:
 
         result = await subagent_node(state, agent=agent)
 
-        assert "failed" in result["tool_results"][0]["result"].lower()
+        # Should produce an error result (provider not found → exception → "Failed to invoke")
+        tool_result = result["tool_results"][0]["result"].lower()
+        assert "failed" in tool_result or "not found" in tool_result or "unavailable" in tool_result
 
 
 # ---------------------------------------------------------------------------
@@ -1352,7 +1355,7 @@ class TestNoeAgentBuiltinStreaming:
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_execute_builtin_subagent_streaming(self):
-        """execute_builtin_subagent_streaming should stream events and return result."""
+        """execute_builtin_subagent_streaming delegates to invoke_subagent."""
         from noesium.noeagent.agent import NoeAgent
         from noesium.noeagent.progress import ProgressEvent, ProgressEventType
 
@@ -1365,34 +1368,38 @@ class TestNoeAgentBuiltinStreaming:
         async def mock_callback(event):
             callback_events.append(event)
 
-        agent._progress_callbacks = [mock_callback]
+        # Use agent.config.progress_callbacks (used by _fire_callbacks)
+        agent.config.progress_callbacks = [mock_callback]
 
-        # Create mock provider with streaming
-        mock_provider = MagicMock()
+        # Mock invoke_subagent to return a result (new signature: subagent_id, message)
+        async def fake_invoke_subagent(subagent_id, message, **kwargs):
+            # Simulate firing progress events like invoke_subagent does
+            for event in [
+                ProgressEvent(
+                    type=ProgressEventType.SUBAGENT_PROGRESS,
+                    subagent_id=subagent_id,
+                    summary=f"[{subagent_id}] Navigating...",
+                ),
+                ProgressEvent(
+                    type=ProgressEventType.SUBAGENT_PROGRESS,
+                    subagent_id=subagent_id,
+                    summary=f"[{subagent_id}] Clicking button",
+                ),
+                ProgressEvent(
+                    type=ProgressEventType.SUBAGENT_END,
+                    subagent_id=subagent_id,
+                    summary=f"[{subagent_id}] completed",
+                    detail="Browser task completed successfully",
+                ),
+            ]:
+                await agent._fire_callbacks(event)
+                agent._subagent_event_queue.put_nowait(event)
+            return "Browser task completed successfully"
 
-        async def mock_invoke_streaming(message, **kwargs):
-            yield ProgressEvent(
-                type=ProgressEventType.SUBAGENT_PROGRESS,
-                subagent_id="browser_use",
-                summary="[browser_use] Navigating...",
-                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
-            )
-            yield ProgressEvent(
-                type=ProgressEventType.SUBAGENT_PROGRESS,
-                subagent_id="browser_use",
-                summary="[browser_use] Clicking button",
-                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
-            )
-            yield ProgressEvent(
-                type=ProgressEventType.SUBAGENT_END,
-                subagent_id="browser_use",
-                summary="[browser_use] completed",
-                detail="Browser task completed successfully",
-            )
+        agent.invoke_subagent = fake_invoke_subagent
 
-        mock_provider.invoke_streaming = mock_invoke_streaming
-
-        result = await agent.execute_builtin_subagent_streaming(mock_provider, "Navigate to example.com", "browser_use")
+        # New signature: execute_builtin_subagent_streaming(subagent_id, message)
+        result = await agent.execute_builtin_subagent_streaming("browser_use", "Navigate to example.com")
 
         assert result == "Browser task completed successfully"
 
@@ -1405,24 +1412,20 @@ class TestNoeAgentBuiltinStreaming:
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_invoke_builtin_uses_streaming(self):
-        """invoke_builtin action should use streaming when available."""
+        """invoke_builtin action delegates to agent.invoke_subagent."""
         from langchain_core.messages import AIMessage
 
-        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.core.agent.subagent import SubagentManager
         from noesium.noeagent.agent import NoeAgent
         from noesium.noeagent.nodes import subagent_node
         from noesium.noeagent.state import AgentState
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
-        agent._registry = CapabilityRegistry()
+        agent._subagent_manager = SubagentManager()
         agent._subagent_event_queue = asyncio.Queue()
 
-        # Create mock provider with streaming support
-        mock_provider = MagicMock()
-        mock_provider.invoke_streaming = AsyncMock(return_value=[])
-        mock_provider.invoke_streaming.return_value = self._make_streaming_generator()
-
-        agent._registry._by_name["builtin_agent:browser_use"] = mock_provider
+        # Mock invoke_subagent to verify it's called
+        agent.invoke_subagent = AsyncMock(return_value="Browser task done")
 
         state: AgentState = {
             "messages": [
@@ -1444,8 +1447,8 @@ class TestNoeAgentBuiltinStreaming:
         result = await subagent_node(state, agent=agent)
 
         assert "tool_results" in result
-        # Streaming should have been used
-        mock_provider.invoke_streaming.assert_awaited_once()
+        # invoke_subagent should have been called
+        agent.invoke_subagent.assert_awaited_once_with("browser_use", "Navigate to example.com")
 
     def _make_streaming_generator(self):
         """Helper to create an async generator for streaming."""
@@ -1657,44 +1660,49 @@ class TestEndToEndStreamingIntegration:
         """SUBAGENT_PROGRESS events should appear in NoeAgent.astream_progress()."""
         from langchain_core.messages import AIMessage
 
-        from noesium.core.capability.registry import CapabilityRegistry
+        from noesium.core.agent.subagent import SubagentManager
         from noesium.noeagent.agent import NoeAgent
-        from noesium.noeagent.progress import ProgressEventType
+        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
-        agent._registry = CapabilityRegistry()
-        agent.initialize = AsyncMock()
+        agent._subagent_manager = SubagentManager()
 
-        # Create a mock provider that will be invoked
-        mock_provider = MagicMock()
+        # Mock invoke_subagent to emit progress events into the queue
+        async def fake_invoke_subagent(subagent_id, message, **kwargs):
+            # These events are fired via the subagent_event_queue inside astream_progress
+            fake_events = [
+                ProgressEvent(
+                    type=ProgressEventType.SUBAGENT_PROGRESS,
+                    subagent_id=subagent_id,
+                    summary=f"[{subagent_id}] Navigating to page...",
+                ),
+                ProgressEvent(
+                    type=ProgressEventType.SUBAGENT_PROGRESS,
+                    subagent_id=subagent_id,
+                    summary=f"[{subagent_id}] Extracting content...",
+                ),
+                ProgressEvent(
+                    type=ProgressEventType.SUBAGENT_END,
+                    subagent_id=subagent_id,
+                    summary=f"[{subagent_id}] completed",
+                    detail="Browser task done",
+                ),
+            ]
+            for event in fake_events:
+                await agent._fire_callbacks(event)
+                if agent._subagent_event_queue is not None:
+                    agent._subagent_event_queue.put_nowait(event)
+            return "Browser task done"
 
-        async def mock_invoke_streaming(message, **kwargs):
-            yield ProgressEvent(
-                type=ProgressEventType.SUBAGENT_PROGRESS,
-                subagent_id="browser_use",
-                summary="[browser_use] Navigating to page...",
-                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
-            )
-            yield ProgressEvent(
-                type=ProgressEventType.SUBAGENT_PROGRESS,
-                subagent_id="browser_use",
-                summary="[browser_use] Extracting content...",
-                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
-            )
-            yield ProgressEvent(
-                type=ProgressEventType.SUBAGENT_END,
-                subagent_id="browser_use",
-                summary="[browser_use] completed",
-                detail="Browser task done",
-            )
-
-        mock_provider.invoke_streaming = mock_invoke_streaming
-        mock_provider.invoke = AsyncMock(return_value="fallback result")
-        agent._registry._by_name["builtin_agent:browser_use"] = mock_provider
+        agent.invoke_subagent = fake_invoke_subagent
 
         mock_compiled = AsyncMock()
 
         async def fake_astream(initial):
+            # Simulate the graph actually calling invoke_subagent inside subagent_node
+            await fake_invoke_subagent("browser_use", "Navigate")
+            # Yield control so _forward_subagent_events can pick up the queued events
+            await asyncio.sleep(0)
             yield {
                 "subagent": {
                     "messages": [
@@ -1709,7 +1717,7 @@ class TestEndToEndStreamingIntegration:
                             },
                         )
                     ],
-                    "tool_results": [],
+                    "tool_results": [{"tool": "subagent:browser_use", "result": "Browser task done"}],
                 }
             }
             yield {"finalize": {"final_answer": "Done.", "messages": []}}

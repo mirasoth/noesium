@@ -377,8 +377,7 @@ class BuiltInAgentCapabilityProvider:
         Yields:
             ProgressEvent: Events wrapped with subagent context.
         """
-        # Lazy import to avoid circular dependencies
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.core.event import ProgressEvent, ProgressEventType
 
         # Ensure agent is created
         if self._agent_instance is None:

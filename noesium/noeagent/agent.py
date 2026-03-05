@@ -19,8 +19,14 @@ except ImportError:
 from uuid_extensions import uuid7str
 
 from noesium.core.agent.base import BaseGraphicAgent
+from noesium.core.agent.subagent import (
+    SubagentContext,
+    SubagentEventType,
+    SubagentInvocationRequest,
+    SubagentManager,
+    SubagentProvider,
+)
 from noesium.core.capability.providers import (
-    AgentCapabilityProvider,
     CliAgentCapabilityProvider,
     MCPCapabilityProvider,
     ToolCapabilityProvider,
@@ -28,7 +34,6 @@ from noesium.core.capability.providers import (
 from noesium.core.capability.registry import CapabilityRegistry
 from noesium.core.event.envelope import AgentRef
 from noesium.core.event.store import InMemoryEventStore
-from noesium.core.library_consts import SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS
 from noesium.core.memory.provider import MemoryTier
 from noesium.core.memory.provider_manager import ProviderMemoryManager
 from noesium.core.memory.providers.event_sourced import EventSourcedProvider
@@ -38,6 +43,7 @@ from noesium.core.toolify.adapters.builtin_adapter import BuiltinAdapter
 from noesium.core.toolify.adapters.function_adapter import FunctionAdapter
 from noesium.core.toolify.atomic import ToolContext, ToolPermission
 from noesium.core.toolify.executor import ToolExecutor
+from noesium.subagents import SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS
 
 from . import nodes
 from .config import _NOE_AGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
@@ -82,6 +88,7 @@ class NoeAgent(BaseGraphicAgent):
         self._tool_desc_cache: str | None = None
         self._tool_desc_provider_count: int = -1
         self._subagent_event_queue: asyncio.Queue[ProgressEvent] | None = None
+        self._subagent_manager: SubagentManager | None = None
 
     # ------------------------------------------------------------------
     # Initialization
@@ -93,6 +100,10 @@ class NoeAgent(BaseGraphicAgent):
         await self._setup_memory()
         if self.config.mode == NoeMode.AGENT:
             await self._setup_capabilities()
+            self._subagent_manager = SubagentManager(
+                default_timeout_s=float(self.config.subagent_max_depth * 300),
+                max_concurrent=5,
+            )
             external_names = [c.name for c in self.config.external]
             enabled_builtin_subagents = self.config.get_enabled_builtin_subagents()
             builtin_names = [s.name for s in enabled_builtin_subagents]
@@ -341,12 +352,18 @@ class NoeAgent(BaseGraphicAgent):
         if not self.config.external:
             return
         from .cli_adapter import ExternalCliAdapter
+        from .subagent_runtimes import NoeCliSubagentRuntime
 
         self._cli_adapter = ExternalCliAdapter()
         for cli_cfg in self.config.external:
             try:
-                # Register config and setup provider (supports both oneshot and daemon modes)
+                # Register config so oneshot/daemon spawn works
                 result = await self._cli_adapter.spawn_from_config(cli_cfg)
+                # Register runtime with SubagentManager (new interface)
+                runtime = NoeCliSubagentRuntime(self._cli_adapter, cli_cfg)
+                if self._subagent_manager is not None:
+                    self._subagent_manager.register(SubagentProvider.from_instance(runtime))
+                # Also register legacy capability provider for tool registry compat
                 provider = CliAgentCapabilityProvider(
                     cli_cfg.name,
                     self._cli_adapter,
@@ -354,18 +371,23 @@ class NoeAgent(BaseGraphicAgent):
                     mode=cli_cfg.mode,
                 )
                 self._registry.register(provider)
-                logger.info("CLI subagent '%s' registered (mode=%s): %s", cli_cfg.name, cli_cfg.mode, result)
+                logger.info(
+                    "CLI subagent '%s' registered (mode=%s): %s",
+                    cli_cfg.name,
+                    cli_cfg.mode,
+                    result,
+                )
             except Exception as exc:
                 logger.warning("Failed to setup CLI subagent '%s': %s", cli_cfg.name, exc)
 
     async def _setup_builtin_subagents(self) -> None:
-        """Set up built-in agent subagents (browser_use, tacitus, etc.).
+        """Register built-in agent subagents with SubagentManager.
 
-        This method registers built-in subagents from the config.builtin
-        list as capability providers in the registry, making them available
-        for the NoeAgent to invoke during task execution.
+        Creates NoeBuiltinSubagentRuntime instances for each configured
+        built-in subagent (browser_use, tacitus, etc.) and registers them
+        with the SubagentManager for invocation via invoke_subagent().
         """
-        from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
+        from .subagent_runtimes import NoeBuiltinSubagentRuntime
 
         enabled_subagents = self.config.get_enabled_builtin_subagents()
         if not enabled_subagents:
@@ -387,7 +409,7 @@ class NoeAgent(BaseGraphicAgent):
                 )
                 continue
 
-            # Bind subagent config so the factory receives it when invoked (no args)
+            # Bind subagent config so the factory receives it when invoked
             def make_factory(cfg: Any, factory_fn: Any) -> Any:
                 def factory() -> Any:
                     return factory_fn(cfg)
@@ -395,14 +417,15 @@ class NoeAgent(BaseGraphicAgent):
                 return factory
 
             try:
-                provider = BuiltInAgentCapabilityProvider(
-                    name=subagent_cfg.name,
+                runtime = NoeBuiltinSubagentRuntime(
                     agent_factory=make_factory(subagent_cfg, factory_callable),
-                    agent_type=subagent_cfg.agent_type,
+                    subagent_id=subagent_cfg.name,
+                    display_name=subagent_cfg.name,
                     description=subagent_cfg.description or f"Built-in {subagent_cfg.agent_type} subagent",
                     task_types=subagent_cfg.task_types,
                 )
-                self._registry.register(provider)
+                if self._subagent_manager is not None:
+                    self._subagent_manager.register(SubagentProvider.from_instance(runtime))
                 logger.info(
                     "Registered built-in subagent: %s (type=%s, tasks=%s)",
                     subagent_cfg.name,
@@ -486,6 +509,8 @@ class NoeAgent(BaseGraphicAgent):
         self._subagents.clear()
         if self._cli_adapter is not None:
             await self._cli_adapter.terminate_all()
+        if self._subagent_manager is not None:
+            await self._subagent_manager.cleanup()
         if self._registry is not None:
             await self._registry.stop_health_monitor()
 
@@ -1095,58 +1120,106 @@ class NoeAgent(BaseGraphicAgent):
         subagent_id = f"{name}-{len(self._subagents) + 1}"
         self._subagents[subagent_id] = child
 
-        if self._registry is not None:
-            provider = AgentCapabilityProvider(subagent_id, child)
-            self._registry.register(provider)
+        # Register with SubagentManager via NoeChildSubagentRuntime
+        if self._subagent_manager is not None:
+            from .subagent_runtimes import NoeChildSubagentRuntime
+
+            runtime = NoeChildSubagentRuntime(child, subagent_id)
+            self._subagent_manager.register(SubagentProvider.from_instance(runtime))
 
         return subagent_id
 
     async def interact_with_subagent(self, subagent_id: str, message: str) -> str:
-        """Stream child agent progress, forwarding events to parent callbacks and queue."""
-        if subagent_id not in self._subagents:
+        """Stream child agent progress via SubagentManager, forwarding events to callbacks."""
+        if subagent_id not in self._subagents and (
+            self._subagent_manager is None or self._subagent_manager.get_provider(subagent_id) is None
+        ):
             raise KeyError(f"Unknown subagent: {subagent_id}")
 
-        child = self._subagents[subagent_id]
-        final_answer = ""
+        return await self.invoke_subagent(subagent_id, message)
 
-        async for event in child.astream_progress(message):
-            if event.type == ProgressEventType.FINAL_ANSWER:
-                final_answer = event.text or ""
-            elif event.type not in (
-                ProgressEventType.SESSION_START,
-                ProgressEventType.SESSION_END,
-            ):
-                wrapped = ProgressEvent(
-                    type=ProgressEventType.SUBAGENT_PROGRESS,
-                    session_id=event.session_id,
-                    sequence=event.sequence,
-                    subagent_id=subagent_id,
-                    summary=f"[{subagent_id}] {event.summary or ''}",
-                    detail=event.detail,
-                    tool_name=event.tool_name,
-                    step_index=event.step_index,
-                    step_desc=event.step_desc,
-                    plan_snapshot=event.plan_snapshot,
-                    metadata={
-                        "child_event_type": event.type.value,
-                        "child_node": event.node,
-                        **event.metadata,
-                    },
-                )
-                await self._fire_callbacks(wrapped)
-                if self._subagent_event_queue is not None:
-                    self._subagent_event_queue.put_nowait(wrapped)
+    async def invoke_subagent(
+        self,
+        subagent_id: str,
+        message: str,
+        timeout_s: float | None = None,
+    ) -> str:
+        """Invoke a subagent via SubagentManager and return the final result.
 
-        end_event = ProgressEvent(
-            type=ProgressEventType.SUBAGENT_END,
+        Streams SubagentProgressEvents, converting and forwarding them as
+        NoeAgent ProgressEvents for TUI display and session logging.
+
+        Args:
+            subagent_id: ID registered in SubagentManager.
+            message: Task message for the subagent.
+            timeout_s: Optional per-invocation timeout in seconds.
+
+        Returns:
+            The final text result from the subagent.
+        """
+        if self._subagent_manager is None:
+            logger.warning("invoke_subagent called but SubagentManager not initialized")
+            return f"Subagent '{subagent_id}' unavailable (manager not initialized)"
+
+        request = SubagentInvocationRequest(
             subagent_id=subagent_id,
-            summary=f"[{subagent_id}] completed",
+            message=message,
+            timeout_s=timeout_s,
         )
-        await self._fire_callbacks(end_event)
-        if self._subagent_event_queue is not None:
-            self._subagent_event_queue.put_nowait(end_event)
+        context = SubagentContext(
+            session_id=self._agent_id,
+            parent_id=self._agent_id,
+            depth=getattr(self, "_depth", 0),
+            max_depth=self.config.subagent_max_depth,
+        )
 
-        return final_answer
+        final_result = ""
+        error_info: str | None = None
+
+        async for event in self._subagent_manager.invoke_stream(subagent_id, request, context):
+            progress_event = self._subagent_event_to_progress(event, subagent_id)
+            if progress_event is not None:
+                await self._fire_callbacks(progress_event)
+                if self._subagent_event_queue is not None:
+                    self._subagent_event_queue.put_nowait(progress_event)
+
+            if event.event_type == SubagentEventType.SUBAGENT_END:
+                final_result = event.detail or event.summary or ""
+            elif event.event_type == SubagentEventType.SUBAGENT_ERROR:
+                error_info = event.error_message or "Unknown subagent error"
+
+        if error_info is not None:
+            raise RuntimeError(error_info)
+
+        return final_result
+
+    def _subagent_event_to_progress(
+        self,
+        event: Any,
+        subagent_id: str,
+    ) -> ProgressEvent | None:
+        """Convert a SubagentProgressEvent to a NoeAgent ProgressEvent.
+
+        Returns None for event types with no direct ProgressEvent mapping.
+        """
+        type_map = {
+            SubagentEventType.SUBAGENT_START: ProgressEventType.SUBAGENT_START,
+            SubagentEventType.SUBAGENT_PROGRESS: ProgressEventType.SUBAGENT_PROGRESS,
+            SubagentEventType.SUBAGENT_THOUGHT: ProgressEventType.THINKING,
+            SubagentEventType.SUBAGENT_END: ProgressEventType.SUBAGENT_END,
+            SubagentEventType.SUBAGENT_ERROR: ProgressEventType.ERROR,
+        }
+        progress_type = type_map.get(event.event_type)
+        if progress_type is None:
+            return None
+
+        return ProgressEvent(
+            type=progress_type,
+            subagent_id=subagent_id,
+            summary=event.summary,
+            detail=event.detail,
+            error=event.error_message if event.event_type == SubagentEventType.SUBAGENT_ERROR else None,
+        )
 
     async def interact_with_subagents(self, requests: list[tuple[str, str]]) -> dict[str, str]:
         """Execute multiple subagent interactions in parallel (O3)."""
@@ -1156,39 +1229,22 @@ class NoeAgent(BaseGraphicAgent):
 
     async def execute_builtin_subagent_streaming(
         self,
-        provider: Any,
+        subagent_id: str,
         message: str,
-        subagent_name: str,
     ) -> str:
-        """Execute a built-in subagent with progress streaming to TUI.
+        """Execute a built-in subagent via SubagentManager with progress streaming.
 
-        This method streams progress events from the built-in subagent,
-        forwarding them to parent callbacks and queuing them for
-        astream_progress() to yield to the TUI.
+        Delegates to invoke_subagent() which routes through SubagentManager
+        and streams SubagentProgressEvents to TUI and callbacks.
 
         Args:
-            provider: The BuiltInAgentCapabilityProvider instance.
+            subagent_id: Subagent ID registered in SubagentManager.
             message: The task message for the subagent.
-            subagent_name: Name of the subagent for event tagging.
 
         Returns:
             The final result string from the subagent.
         """
-        final_result = ""
-
-        async for event in provider.invoke_streaming(message=message):
-            # Fire to callbacks (SessionLogger, etc.)
-            await self._fire_callbacks(event)
-
-            # Queue for astream_progress to yield
-            if self._subagent_event_queue is not None:
-                self._subagent_event_queue.put_nowait(event)
-
-            # Track final result
-            if event.type == ProgressEventType.SUBAGENT_END:
-                final_result = event.detail or event.summary or ""
-
-        return final_result
+        return await self.invoke_subagent(subagent_id, message)
 
     async def _handle_inline_command(
         self,

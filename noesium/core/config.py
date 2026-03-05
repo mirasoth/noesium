@@ -319,7 +319,7 @@ class LoggingConfig(BaseModel):
     retention: str = "7 days"
 
 
-class NoeAgentConfig(BaseModel):
+class FrameworkConfig(BaseModel):
     """Top-level configuration model.
 
     Contains core framework sections (LLM, tools, memory, logging, etc.).
@@ -434,7 +434,7 @@ def _normalize_config_data(data: Dict[str, Any]) -> Dict[str, Any]:
     return data
 
 
-def load_config(config_path: Optional[Path] = None) -> NoeAgentConfig:
+def load_config(config_path: Optional[Path] = None) -> FrameworkConfig:
     """Load configuration from file.
 
     If the config file doesn't exist, creates a default configuration
@@ -447,14 +447,14 @@ def load_config(config_path: Optional[Path] = None) -> NoeAgentConfig:
                     uses get_config_path() to determine the path.
 
     Returns:
-        Loaded NoeAgentConfig instance
+        Loaded FrameworkConfig instance
     """
     if config_path is None:
         config_path = get_config_path()
 
     # Create default config if file doesn't exist
     if not config_path.exists():
-        config = NoeAgentConfig()
+        config = FrameworkConfig()
         save_config(config, config_path)
         return config
 
@@ -471,7 +471,7 @@ def load_config(config_path: Optional[Path] = None) -> NoeAgentConfig:
             data = {}
 
     # Merge with defaults so empty {} gets full default structure
-    default_dict = NoeAgentConfig().model_dump()
+    default_dict = FrameworkConfig().model_dump()
     data = _deep_merge(default_dict, data)
 
     # Normalize data to handle format variations
@@ -480,14 +480,14 @@ def load_config(config_path: Optional[Path] = None) -> NoeAgentConfig:
     # Apply environment variable overrides
     data = apply_env_overrides(data)
 
-    return NoeAgentConfig(**data)
+    return FrameworkConfig(**data)
 
 
-def save_config(config: NoeAgentConfig, config_path: Optional[Path] = None) -> None:
+def save_config(config: FrameworkConfig, config_path: Optional[Path] = None) -> None:
     """Save configuration to file.
 
     Args:
-        config: NoeAgentConfig instance to save
+        config: FrameworkConfig instance to save
         config_path: Optional path to save to. If not provided,
                     uses get_config_path() to determine the path.
     """
@@ -625,15 +625,15 @@ def get_default_provider_config(provider: str) -> LLMProviderConfig:
     return defaults.get(provider, LLMProviderConfig())
 
 
-def init_default_config() -> NoeAgentConfig:
+def init_default_config() -> FrameworkConfig:
     """Initialize a default configuration with all providers configured.
 
     This creates a config with sensible defaults for all supported providers.
 
     Returns:
-        NoeAgentConfig with default provider configurations
+        FrameworkConfig with default provider configurations
     """
-    config = NoeAgentConfig()
+    config = FrameworkConfig()
 
     # Set up default provider configs
     for provider_name in ["openai", "openrouter", "ollama", "litellm", "llamacpp"]:
@@ -644,7 +644,7 @@ def init_default_config() -> NoeAgentConfig:
 
 __all__ = [
     # Models
-    "NoeAgentConfig",
+    "FrameworkConfig",
     "LLMConfig",
     "LLMProviderConfig",
     "AgentConfig",

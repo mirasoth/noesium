@@ -23,8 +23,15 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 
 ### 2026-03-05
 
-- **Created**: RFC-9003 - Extensible Subagent Interface for Core Agent Framework; unified subagent descriptor/runtime/streaming/lifecycle/policy contract based on NoeAgent implementation analysis; CapabilityRegistry-integrated subagent manager architecture; alternatives and migration phases for future backend integration
-- **Reference Updated**: rfc-index.md - Registered RFC-9003 under Experimental (9xxx), updated quick links and status listings
+- **Updated**: RFC-0006 - Logic consistency (Option A): renamed "Subagent" to **Effect Executor** for sandboxed tool runner; title to "Agent Kernel and Sandboxed Effect Executor Model"; added terminology note distinguishing Effect Executor from Subagent (RFC-1005/1006)
+- **Updated**: RFC-1003 - Replaced "subagent" with "effect executor" for sandboxed execution (alignment with RFC-0006)
+- **Reference Updated**: rfc-namings.md - Subagent now cites RFC-1005 §5.1 (cognitive agent); added Effect Executor (RFC-0006 §5.2); Agent Kernel Pod now "effect executor dispatch"
+- **Reference Updated**: rfc-index.md - RFC-0006 title and Last Updated; logic-consistency-review.md resolution checklist
+- **Created**: RFC-1007 - Noesium Framework Layered Impl Architecture; four-layer architecture (core, toolkits, subagents, noeagent); dependency direction and import restrictions; FrameworkConfig; public API surface per layer
+- **Updated**: RFC-1006 - Merged RFC-9004 content (SubagentContext, HITL Protocol, Dynamic Discovery); added Section 5.6 SubagentContext for memory/state sharing; added Section 5.7 HITL Protocol for human-in-the-loop pause/resume; added Section 6.3 Dynamic Discovery via entry points; updated Section 5.4 with HITL event types; updated Section 5.5 with resume() method; implemented core subagent module in noesium/core/agent/subagent/
+- **Deleted**: RFC-9004 - Content merged into RFC-1006, file deleted
+- **Created**: RFC-1006 - Extensible Subagent Interface for Core Agent Framework (formerly RFC-9003)
+- **Reference Updated**: rfc-index.md - Registered RFC-1006 and RFC-1007 under Core Framework (1xxx), deleted RFC-9003/RFC-9004, updated quick links
 
 ### 2026-03-04
 

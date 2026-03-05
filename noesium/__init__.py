@@ -52,8 +52,9 @@ from noesium.core.agent import (
 )
 
 # Configuration
+from noesium.core.config import NoeAgentConfig  # Backward compatibility alias
 from noesium.core.config import (
-    NoeAgentConfig,
+    FrameworkConfig,
     load_config,
     save_config,
 )
@@ -64,6 +65,9 @@ from noesium.core.event import (
     EventStore,
     FileEventStore,
     InMemoryEventStore,
+    ProgressCallback,
+    ProgressEvent,
+    ProgressEventType,
 )
 
 # Exceptions - User-facing only
@@ -99,10 +103,12 @@ from noesium.core.memory import (
 # Routing
 from noesium.core.routing import ModelRouter
 
+# Toolkits - Built-in tool implementations (re-exported for convenience)
 # Tools
 from noesium.core.toolify import (
     AtomicTool,
     ToolExecutor,
+    ToolkitRegistry,
     get_toolkit,
     get_toolkits_map,
 )
@@ -127,14 +133,15 @@ from noesium.noeagent import (
     NoeMode,
 )
 
-# AskuraAgent - General-purpose conversation agent
-from noesium.subagents.askura import (
+# Subagents - Reusable agent implementations
+from noesium.subagents import (
     AskuraAgent,
     AskuraConfig,
+    AskuraResponse,
+    AskuraState,
+    ResearchState,
+    TacitusAgent,
 )
-
-# TacitusAgent - Advanced research agent
-from noesium.subagents.tacitus import TacitusAgent
 
 # =============================================================================
 # Tier 2: Core Systems (Frequently Used)
@@ -188,7 +195,8 @@ __all__ = [
     "NoeConfig",
     "NoeMode",
     "CliSubagentConfig",
-    "NoeAgentConfig",
+    "FrameworkConfig",
+    "NoeAgentConfig",  # Backward compatibility alias
     "load_config",
     "save_config",
     "get_llm_client",
@@ -203,19 +211,26 @@ __all__ = [
     "SemanticMemory",
     "AtomicTool",
     "ToolExecutor",
+    "ToolkitRegistry",
     "get_toolkit",
     "get_toolkits_map",
     "EventEnvelope",
     "EventStore",
     "InMemoryEventStore",
     "FileEventStore",
+    "ProgressEvent",
+    "ProgressEventType",
+    "ProgressCallback",
     "get_vector_store",
     "BaseVectorStore",
     "ModelRouter",
     # Tier 3: Specialized Subagents
     "AskuraAgent",
     "AskuraConfig",
+    "AskuraResponse",
+    "AskuraState",
     "TacitusAgent",
+    "ResearchState",
     "BrowserUseAgent",  # Lazy-loaded
     # Tier 4: Utilities & Exceptions
     "setup_logging",

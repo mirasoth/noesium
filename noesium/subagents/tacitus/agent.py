@@ -428,7 +428,7 @@ class TacitusAgent(BaseResearcher):
         # Lazy import to avoid circular dependencies
         from uuid_extensions import uuid7str
 
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.core.event import ProgressEvent, ProgressEventType
 
         session_id = uuid7str()
 

@@ -23,8 +23,8 @@ from .views import AgentHistoryList
 
 # Lazy import for ProgressEvent to avoid circular imports
 def _get_progress_types():
-    """Lazy import progress types to avoid circular dependencies."""
-    from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+    """Lazy import progress types."""
+    from noesium.core.event import ProgressEvent, ProgressEventType
 
     return ProgressEvent, ProgressEventType
 

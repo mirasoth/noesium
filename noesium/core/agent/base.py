@@ -1,9 +1,12 @@
 import os
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from .subagent import SubagentProtocol
 
 try:
     from langchain_core.runnables import RunnableConfig
@@ -68,6 +71,17 @@ class BaseAgent(ABC):
             )
         else:
             print("FINAL_SUMMARY: 0 total | 0 calls | P:0 C:0")
+
+    def as_subagent_protocol(self) -> Optional["SubagentProtocol"]:
+        """Return a SubagentProtocol adapter for this agent if supported.
+
+        Override in subclasses that can be used as subagents. Returns None
+        by default, indicating the agent does not support the subagent protocol.
+
+        Returns:
+            A SubagentProtocol implementation wrapping this agent, or None.
+        """
+        return None
 
 
 class BaseGraphicAgent(BaseAgent):

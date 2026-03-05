@@ -7,8 +7,10 @@ into the noesium toolkit system.
 
 from typing import Any, Dict, List, Optional
 
-from noesium.core.library_consts import TOOLKIT_MCP
 from noesium.core.utils.logging import get_logger
+
+# Toolkit registration name
+TOOLKIT_MCP = "mcp"
 
 from .base import AsyncBaseToolkit, MCPNotAvailableError
 from .config import ToolkitConfig

@@ -12,11 +12,13 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
-from noesium.core.library_consts import (
+from noesium.subagents import (
     SUBAGENT_ASKURA,
     SUBAGENT_BROWSER_USE,
     SUBAGENT_CLAUDE,
     SUBAGENT_TACITUS,
+)
+from noesium.toolkits import (
     TOOLKIT_ARXIV,
     TOOLKIT_AUDIO,
     TOOLKIT_BASH,
@@ -280,35 +282,25 @@ async def execute_subagent_command(
             f"No task provided for {get_subagent_display_name(subagent_name)}. Usage: /{command.command_type.value} <your task>",
         )
 
-    # Try to find the subagent in the registry
-    registry = agent._registry
-    if registry is None:
-        return False, "Agent not properly initialized (no capability registry)"
+    # Invoke via SubagentManager
+    subagent_manager = getattr(agent, "_subagent_manager", None)
+    if subagent_manager is None:
+        return False, "Agent not properly initialized (no SubagentManager)"
 
-    # Check if it's a built-in subagent
-    cap_id = f"builtin_agent:{subagent_name}"
-    try:
-        provider = registry.get_by_name(cap_id)
-    except Exception:
-        provider = None
-
+    provider = subagent_manager.get_provider(subagent_name)
     if provider is None:
         # Check if the subagent is configured but not enabled
         enabled_subagents = agent.config.get_enabled_builtin_subagents()
-        subagent_names = [s.agent_type for s in enabled_subagents]
-        if subagent_name not in subagent_names:
+        subagent_agent_types = [s.agent_type for s in enabled_subagents]
+        if subagent_name not in subagent_agent_types:
             return (
                 False,
                 f"Subagent '{get_subagent_display_name(subagent_name)}' is not enabled. Enable it in your config.",
             )
-        return False, f"Subagent '{get_subagent_display_name(subagent_name)}' not found in registry."
+        return False, f"Subagent '{get_subagent_display_name(subagent_name)}' not found in SubagentManager."
 
     try:
-        # Use streaming if available for real-time progress
-        if hasattr(provider, "invoke_streaming"):
-            result = await agent.execute_builtin_subagent_streaming(provider, message, subagent_name)
-        else:
-            result = await provider.invoke(message=message)
+        result = await agent.invoke_subagent(subagent_name, message)
         return True, str(result)
     except Exception as exc:
         return False, f"Error executing {get_subagent_display_name(subagent_name)}: {exc}"

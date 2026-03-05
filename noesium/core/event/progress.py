@@ -1,9 +1,12 @@
-"""Typed progress event protocol for NoeAgent (impl guide §5.5).
+"""Typed progress event protocol for agent execution (RFC-1007).
 
-Provides a unified event model consumed by both the Rich TUI (compact display)
-and library-mode integrations (structured output).  Each event carries a short
+Provides a unified event model consumed by both Rich TUI (compact display)
+and library-mode integrations (structured output). Each event carries a short
 ``summary`` suitable for terminal rendering and a verbose ``detail`` for
 session-level offline logging.
+
+This module is part of the core framework layer and MUST NOT import from
+application layers (noeagent).
 """
 
 from __future__ import annotations
@@ -41,7 +44,7 @@ class ProgressEvent(BaseModel):
     """Single flat event emitted during agent execution.
 
     The ``summary`` field always contains a short one-liner suitable for TUI
-    rendering.  The ``detail`` field holds verbose content (full tool args /
+    rendering. The ``detail`` field holds verbose content (full tool args /
     results, reflection text, etc.) intended for session logging only.
     """
 

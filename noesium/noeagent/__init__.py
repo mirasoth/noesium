@@ -14,6 +14,8 @@ except ImportError:
     # python-dotenv not installed, silently skip
     pass
 
+from noesium.core.event import ProgressCallback, ProgressEvent, ProgressEventType
+
 from .agent import NoeAgent
 from .commands import (
     BUILTIN_SUBAGENT_NAMES,
@@ -27,7 +29,6 @@ from .commands import (
     validate_subagent_names,
 )
 from .config import CliSubagentConfig, NoeConfig, NoeMode
-from .progress import ProgressCallback, ProgressEvent, ProgressEventType
 from .schemas import AgentAction, SubagentAction, ToolCallAction
 from .session_log import SessionLogger
 from .state import TaskPlan, TaskStep

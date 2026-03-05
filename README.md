@@ -25,22 +25,35 @@ Goals: long-running autonomous agents, durable/resumable execution, multi-agent 
 
 ## Architecture
 
-```mermaid
-flowchart TB
-  subgraph framework [Framework]
-    core[core: agent base, llm, toolify, memory, event, vector_store]
-    toolkits[toolkits: 17+ built-in]
-  end
-  subgraph builtin [Built-in multi-agent system]
-    noeAgent[NoeAgent]
-    subagents[BrowserUseAgent, TacitusAgent, AskuraAgent]
-  end
-  framework --> builtin
-  framework -.-> yourAgents[Your custom agents]
+### Layer Overview
+
+```
+                    ┌─────────────────┐
+                    │   noeagent      │  (Application Layer)
+                    └────────┬────────┘
+                             │ depends on
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+       ┌──────────┐   ┌───────────┐   ┌──────────┐
+       │ toolkits │   │ subagents │   │   core   │
+       └────┬─────┘   └─────┬─────┘   └────┬─────┘
+            │               │              │
+            └───────────────┴──────────────┘
+                            │ depends on
+                            ▼
+                      ┌──────────┐
+                      │   core   │  (Framework Layer)
+                      └──────────┘
 ```
 
-- **Framework** — Core modules (`agent` base classes, `llm`, `toolify`, `memory`, `event`, `vector_store`) and 17+ toolkits provide the agentic building blocks.
-- **Built-in multi-agent system** — NoeAgent (orchestrator) and subagents (BrowserUseAgent, TacitusAgent, AskuraAgent) are a reference implementation and directly usable. See [AGENTS.md](AGENTS.md) for details.
+### Layer Details
+
+| Layer | Package | Purpose | Dependencies | Knows About NoeAgent |
+|-------|---------|---------|--------------|---------------------|
+| Core | `noesium.core` | Framework primitives (agents, tools, events, memory, LLM) | None (external only) | NO |
+| Toolkits | `noesium.toolkits` | Built-in tool implementations | `noesium.core` | NO |
+| Subagents | `noesium.subagents` | Reusable agent implementations | `noesium.core`, `noesium.toolkits` | NO |
+| Application | `noesium.noeagent` | Complete agent application | All above | YES (it IS noeagent) |
 
 ## Install
 

@@ -10,9 +10,11 @@ from typing import Any, Callable, Optional
 from pydantic import BaseModel, ConfigDict, Field
 from uuid_extensions import uuid7str
 
-from noesium.core.library_consts import (
+from noesium.subagents import (
     SUBAGENT_BROWSER_USE,
     SUBAGENT_TACITUS,
+)
+from noesium.toolkits import (
     TOOLKIT_BASH,
     TOOLKIT_DOCUMENT,
     TOOLKIT_FILE_EDIT,
