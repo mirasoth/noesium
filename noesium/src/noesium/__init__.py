@@ -6,11 +6,10 @@ tools, and orchestration capabilities. It features an event-sourced multi-agent
 kernel architecture emphasizing durability, replayability, and distributed coordination.
 
 Usage Examples:
-    # Basic usage - NoeAgent
-    from noesium import NoeAgent, NoeConfig
+    # Build a custom agent on the framework
+    from noesium import BaseGraphicAgent, FrameworkConfig
 
-    agent = NoeAgent(NoeConfig(mode="agent"))
-    result = await agent.run("Analyze the quarterly sales data")
+    config = FrameworkConfig()
 
     # LLM client
     from noesium import get_llm_client
@@ -57,9 +56,6 @@ from noesium.core.config import (
     load_config,
     save_config,
 )
-
-# Backward compatibility: NoeAgentConfig was renamed to FrameworkConfig (RFC-1007)
-NoeAgentConfig = FrameworkConfig
 
 # Events
 from noesium.core.event import (
@@ -127,14 +123,6 @@ from noesium.core.vector_store import (
     get_vector_store,
 )
 
-# NoeAgent system
-from noesium.noeagent import (
-    CliSubagentConfig,
-    NoeAgent,
-    NoeConfig,
-    NoeMode,
-)
-
 # Subagents - Reusable agent implementations
 from noesium.subagents import (
     AskuraAgent,
@@ -193,12 +181,7 @@ __all__ = [
     # Version
     "__version__",
     # Tier 1: Main Entry Points
-    "NoeAgent",
-    "NoeConfig",
-    "NoeMode",
-    "CliSubagentConfig",
     "FrameworkConfig",
-    "NoeAgentConfig",  # Backward compatibility alias
     "load_config",
     "save_config",
     "get_llm_client",

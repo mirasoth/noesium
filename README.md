@@ -10,7 +10,7 @@
 
 </div>
 
-**Noesium** is a computation-driven cognitive agentic framework. Use it as a **ready-to-run multi-agent system** (NoeAgent plus subagents) or as a **foundation** to build custom agents with core abstractions and 17+ toolkits.
+**Noesium** is a computation-driven cognitive agentic framework for building custom autonomous systems with core abstractions, reusable subagents, and 17+ toolkits.
 
 ## Design Philosophy
 
@@ -28,18 +28,11 @@ Goals: long-running autonomous agents, durable/resumable execution, multi-agent 
 ### Layer Overview
 
 ```
-                    ┌─────────────────┐
-                    │   noeagent      │  (Application Layer)
-                    └────────┬────────┘
-                             │ depends on
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-       ┌──────────┐   ┌───────────┐   ┌──────────┐
-       │ toolkits │   │ subagents │   │   core   │
-       └────┬─────┘   └─────┬─────┘   └────┬─────┘
-            │               │              │
-            └───────────────┴──────────────┘
-                            │ depends on
+               ┌──────────┐   ┌───────────┐
+               │ toolkits │   │ subagents │
+               └────┬─────┘   └─────┬─────┘
+                    │               │
+                    └───────┬───────┘
                             ▼
                       ┌──────────┐
                       │   core   │  (Framework Layer)
@@ -48,12 +41,11 @@ Goals: long-running autonomous agents, durable/resumable execution, multi-agent 
 
 ### Layer Details
 
-| Layer | Package | Purpose | Dependencies | Knows About NoeAgent |
-|-------|---------|---------|--------------|---------------------|
-| Core | `noesium.core` | Framework primitives (agents, tools, events, memory, LLM) | None (external only) | NO |
-| Toolkits | `noesium.toolkits` | Built-in tool implementations | `noesium.core` | NO |
-| Subagents | `noesium.subagents` | Reusable agent implementations | `noesium.core`, `noesium.toolkits` | NO |
-| Application | `noesium.noeagent` | Complete agent application | All above | YES (it IS noeagent) |
+| Layer | Package | Purpose | Dependencies |
+|-------|---------|---------|--------------|
+| Core | `noesium.core` | Framework primitives (agents, tools, events, memory, LLM) | None (external only) |
+| Toolkits | `noesium.toolkits` | Built-in tool implementations | `noesium.core` |
+| Subagents | `noesium.subagents` | Reusable agent implementations | `noesium.core`, `noesium.toolkits` |
 
 ## Install
 
@@ -81,31 +73,7 @@ Use `uv run` for scripts when developing with the repo.
 
 ## Quick Start
 
-### 1. Common user — NoeAgent
-
-**Library:**
-
-```python
-import asyncio
-from noesium import NoeAgent
-
-async def main():
-    agent = NoeAgent()
-    result = await agent.arun("What are the latest developments in quantum computing?")
-    print(result)
-
-asyncio.run(main())
-```
-
-**TUI:**
-
-```bash
-python -m noesium.noeagent.tui
-```
-
-Full NoeAgent options, streaming, subagents, and config: [docs/noeagent_guide.md](docs/noeagent_guide.md).
-
-### 2. Developer — Framework
+### 1. Developer — Framework
 
 Build a custom agent on the framework:
 

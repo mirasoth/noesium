@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "noecoder"
@@ -44,8 +44,11 @@ dev = [
 [project.scripts]
 noecoder = "noecoder.main:main"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/noecoder"]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+noecoder = ["**/*.json"]
 
 [tool.black]
 line-length = 120

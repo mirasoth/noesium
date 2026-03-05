@@ -30,13 +30,13 @@ def get_toolkit_tmp_dir(toolkit_name: str, subdir: str = "") -> str:
 def set_noesium_home(path: str | Path) -> None:
     """Override NOESIUM_HOME and update dependent paths.
 
-    This is called by application layers (e.g., noeagent) to use their own
+    This is called by application layers to use their own
     home directory instead of the default ~/.noesium.
 
     Must be called before any other noesium imports that use NOESIUM_HOME.
 
     Args:
-        path: New home directory path (e.g., ~/.noeagent)
+        path: New home directory path (e.g., ~/.my-agent)
     """
     global NOESIUM_HOME, DEFAULT_CONFIG_PATH
 
