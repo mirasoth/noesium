@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Default head mode: True = headless (no window), False = headed (visible browser window).
 # Used globally by BrowserUseAgent, MCP server, and default config.
-DEFAULT_HEADLESS: bool = False
+DEFAULT_HEADLESS: bool = True
 
 
 @cache
