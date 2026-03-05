@@ -15,12 +15,6 @@ NOESIUM_HOME = Path(os.getenv("NOESIUM_HOME", str(Path.home() / ".noesium")))
 DEFAULT_CONFIG_PATH = NOESIUM_HOME / "config.json"
 CONFIG_VERSION = "1.0"
 
-# Default directories under NOESIUM_HOME
-NOESIUM_LOGS_DIR = NOESIUM_HOME / "logs"
-NOESIUM_MEMORY_DIR = NOESIUM_HOME / "memory"
-NOESIUM_DATA_DIR = NOESIUM_HOME / "data"
-NOESIUM_SESSIONS_DIR = NOESIUM_HOME / "sessions"
-
 # Library temp/cache base (toolkits default here when used standalone)
 NOESIUM_TMP_BASE = Path("/tmp/noesium")
 
@@ -31,3 +25,20 @@ def get_toolkit_tmp_dir(toolkit_name: str, subdir: str = "") -> str:
     if subdir:
         base = base / subdir
     return str(base)
+
+
+def set_noesium_home(path: str | Path) -> None:
+    """Override NOESIUM_HOME and update dependent paths.
+
+    This is called by application layers (e.g., noeagent) to use their own
+    home directory instead of the default ~/.noesium.
+
+    Must be called before any other noesium imports that use NOESIUM_HOME.
+
+    Args:
+        path: New home directory path (e.g., ~/.noeagent)
+    """
+    global NOESIUM_HOME, DEFAULT_CONFIG_PATH
+
+    NOESIUM_HOME = Path(path)
+    DEFAULT_CONFIG_PATH = NOESIUM_HOME / "config.json"

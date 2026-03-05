@@ -1119,14 +1119,11 @@ def run_agent_tui(agent: "NoeAgent") -> None:
             # Parse optional subagent selector prefix (e.g. "2 3 message" -> Browser + Research)
             subagent_names_parsed, message = parse_subagent_prefix_from_input(user_input)
 
-            # Echo prompt so the run is self-contained
-            prompt_echo = message.split("\n")[0] + ("..." if "\n" in message else "")
-            console.print(
-                Text.assemble(("noe|", "bold cyan"), (f"{agent.config.mode.value}> ", "bold cyan"), (prompt_echo, ""))
-            )
+            # prompt_toolkit already echoed the input with prompt, so we only show subagent selection
+            # indicator if subagents were selected (no need to re-print the prompt/message)
             if subagent_names_parsed:
                 tags = " ".join(f"[{get_subagent_display_name(n)}]" for n in subagent_names_parsed)
-                console.print(Text.assemble(("  ", ""), (tags, "bold magenta"), (" selected", "dim")))
+                console.print(Text.assemble((tags, "bold magenta"), (" selected", "dim")))
             console.print()
 
             try:

@@ -483,14 +483,27 @@ class NoeAgent(BaseGraphicAgent):
 
             opts = (subagent_cfg.config or {}).copy()
 
-            # Check for headless setting: config file -> env var -> default
+            # Determine headless setting with precedence: env var > config > default
+            # Env var always overrides everything if set
             env_headless = os.getenv("BROWSER_USE_HEADLESS")
             if env_headless is not None:
-                env_headless_val = env_headless.lower() in ("true", "1", "yes", "t")
+                # Env var is set - it takes highest precedence
+                if env_headless.lower() in ("false", "0", "no", "f"):
+                    headless = False
+                elif env_headless.lower() in ("true", "1", "yes", "t"):
+                    headless = True
+                else:
+                    # Invalid value, fall back to default
+                    headless = DEFAULT_HEADLESS
+                logger.debug(f"BROWSER_USE_HEADLESS={env_headless} -> headless={headless}")
+            elif "headless" in opts:
+                # Config file setting (second priority)
+                headless = opts.pop("headless")
+                logger.debug(f"Using config headless={headless}")
             else:
-                env_headless_val = None
-
-            headless = opts.pop("headless", env_headless_val if env_headless_val is not None else DEFAULT_HEADLESS)
+                # Default fallback
+                headless = DEFAULT_HEADLESS
+                logger.debug(f"Using default headless={headless}")
 
             return BrowserUseAgent(
                 llm=self.llm,
@@ -1213,12 +1226,18 @@ class NoeAgent(BaseGraphicAgent):
     ) -> ProgressEvent | None:
         """Convert a SubagentProgressEvent to a NoeAgent ProgressEvent.
 
+        Preserves metadata, tool_name, step_index, plan_snapshot so the TUI
+        SubagentTracker and detail rendering (child_event_type, agent_type, etc.)
+        can function correctly for all subagent backends.
+
         Returns None for event types with no direct ProgressEvent mapping.
         """
         type_map = {
             SubagentEventType.SUBAGENT_START: ProgressEventType.SUBAGENT_START,
             SubagentEventType.SUBAGENT_PROGRESS: ProgressEventType.SUBAGENT_PROGRESS,
             SubagentEventType.SUBAGENT_THOUGHT: ProgressEventType.THINKING,
+            SubagentEventType.SUBAGENT_TOOL_CALL: ProgressEventType.TOOL_START,
+            SubagentEventType.SUBAGENT_TOOL_RESULT: ProgressEventType.TOOL_END,
             SubagentEventType.SUBAGENT_END: ProgressEventType.SUBAGENT_END,
             SubagentEventType.SUBAGENT_ERROR: ProgressEventType.ERROR,
         }
@@ -1226,12 +1245,27 @@ class NoeAgent(BaseGraphicAgent):
         if progress_type is None:
             return None
 
+        # Extract metadata from the subagent event's payload (carries child_event_type,
+        # agent_type, step_index, plan_snapshot forwarded by NoeBuiltinSubagentRuntime).
+        payload = event.payload or {}
+        metadata: dict = {k: v for k, v in payload.items() if k not in ("step_index", "plan_snapshot", "step_desc")}
+        step_index: int | None = payload.get("step_index")
+        step_desc: str | None = payload.get("step_desc")
+        plan_snapshot: dict | None = payload.get("plan_snapshot")
+
         return ProgressEvent(
             type=progress_type,
             subagent_id=subagent_id,
             summary=event.summary,
             detail=event.detail,
             error=event.error_message if event.event_type == SubagentEventType.SUBAGENT_ERROR else None,
+            tool_name=event.tool_name,
+            tool_args=event.tool_args,
+            tool_result=str(event.tool_result) if event.tool_result is not None else None,
+            step_index=step_index,
+            step_desc=step_desc,
+            plan_snapshot=plan_snapshot,
+            metadata=metadata,
         )
 
     async def interact_with_subagents(self, requests: list[tuple[str, str]]) -> dict[str, str]:

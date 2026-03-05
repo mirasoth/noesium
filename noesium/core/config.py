@@ -229,7 +229,7 @@ class MemuMemoryConfig(BaseModel):
         user_id: User identifier
     """
 
-    memory_dir: str = str(NOESIUM_HOME / "memory")
+    memory_dir: str = Field(default_factory=lambda: str(NOESIUM_HOME / "memory"))
     user_id: str = "default_user"
 
 
@@ -240,7 +240,7 @@ class EventSourcedMemoryConfig(BaseModel):
         db_path: Path to SQLite database file
     """
 
-    db_path: str = str(NOESIUM_HOME / "data" / "events.db")
+    db_path: str = Field(default_factory=lambda: str(NOESIUM_HOME / "data" / "events.db"))
 
 
 class MemoryConfig(BaseModel):
@@ -258,7 +258,7 @@ class MemoryConfig(BaseModel):
     providers: List[str] = Field(default_factory=lambda: ["working", "event_sourced", "memu"])
     persist: bool = True
     session_logging: bool = True
-    session_log_dir: str = str(NOESIUM_HOME / "sessions")
+    session_log_dir: str = Field(default_factory=lambda: str(NOESIUM_HOME / "sessions"))
     memu: MemuMemoryConfig = Field(default_factory=MemuMemoryConfig)
     event_sourced: EventSourcedMemoryConfig = Field(default_factory=EventSourcedMemoryConfig)
 

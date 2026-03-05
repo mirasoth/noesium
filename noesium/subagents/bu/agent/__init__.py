@@ -250,6 +250,10 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         This method yields ProgressEvent objects compatible with the core
         progress system, allowing real-time visibility into browser actions.
 
+        Events are emitted live via an async step callback so each step's
+        Eval / Memory / Next-goal / Action information is surfaced as it
+        happens, rather than being reconstructed from history post-run.
+
         Args:
             user_message: The task description in natural language.
             context: Optional context dictionary (ignored in browser_use).
@@ -262,16 +266,24 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         Event Sequence:
             1. SESSION_START - Browser session initialized
             2. PLAN_CREATED - Dynamic plan (up to max_steps)
-            3. STEP_START/STEP_COMPLETE - For each browser action
-            4. TOOL_START/TOOL_END - For specific actions (click, type, etc.)
+            3. THINKING - Browser launch notification
+            4. Per step (live, via async callback):
+               - STEP_START   summary = "Step N: <next_goal>"
+                              detail  = Eval / Memory / Next goal / Action
+               - TOOL_START   summary = <action description>
             5. FINAL_ANSWER - Task result
             6. SESSION_END - Cleanup complete
         """
+        import asyncio
+
         ProgressEvent, ProgressEventType = _get_progress_types()
         from uuid_extensions import uuid7str
 
         session_id = uuid7str()
-        step_count = 0
+
+        # Sentinel object placed into the queue when agent.run() finishes.
+        _DONE = object()
+        step_queue: asyncio.Queue = asyncio.Queue()
 
         # Yield SESSION_START
         yield ProgressEvent(
@@ -292,19 +304,63 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
             },
         )
 
-        # Step callback for real-time updates
-        current_step = [0]
-        current_action = [""]
+        async def on_step(browser_state: Any, model_output: Any, step_num: int) -> None:
+            """Async step callback: emit live per-step progress events."""
+            eval_text = ""
+            memory_text = ""
+            next_goal = ""
+            action_desc = ""
 
-        def on_step(browser_state, model_output, step_num):
-            """Callback for each browser step."""
-            nonlocal step_count
-            step_count = step_num
-            current_step[0] = step_num
-            if model_output and hasattr(model_output, "action"):
-                current_action[0] = self._describe_action_from_output(model_output)
+            if model_output and hasattr(model_output, "current_state"):
+                cs = model_output.current_state
+                eval_text = getattr(cs, "evaluation_previous_goal", "") or ""
+                memory_text = getattr(cs, "memory", "") or ""
+                next_goal = getattr(cs, "next_goal", "") or ""
 
-        # Create underlying agent with step callback
+            if model_output and hasattr(model_output, "action") and model_output.action:
+                action_desc = self._describe_action_from_output(model_output)
+
+            summary = f"Step {step_num}"
+            if next_goal:
+                summary = f"Step {step_num}: {next_goal[:80]}"
+            elif action_desc:
+                summary = f"Step {step_num}: {action_desc[:80]}"
+
+            detail_parts = []
+            if eval_text:
+                detail_parts.append(f"Eval: {eval_text}")
+            if memory_text:
+                detail_parts.append(f"Memory: {memory_text}")
+            if next_goal:
+                detail_parts.append(f"Next goal: {next_goal}")
+            if action_desc:
+                detail_parts.append(f"Action: {action_desc}")
+            detail = "\n".join(detail_parts) or None
+
+            # STEP_START carries the rich eval/memory/next_goal detail
+            await step_queue.put(
+                ProgressEvent(
+                    type=ProgressEventType.STEP_START,
+                    session_id=session_id,
+                    step_index=step_num,
+                    summary=summary,
+                    detail=detail,
+                )
+            )
+
+            # Emit a TOOL_START for the chosen browser action
+            if action_desc:
+                await step_queue.put(
+                    ProgressEvent(
+                        type=ProgressEventType.TOOL_START,
+                        session_id=session_id,
+                        tool_name="browser_action",
+                        summary=action_desc,
+                        detail=detail,
+                    )
+                )
+
+        # Create underlying agent with the async step callback
         from ..adapters.llm_adapter import BaseChatModel
 
         try:
@@ -323,74 +379,34 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
                 summary="Launching browser... (this may take up to 30s)",
             )
 
-            # Run the agent (browser starts inside run())
-            result = await agent.run(max_steps=max_steps)
+            # Run agent.run() concurrently so we can drain the step queue live.
+            async def _run_agent() -> Any:
+                try:
+                    return await agent.run(max_steps=max_steps)
+                finally:
+                    await step_queue.put(_DONE)
+
+            run_task = asyncio.ensure_future(_run_agent())
+
+            # Drain step events until the sentinel arrives
+            while True:
+                item = await step_queue.get()
+                if item is _DONE:
+                    break
+                yield item
+
+            # Collect the result (re-raises any agent exception)
+            result = await run_task
             self._last_result = result
-
-            # Process history and yield events for each step
-            history = result.history if result else []
-            for i, history_item in enumerate(history):
-                # Step start
-                yield ProgressEvent(
-                    type=ProgressEventType.STEP_START,
-                    session_id=session_id,
-                    step_index=i,
-                    summary=f"Browser step {i + 1}/{len(history)}",
-                )
-
-                # Extract action details from history
-                action_desc = ""
-                if hasattr(history_item, "model_output") and history_item.model_output:
-                    action_desc = self._describe_action_from_output(history_item.model_output)
-                    if action_desc:
-                        yield ProgressEvent(
-                            type=ProgressEventType.TOOL_START,
-                            session_id=session_id,
-                            tool_name="browser_action",
-                            summary=action_desc,
-                            detail=(
-                                str(history_item.model_output.action)[:500]
-                                if hasattr(history_item.model_output, "action")
-                                else None
-                            ),
-                        )
-
-                # Check for action result
-                if hasattr(history_item, "result") and history_item.result:
-                    result_desc = self._describe_result(history_item.result)
-                    yield ProgressEvent(
-                        type=ProgressEventType.TOOL_END,
-                        session_id=session_id,
-                        tool_name="browser_action",
-                        tool_result=result_desc[:100],
-                        summary=f"✓ {result_desc[:60]}",
-                    )
-
-                # Step complete
-                yield ProgressEvent(
-                    type=ProgressEventType.STEP_COMPLETE,
-                    session_id=session_id,
-                    step_index=i,
-                    summary=f"Step {i + 1} completed",
-                )
 
             # Yield final answer
             final_result = result.final_result() if result else None
-            if final_result:
-                yield ProgressEvent(
-                    type=ProgressEventType.FINAL_ANSWER,
-                    session_id=session_id,
-                    text=final_result,
-                    summary="Browser task completed",
-                )
-            else:
-                # Task completed without final result text
-                yield ProgressEvent(
-                    type=ProgressEventType.FINAL_ANSWER,
-                    session_id=session_id,
-                    text="Task completed (no text result)",
-                    summary="Browser task completed",
-                )
+            yield ProgressEvent(
+                type=ProgressEventType.FINAL_ANSWER,
+                session_id=session_id,
+                text=final_result or "Task completed (no text result)",
+                summary="Browser task completed",
+            )
 
         except Exception as e:
             self.logger.error(f"Browser task failed: {e}")

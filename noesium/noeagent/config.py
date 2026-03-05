@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
+# CRITICAL: Override NOESIUM_HOME BEFORE any other noesium imports (RFC-1007)
+# This ensures all default paths in noesium.core.config use ~/.noeagent
+from pathlib import Path
+
+_NOEAGENT_HOME = Path.home() / ".noeagent"
+
+# Import and call set_noesium_home before any other noesium imports
+from noesium.core.consts import set_noesium_home
+
+set_noesium_home(_NOEAGENT_HOME)
+
+# Now safe to import other modules - they will use the overridden NOESIUM_HOME
 import os
 from enum import Enum
-from pathlib import Path
 from typing import Any, Callable, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -25,7 +36,6 @@ from noesium.toolkits import (
     TOOLKIT_WEB_SEARCH,
 )
 
-_NOEAGENT_HOME = Path.home() / ".noeagent"
 _NOEAGENT_CONSOLE_LOG_LEVEL = "ERROR"
 
 

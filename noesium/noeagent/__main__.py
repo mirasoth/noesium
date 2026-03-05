@@ -13,6 +13,10 @@ import argparse
 import json
 import sys
 
+import dotenv
+
+dotenv.load_dotenv()
+
 
 def main() -> None:
     """Main entry point for noeagent CLI command."""

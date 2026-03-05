@@ -208,17 +208,97 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
 
                 final_text = ""
                 async for event in agent.astream_progress(task):
-                    if event.type == ProgressEventType.FINAL_ANSWER:
+                    etype = event.type
+                    if etype == ProgressEventType.FINAL_ANSWER:
                         final_text = event.text or ""
-                    elif event.type not in (
+                    elif etype in (
                         ProgressEventType.SESSION_START,
                         ProgressEventType.SESSION_END,
                     ):
+                        pass  # suppress session wrapper events from subagent
+                    elif etype == ProgressEventType.TOOL_START:
+                        # tool_call() already sets summary; pass extra fields via kwargs only
+                        yield SubagentProgressEvent.tool_call(
+                            request_id=request_id,
+                            subagent_id=self._subagent_id,
+                            tool_name=event.tool_name or "browser_action",
+                            tool_args=event.tool_args or {},
+                            payload={"child_event_type": "tool.start", "agent_type": self._subagent_id},
+                        )
+                    elif etype == ProgressEventType.TOOL_END:
+                        # create_tool_result() already sets summary; pass extra fields via kwargs only
+                        yield SubagentProgressEvent.create_tool_result(
+                            request_id=request_id,
+                            subagent_id=self._subagent_id,
+                            tool_name=event.tool_name or "browser_action",
+                            result=event.tool_result or "",
+                            payload={"child_event_type": "tool.end", "agent_type": self._subagent_id},
+                        )
+                    elif etype == ProgressEventType.PLAN_CREATED:
+                        yield SubagentProgressEvent.progress(
+                            request_id=request_id,
+                            subagent_id=self._subagent_id,
+                            summary=event.summary or "Plan created",
+                            detail=event.detail,
+                            payload={
+                                "child_event_type": "plan.created",
+                                "agent_type": self._subagent_id,
+                                "plan_snapshot": event.plan_snapshot,
+                            },
+                        )
+                    elif etype == ProgressEventType.PLAN_REVISED:
+                        yield SubagentProgressEvent.progress(
+                            request_id=request_id,
+                            subagent_id=self._subagent_id,
+                            summary=event.summary or "Plan revised",
+                            detail=event.detail,
+                            payload={
+                                "child_event_type": "plan.revised",
+                                "agent_type": self._subagent_id,
+                                "plan_snapshot": event.plan_snapshot,
+                            },
+                        )
+                    elif etype == ProgressEventType.STEP_START:
+                        yield SubagentProgressEvent.progress(
+                            request_id=request_id,
+                            subagent_id=self._subagent_id,
+                            summary=event.summary or f"Step {(event.step_index or 0) + 1} starting",
+                            detail=event.detail,
+                            payload={
+                                "child_event_type": "step.start",
+                                "agent_type": self._subagent_id,
+                                "step_index": event.step_index,
+                                "step_desc": event.step_desc,
+                            },
+                        )
+                    elif etype == ProgressEventType.STEP_COMPLETE:
+                        yield SubagentProgressEvent.progress(
+                            request_id=request_id,
+                            subagent_id=self._subagent_id,
+                            summary=event.summary or f"Step {(event.step_index or 0) + 1} complete",
+                            detail=event.detail,
+                            payload={
+                                "child_event_type": "step.complete",
+                                "agent_type": self._subagent_id,
+                                "step_index": event.step_index,
+                            },
+                        )
+                    elif etype == ProgressEventType.THINKING:
+                        # thought() sets detail=thought; do not pass detail= again via kwargs
+                        yield SubagentProgressEvent.thought(
+                            request_id=request_id,
+                            subagent_id=self._subagent_id,
+                            thought=event.summary or "",
+                            payload={"agent_type": self._subagent_id},
+                        )
+                    else:
+                        # Generic progress for any remaining event types
                         yield SubagentProgressEvent.progress(
                             request_id=request_id,
                             subagent_id=self._subagent_id,
                             summary=event.summary or "",
-                            detail=getattr(event, "detail", None),
+                            detail=event.detail,
+                            payload={"agent_type": self._subagent_id},
                         )
 
                 yield SubagentProgressEvent.end(

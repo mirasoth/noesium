@@ -40,6 +40,20 @@ Usage Examples:
 __version__ = "0.3.4"
 
 # =============================================================================
+# CRITICAL: Override NOESIUM_HOME BEFORE any other imports (RFC-1007)
+# The noesium package exports NoeAgent, so it uses ~/.noeagent by default.
+# For core-only usage, import directly from noesium.core instead.
+# =============================================================================
+from pathlib import Path
+
+_NOEAGENT_HOME = Path.home() / ".noeagent"
+
+# Import and call set_noesium_home before any other noesium module imports
+from noesium.core.consts import set_noesium_home
+
+set_noesium_home(_NOEAGENT_HOME)
+
+# =============================================================================
 # Tier 1: Main Entry Points (Most Common)
 # =============================================================================
 
