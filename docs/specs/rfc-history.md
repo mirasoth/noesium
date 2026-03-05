@@ -2,7 +2,7 @@
 
 This document tracks all RFC lifecycle events in chronological order (newest first).
 
-**Last Updated**: 2026-03-04
+**Last Updated**: 2026-03-05
 
 ---
 
@@ -20,6 +20,11 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 ---
 
 ## Change History
+
+### 2026-03-05
+
+- **Created**: RFC-9003 - Extensible Subagent Interface for Core Agent Framework; unified subagent descriptor/runtime/streaming/lifecycle/policy contract based on NoeAgent implementation analysis; CapabilityRegistry-integrated subagent manager architecture; alternatives and migration phases for future backend integration
+- **Reference Updated**: rfc-index.md - Registered RFC-9003 under Experimental (9xxx), updated quick links and status listings
 
 ### 2026-03-04
 
