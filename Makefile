@@ -89,7 +89,7 @@ test-voyager: ## Run voyager backend tests
 	cd voyager/backend && $(UV) run $(PYTEST) tests/ -v
 
 test-all: test-noesium test-noeagent test-voyager ## Run all package tests
-	@echo "$(GREEN)✅ All tests completed$(RESET)"
+	@echo "$(GREEN)✅ All package tests completed$(RESET)"
 
 # =============================================================================
 # CODE QUALITY COMMANDS
@@ -127,6 +127,7 @@ autofix: lint-fix format ## Auto-fix all code quality issues
 # =============================================================================
 
 .PHONY: build build-wheel build-sdist package
+.PHONY: build-noesium build-noeagent build-voyager build-all
 
 build: ## Build package
 	@echo "$(BLUE)🔨 Building package...$(RESET)"
@@ -141,6 +142,22 @@ build-sdist: ## Build source distribution
 	@$(UV) build --sdist
 
 package: clean build ## Build and package for distribution
+
+# Package-specific build targets
+build-noesium: ## Build noesium package
+	@echo "$(BLUE)🔨 Building noesium package...$(RESET)"
+	cd noesium && $(UV) build
+
+build-noeagent: ## Build noeagent package
+	@echo "$(BLUE)🔨 Building noeagent package...$(RESET)"
+	cd noeagent && $(UV) build
+
+build-voyager: ## Build voyager backend package
+	@echo "$(BLUE)🔨 Building voyager backend package...$(RESET)"
+	cd voyager/backend && $(UV) build
+
+build-all: build-noesium build-noeagent build-voyager ## Build all packages
+	@echo "$(GREEN)✅ All packages built$(RESET)"
 
 # =============================================================================
 # CLEAN COMMANDS
