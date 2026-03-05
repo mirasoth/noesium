@@ -16,7 +16,7 @@ class TestToolkitConfig:
         # Clear environment variable to test true defaults
         with patch.dict(os.environ, {}, clear=False):
             # Remove the specific env var if it exists
-            os.environ.pop("NOE_LLM_PROVIDER", None)
+            os.environ.pop("NOESIUM_LLM_PROVIDER", None)
             os.environ.pop("LOG_LEVEL", None)
             os.environ.pop("NOE_ENABLE_TRACING", None)
 

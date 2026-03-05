@@ -361,7 +361,7 @@ class TestSubagentProgressEvent:
         assert evt.tool_args == {"query": "test"}
 
     def test_tool_result_factory(self):
-        evt = SubagentProgressEvent.tool_result(
+        evt = SubagentProgressEvent.create_tool_result(
             request_id="req1",
             subagent_id="agent1",
             tool_name="web_search",

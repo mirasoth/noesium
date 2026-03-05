@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from ..config.markdown_config import get_config_manager
+from .embeddings import get_default_embedding_client
 from .file_manager import MemoryFileManager
 
 logger = logging.getLogger(__name__)

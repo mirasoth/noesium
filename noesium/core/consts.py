@@ -1,5 +1,6 @@
-"""Global constants for the Noesium framework."""
+"""Global constants for the Noesium framework (RFC-1007: no application-specific names)."""
 
+import os
 from pathlib import Path
 
 # LLM Model Constants
@@ -9,25 +10,24 @@ GEMINI_FLASH = "google/gemini-2.5-flash"
 # Embedding Constants
 DEFAULT_EMBEDDING_DIMS = 768
 
-# Configuration Constants
-NOE_AGENT_HOME = Path.home() / ".noeagent"
-FRAMEWORK_HOME = NOE_AGENT_HOME  # Alias for clarity (RFC-1007)
-DEFAULT_CONFIG_PATH = FRAMEWORK_HOME / "config.json"
+# Framework home: NOESIUM_HOME env or ~/.noesium (application layers may use their own paths)
+NOESIUM_HOME = Path(os.getenv("NOESIUM_HOME", str(Path.home() / ".noesium")))
+DEFAULT_CONFIG_PATH = NOESIUM_HOME / "config.json"
 CONFIG_VERSION = "1.0"
 
-# Default Directories
-NOE_AGENT_LOGS_DIR = FRAMEWORK_HOME / "logs"
-NOE_AGENT_MEMORY_DIR = FRAMEWORK_HOME / "memory"
-NOE_AGENT_DATA_DIR = FRAMEWORK_HOME / "data"
-NOE_AGENT_SESSIONS_DIR = FRAMEWORK_HOME / "sessions"
+# Default directories under NOESIUM_HOME
+NOESIUM_LOGS_DIR = NOESIUM_HOME / "logs"
+NOESIUM_MEMORY_DIR = NOESIUM_HOME / "memory"
+NOESIUM_DATA_DIR = NOESIUM_HOME / "data"
+NOESIUM_SESSIONS_DIR = NOESIUM_HOME / "sessions"
 
 # Library temp/cache base (toolkits default here when used standalone)
-NOE_TMP_BASE = Path("/tmp/noesium")
+NOESIUM_TMP_BASE = Path("/tmp/noesium")
 
 
 def get_toolkit_tmp_dir(toolkit_name: str, subdir: str = "") -> str:
-    """Return toolkit temp dir under NOE_TMP_BASE, optionally with a subdir."""
-    base = NOE_TMP_BASE / toolkit_name
+    """Return toolkit temp dir under NOESIUM_TMP_BASE, optionally with a subdir."""
+    base = NOESIUM_TMP_BASE / toolkit_name
     if subdir:
         base = base / subdir
     return str(base)

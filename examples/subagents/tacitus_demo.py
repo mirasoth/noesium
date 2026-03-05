@@ -22,7 +22,7 @@ async def main():
     print("🔄 Starting research...")
     result = await researcher.research(user_message=topic)
 
-    print(f"\n✅ Research completed!")
+    print("\n✅ Research completed!")
     print(f"📄 Summary: {result.summary}")
     print(f"📊 Sources found: {len(result.sources)}")
     print(f"📖 Content: {result.content}")
@@ -40,7 +40,7 @@ async def main():
             source_section += f"{i}. {source}\n"
     print(source_section)
 
-    print(f"\n🎉 Research complete!")
+    print("\n🎉 Research complete!")
 
 
 if __name__ == "__main__":

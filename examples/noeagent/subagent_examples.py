@@ -130,7 +130,7 @@ async def example_builtin_browser():
 
     agent = NoeAgent(config)
     await agent.initialize()
-    print(f"  Registered: browser_use (headless=True)")
+    print("  Registered: browser_use (headless=True)")
     await agent._cleanup_subagents()
 
 
@@ -162,7 +162,7 @@ async def example_builtin_tacitus():
 
     agent = NoeAgent(config)
     await agent.initialize()
-    print(f"  Registered: tacitus (research with reflection)")
+    print("  Registered: tacitus (research with reflection)")
     await agent._cleanup_subagents()
 
 
@@ -200,7 +200,7 @@ async def example_cli_oneshot():
 
     agent = NoeAgent(config)
     await agent.initialize()
-    print(f"  Configured: claude (oneshot, timeout=300s)")
+    print("  Configured: claude (oneshot, timeout=300s)")
     print(f"  Tools: {config.cli_subagents[0].allowed_tools}")
     await agent._cleanup_subagents()
 
@@ -234,8 +234,8 @@ async def example_cli_daemon():
 
     agent = NoeAgent(config)
     await agent.initialize()
-    print(f"  Configured: persistent-agent (daemon, restart=on-failure)")
-    print(f"  Lifecycle: spawn -> interact -> terminate")
+    print("  Configured: persistent-agent (daemon, restart=on-failure)")
+    print("  Lifecycle: spawn -> interact -> terminate")
 
 
 # =============================================================================

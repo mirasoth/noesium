@@ -6,7 +6,7 @@ and library-mode integrations (structured output). Each event carries a short
 session-level offline logging.
 
 This module is part of the core framework layer and MUST NOT import from
-application layers (noeagent).
+application layers.
 """
 
 from __future__ import annotations

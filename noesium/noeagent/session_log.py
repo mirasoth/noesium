@@ -13,7 +13,7 @@ from pathlib import Path
 
 from uuid_extensions import uuid7str
 
-from .progress import ProgressEvent
+from noesium.core.event import ProgressEvent
 
 logger = logging.getLogger(__name__)
 

@@ -264,7 +264,7 @@ class SubagentProvider:
     the capability registry system. Supports three creation modes:
     - From a class (for entry-point discovery, zero-arg constructor)
     - From a factory callable (for runtime-arg construction)
-    - From a pre-built instance (for NoeAgent-specific runtimes)
+    - From a pre-built instance (for application-specific runtimes)
     """
 
     def __init__(
@@ -287,8 +287,8 @@ class SubagentProvider:
     def from_instance(cls, runtime: BaseSubagentRuntime) -> SubagentProvider:
         """Create a provider from a pre-built runtime instance.
 
-        Useful when the runtime requires constructor arguments (e.g., NoeAgent-
-        specific runtimes that need agent references or config objects).
+        Useful when the runtime requires constructor arguments (e.g.,
+        application-specific runtimes that need agent references or config).
 
         Args:
             runtime: A pre-instantiated runtime.

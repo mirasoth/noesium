@@ -227,8 +227,6 @@ class SignalHandler:
         First Ctrl+C: Cancel current step and pause.
         Second Ctrl+C: Exit immediately if exit_on_second_int is True.
         """
-        global _exiting
-
         if _exiting:
             # Already exiting, force exit immediately
             os._exit(0)

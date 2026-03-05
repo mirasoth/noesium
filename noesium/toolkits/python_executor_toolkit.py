@@ -55,13 +55,6 @@ def _execute_python_code_sync(code: str, workdir: str) -> Dict[str, Any]:
     Returns:
         Dictionary containing execution results
     """
-    try:
-        from IPython.core.interactiveshell import InteractiveShell
-        from traitlets.config.loader import Config
-
-    except ImportError:
-        pass
-
     original_dir = os.getcwd()
 
     try:

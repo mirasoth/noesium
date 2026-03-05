@@ -41,7 +41,11 @@ from noesium.subagents.bu.browser.profile import BrowserProfile, ProxySettings
 from noesium.subagents.bu.browser.views import BrowserStateSummary, TabInfo
 from noesium.subagents.bu.dom.views import DOMRect, EnhancedDOMTreeNode, TargetInfo
 from noesium.subagents.bu.observability import observe_debug
-from noesium.subagents.bu.utils import _log_pretty_url, is_new_tab_page
+from noesium.subagents.bu.utils import (
+    _log_pretty_url,
+    create_task_with_error_handling,
+    is_new_tab_page,
+)
 
 if TYPE_CHECKING:
     from noesium.subagents.bu.actor.page import Page
@@ -220,7 +224,7 @@ class BrowserSession(BaseModel):
         # From BrowserNewContextArgs
         storage_state: str | Path | dict[str, Any] | None = None,
         # BrowserProfile specific fields
-        ## Other params
+        # Other params
         disable_security: bool | None = None,
         deterministic_rendering: bool | None = None,
         allowed_domains: list[str] | None = None,
@@ -2909,7 +2913,6 @@ class BrowserSession(BaseModel):
 
     async def _cdp_grant_permissions(self, permissions: list[str], origin: str | None = None) -> None:
         """Grant permissions using CDP Browser.grantPermissions."""
-        params = {"permissions": permissions}
         # if origin:
         # 	params['origin'] = origin
         await self.get_or_create_cdp_session()

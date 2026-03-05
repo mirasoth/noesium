@@ -2,7 +2,12 @@ import asyncio
 
 from pydantic import BaseModel
 
-# Noesium-specific import needed
+from noesium.subagents.bu import Browser
+
+try:
+    from langchain_community.chat_models.openai import ChatOpenAI
+except ImportError:
+    ChatOpenAI = None  # type: ignore[misc, assignment]
 
 TASK = """
 On the current wikipedia page, find the latest huge edit and tell me what is was about.
@@ -19,7 +24,7 @@ class LatestEditFinder(BaseModel):
     edit_url: str
 
 
-llm = ChatOpenAI("gpt-4.1-mini")
+llm = ChatOpenAI("gpt-4.1-mini") if ChatOpenAI else None
 
 
 async def main():

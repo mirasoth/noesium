@@ -390,7 +390,7 @@ class TestModelRouter:
         """Test that strategy initialization is logged."""
         with patch("noesium.core.routing.router.get_llm_client"):
             with patch("noesium.core.routing.router.logger") as mock_logger:
-                router = ModelRouter(strategy="self_assessment")
+                ModelRouter(strategy="self_assessment")
 
                 # Should log initialization
                 mock_logger.info.assert_called()

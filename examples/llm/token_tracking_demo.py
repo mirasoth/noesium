@@ -75,7 +75,7 @@ def demo_basic_token_tracking():
     print("🔍 Getting final stats...")
     try:
         stats = tracker.get_stats()
-        print(f"✅ Stats retrieved successfully")
+        print("✅ Stats retrieved successfully")
         print(f"📈 Final: {stats['total_tokens']} total | {stats['total_calls']} calls")
     except Exception as e:
         print(f"❌ Error getting stats: {e}")
@@ -164,7 +164,7 @@ def main():
     finally:
         try:
             signal.alarm(0)  # Make sure to cancel any active alarms
-        except:
+        except Exception:
             pass
 
 

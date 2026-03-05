@@ -120,6 +120,7 @@ dev = [
     "mypy>=1.10.0",
     "autoflake>=2.3.1",
     "flake8>=7.3.0",
+    "ruff>=0.8.0",
     "networkx>=3.5",
     "pandas>=2.0.0",
 ]
@@ -148,6 +149,22 @@ line-length = 120
 [tool.isort]
 profile = "black"
 line_length = 120
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint.per-file-ignores]
+# Late/conditional imports for optional deps or lazy loading
+"noesium/__init__.py" = ["E402"]
+"noesium/toolkits/__init__.py" = ["E402"]
+"noesium/subagents/__init__.py" = ["E402"]
+"noesium/core/toolify/mcp_integration.py" = ["E402"]
+"noesium/core/memory/memu/llm_adapter.py" = ["E402"]
+"noesium/noeagent/tui.py" = ["E402"]
+"noesium/subagents/bu/agent/__init__.py" = ["E402"]
+"noesium/subagents/bu/agent/service.py" = ["E402"]
+"noesium/subagents/bu/tokens/service.py" = ["E402"]
+"examples/**/*.py" = ["E402"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

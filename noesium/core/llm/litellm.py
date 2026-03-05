@@ -35,19 +35,21 @@ except ImportError:
     INSTRUCTOR_AVAILABLE = False
 
 from noesium.core.llm.base import BaseLLMClient
-from noesium.core.tracing import configure_opik, estimate_token_usage, get_token_tracker, is_opik_enabled
+from noesium.core.tracing import configure_opik, estimate_token_usage, get_token_tracker
 from noesium.core.utils.logging import get_logger
 
 # Only import OPIK if tracing is enabled
 OPIK_AVAILABLE = False
-track = lambda func: func  # Default no-op decorator
-if os.getenv("NOE_OPIK_TRACING", "false").lower() == "true":
+
+if os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true":
     try:
         from opik import track
 
         OPIK_AVAILABLE = True
     except ImportError:
-        pass
+        track = lambda func: func  # noqa: E731
+else:
+    track = lambda func: func  # noqa: E731
 
 
 T = TypeVar("T")
@@ -175,18 +177,6 @@ class LLMClient(BaseLLMClient):
         Returns:
             Generated text response or streaming response
         """
-        # Add Opik tracing metadata
-        opik_metadata = {}
-        if is_opik_enabled():
-            opik_metadata = {
-                "provider": self._opik_provider,
-                "model": self.chat_model,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": stream,
-                "call_type": "completion",
-            }
-
         try:
             if self.debug:
                 logger.debug(f"Chat completion: {messages}")

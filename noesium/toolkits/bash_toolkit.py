@@ -124,7 +124,7 @@ class BashToolkit(AsyncBaseToolkit):
             self.child = pexpect.spawn("/bin/bash", encoding="utf-8", echo=False, timeout=self.timeout)
 
             # Set up a unique prompt for reliable command detection
-            self.custom_prompt = "NOE_BASH_PROMPT>> "
+            self.custom_prompt = self.config.config.get("custom_prompt", "noesium-bash>> ")
 
             # Configure shell for better interaction
             self.child.sendline("stty -onlcr")  # Disable automatic newline conversion

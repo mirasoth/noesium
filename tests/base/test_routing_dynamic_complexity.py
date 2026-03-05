@@ -71,7 +71,7 @@ class TestDynamicComplexityStrategy:
         """Test that weights are normalized if they don't sum to 1.0."""
         config = {"alpha": 0.6, "beta": 0.4, "gamma": 0.2}  # These sum to 1.2, should be normalized
 
-        with patch("noesium.core.utils.logging.get_logger") as mock_logger:
+        with patch("noesium.core.utils.logging.get_logger"):
             strategy = DynamicComplexityStrategy(lite_client=mock_llm_client, config=config)
 
             # Weights should be normalized

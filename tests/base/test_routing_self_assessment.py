@@ -107,7 +107,7 @@ class TestSelfAssessmentStrategy:
         ]
 
         for response in test_cases:
-            with patch("noesium.core.utils.logging.get_logger") as mock_logger:
+            with patch("noesium.core.utils.logging.get_logger"):
                 score, confidence = strategy._parse_assessment_response(response)
                 assert score == 3  # Default fallback
                 assert confidence == 0.3  # Low confidence

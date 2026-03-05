@@ -1,7 +1,7 @@
 """Tests for toolkit-specific configuration integration."""
 
 from noesium.core.config import (
-    NoeAgentConfig,
+    FrameworkConfig,
     ToolkitConfigEntry,
 )
 from noesium.noeagent.config import NoeConfig
@@ -61,7 +61,7 @@ class TestToolkitConfigIntegration:
 
     def test_global_config_with_toolkit_configs(self):
         """Test global config with toolkit-specific configurations."""
-        config = NoeAgentConfig()
+        config = FrameworkConfig()
         config.tools.toolkit_configs = {
             "web_search": ToolkitConfigEntry(
                 enabled_engines=["tavily", "googleai"],

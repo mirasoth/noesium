@@ -88,7 +88,8 @@ format-check: ## Check if code is properly formatted
 
 lint: ## Lint code
 	@echo "$(BLUE)🔍 Running linters...$(RESET)"
-	@$(UV) run flake8 --max-line-length=$(LINE_LENGTH) --extend-ignore=E203,W503 $(PYTHON_MODULES)
+	@$(UV) run ruff check $(PYTHON_MODULES) --line-length $(LINE_LENGTH)
+	@$(UV) run flake8 --max-line-length=$(LINE_LENGTH) --extend-ignore=E203,W503,E402,E501,W291,W293,E101,W191,F811 $(PYTHON_MODULES)
 
 lint-fix: ## Auto-fix linting issues where possible
 	@echo "$(BLUE)🔧 Auto-fixing linting issues...$(RESET)"

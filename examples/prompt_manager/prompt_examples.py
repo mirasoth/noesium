@@ -341,10 +341,8 @@ You are processing user data:
                 print(f"   Error validating {template_name}: {e}")
 
         # Test invalid template
-        print(f"\nInvalid Template Test:")
-        invalid_template = PromptLoader.from_string(
-            "Hello {{ name }}, your balance is {{ invalid_syntax", name="invalid_example"
-        )
+        print("\nInvalid Template Test:")
+        PromptLoader.from_string("Hello {{ name }}, your balance is {{ invalid_syntax", name="invalid_example")
 
         # Create temporary file for validation
         temp_file = self.examples_dir / "temp_invalid.json"
@@ -557,7 +555,7 @@ Please analyze the following data: {{ data | truncate(100) }}
             self.manager.render_prompt("nonexistent_template.md")
             print("   Unexpected success!")
         except FileNotFoundError:
-            print(f"   Expected error caught: File not found")
+            print("   Expected error caught: File not found")
             results["file_not_found"] = True
 
         # 3. Template with syntax error
@@ -569,7 +567,7 @@ Please analyze the following data: {{ data | truncate(100) }}
             self.manager.render_prompt(broken_template, name="test", amount=100)
             print("   Unexpected success!")
         except ValueError:
-            print(f"   Expected error caught: Template syntax error")
+            print("   Expected error caught: Template syntax error")
             results["syntax_error"] = True
 
         # 4. Graceful fallback

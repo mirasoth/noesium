@@ -29,6 +29,14 @@ _NOE_HOME = Path.home() / ".noeagent"
 _NOE_AGENT_CONSOLE_LOG_LEVEL = "ERROR"
 
 
+def get_noe_config_path() -> Path:
+    """Return NoeAgent config file path (NOE_AGENT_CONFIG or ~/.noeagent/config.json)."""
+    path = os.getenv("NOE_AGENT_CONFIG")
+    if path:
+        return Path(path)
+    return _NOE_HOME / "config.json"
+
+
 class NoeMode(str, Enum):
     ASK = "ask"
     AGENT = "agent"
@@ -335,15 +343,18 @@ class NoeConfig(BaseModel):
     def from_global_config(cls) -> "NoeConfig":
         """Load NoeConfig from global configuration.
 
-        This method loads the centralized configuration from ~/.noeagent/config.json
-        and creates a NoeConfig instance from it.
+        This method loads the centralized configuration from get_noe_config_path()
+        (NOE_AGENT_CONFIG or ~/.noeagent/config.json) and creates a NoeConfig instance.
 
         Returns:
             NoeConfig instance populated from global configuration
         """
         from noesium.core.config import load_config
 
-        global_config = load_config()
+        global_config = load_config(get_noe_config_path())
+        # NoeAgent env overrides (backward compat with NOE_*)
+        if os.getenv("NOE_LLM_PROVIDER"):
+            global_config.llm.provider = os.getenv("NOE_LLM_PROVIDER")
 
         # Get the chat model for the configured provider
         provider_config = global_config.llm.providers.get(global_config.llm.provider, {})

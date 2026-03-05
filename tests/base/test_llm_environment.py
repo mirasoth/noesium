@@ -60,7 +60,7 @@ class TestLLMEnvironment:
             hf_hub_available = False
 
         # Just log availability - don't fail if optional deps are missing
-        print(f"Optional dependencies availability:")
+        print("Optional dependencies availability:")
         print(f"  instructor: {instructor_available}")
         print(f"  llama-cpp-python: {llamacpp_available}")
         print(f"  huggingface_hub: {hf_hub_available}")

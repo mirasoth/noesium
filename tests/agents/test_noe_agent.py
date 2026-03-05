@@ -131,7 +131,7 @@ class TestRichTUIRendering:
         assert "[sub] Plan: custom" in str(tree2.label)
 
     def test_activity_line_tool_start(self):
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.core.event import ProgressEvent, ProgressEventType
         from noesium.noeagent.tui import _activity_line
 
         evt = ProgressEvent(
@@ -144,7 +144,7 @@ class TestRichTUIRendering:
         assert "run_bash" in line.plain
 
     def test_activity_line_tool_end(self):
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.core.event import ProgressEvent, ProgressEventType
         from noesium.noeagent.tui import _activity_line
 
         evt = ProgressEvent(
@@ -157,7 +157,7 @@ class TestRichTUIRendering:
         assert "run_bash" in line.plain
 
     def test_activity_line_subagent_start(self):
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.core.event import ProgressEvent, ProgressEventType
         from noesium.noeagent.tui import _activity_line
 
         evt = ProgressEvent(

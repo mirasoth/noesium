@@ -58,9 +58,9 @@ def _print_event(event: ProgressEvent, count: int) -> None:
     event_type = event.type.value
 
     if event_type == "session.start":
-        print(f"\n[1/3] Starting session...")
+        print("\n[1/3] Starting session...")
     elif event_type == "plan.created":
-        print(f"[2/3] Plan created")
+        print("[2/3] Plan created")
         if event.plan_snapshot:
             steps = event.plan_snapshot.get("steps", [])
             for i, step in enumerate(steps[:5]):  # Show first 5 steps

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Optional, Type
 
 try:
     from langchain_core.messages import HumanMessage
@@ -32,6 +32,7 @@ from noesium.core.capability.providers import (
     ToolCapabilityProvider,
 )
 from noesium.core.capability.registry import CapabilityRegistry
+from noesium.core.event import ProgressEvent, ProgressEventType
 from noesium.core.event.envelope import AgentRef
 from noesium.core.event.store import InMemoryEventStore
 from noesium.core.memory.provider import MemoryTier
@@ -48,8 +49,11 @@ from noesium.subagents import SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS
 from . import nodes
 from .config import _NOE_AGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
 from .planner import TaskPlanner
-from .progress import ProgressEvent, ProgressEventType
 from .state import AgentState, AskState
+
+if TYPE_CHECKING:
+    from .cli_adapter import ExternalCliAdapter
+    from .commands import InlineCommand
 
 logger = logging.getLogger(__name__)
 

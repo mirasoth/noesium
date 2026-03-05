@@ -14,12 +14,12 @@ from noesium.core.config import (
     AgentConfig,
     AgentSubagentConfig,
     CliSubagentConfig,
+    FrameworkConfig,
     LLMConfig,
     LLMProviderConfig,
     LoggingConfig,
     MCPServerConfig,
     MemoryConfig,
-    NoeAgentConfig,
     SubagentsConfig,
     ToolkitConfigEntry,
     ToolsConfig,
@@ -186,7 +186,7 @@ class TestConfigModels:
 
     def test_tracing_config_defaults(self):
         """Test TracingConfig default values."""
-        with patch.dict(os.environ, {"NOE_OPIK_TRACING": "false"}):
+        with patch.dict(os.environ, {"NOESIUM_OPIK_TRACING": "false"}):
             config = TracingConfig()
             assert config.enabled is False
             assert config.provider == "opik"
@@ -196,7 +196,7 @@ class TestConfigModels:
         """Test LoggingConfig default values."""
         with patch.dict(
             os.environ,
-            {"LOG_LEVEL": "INFO", "NOE_FILE_LOG_LEVEL": ""},
+            {"LOG_LEVEL": "INFO", "NOESIUM_FILE_LOG_LEVEL": ""},
             clear=False,
         ):
             config = LoggingConfig()
@@ -207,8 +207,8 @@ class TestConfigModels:
             assert config.retention == "7 days"
 
     def test_noeagent_config_defaults(self):
-        """Test NoeAgentConfig default values."""
-        config = NoeAgentConfig()
+        """Test FrameworkConfig default values."""
+        config = FrameworkConfig()
         assert config.version == CONFIG_VERSION
         assert isinstance(config.llm, LLMConfig)
         assert isinstance(config.agent, AgentConfig)
@@ -220,8 +220,8 @@ class TestConfigModels:
         assert config.working_directory is None
 
     def test_noeagent_config_extra_fields(self):
-        """Test that NoeAgentConfig allows extra fields."""
-        config = NoeAgentConfig(custom_field="test")
+        """Test that FrameworkConfig allows extra fields."""
+        config = FrameworkConfig(custom_field="test")
         assert config.model_dump().get("custom_field") == "test"
 
 
@@ -233,11 +233,11 @@ class TestConfigLoading:
         with patch.dict(os.environ, {}, clear=True):
             path = get_config_path()
             assert path.name == "config.json"
-            assert ".noeagent" in str(path)
+            assert ".noesium" in str(path)
 
     def test_get_config_path_from_env(self):
         """Test config path from environment variable."""
-        with patch.dict(os.environ, {"NOE_AGENT_CONFIG": "/custom/path/config.json"}):
+        with patch.dict(os.environ, {"NOESIUM_CONFIG": "/custom/path/config.json"}):
             path = get_config_path()
             assert path == Path("/custom/path/config.json")
 
@@ -247,7 +247,7 @@ class TestConfigLoading:
             config_path = Path(tmpdir) / "config.json"
             config = load_config(config_path)
 
-            assert isinstance(config, NoeAgentConfig)
+            assert isinstance(config, FrameworkConfig)
             assert config_path.exists()
 
             # Verify the file was created
@@ -277,7 +277,7 @@ class TestConfigLoading:
                 assert config.agent.max_iterations == 50
 
     def test_load_config_empty_file_uses_defaults(self):
-        """Test that empty config file {} is merged with defaults (e.g. ~/.noeagent/config.json = {})."""
+        """Test that empty config file {} is merged with defaults (e.g. ~/.noesium/config.json = {})."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"
             config_path.write_text("{}")
@@ -285,7 +285,7 @@ class TestConfigLoading:
             with patch.dict(os.environ, {}, clear=True):
                 config = load_config(config_path)
 
-            assert isinstance(config, NoeAgentConfig)
+            assert isinstance(config, FrameworkConfig)
             assert config.version == CONFIG_VERSION
             assert config.llm.provider == "openai"
             assert "bash" in config.tools.enabled_toolkits
@@ -300,7 +300,7 @@ class TestConfigLoading:
             with patch.dict(os.environ, {}, clear=True):
                 config = load_config(config_path)
 
-            assert isinstance(config, NoeAgentConfig)
+            assert isinstance(config, FrameworkConfig)
             assert config.llm.provider == "openai"
             assert "bash" in config.tools.enabled_toolkits
 
@@ -309,7 +309,7 @@ class TestConfigLoading:
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"
 
-            config = NoeAgentConfig()
+            config = FrameworkConfig()
             config.agent.max_iterations = 100
             config.llm.provider = "openai"
 
@@ -335,7 +335,7 @@ class TestConfigLoading:
                 json.dump(config_data, f)
 
             # Override with environment variable
-            with patch.dict(os.environ, {"NOE_LLM_PROVIDER": "openai", "OPENAI_API_KEY": "test-key"}):
+            with patch.dict(os.environ, {"NOESIUM_LLM_PROVIDER": "openai", "OPENAI_API_KEY": "test-key"}):
                 config = load_config(config_path)
                 assert config.llm.provider == "openai"
                 # Note: API key from env should be in providers config
@@ -345,9 +345,9 @@ class TestEnvironmentOverrides:
     """Test environment variable overrides."""
 
     def test_apply_env_overrides_llm_provider(self):
-        """Test NOE_LLM_PROVIDER override."""
+        """Test NOESIUM_LLM_PROVIDER override."""
         data = {}
-        with patch.dict(os.environ, {"NOE_LLM_PROVIDER": "ollama"}):
+        with patch.dict(os.environ, {"NOESIUM_LLM_PROVIDER": "ollama"}):
             result = apply_env_overrides(data)
             assert result["llm"]["provider"] == "ollama"
 
@@ -378,21 +378,21 @@ class TestEnvironmentOverrides:
             assert result["llm"]["providers"]["ollama"]["chat_model"] == "llama3.2"
 
     def test_apply_env_overrides_tracing(self):
-        """Test NOE_OPIK_TRACING override."""
+        """Test NOESIUM_OPIK_TRACING override."""
         data = {}
-        with patch.dict(os.environ, {"NOE_OPIK_TRACING": "true"}):
+        with patch.dict(os.environ, {"NOESIUM_OPIK_TRACING": "true"}):
             result = apply_env_overrides(data)
             assert result["tracing"]["enabled"] is True
 
     def test_apply_env_overrides_logging(self):
-        """Test LOG_LEVEL and NOE_FILE_LOG_LEVEL overrides."""
+        """Test LOG_LEVEL and NOESIUM_FILE_LOG_LEVEL overrides."""
         data = {}
         with patch.dict(os.environ, {"LOG_LEVEL": "WARNING"}, clear=False):
             result = apply_env_overrides(data)
             assert result["logging"]["level"] == "WARNING"
 
         data = {}
-        with patch.dict(os.environ, {"NOE_FILE_LOG_LEVEL": "DEBUG"}, clear=False):
+        with patch.dict(os.environ, {"NOESIUM_FILE_LOG_LEVEL": "DEBUG"}, clear=False):
             result = apply_env_overrides(data)
             assert result["logging"]["file_level"] == "DEBUG"
 

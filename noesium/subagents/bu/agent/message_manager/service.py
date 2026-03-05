@@ -3,13 +3,19 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
-from ...adapters.llm_adapter import BaseMessage, ContentImage, ContentText, SystemMessage
+from ...adapters.llm_adapter import BaseChatModel, BaseMessage, ContentImage, ContentText, SystemMessage
 from ...browser.views import BrowserStateSummary
 from ...filesystem.file_system import FileSystem
 from ...observability import observe_debug
 from ...utils import match_url_with_domain_pattern, time_execution_sync
 from ..prompts import AgentMessagePrompt
-from ..views import ActionResult, AgentOutput, AgentStepInfo, MessageManagerState
+from ..views import (
+    ActionResult,
+    AgentOutput,
+    AgentStepInfo,
+    MessageCompactionSettings,
+    MessageManagerState,
+)
 from .views import HistoryItem
 
 logger = logging.getLogger(__name__)

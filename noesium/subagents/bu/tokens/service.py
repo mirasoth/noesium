@@ -253,9 +253,7 @@ class TokenCost:
 
         # ANSI color codes
         C_CYAN = "\033[96m"
-        C_YELLOW = "\033[93m"
         C_GREEN = "\033[92m"
-        C_BLUE = "\033[94m"
         C_RESET = "\033[0m"
 
         # Always get cost breakdown for token details (even if not showing costs)

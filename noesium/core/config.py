@@ -1,11 +1,9 @@
-"""Noesium Core Configuration System
+"""Noesium Core Configuration System (RFC-1007: framework layer, no application names).
 
-This module provides a centralized, flexible, and hierarchical configuration
-management system for the noesium agentic framework. Configuration values
-are loaded with the following precedence (highest to lowest):
+Configuration values are loaded with the following precedence (highest to lowest):
 
 1. Environment Variables - Always take highest precedence
-2. Config File - JSON configuration file at ~/.noeagent/config.json
+2. Config File - Path from NOESIUM_CONFIG or NOESIUM_HOME/config.json
 3. Default Values - Hard-coded defaults in code
 
 Usage:
@@ -25,7 +23,7 @@ from pydantic import BaseModel, Field
 from noesium.core.consts import (
     CONFIG_VERSION,
     DEFAULT_CONFIG_PATH,
-    NOE_AGENT_HOME,
+    NOESIUM_HOME,
 )
 
 # =============================================================================
@@ -63,7 +61,7 @@ class LLMConfig(BaseModel):
         providers: Provider-specific configurations
     """
 
-    provider: str = Field(default_factory=lambda: os.getenv("NOE_LLM_PROVIDER", "openai"))
+    provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
     providers: Dict[str, LLMProviderConfig] = Field(default_factory=dict)
 
 
@@ -231,7 +229,7 @@ class MemuMemoryConfig(BaseModel):
         user_id: User identifier
     """
 
-    memory_dir: str = str(NOE_AGENT_HOME / "memory")
+    memory_dir: str = str(NOESIUM_HOME / "memory")
     user_id: str = "default_user"
 
 
@@ -242,7 +240,7 @@ class EventSourcedMemoryConfig(BaseModel):
         db_path: Path to SQLite database file
     """
 
-    db_path: str = str(NOE_AGENT_HOME / "data" / "events.db")
+    db_path: str = str(NOESIUM_HOME / "data" / "events.db")
 
 
 class MemoryConfig(BaseModel):
@@ -260,7 +258,7 @@ class MemoryConfig(BaseModel):
     providers: List[str] = Field(default_factory=lambda: ["working", "event_sourced", "memu"])
     persist: bool = True
     session_logging: bool = True
-    session_log_dir: str = str(NOE_AGENT_HOME / "sessions")
+    session_log_dir: str = str(NOESIUM_HOME / "sessions")
     memu: MemuMemoryConfig = Field(default_factory=MemuMemoryConfig)
     event_sourced: EventSourcedMemoryConfig = Field(default_factory=EventSourcedMemoryConfig)
 
@@ -294,7 +292,7 @@ class TracingConfig(BaseModel):
         opik: OPIK-specific config
     """
 
-    enabled: bool = Field(default_factory=lambda: os.getenv("NOE_OPIK_TRACING", "false").lower() == "true")
+    enabled: bool = Field(default_factory=lambda: os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true")
     provider: str = "opik"
     opik: OpikTracingConfig = Field(default_factory=OpikTracingConfig)
 
@@ -303,7 +301,7 @@ class LoggingConfig(BaseModel):
     """Common logging configuration (core layer).
 
     Both console and file default to the same ``level`` (INFO).
-    Application layers (e.g. NoeAgent TUI) may override the console level
+    Application layers may override the console level
     for their own UX needs via ``setup_logging(console_level=...)``.
 
     Attributes:
@@ -314,7 +312,7 @@ class LoggingConfig(BaseModel):
     """
 
     level: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
-    file_level: Optional[str] = Field(default_factory=lambda: os.getenv("NOE_FILE_LOG_LEVEL"))
+    file_level: Optional[str] = Field(default_factory=lambda: os.getenv("NOESIUM_FILE_LOG_LEVEL"))
     rotation: str = "10 MB"
     retention: str = "7 days"
 
@@ -325,7 +323,7 @@ class FrameworkConfig(BaseModel):
     Contains core framework sections (LLM, tools, memory, logging, etc.).
     Application-specific sections (e.g. ``tui``) are accepted via
     ``extra = "allow"`` but not modeled here — they are handled by
-    the application layer (e.g. ``NoeConfig.from_global_config()``).
+    the application layer.
 
     Attributes:
         version: Configuration schema version
@@ -362,13 +360,13 @@ def get_config_path() -> Path:
     """Get configuration file path.
 
     The path is determined in this order:
-    1. NOE_AGENT_CONFIG environment variable
-    2. Default location: ~/.noeagent/config.json
+    1. NOESIUM_CONFIG environment variable
+    2. Default: NOESIUM_HOME/config.json (e.g. ~/.noesium/config.json)
 
     Returns:
         Path to the configuration file
     """
-    config_path = os.getenv("NOE_AGENT_CONFIG")
+    config_path = os.getenv("NOESIUM_CONFIG")
     if config_path:
         return Path(config_path)
     return DEFAULT_CONFIG_PATH
@@ -518,7 +516,7 @@ def apply_env_overrides(data: Dict[str, Any]) -> Dict[str, Any]:
     data["llm"].setdefault("providers", {})
 
     # LLM Provider
-    if provider := os.getenv("NOE_LLM_PROVIDER"):
+    if provider := os.getenv("NOESIUM_LLM_PROVIDER"):
         data["llm"]["provider"] = provider
 
     # OpenAI
@@ -571,13 +569,13 @@ def apply_env_overrides(data: Dict[str, Any]) -> Dict[str, Any]:
         llamacpp_config["chat_model"] = model
 
     # Tracing
-    if tracing := os.getenv("NOE_OPIK_TRACING"):
+    if tracing := os.getenv("NOESIUM_OPIK_TRACING"):
         data.setdefault("tracing", {})["enabled"] = tracing.lower() == "true"
 
     # Logging
     if log_level := os.getenv("LOG_LEVEL"):
         data.setdefault("logging", {})["level"] = log_level
-    if file_level := os.getenv("NOE_FILE_LOG_LEVEL"):
+    if file_level := os.getenv("NOESIUM_FILE_LOG_LEVEL"):
         data.setdefault("logging", {})["file_level"] = file_level
 
     return data

@@ -9,10 +9,11 @@ import asyncio
 import os
 
 from noesium.core.toolify import ToolkitConfig, get_toolkit
-from noesium.core.utils.logging import setup_logging
+from noesium.core.utils.logging import get_logger, setup_logging
 
 # Set up logging (use ERROR to suppress toolkit noise, WARNING for debugging)
 setup_logging(level="ERROR")
+logger = get_logger(__name__)
 
 
 async def demo_openai_provider():

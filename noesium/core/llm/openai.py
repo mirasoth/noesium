@@ -47,16 +47,19 @@ from noesium.core.utils.logging import get_logger
 
 # Only import OPIK if tracing is enabled
 OPIK_AVAILABLE = False
-track = lambda func: func  # Default no-op decorator
-track_openai = lambda client: client  # Default no-op function
-if os.getenv("NOE_OPIK_TRACING", "false").lower() == "true":
+
+if os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true":
     try:
         from opik import track
         from opik.integrations.openai import track_openai
 
         OPIK_AVAILABLE = True
     except ImportError:
-        pass
+        track = lambda func: func  # noqa: E731
+        track_openai = lambda client: client  # noqa: E731
+else:
+    track = lambda func: func  # noqa: E731
+    track_openai = lambda client: client  # noqa: E731
 
 
 T = TypeVar("T")

@@ -123,7 +123,7 @@ class TestImageToolkit:
 
     def test_resize_image_no_resize_needed(self, image_toolkit):
         """Test that small images are not resized."""
-        with patch("PIL.Image.open") as mock_image_open:
+        with patch("PIL.Image.open"):
             mock_image = MagicMock()
             mock_image.size = (400, 300)
 

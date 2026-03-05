@@ -203,7 +203,7 @@ class SubagentProgressEvent:
         )
 
     @classmethod
-    def tool_result(
+    def create_tool_result(
         cls,
         request_id: str,
         subagent_id: str,

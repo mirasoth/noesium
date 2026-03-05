@@ -181,13 +181,13 @@ async def demo_pgvector_store():
 
     except Exception as e:
         print(f"❌ PGVector demo failed: {e}")
-        print(f"🔧 Troubleshooting tips:")
+        print("🔧 Troubleshooting tips:")
         print(f"   • Check if PostgreSQL is running at {pg_config['host']}:{pg_config['port']}")
         print(f"   • Verify database '{pg_config['dbname']}' exists and user has permissions")
-        print(f"   • Ensure pgvector extension is installed: CREATE EXTENSION vector;")
-        print(f"   • Start services with: docker-compose up -d pgvector ollama")
-        print(f"   • Check connection parameters in environment variables")
-        print(f"   • Ensure embedding service (Ollama) is running")
+        print("   • Ensure pgvector extension is installed: CREATE EXTENSION vector;")
+        print("   • Start services with: docker-compose up -d pgvector ollama")
+        print("   • Check connection parameters in environment variables")
+        print("   • Ensure embedding service (Ollama) is running")
 
 
 async def main():
@@ -200,13 +200,13 @@ async def main():
     print("   • Document storage with vector embeddings")
     print("   • Semantic search with distance-based scoring")
 
-    print(f"\n🔧 Configuration:")
+    print("\n🔧 Configuration:")
     print(f"   • PostgreSQL Host: {os.getenv('POSTGRES_HOST', 'localhost')}:{os.getenv('POSTGRES_PORT', '5432')}")
     print(f"   • Database: {os.getenv('POSTGRES_DB', 'vectordb')}")
     print(f"   • User: {os.getenv('POSTGRES_USER', 'postgres')}")
     print(f"   • HNSW Index: {os.getenv('USE_HNSW', 'true')}")
     print(f"   • DiskANN Index: {os.getenv('USE_DISKANN', 'false')}")
-    print(f"   • Embedding Model: nomic-embed-text:latest")
+    print("   • Embedding Model: nomic-embed-text:latest")
 
     # Run the demo
     await demo_pgvector_store()

@@ -252,7 +252,7 @@ config = ToolkitConfig(
 
 The system respects these environment variables:
 
-- `NOE_LLM_PROVIDER`: Default LLM provider
+- `NOESIUM_LLM_PROVIDER`: Default LLM provider
 - `LOG_LEVEL`: Logging level
 - `NOE_ENABLE_TRACING`: Enable detailed tracing
 - `SERPER_API_KEY`: For search toolkit

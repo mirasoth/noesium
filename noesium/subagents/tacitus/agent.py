@@ -179,7 +179,7 @@ class TacitusAgent(BaseResearcher):
             return ResearchOutput(
                 content=final_message or "Research completed",
                 sources=result.get("sources_gathered", []),
-                summary=f"Research completed for topic",
+                summary="Research completed for topic",
                 timestamp=datetime.now(),
             )
 
@@ -405,7 +405,7 @@ class TacitusAgent(BaseResearcher):
     ) -> AsyncGenerator[Any, None]:
         """Stream progress events during research.
 
-        This method yields ProgressEvent objects compatible with NoeAgent's
+        This method yields ProgressEvent objects compatible with the core
         progress system, allowing real-time visibility into research phases.
 
         Args:

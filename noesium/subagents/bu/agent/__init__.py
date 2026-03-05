@@ -31,21 +31,22 @@ def _get_progress_types():
 
 T = TypeVar("T")
 
-# Fallback base directory when no parent session dir is provided
-_NOEAGENT_DIR = Path.home() / ".noeagent"
-_BROWSER_USE_SESSIONS_DIR = _NOEAGENT_DIR / "browser-use-sessions"
+# Fallback base directory when no parent session dir is provided (framework default)
+from noesium.core.consts import NOESIUM_HOME
+
+_BROWSER_USE_SESSIONS_DIR = NOESIUM_HOME / "browser-use-sessions"
 
 
 def _create_session_dir(session_id: str, *, parent_session_dir: str | Path | None = None) -> Path:
     """Create an isolated session directory for browser-use.
 
-    When ``parent_session_dir`` is supplied (the noeagent session directory),
+    When ``parent_session_dir`` is supplied (the caller's session directory),
     the browser-use data is placed under ``<parent_session_dir>/browser-use/``.
-    Otherwise falls back to ``~/.noeagent/browser-use-sessions/<session_id>/``.
+    Otherwise falls back to ``NOESIUM_HOME/browser-use-sessions/<session_id>/``.
 
     Args:
         session_id: Unique identifier for the session.
-        parent_session_dir: NoeAgent-level session directory (preferred).
+        parent_session_dir: Caller's session directory (preferred).
 
     Returns:
         Path to the created session directory.
@@ -70,8 +71,8 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
     language interface, allowing users to control web browsers to perform
     tasks like navigation, form filling, and content extraction.
 
-    Each session uses an isolated directory under ~/.noeagent/browser-use-sessions/
-    to store browser profile data, downloads, and other temporary files.
+    Each session uses an isolated directory under the caller's session dir
+    or NOESIUM_HOME/browser-use-sessions/ to store browser profile data.
     """
 
     def __init__(
@@ -94,7 +95,7 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
             headless: Whether to run browser in headless mode (default: True).
             session_id: Unique session identifier. If None, generates one automatically.
             cleanup_on_close: Whether to delete session directory on close (default: True).
-            parent_session_dir: NoeAgent session directory. When provided, BU temp data is
+            parent_session_dir: Caller's session directory. When provided, BU temp data is
                 placed under ``<parent_session_dir>/browser-use/`` for session isolation.
             **kwargs: Additional arguments passed to the underlying Agent.
         """
@@ -246,7 +247,7 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
     ) -> AsyncGenerator[Any, None]:
         """Stream progress events during browser automation.
 
-        This method yields ProgressEvent objects compatible with NoeAgent's
+        This method yields ProgressEvent objects compatible with the core
         progress system, allowing real-time visibility into browser actions.
 
         Args:

@@ -157,7 +157,7 @@ class TaskPlanner:
             end = text.rindex("}") + 1
             data = json.loads(text[start:end])
         except (ValueError, json.JSONDecodeError):
-            lines = [l.strip().lstrip("0123456789.-) ") for l in text.splitlines() if l.strip()]
+            lines = [line.strip().lstrip("0123456789.-) ") for line in text.splitlines() if line.strip()]
             return [TaskStep(description=line) for line in lines if line]
         steps_raw = data.get("steps", [])
         result: list[TaskStep] = []

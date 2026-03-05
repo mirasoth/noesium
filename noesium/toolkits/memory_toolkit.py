@@ -235,7 +235,7 @@ class MemoryToolkit(AsyncBaseToolkit):
 
         # Validate new content size
         if not self._validate_content_size(new_content):
-            return f"Error: Edited content would be too large"
+            return "Error: Edited content would be too large"
 
         # Update memory
         self.memory_slots[slot_name] = new_content
@@ -264,7 +264,7 @@ class MemoryToolkit(AsyncBaseToolkit):
             new_content = content
 
         if not self._validate_content_size(new_content):
-            return f"Error: Combined content would be too large"
+            return "Error: Combined content would be too large"
 
         self.memory_slots[slot_name] = new_content
         self._save_memory_slot(slot_name, new_content)
@@ -371,7 +371,7 @@ class MemoryToolkit(AsyncBaseToolkit):
         largest_slot = max(self.memory_slots.items(), key=lambda x: len(x[1]))
 
         stats = [
-            f"Memory Statistics:",
+            "Memory Statistics:",
             f"  Total slots: {total_slots}",
             f"  Total characters: {total_chars:,}",
             f"  Total bytes: {total_bytes:,}",

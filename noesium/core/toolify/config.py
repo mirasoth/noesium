@@ -32,7 +32,7 @@ class ToolkitConfig(BaseModel):
     """Toolkit-specific configuration parameters"""
 
     # LLM Integration
-    llm_provider: str = Field(default_factory=lambda: os.getenv("NOE_LLM_PROVIDER", "openai"))
+    llm_provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
     """LLM provider to use (openrouter, openai, ollama, llamacpp, litellm)"""
 
     llm_model: Optional[str] = None

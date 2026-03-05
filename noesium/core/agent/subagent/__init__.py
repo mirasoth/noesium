@@ -2,7 +2,7 @@
 
 This module provides a general-purpose, framework-agnostic interface for
 heterogeneous subagents. It is intentionally independent of any specific
-agent implementation (e.g., NoeAgent).
+agent implementation.
 
 Key components:
 - SubagentDescriptor: Static metadata for discovery and planning

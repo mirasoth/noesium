@@ -27,7 +27,7 @@ def main() -> None:
     config_subparsers = config_parser.add_subparsers(dest="config_command", help="Config commands")
 
     # config path
-    path_parser = config_subparsers.add_parser("path", help="Show config file path")
+    config_subparsers.add_parser("path", help="Show config file path")
 
     # config show
     show_parser = config_subparsers.add_parser("show", help="Show current configuration")
@@ -70,14 +70,13 @@ def handle_config_command(args: argparse.Namespace) -> None:
 def cmd_config_path() -> None:
     """Show config file path."""
     try:
-        from noesium.core.config import get_config_path
+        from noesium.noeagent.config import get_noe_config_path
 
-        print(str(get_config_path()))
+        print(str(get_noe_config_path()))
     except ImportError:
-        # Fallback if core.config not available
-        from noesium.core.consts import DEFAULT_CONFIG_PATH
+        from pathlib import Path
 
-        print(str(DEFAULT_CONFIG_PATH))
+        print(str(Path.home() / ".noeagent" / "config.json"))
 
 
 def cmd_config_show(key: str | None = None) -> None:
@@ -88,8 +87,9 @@ def cmd_config_show(key: str | None = None) -> None:
     """
     try:
         from noesium.core.config import load_config
+        from noesium.noeagent.config import get_noe_config_path
 
-        config = load_config()
+        config = load_config(get_noe_config_path())
 
         if key:
             # Navigate nested keys
@@ -120,9 +120,10 @@ def cmd_config_init(provider: str | None = None) -> None:
         provider: Optional LLM provider name to set as default
     """
     try:
-        from noesium.core.config import NoeAgentConfig, get_config_path, save_config
+        from noesium.core.config import FrameworkConfig, save_config
+        from noesium.noeagent.config import get_noe_config_path
 
-        config_path = get_config_path()
+        config_path = get_noe_config_path()
 
         if config_path.exists():
             response = input(f"Config file already exists at {config_path}. Overwrite? [y/N] ")
@@ -130,7 +131,7 @@ def cmd_config_init(provider: str | None = None) -> None:
                 print("Aborted.")
                 return
 
-        config = NoeAgentConfig()
+        config = FrameworkConfig()
         if provider:
             config.llm.provider = provider
 
@@ -149,9 +150,10 @@ def cmd_config_set(key: str, value: str) -> None:
         value: Config value (JSON or string)
     """
     try:
-        from noesium.core.config import NoeAgentConfig, load_config, save_config
+        from noesium.core.config import FrameworkConfig, load_config, save_config
+        from noesium.noeagent.config import get_noe_config_path
 
-        config = load_config()
+        config = load_config(get_noe_config_path())
 
         # Parse key path
         keys = key.split(".")
@@ -169,8 +171,8 @@ def cmd_config_set(key: str, value: str) -> None:
             obj[keys[-1]] = value
 
         # Save
-        config = NoeAgentConfig(**data)
-        save_config(config)
+        config = FrameworkConfig(**data)
+        save_config(config, get_noe_config_path())
         print(f"Set {key} = {value}")
     except ImportError as e:
         print(f"Error setting config: {e}", file=sys.stderr)

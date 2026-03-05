@@ -14,13 +14,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from noesium.core.event import ProgressEvent, ProgressEventType
 from noesium.noeagent.config import (
     AgentSubagentConfig,
     CliSubagentConfig,
     NoeConfig,
     NoeMode,
 )
-from noesium.noeagent.progress import ProgressEvent, ProgressEventType
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -1157,7 +1157,7 @@ class TestInvokeCliAction:
             "tool_results": [],
         }
 
-        result = await subagent_node(state, agent=agent)
+        await subagent_node(state, agent=agent)
 
         # Verify execute_oneshot was called with the options
         agent._cli_adapter.execute_oneshot.assert_awaited_once()
@@ -1227,7 +1227,7 @@ class TestBuiltInAgentCapabilityProviderStreaming:
     async def test_invoke_streaming_with_progress_support(self):
         """invoke_streaming should yield wrapped progress events."""
         from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.core.event import ProgressEvent, ProgressEventType
 
         # Create a mock agent with astream_progress
         mock_agent = MagicMock()
@@ -1287,7 +1287,7 @@ class TestBuiltInAgentCapabilityProviderStreaming:
     async def test_invoke_streaming_without_progress_support(self):
         """invoke_streaming should fallback to invoke for non-streaming agents."""
         from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
-        from noesium.noeagent.progress import ProgressEventType
+        from noesium.core.event import ProgressEventType
 
         # Create a mock agent without astream_progress
         mock_agent = MagicMock()
@@ -1315,7 +1315,7 @@ class TestBuiltInAgentCapabilityProviderStreaming:
     async def test_invoke_streaming_error_handling(self):
         """invoke_streaming should handle errors gracefully."""
         from noesium.core.capability.providers import BuiltInAgentCapabilityProvider
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.core.event import ProgressEvent, ProgressEventType
 
         # Create a mock agent that raises an error
         mock_agent = MagicMock()
@@ -1356,8 +1356,8 @@ class TestNoeAgentBuiltinStreaming:
     @pytest.mark.unit
     async def test_execute_builtin_subagent_streaming(self):
         """execute_builtin_subagent_streaming delegates to invoke_subagent."""
+        from noesium.core.event import ProgressEvent, ProgressEventType
         from noesium.noeagent.agent import NoeAgent
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
         agent._subagent_event_queue = asyncio.Queue()
@@ -1452,7 +1452,7 @@ class TestNoeAgentBuiltinStreaming:
 
     def _make_streaming_generator(self):
         """Helper to create an async generator for streaming."""
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+        from noesium.core.event import ProgressEvent, ProgressEventType
 
         async def gen():
             yield ProgressEvent(
@@ -1482,7 +1482,7 @@ class TestBrowserUseAgentProgressStreaming:
     @pytest.mark.unit
     async def test_astream_progress_event_sequence(self):
         """astream_progress should yield events in correct sequence."""
-        from noesium.noeagent.progress import ProgressEventType
+        from noesium.core.event import ProgressEventType
         from noesium.subagents.bu.agent import BrowserUseAgent
 
         # Create agent with mock LLM
@@ -1526,7 +1526,7 @@ class TestBrowserUseAgentProgressStreaming:
     @pytest.mark.unit
     async def test_astream_progress_error_handling(self):
         """astream_progress should emit ERROR event on failure."""
-        from noesium.noeagent.progress import ProgressEventType
+        from noesium.core.event import ProgressEventType
         from noesium.subagents.bu.agent import BrowserUseAgent
 
         mock_llm = MagicMock()
@@ -1560,7 +1560,7 @@ class TestTacitusAgentProgressStreaming:
     @pytest.mark.unit
     async def test_astream_progress_event_sequence(self):
         """astream_progress should yield events in correct sequence for research."""
-        from noesium.noeagent.progress import ProgressEventType
+        from noesium.core.event import ProgressEventType
         from noesium.subagents.tacitus.agent import TacitusAgent
 
         # Create agent with mock LLM
@@ -1610,7 +1610,7 @@ class TestTacitusAgentProgressStreaming:
     @pytest.mark.unit
     async def test_astream_progress_reflection_events(self):
         """astream_progress should emit reflection events for research loops."""
-        from noesium.noeagent.progress import ProgressEventType
+        from noesium.core.event import ProgressEventType
         from noesium.subagents.tacitus.agent import TacitusAgent
 
         mock_llm = MagicMock()
@@ -1661,8 +1661,8 @@ class TestEndToEndStreamingIntegration:
         from langchain_core.messages import AIMessage
 
         from noesium.core.agent.subagent import SubagentManager
+        from noesium.core.event import ProgressEvent, ProgressEventType
         from noesium.noeagent.agent import NoeAgent
-        from noesium.noeagent.progress import ProgressEvent, ProgressEventType
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
         agent._subagent_manager = SubagentManager()
@@ -1742,7 +1742,7 @@ class TestEndToEndStreamingIntegration:
     @pytest.mark.integration
     async def test_tui_receives_subagent_events(self):
         """TUI should receive and display subagent progress events."""
-        from noesium.noeagent.progress import ProgressEventType
+        from noesium.core.event import ProgressEventType
         from noesium.noeagent.tui import SubagentTracker
 
         tracker = SubagentTracker(max_display=3)

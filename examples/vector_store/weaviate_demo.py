@@ -175,13 +175,13 @@ async def demo_weaviate_vector_store():
 
     except Exception as e:
         print(f"❌ Weaviate demo failed: {e}")
-        print(f"🔧 Troubleshooting tips:")
+        print("🔧 Troubleshooting tips:")
         print(f"   • Check if Weaviate is running at {weaviate_config['cluster_url']}")
         print(
-            f"   • For local: docker run -p 8080:8080 -e QUERY_DEFAULTS_LIMIT=25 -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true -e PERSISTENCE_DATA_PATH='/var/lib/weaviate' semitechnologies/weaviate:latest"
+            "   • For local: docker run -p 8080:8080 -e QUERY_DEFAULTS_LIMIT=25 -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true -e PERSISTENCE_DATA_PATH='/var/lib/weaviate' semitechnologies/weaviate:latest"
         )
-        print(f"   • For cloud: Set WEAVIATE_URL and WEAVIATE_API_KEY environment variables")
-        print(f"   • Ensure embedding service (Ollama) is running for embeddings")
+        print("   • For cloud: Set WEAVIATE_URL and WEAVIATE_API_KEY environment variables")
+        print("   • Ensure embedding service (Ollama) is running for embeddings")
 
     finally:
         # Clean up the vector store connection
@@ -202,10 +202,10 @@ async def main():
     print("   • Document storage with embeddings")
     print("   • Semantic search with scoring")
 
-    print(f"\n🔧 Configuration:")
+    print("\n🔧 Configuration:")
     print(f"   • Weaviate URL: {os.getenv('WEAVIATE_URL', 'http://localhost:8080')}")
     print(f"   • API Key: {'Set' if os.getenv('WEAVIATE_API_KEY') else 'Not set (using anonymous)'}")
-    print(f"   • Embedding Model: nomic-embed-text:latest")
+    print("   • Embedding Model: nomic-embed-text:latest")
 
     # Run the demo
     await demo_weaviate_vector_store()

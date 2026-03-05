@@ -114,7 +114,7 @@ async def pattern_cli_code_assistant():
     agent = NoeAgent(config)
     await agent.initialize()
 
-    print(f"  Mode: oneshot (fresh process per invocation)")
+    print("  Mode: oneshot (fresh process per invocation)")
     print(f"  Tools: {config.external[0].allowed_tools}")
 
     await agent._cleanup_subagents()

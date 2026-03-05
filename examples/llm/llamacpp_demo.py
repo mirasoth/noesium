@@ -138,7 +138,7 @@ def demo_structured_output(client: LLMClient):
             structured_client = LLMClient(
                 model_path=client.model_path, instructor=True, n_ctx=2048, n_gpu_layers=client.llama.params.n_gpu_layers
             )
-        except:
+        except Exception:
             print("⚠️ Could not create instructor-enabled client, using fallback approach...")
             structured_client = client
 
@@ -153,7 +153,7 @@ def demo_structured_output(client: LLMClient):
             response = structured_client.structured_completion(
                 messages=messages, response_model=BookRecommendation, temperature=0.7, max_tokens=200
             )
-            print(f"✅ Structured Response:")
+            print("✅ Structured Response:")
             print(f"   📖 Title: {response.title}")
             print(f"   ✍️  Author: {response.author}")
             print(f"   🎭 Genre: {response.genre}")
@@ -204,7 +204,7 @@ def demo_token_tracking(client: LLMClient):
     # Show final stats
     try:
         stats = tracker.get_stats()
-        print(f"\n📈 Final Statistics:")
+        print("\n📈 Final Statistics:")
         print(f"   Total tokens: {stats['total_tokens']}")
         print(f"   Total calls: {stats['total_calls']}")
     except Exception as e:

@@ -195,7 +195,7 @@ class MemoryAgent:
             try:
                 session_date = datetime.fromisoformat(session_date).strftime("%Y-%m-%d")
             except Exception:
-                logger.info(f"session date unavaiable, use system datetime")
+                logger.info("session date unavaiable, use system datetime")
                 session_date = datetime.now().strftime("%Y-%m-%d")
 
             logger.info(f"🚀 Starting iterative conversation processing for {character_name}")

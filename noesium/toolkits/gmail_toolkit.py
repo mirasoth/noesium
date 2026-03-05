@@ -531,7 +531,7 @@ class GmailToolkit(AsyncBaseToolkit):
                     for match in matches:
                         # Filter out obviously non-code numbers (years, common numbers)
                         if isinstance(match, str) and len(match) >= 4:
-                            if not match in ["2023", "2024", "2025", "1234", "0000"]:
+                            if match not in ["2023", "2024", "2025", "1234", "0000"]:
                                 codes_found.append(
                                     {
                                         "code": match,

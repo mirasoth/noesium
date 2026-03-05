@@ -239,7 +239,7 @@ class TestTokenUsageIntegration:
         assert usage.prompt_tokens > 0
         assert usage.completion_tokens > 0
         assert usage.total_tokens == usage.prompt_tokens + usage.completion_tokens
-        assert usage.estimated == True
+        assert usage.estimated
         assert usage.model_name == "test-model"
         assert usage.call_type == "completion"
 
@@ -277,7 +277,7 @@ class TestTokenUsageIntegration:
 
             # Get latest usage
             latest_usage = tracker.usage_history[-1]
-            assert latest_usage.estimated == True  # Should be estimated for llamacpp
+            assert latest_usage.estimated  # Should be estimated for llamacpp
             assert latest_usage.call_type == "completion"
 
         finally:

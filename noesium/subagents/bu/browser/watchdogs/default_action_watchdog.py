@@ -1717,7 +1717,7 @@ class DefaultActionWatchdog(BaseWatchdog):
                 raise ValueError("Could not get object_id for element")
 
             # Step 1: Focus the element using simple strategy
-            focused_successfully = await self._focus_element_simple(
+            await self._focus_element_simple(
                 backend_node_id=backend_node_id,
                 object_id=object_id,
                 cdp_session=cdp_session,

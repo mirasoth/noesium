@@ -1,8 +1,13 @@
 import asyncio
 
-# Noesium-specific import needed
+from noesium.subagents.bu import Agent, Browser
 
-llm = ChatOpenAI("gpt-4.1-mini")
+try:
+    from langchain_community.chat_models.openai import ChatOpenAI
+except ImportError:
+    ChatOpenAI = None  # type: ignore[misc, assignment]
+
+llm = ChatOpenAI("gpt-4.1-mini") if ChatOpenAI else None
 
 
 async def main():

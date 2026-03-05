@@ -114,7 +114,7 @@ def demo_structured_completion(client: LLMClient, logger):
         )
 
         logger.info("✅ Structured completion successful!")
-        print(f"\n🧠 Personality Analysis:")
+        print("\n🧠 Personality Analysis:")
         print(f"Type: {analysis.personality_type}")
         print(f"Traits: {', '.join(analysis.traits)}")
         print(f"Strengths: {', '.join(analysis.strengths)}")
@@ -156,7 +156,7 @@ def demo_travel_recommendation(client: LLMClient, logger):
         )
 
         logger.info("✅ Travel recommendation successful!")
-        print(f"\n🗺️ Travel Recommendation:")
+        print("\n🗺️ Travel Recommendation:")
         print(f"Destination: {recommendation.destination}")
         print(f"Best Time: {recommendation.best_time_to_visit}")
         print(f"Duration: {recommendation.duration}")

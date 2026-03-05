@@ -241,7 +241,6 @@ class CodeAgent:
         self._llm_messages.append(UserMessage(content=f"Task: {self.task}"))
 
         # Track agent run error for telemetry
-        agent_run_error: str | None = None
         should_delay_close = False
 
         # Extract URL from task and navigate if found

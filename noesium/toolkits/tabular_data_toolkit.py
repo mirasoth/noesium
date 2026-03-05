@@ -32,7 +32,7 @@ try:
 
     PANDAS_AVAILABLE = True
 except ImportError:
-    pd = None  # type: ignore
+    pd = None  # type: ignore[assignment,misc]
     PANDAS_AVAILABLE = False
 
 # Template for column analysis
@@ -151,17 +151,17 @@ class TabularDataToolkit(AsyncBaseToolkit):
 
             elif file_ext in [".xlsx", ".xls"]:
                 df = pd.read_excel(file_path, **kwargs)
-                self.logger.info(f"Successfully loaded Excel file")
+                self.logger.info("Successfully loaded Excel file")
                 return df
 
             elif file_ext == ".json":
                 df = pd.read_json(file_path, **kwargs)
-                self.logger.info(f"Successfully loaded JSON file")
+                self.logger.info("Successfully loaded JSON file")
                 return df
 
             elif file_ext == ".parquet":
                 df = pd.read_parquet(file_path, **kwargs)
-                self.logger.info(f"Successfully loaded Parquet file")
+                self.logger.info("Successfully loaded Parquet file")
                 return df
 
             elif file_ext == ".tsv":
@@ -180,7 +180,7 @@ class TabularDataToolkit(AsyncBaseToolkit):
                 # Try to read as CSV by default
                 try:
                     df = pd.read_csv(file_path, **kwargs)
-                    self.logger.info(f"Successfully loaded file as CSV")
+                    self.logger.info("Successfully loaded file as CSV")
                     return df
                 except Exception as e:
                     raise Exception(f"Unsupported file format: {file_ext}") from e

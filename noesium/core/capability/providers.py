@@ -159,7 +159,7 @@ class SkillCapabilityProvider:
 
 
 class AgentCapabilityProvider:
-    """Wraps an in-process NoeAgent child as a capability provider (stateful).
+    """Wraps an in-process child agent as a capability provider (stateful).
 
     The agent is lazily spawned on first invocation if ``spawn_fn`` is provided,
     or it wraps an already-running child agent instance.

@@ -618,7 +618,7 @@ class GemParser:
                 if field_type in [str, int, float, bool, bytes, type(None)]:
                     return False
                 # bytearray needs arbitrary types in Pydantic
-                if field_type == bytearray:
+                if field_type is bytearray:
                     return True
 
                 # Standard library types that are usually fine

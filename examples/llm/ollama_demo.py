@@ -81,7 +81,7 @@ def check_ollama_connection(client: LLMClient, logger):
 
     try:
         # Try a simple completion to test connection
-        response = client.completion(messages=[{"role": "user", "content": "Hello"}], max_tokens=10)
+        client.completion(messages=[{"role": "user", "content": "Hello"}], max_tokens=10)
         logger.info("✅ Ollama server is accessible")
         return True
     except Exception as e:
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         )
 
         logger.info("✅ Structured completion successful!")
-        print(f"\n🔍 Code Analysis:")
+        print("\n🔍 Code Analysis:")
         print(f"Language: {analysis.language}")
         print(f"Complexity: {analysis.complexity}")
         print(f"Purpose: {analysis.main_purpose}")
@@ -182,7 +182,7 @@ def demo_creative_structured_completion(client: LLMClient, logger):
         )
 
         logger.info("✅ Creative structured completion successful!")
-        print(f"\n📚 Story Outline:")
+        print("\n📚 Story Outline:")
         print(f"Title: {outline.title}")
         print(f"Genre: {outline.genre}")
         print(f"Setting: {outline.setting}")
@@ -190,7 +190,7 @@ def demo_creative_structured_completion(client: LLMClient, logger):
         print(f"Conflict: {outline.conflict}")
         print(f"Theme: {outline.theme}")
         print(f"Target Length: {outline.target_length}")
-        print(f"Plot Points:")
+        print("Plot Points:")
         for i, point in enumerate(outline.plot_points, 1):
             print(f"  {i}. {point}")
         print()
@@ -226,7 +226,7 @@ def demo_image_understanding(client: LLMClient, logger):
             try:
                 font = ImageFont.load_default()
                 draw.text((50, 260), "Test Image for Ollama Demo", fill="black", font=font)
-            except:
+            except Exception:
                 draw.text((50, 260), "Test Image for Ollama Demo", fill="black")
 
             img.save(test_image_path)
@@ -445,7 +445,7 @@ def main():
         # List available models
         list_available_models(client, logger)
 
-        print(f"\n🤖 Testing with Ollama Models")
+        print("\n🤖 Testing with Ollama Models")
         print("-" * 30)
 
         # Run demos

@@ -23,7 +23,7 @@ except ImportError:
     colorlog = None  # fallback if colorlog is not installed
 
 # Note: logging.basicConfig() is NOT called at module level.
-# Logging must be explicitly configured via setup_logging() or by NoeAgent.
+# Logging must be explicitly configured via setup_logging() or by the application.
 # This allows the verbose config to control logging level.
 logger = logging.getLogger(__name__)
 

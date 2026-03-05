@@ -73,6 +73,8 @@ if TYPE_CHECKING:
     from .agent import NoeAgent
     from .state import TaskPlan
 
+from noesium.core.event import ProgressEvent, ProgressEventType
+
 from .commands import (
     BUILTIN_SUBAGENT_NAMES,
     get_subagent_display_name,
@@ -80,7 +82,6 @@ from .commands import (
     parse_subagent_prefix_from_input,
 )
 from .config import _NOE_AGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
-from .progress import ProgressEvent, ProgressEventType
 from .session_log import SessionLogger
 
 # ---------------------------------------------------------------------------
@@ -785,7 +786,6 @@ async def _process_query(
     activity_lines: list[Text] = []
     partial_results: list[str] = []
     final_answer: str = ""
-    current_step_summary: str = ""
     step_details: list[Text] = []  # Step progress details (not shown in live; kept for optional post-Live)
     plan_created_appended: bool = False  # dedup: only one "Plan created with N steps" per run
     subagent_plan_created_shown: set[str] = set()  # dedup: one "[tag] Plan created" per subagent

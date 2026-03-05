@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from noesium.core.config import (
     AgentSubagentConfig,
-    NoeAgentConfig,
+    FrameworkConfig,
     init_default_config,
     load_config,
     save_config,
@@ -29,7 +29,7 @@ class TestConfigIntegration:
             config_path = Path(tmpdir) / "config.json"
 
             # 1. Create and save initial config
-            config1 = NoeAgentConfig()
+            config1 = FrameworkConfig()
             config1.llm.provider = "openai"
             config1.agent.max_iterations = 50
             save_config(config1, config_path)
@@ -57,7 +57,7 @@ class TestConfigIntegration:
             config_path = Path(tmpdir) / "config.json"
 
             # Create config with ollama
-            config = NoeAgentConfig()
+            config = FrameworkConfig()
             config.llm.provider = "ollama"
             save_config(config, config_path)
 
@@ -73,7 +73,7 @@ class TestConfigIntegration:
 
     def test_config_with_mcp_servers(self):
         """Test configuration with MCP servers."""
-        config = NoeAgentConfig()
+        config = FrameworkConfig()
         config.tools.mcp_servers = [
             {
                 "name": "filesystem",
@@ -93,7 +93,7 @@ class TestConfigIntegration:
 
     def test_config_with_subagents(self):
         """Test configuration with subagents."""
-        config = NoeAgentConfig()
+        config = FrameworkConfig()
         config.subagents.builtin = [
             AgentSubagentConfig(
                 name="browser_use",
@@ -113,7 +113,7 @@ class TestConfigIntegration:
 
     def test_config_with_subagents_builtin_config(self):
         """Test that builtin subagent config (e.g. headless) round-trips and is available via NoeConfig."""
-        config = NoeAgentConfig()
+        config = FrameworkConfig()
         config.subagents.builtin = [
             AgentSubagentConfig(
                 name="browser_use",
@@ -139,7 +139,7 @@ class TestConfigIntegration:
 
     def test_config_with_toolkit_configs(self):
         """Test configuration with toolkit-specific settings."""
-        config = NoeAgentConfig()
+        config = FrameworkConfig()
         config.tools.toolkit_configs = {
             "bash": {"timeout": 600, "shell": "/bin/zsh"},
             "python_executor": {"timeout": 300, "max_output_length": 20000},
@@ -164,7 +164,7 @@ class TestNoeConfigIntegration:
             config_path = Path(tmpdir) / "config.json"
 
             # Create global config
-            global_config = NoeAgentConfig()
+            global_config = FrameworkConfig()
             global_config.llm.provider = "ollama"
             global_config.llm.providers["ollama"] = {"chat_model": "llama3.2"}
             global_config.agent.max_iterations = 50
@@ -187,7 +187,7 @@ class TestNoeConfigIntegration:
             config_path = Path(tmpdir) / "config.json"
 
             # Create global config with subagent (optional config for headless/headed)
-            global_config = NoeAgentConfig()
+            global_config = FrameworkConfig()
             global_config.subagents.builtin = [
                 AgentSubagentConfig(
                     name="browser_use",
@@ -214,7 +214,7 @@ class TestNoeConfigIntegration:
             config_path = Path(tmpdir) / "config.json"
 
             # Create global config in agent mode
-            global_config = NoeAgentConfig()
+            global_config = FrameworkConfig()
             global_config.agent.mode = "ask"
             global_config.agent.max_iterations = 50
             global_config.tools.enabled_toolkits = ["bash", "python_executor"]
@@ -256,7 +256,7 @@ class TestConfigCLI:
             monkeypatch.setenv("NOE_AGENT_CONFIG", str(config_path))
 
             # Create config
-            config = NoeAgentConfig()
+            config = FrameworkConfig()
             config.llm.provider = "ollama"
             save_config(config, config_path)
 
@@ -273,7 +273,7 @@ class TestConfigCLI:
             monkeypatch.setenv("NOE_AGENT_CONFIG", str(config_path))
 
             # Create config
-            config = NoeAgentConfig()
+            config = FrameworkConfig()
             config.llm.provider = "openai"
             save_config(config, config_path)
 
@@ -311,7 +311,7 @@ class TestConfigCLI:
             env = {"NOE_AGENT_CONFIG": str(config_path)}
             with patch.dict(os.environ, env, clear=True):
                 # Create initial config
-                config = NoeAgentConfig()
+                config = FrameworkConfig()
                 save_config(config, config_path)
 
                 # Set a value
@@ -333,7 +333,7 @@ class TestConfigPersistence:
             config_path = Path(tmpdir) / "config.json"
 
             # Session 1: Create and save
-            config1 = NoeAgentConfig()
+            config1 = FrameworkConfig()
             config1.llm.provider = "openai"
             config1.agent.max_iterations = 30
             save_config(config1, config_path)
@@ -405,6 +405,6 @@ class TestProviderConfiguration:
 
             # Test switching to different providers
             for provider in ["openai", "ollama", "openrouter"]:
-                with patch.dict(os.environ, {"NOE_AGENT_CONFIG": str(config_path), "NOE_LLM_PROVIDER": provider}):
+                with patch.dict(os.environ, {"NOESIUM_CONFIG": str(config_path), "NOESIUM_LLM_PROVIDER": provider}):
                     loaded = load_config()
                     assert loaded.llm.provider == provider

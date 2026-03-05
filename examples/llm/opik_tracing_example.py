@@ -269,7 +269,7 @@ def main():
     try:
         ollama_client = OllamaClient(chat_model="llama3.2", instructor=True)
         # Test connection
-        test_response = ollama_client.completion(messages=[{"role": "user", "content": "Hello"}], max_tokens=5)
+        ollama_client.completion(messages=[{"role": "user", "content": "Hello"}], max_tokens=5)
         clients_to_test.append((ollama_client, "Ollama"))
     except Exception as e:
         logger.warning(f"Could not initialize Ollama client: {e}")

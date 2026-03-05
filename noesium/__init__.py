@@ -52,12 +52,14 @@ from noesium.core.agent import (
 )
 
 # Configuration
-from noesium.core.config import NoeAgentConfig  # Backward compatibility alias
 from noesium.core.config import (
     FrameworkConfig,
     load_config,
     save_config,
 )
+
+# Backward compatibility: NoeAgentConfig was renamed to FrameworkConfig (RFC-1007)
+NoeAgentConfig = FrameworkConfig
 
 # Events
 from noesium.core.event import (

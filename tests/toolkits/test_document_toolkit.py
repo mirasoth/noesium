@@ -49,10 +49,10 @@ class TestDocumentToolkit:
 
     def test_is_url_detection(self, document_toolkit):
         """Test URL detection functionality."""
-        assert document_toolkit._is_url("https://example.com/doc.pdf") == True
-        assert document_toolkit._is_url("http://example.com/doc.pdf") == True
-        assert document_toolkit._is_url("/path/to/doc.pdf") == False
-        assert document_toolkit._is_url("doc.pdf") == False
+        assert document_toolkit._is_url("https://example.com/doc.pdf")
+        assert document_toolkit._is_url("http://example.com/doc.pdf")
+        assert not document_toolkit._is_url("/path/to/doc.pdf")
+        assert not document_toolkit._is_url("doc.pdf")
 
     def test_get_file_extension(self, document_toolkit):
         """Test file extension extraction."""

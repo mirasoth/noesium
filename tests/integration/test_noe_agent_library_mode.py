@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from noesium.core.event import ProgressEvent, ProgressEventType
 from noesium.noeagent.config import NoeConfig, NoeMode
-from noesium.noeagent.progress import ProgressEvent, ProgressEventType
 
 # ---------------------------------------------------------------------------
 # Fixtures

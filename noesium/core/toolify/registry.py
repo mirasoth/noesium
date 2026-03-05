@@ -31,7 +31,7 @@ class ToolkitRegistry:
             toolkit_class: Toolkit class to register
         """
         if not issubclass(toolkit_class, (BaseToolkit, AsyncBaseToolkit)):
-            raise ValueError(f"Toolkit class must inherit from BaseToolkit or AsyncBaseToolkit")
+            raise ValueError("Toolkit class must inherit from BaseToolkit or AsyncBaseToolkit")
 
         cls._registry[name] = toolkit_class
         logger.debug(f"Registered toolkit: {name} -> {toolkit_class.__name__}")

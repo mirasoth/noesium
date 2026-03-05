@@ -197,7 +197,7 @@ async def main():
         print(f"   ✓ Final total items: {final_stats.total_items}")
 
         print("\n✅ MemU Memory Store example completed successfully!")
-        print(f"\n📁 Check the memory files in: /tmp/memu_store_example_storage/")
+        print("\n📁 Check the memory files in: /tmp/memu_store_example_storage/")
 
     except Exception as e:
         logger.error(f"Error in MemU memory store example: {e}")

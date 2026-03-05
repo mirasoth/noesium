@@ -155,16 +155,16 @@ class Element:
                         bounds_result = await self._client.send.Runtime.callFunctionOn(
                             params={
                                 "functionDeclaration": """
-									function() {
-										const rect = this.getBoundingClientRect();
-										return {
-											x: rect.left,
-											y: rect.top,
-											width: rect.width,
-											height: rect.height
-										};
-									}
-								""",
+                                    function() {
+                                        const rect = this.getBoundingClientRect();
+                                        return {
+                                            x: rect.left,
+                                            y: rect.top,
+                                            width: rect.width,
+                                            height: rect.height
+                                        };
+                                    }
+                                """,
                                 "objectId": object_id,
                                 "returnByValue": True,
                             },
@@ -407,7 +407,7 @@ class Element:
                 raise RuntimeError("Session ID is required for fill operation")
 
             # Step 1: Focus the element
-            focused_successfully = await self._focus_element_simple(
+            await self._focus_element_simple(
                 backend_node_id=backend_node_id,
                 object_id=object_id,
                 cdp_client=cdp_client,
@@ -969,23 +969,23 @@ class Element:
             await cdp_client.send.Runtime.callFunctionOn(
                 params={
                     "functionDeclaration": """
-						function() {
-							// Try to select all text first (only works on text-like inputs)
-							// This handles cases where cursor is in the middle of text
-							try {
-								this.select();
-							} catch (e) {
-								// Some input types (date, color, number, etc.) don't support select()
-								// That's fine, we'll just clear the value directly
-							}
-							// Set value to empty
-							this.value = "";
-							// Dispatch events to notify frameworks like React
-							this.dispatchEvent(new Event("input", { bubbles: true }));
-							this.dispatchEvent(new Event("change", { bubbles: true }));
-							return this.value;
-						}
-					""",
+                        function() {
+                            // Try to select all text first (only works on text-like inputs)
+                            // This handles cases where cursor is in the middle of text
+                            try {
+                                this.select();
+                            } catch (e) {
+                                // Some input types (date, color, number, etc.) don't support select()
+                                // That's fine, we'll just clear the value directly
+                            }
+                            // Set value to empty
+                            this.value = "";
+                            // Dispatch events to notify frameworks like React
+                            this.dispatchEvent(new Event("input", { bubbles: true }));
+                            this.dispatchEvent(new Event("change", { bubbles: true }));
+                            return this.value;
+                        }
+                    """,
                     "objectId": object_id,
                     "returnByValue": True,
                 },

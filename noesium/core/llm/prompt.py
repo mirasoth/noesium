@@ -397,7 +397,7 @@ class PromptManager:
                 # Try markdown first, then treat as plain text
                 try:
                     template = PromptLoader.from_markdown(path)
-                except:
+                except Exception:
                     content = path.read_text(encoding="utf-8")
                     template = PromptLoader.from_string(content, name or path.stem)
 

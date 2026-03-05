@@ -55,10 +55,20 @@ Each time you're asked to continue, provide the next country name that hasn't be
 Keep track of which countries you've already said and don't repeat them.
 Only output the country name, no numbers, no punctuation, just the name."""
 
-    # Test with different models
+    # Test with different models (optional LangChain models; not in noesium's llm_adapter)
     models = []
-    models.append(ChatOpenAI(model="gpt-4.1"))  # Commented out - requires OPENAI_API_KEY
-    models.append(ChatGoogle(model="gemini-2.0-flash-exp"))
+    try:
+        from langchain_community.chat_models.openai import ChatOpenAI
+
+        models.append(ChatOpenAI(model="gpt-4.1"))
+    except ImportError:
+        pass
+    try:
+        from langchain_google_genai import ChatGoogle
+
+        models.append(ChatGoogle(model="gemini-2.0-flash-exp"))
+    except ImportError:
+        pass
 
     # Add OCI model if available
     oci_model = get_oci_model_if_available()

@@ -65,7 +65,7 @@ class BuiltinAdapter:
                 input_schema=schema,
                 source=ToolSource.BUILTIN,
                 toolkit_name=toolkit_name,
-                tags=[f"source:builtin", f"toolkit:{toolkit_name}"],
+                tags=["source:builtin", f"toolkit:{toolkit_name}"],
             ).bind(func)
             atomic_tools.append(tool)
         return atomic_tools
