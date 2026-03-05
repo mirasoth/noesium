@@ -11,7 +11,7 @@ Requirements:
 - Set appropriate LLM API keys
 
 Environment Variables for Opik:
-- NOE_OPIK_TRACING: Global toggle for Opik tracing (default: false)
+- NOESIUM_OPIK_TRACING: Global toggle for Opik tracing (default: false)
 - OPIK_USE_LOCAL: Use local Opik deployment (default: true)
 - OPIK_LOCAL_URL: Local Opik URL (default: http://localhost:5173)
 - OPIK_API_KEY: Your Comet ML API key (only needed for cloud)
@@ -24,7 +24,7 @@ Local Deployment Setup:
 1. Install Opik locally: pip install opik
 2. Start local Opik server: opik local start
 3. Set environment variables:
-   export NOE_OPIK_TRACING=true
+   export NOESIUM_OPIK_TRACING=true
    export OPIK_USE_LOCAL=true
    # Optional: export OPIK_LOCAL_URL=http://localhost:5173
 
@@ -73,12 +73,12 @@ def check_opik_configuration(logger):
     logger.info("🔍 Checking Opik configuration...")
 
     # Check global Noesium toggle first
-    noesium_opik_enabled = os.getenv("NOE_OPIK_TRACING", "false").lower() == "true"
+    noesium_opik_enabled = os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true"
 
     if not noesium_opik_enabled:
-        logger.warning("⚠️ NOE_OPIK_TRACING not enabled")
+        logger.warning("⚠️ NOESIUM_OPIK_TRACING not enabled")
         logger.info("💡 To enable Opik tracing:")
-        logger.info("   1. Set: export NOE_OPIK_TRACING=true")
+        logger.info("   1. Set: export NOESIUM_OPIK_TRACING=true")
         logger.info("   2. Configure Opik: opik configure (or set environment variables)")
         logger.info("   3. For cloud: set OPIK_API_KEY")
         logger.info("   4. For local: ensure Opik server is running")

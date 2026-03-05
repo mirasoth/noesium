@@ -25,16 +25,16 @@ from noesium.toolkits import (
     TOOLKIT_WEB_SEARCH,
 )
 
-_NOE_HOME = Path.home() / ".noeagent"
-_NOE_AGENT_CONSOLE_LOG_LEVEL = "ERROR"
+_NOEAGENT_HOME = Path.home() / ".noeagent"
+_NOEAGENT_CONSOLE_LOG_LEVEL = "ERROR"
 
 
 def get_noe_config_path() -> Path:
-    """Return NoeAgent config file path (NOE_AGENT_CONFIG or ~/.noeagent/config.json)."""
-    path = os.getenv("NOE_AGENT_CONFIG")
+    """Return NoeAgent config file path (NOEAGENT_CONFIG or ~/.noeagent/config.json)."""
+    path = os.getenv("NOEAGENT_CONFIG")
     if path:
         return Path(path)
-    return _NOE_HOME / "config.json"
+    return _NOEAGENT_HOME / "config.json"
 
 
 class NoeMode(str, Enum):
@@ -208,7 +208,7 @@ class NoeConfig(BaseModel):
     """
 
     mode: NoeMode = NoeMode.AGENT
-    llm_provider: str = Field(default_factory=lambda: os.getenv("NOE_LLM_PROVIDER", "openai"))
+    llm_provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
     model_name: str | None = None
     planning_model: str | None = None
 
@@ -222,7 +222,7 @@ class NoeConfig(BaseModel):
     dotenv_path: str | None = None  # None means auto-detect .env in current directory
 
     progress_callbacks: list[Callable] = Field(default_factory=list)
-    session_log_dir: str = Field(default_factory=lambda: str(_NOE_HOME / "sessions"))
+    session_log_dir: str = Field(default_factory=lambda: str(_NOEAGENT_HOME / "sessions"))
     enable_session_logging: bool = True
 
     # Session isolation — all per-session artefacts live under session_dir
@@ -234,7 +234,7 @@ class NoeConfig(BaseModel):
     file_log_level: str = "INFO"
 
     # TUI settings
-    tui_history_file: str = Field(default_factory=lambda: str(_NOE_HOME / "history.json"))
+    tui_history_file: str = Field(default_factory=lambda: str(_NOEAGENT_HOME / "history.json"))
     tui_history_size: int = 1000
 
     enabled_toolkits: list[str] = Field(
@@ -259,7 +259,7 @@ class NoeConfig(BaseModel):
     memory_providers: list[str] = Field(
         default_factory=lambda: ["working", "event_sourced", "memu"],
     )
-    memu_memory_dir: str = Field(default_factory=lambda: str(_NOE_HOME / "memory"))
+    memu_memory_dir: str = Field(default_factory=lambda: str(_NOEAGENT_HOME / "memory"))
     memu_user_id: str = "default_user"
     persist_memory: bool = True
 
@@ -344,7 +344,7 @@ class NoeConfig(BaseModel):
         """Load NoeConfig from global configuration.
 
         This method loads the centralized configuration from get_noe_config_path()
-        (NOE_AGENT_CONFIG or ~/.noeagent/config.json) and creates a NoeConfig instance.
+        (NOEAGENT_CONFIG or ~/.noeagent/config.json) and creates a NoeConfig instance.
 
         Returns:
             NoeConfig instance populated from global configuration
@@ -352,9 +352,9 @@ class NoeConfig(BaseModel):
         from noesium.core.config import load_config
 
         global_config = load_config(get_noe_config_path())
-        # NoeAgent env overrides (backward compat with NOE_*)
-        if os.getenv("NOE_LLM_PROVIDER"):
-            global_config.llm.provider = os.getenv("NOE_LLM_PROVIDER")
+        # NoeAgent env overrides (backward compat with NOESIUM_*)
+        if os.getenv("NOESIUM_LLM_PROVIDER"):
+            global_config.llm.provider = os.getenv("NOESIUM_LLM_PROVIDER")
 
         # Get the chat model for the configured provider
         provider_config = global_config.llm.providers.get(global_config.llm.provider, {})
@@ -379,7 +379,7 @@ class NoeConfig(BaseModel):
             session_log_dir=global_config.memory.session_log_dir,
             enable_session_logging=global_config.memory.session_logging,
             file_log_level=global_config.logging.file_level or global_config.logging.level,
-            tui_history_file=_tui_field(global_config, "history_file", str(_NOE_HOME / "history.json")),
+            tui_history_file=_tui_field(global_config, "history_file", str(_NOEAGENT_HOME / "history.json")),
             tui_history_size=_tui_field(global_config, "history_size", 1000),
             enabled_toolkits=global_config.tools.enabled_toolkits,
             toolkit_configs={

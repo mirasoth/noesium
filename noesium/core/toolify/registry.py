@@ -12,6 +12,24 @@ from .config import ToolkitConfig
 logger = get_logger(__name__)
 
 
+# Flag to track if toolkits have been discovered
+_toolkits_discovered = False
+
+
+def _ensure_toolkits_discovered():
+    """
+    Ensure built-in toolkits are discovered (lazy initialization).
+
+    This avoids circular imports by deferring discovery until needed.
+    """
+    global _toolkits_discovered
+    if _toolkits_discovered:
+        return
+
+    _toolkits_discovered = True
+    _discover_builtin_toolkits()
+
+
 class ToolkitRegistry:
     """
     Registry for managing available toolkits.
@@ -62,6 +80,7 @@ class ToolkitRegistry:
         Raises:
             KeyError: If toolkit is not registered
         """
+        _ensure_toolkits_discovered()
         if name not in cls._registry:
             raise KeyError(f"Toolkit '{name}' not found. Available toolkits: {list(cls._registry.keys())}")
         return cls._registry[name]
@@ -74,6 +93,7 @@ class ToolkitRegistry:
         Returns:
             List of toolkit names
         """
+        _ensure_toolkits_discovered()
         return list(cls._registry.keys())
 
     @classmethod
@@ -107,6 +127,7 @@ class ToolkitRegistry:
         Returns:
             True if registered, False otherwise
         """
+        _ensure_toolkits_discovered()
         return name in cls._registry
 
     @classmethod
@@ -221,10 +242,3 @@ def _discover_builtin_toolkits():
             logger.debug(f"Discovered toolkit module: {module_name}")
         except ImportError as e:
             logger.warning(f"Failed to import toolkit module {module_name}: {e}")
-
-
-# Initialize built-in toolkits on import
-try:
-    _discover_builtin_toolkits()
-except Exception as e:
-    logger.warning(f"Failed to discover built-in toolkits: {e}")

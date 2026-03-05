@@ -81,7 +81,7 @@ from .commands import (
     get_toolkit_display_name,
     parse_subagent_prefix_from_input,
 )
-from .config import _NOE_AGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
+from .config import _NOEAGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
 from .session_log import SessionLogger
 
 # ---------------------------------------------------------------------------
@@ -1184,7 +1184,7 @@ def main() -> None:
     session_dir = _Path(config.session_dir)
     session_dir.mkdir(parents=True, exist_ok=True)
     setup_logging(
-        console_level=_NOE_AGENT_CONSOLE_LOG_LEVEL,
+        console_level=_NOEAGENT_CONSOLE_LOG_LEVEL,
         log_file=str(session_dir / "noeagent.log"),
         log_file_level=config.file_log_level,
         enable_colors=False,

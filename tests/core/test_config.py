@@ -72,7 +72,7 @@ class TestConfigModels:
 
     def test_llm_config_defaults(self):
         """Test LLMConfig default values."""
-        with patch.dict(os.environ, {"NOE_LLM_PROVIDER": "openai"}):
+        with patch.dict(os.environ, {"NOESIUM_LLM_PROVIDER": "openai"}):
             config = LLMConfig()
             assert config.provider == "openai"
             assert config.providers == {}

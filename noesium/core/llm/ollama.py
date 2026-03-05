@@ -417,7 +417,7 @@ class LLMClient(BaseLLMClient):
             if len(embedding) != expected_dims:
                 logger.warning(
                     f"Embedding has {len(embedding)} dimensions, expected {expected_dims}. "
-                    f"Consider setting NOE_EMBEDDING_DIMS={len(embedding)} or "
+                    f"Consider setting NOESIUM_EMBEDDING_DIMS={len(embedding)} or "
                     f"using a different embedding model."
                 )
 

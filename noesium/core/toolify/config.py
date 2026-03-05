@@ -55,7 +55,7 @@ class ToolkitConfig(BaseModel):
     log_level: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
     """Logging level for this toolkit"""
 
-    enable_tracing: bool = Field(default_factory=lambda: os.getenv("NOE_ENABLE_TRACING", "false").lower() == "true")
+    enable_tracing: bool = Field(default_factory=lambda: os.getenv("NOESIUM_ENABLE_TRACING", "false").lower() == "true")
     """Enable detailed tracing for debugging"""
 
     class Config:

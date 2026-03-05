@@ -149,4 +149,4 @@ class BaseLLMClient(ABC):
         Returns:
             int: Expected embedding dimensions
         """
-        return int(os.getenv("NOE_EMBEDDING_DIMS", str(DEFAULT_EMBEDDING_DIMS)))
+        return int(os.getenv("NOESIUM_EMBEDDING_DIMS", str(DEFAULT_EMBEDDING_DIMS)))

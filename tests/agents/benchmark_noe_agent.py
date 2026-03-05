@@ -8,7 +8,7 @@ Usage:
     uv run pytest tests/agents/benchmark_noe_agent.py -v -k "test_tool_web_search"
 
 Environment variables required:
-    NOE_LLM_PROVIDER / OPENAI_API_KEY / OPENROUTER_API_KEY  (LLM)
+    NOESIUM_LLM_PROVIDER / OPENAI_API_KEY / OPENROUTER_API_KEY  (LLM)
     TAVILY_API_KEY        (web_search toolkit)
     JINA_API_KEY          (jina_research toolkit)
     SERPER_API_KEY        (serper toolkit)

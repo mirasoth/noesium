@@ -540,6 +540,7 @@ class TestNoeConfig:
         """Test that _create_browser_use_agent passes config.headless to BrowserUseAgent."""
         from noesium.noeagent.agent import NoeAgent
         from noesium.noeagent.config import AgentSubagentConfig
+        from noesium.subagents.bu.config import DEFAULT_HEADLESS
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
 
@@ -563,13 +564,20 @@ class TestNoeConfig:
         bu_headless = agent._create_browser_use_agent(cfg_headless)
         assert bu_headless.browser_profile.headless is True
 
+        # Default mode: uses env var BROWSER_USE_HEADLESS if set, otherwise DEFAULT_HEADLESS
         cfg_default = AgentSubagentConfig(
             name="browser_use",
             agent_type="browser_use",
             description="Web automation",
         )
         bu_default = agent._create_browser_use_agent(cfg_default)
-        assert bu_default.browser_profile.headless is True
+        # When no config is provided, it should use env var or DEFAULT_HEADLESS
+        env_headless = os.getenv("BROWSER_USE_HEADLESS")
+        if env_headless is not None:
+            expected = env_headless.lower() in ("true", "1", "yes", "t")
+        else:
+            expected = DEFAULT_HEADLESS
+        assert bu_default.browser_profile.headless is expected
 
     def test_ask_mode_overrides(self):
         cfg = NoeConfig(mode=NoeMode.ASK).effective()
@@ -585,10 +593,10 @@ class TestNoeConfig:
 
     def test_config_priority_env_overrides_default(self, monkeypatch):
         """Environment variables should override default values."""
-        monkeypatch.setenv("NOE_LLM_PROVIDER", "ollama")
+        monkeypatch.setenv("NOESIUM_LLM_PROVIDER", "ollama")
         cfg = NoeConfig()
         assert cfg.llm_provider == "ollama"
-        monkeypatch.delenv("NOE_LLM_PROVIDER")
+        monkeypatch.delenv("NOESIUM_LLM_PROVIDER")
 
     def test_load_dotenv_disabled(self, tmp_path, monkeypatch):
         """Test that dotenv loading can be disabled."""

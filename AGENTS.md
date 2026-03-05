@@ -445,7 +445,7 @@ Do not use `python`, `python3`, or `pip` directly - use `uv run` instead.
 
 ```bash
 # LLM Provider
-export NOE_LLM_PROVIDER="openai"  # or "openrouter", "ollama", "llamacpp"
+export NOESIUM_LLM_PROVIDER="openai"  # or "openrouter", "ollama", "llamacpp"
 
 # OpenAI
 export OPENAI_API_KEY="sk-..."

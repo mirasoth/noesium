@@ -254,7 +254,7 @@ The system respects these environment variables:
 
 - `NOESIUM_LLM_PROVIDER`: Default LLM provider
 - `LOG_LEVEL`: Logging level
-- `NOE_ENABLE_TRACING`: Enable detailed tracing
+- `NOESIUM_ENABLE_TRACING`: Enable detailed tracing
 - `SERPER_API_KEY`: For search toolkit
 - `JINA_API_KEY`: For web content extraction
 

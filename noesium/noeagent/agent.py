@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Optional, Type
 
@@ -47,7 +48,7 @@ from noesium.core.toolify.executor import ToolExecutor
 from noesium.subagents import SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS
 
 from . import nodes
-from .config import _NOE_AGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
+from .config import _NOEAGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
 from .planner import TaskPlanner
 from .state import AgentState, AskState
 
@@ -166,10 +167,10 @@ class NoeAgent(BaseGraphicAgent):
         from noesium.core.utils.logging import setup_logging
 
         setup_logging(
-            console_level=_NOE_AGENT_CONSOLE_LOG_LEVEL,
+            console_level=_NOEAGENT_CONSOLE_LOG_LEVEL,
             log_file=str(session_dir / "noeagent.log"),
             log_file_level=self.config.file_log_level,
-            third_party_level=_NOE_AGENT_CONSOLE_LOG_LEVEL,
+            third_party_level=_NOEAGENT_CONSOLE_LOG_LEVEL,
         )
         NoeAgent._logging_configured = True
 
@@ -481,7 +482,15 @@ class NoeAgent(BaseGraphicAgent):
             from noesium.subagents.bu.config import DEFAULT_HEADLESS
 
             opts = (subagent_cfg.config or {}).copy()
-            headless = opts.pop("headless", DEFAULT_HEADLESS)
+
+            # Check for headless setting: config file -> env var -> default
+            env_headless = os.getenv("BROWSER_USE_HEADLESS")
+            if env_headless is not None:
+                env_headless_val = env_headless.lower() in ("true", "1", "yes", "t")
+            else:
+                env_headless_val = None
+
+            headless = opts.pop("headless", env_headless_val if env_headless_val is not None else DEFAULT_HEADLESS)
 
             return BrowserUseAgent(
                 llm=self.llm,
@@ -1313,7 +1322,67 @@ class NoeAgent(BaseGraphicAgent):
         await self._fire_callbacks(sa_start_evt)
         yield sa_start_evt
 
-        # Try to find the subagent in the registry
+        # Built-in subagents (browser_use, tacitus) are registered with SubagentManager only,
+        # not with CapabilityRegistry. Use invoke_stream so the agent actually runs.
+        mgr = self._subagent_manager
+        if mgr is not None and mgr.get_provider(subagent_name) is not None:
+            request = SubagentInvocationRequest(subagent_id=subagent_name, message=message)
+            context = SubagentContext(
+                session_id=self._agent_id,
+                parent_id=self._agent_id,
+                depth=getattr(self, "_depth", 0),
+                max_depth=self.config.subagent_max_depth,
+            )
+            final_result = ""
+            try:
+                async for event in mgr.invoke_stream(subagent_name, request, context):
+                    progress_event = self._subagent_event_to_progress(event, subagent_name)
+                    if progress_event is not None:
+                        await self._fire_callbacks(progress_event)
+                        yield progress_event
+                    if event.event_type == SubagentEventType.SUBAGENT_END:
+                        final_result = event.detail or event.summary or ""
+                    elif event.event_type == SubagentEventType.SUBAGENT_ERROR:
+                        error_evt = _evt(
+                            ProgressEventType.ERROR,
+                            error=event.error_message or "Subagent error",
+                        )
+                        await self._fire_callbacks(error_evt)
+                        yield error_evt
+            except Exception as exc:
+                logger.warning("Subagent '%s' execution failed: %s", subagent_name, exc)
+                error_evt = _evt(
+                    ProgressEventType.ERROR,
+                    error=f"Error executing {display_name}: {exc}",
+                )
+                await self._fire_callbacks(error_evt)
+                yield error_evt
+                sa_end_evt = _evt(
+                    ProgressEventType.SUBAGENT_END,
+                    subagent_id=subagent_name,
+                    summary=f"[{display_name}] failed",
+                )
+                await self._fire_callbacks(sa_end_evt)
+                yield sa_end_evt
+                end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
+                await self._fire_callbacks(end_evt)
+                yield end_evt
+                return
+            if final_result:
+                final_evt = _evt(
+                    ProgressEventType.FINAL_ANSWER,
+                    text=final_result,
+                    summary="Final answer ready",
+                    detail=final_result,
+                )
+                await self._fire_callbacks(final_evt)
+                yield final_evt
+            end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended")
+            await self._fire_callbacks(end_evt)
+            yield end_evt
+            return
+
+        # Fallback: try capability registry (e.g. CLI agents registered as providers)
         registry = self._registry
         if registry is None:
             error_evt = _evt(
@@ -1327,7 +1396,6 @@ class NoeAgent(BaseGraphicAgent):
             yield end_evt
             return
 
-        # Check if it's a built-in subagent
         cap_id = f"builtin_agent:{subagent_name}"
         try:
             provider = registry.get_by_name(cap_id)
@@ -1335,18 +1403,15 @@ class NoeAgent(BaseGraphicAgent):
             provider = None
 
         if provider is None:
-            # Check if the subagent is configured but not enabled
             enabled_subagents = self.config.get_enabled_builtin_subagents()
             subagent_types = [s.agent_type for s in enabled_subagents]
             if subagent_name not in subagent_types:
                 error_msg = f"Subagent '{display_name}' is not enabled. Enable it in your config."
             else:
-                error_msg = f"Subagent '{display_name}' not found in registry."
-
+                error_msg = f"Subagent '{display_name}' not found."
             error_evt = _evt(ProgressEventType.ERROR, error=error_msg)
             await self._fire_callbacks(error_evt)
             yield error_evt
-
             sa_end_evt = _evt(
                 ProgressEventType.SUBAGENT_END,
                 subagent_id=subagent_name,
@@ -1354,34 +1419,27 @@ class NoeAgent(BaseGraphicAgent):
             )
             await self._fire_callbacks(sa_end_evt)
             yield sa_end_evt
-
             end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
             await self._fire_callbacks(end_evt)
             yield end_evt
             return
 
-        # Execute the subagent
+        # Execute via registry provider (e.g. CLI capability provider)
         final_result = ""
         try:
             if hasattr(provider, "invoke_streaming"):
-                # Stream progress events from the subagent
                 async for event in provider.invoke_streaming(message=message):
-                    # Tag events with subagent info and forward
                     if event.subagent_id is None:
                         event = ProgressEvent(**{**event.model_dump(), "subagent_id": subagent_name})
                     await self._fire_callbacks(event)
                     yield event
-
                     if event.type == ProgressEventType.SUBAGENT_END:
                         final_result = event.detail or event.summary or ""
                     elif event.type == ProgressEventType.FINAL_ANSWER:
                         final_result = event.text or ""
             else:
-                # Non-streaming invocation
                 result = await provider.invoke(message=message)
                 final_result = str(result)
-
-                # Emit end event with result
                 sa_end_evt = _evt(
                     ProgressEventType.SUBAGENT_END,
                     subagent_id=subagent_name,

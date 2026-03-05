@@ -63,8 +63,8 @@ class TestConfigIntegration:
 
             # Override with environment variable
             env = {
-                "NOE_AGENT_CONFIG": str(config_path),
-                "NOE_LLM_PROVIDER": "openai",
+                "NOEAGENT_CONFIG": str(config_path),
+                "NOESIUM_LLM_PROVIDER": "openai",
                 "OPENAI_API_KEY": "test-key",
             }
             with patch.dict(os.environ, env):
@@ -131,7 +131,7 @@ class TestConfigIntegration:
             assert len(loaded.subagents.builtin) == 1
             assert loaded.subagents.builtin[0].config == {"headless": False}
 
-            with patch.dict(os.environ, {"NOE_AGENT_CONFIG": str(config_path)}):
+            with patch.dict(os.environ, {"NOEAGENT_CONFIG": str(config_path)}):
                 noe_config = NoeConfig.from_global_config()
                 subagent = noe_config.get_builtin_subagent("browser_use")
                 assert subagent is not None
@@ -172,7 +172,7 @@ class TestNoeConfigIntegration:
             save_config(global_config, config_path)
 
             # Load via NoeConfig (isolate environment to prevent overrides)
-            env = {"NOE_AGENT_CONFIG": str(config_path)}
+            env = {"NOEAGENT_CONFIG": str(config_path)}
             with patch.dict(os.environ, env, clear=True):
                 noe_config = NoeConfig.from_global_config()
 
@@ -199,7 +199,7 @@ class TestNoeConfigIntegration:
             save_config(global_config, config_path)
 
             # Get subagent via NoeConfig
-            with patch.dict(os.environ, {"NOE_AGENT_CONFIG": str(config_path)}):
+            with patch.dict(os.environ, {"NOEAGENT_CONFIG": str(config_path)}):
                 noe_config = NoeConfig.from_global_config()
                 subagent = noe_config.get_builtin_subagent("browser_use")
 
@@ -221,7 +221,7 @@ class TestNoeConfigIntegration:
             save_config(global_config, config_path)
 
             # Load and check overrides
-            with patch.dict(os.environ, {"NOE_AGENT_CONFIG": str(config_path)}):
+            with patch.dict(os.environ, {"NOEAGENT_CONFIG": str(config_path)}):
                 noe_config = NoeConfig.from_global_config()
                 effective = noe_config.effective()
 
@@ -241,7 +241,7 @@ class TestConfigCLI:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             custom_path = Path(tmpdir) / "custom_config.json"
-            monkeypatch.setenv("NOE_AGENT_CONFIG", str(custom_path))
+            monkeypatch.setenv("NOEAGENT_CONFIG", str(custom_path))
 
             cmd_config_path()
             captured = capsys.readouterr()
@@ -253,7 +253,7 @@ class TestConfigCLI:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"
-            monkeypatch.setenv("NOE_AGENT_CONFIG", str(config_path))
+            monkeypatch.setenv("NOEAGENT_CONFIG", str(config_path))
 
             # Create config
             config = FrameworkConfig()
@@ -270,7 +270,7 @@ class TestConfigCLI:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"
-            monkeypatch.setenv("NOE_AGENT_CONFIG", str(config_path))
+            monkeypatch.setenv("NOEAGENT_CONFIG", str(config_path))
 
             # Create config
             config = FrameworkConfig()
@@ -287,7 +287,7 @@ class TestConfigCLI:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"
-            monkeypatch.setenv("NOE_AGENT_CONFIG", str(config_path))
+            monkeypatch.setenv("NOEAGENT_CONFIG", str(config_path))
 
             # Mock user input
             monkeypatch.setattr("builtins.input", lambda _: "y")
@@ -308,7 +308,7 @@ class TestConfigCLI:
             config_path = Path(tmpdir) / "config.json"
 
             # Set config path and isolate environment
-            env = {"NOE_AGENT_CONFIG": str(config_path)}
+            env = {"NOEAGENT_CONFIG": str(config_path)}
             with patch.dict(os.environ, env, clear=True):
                 # Create initial config
                 config = FrameworkConfig()

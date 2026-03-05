@@ -131,7 +131,7 @@ For full framework usage, custom agents, and toolkits: **[docs/dev_guide.md](doc
 ## Environment variables
 
 ```bash
-export NOE_LLM_PROVIDER="openai"   # or openrouter, ollama, llamacpp
+export NOESIUM_LLM_PROVIDER="openai"   # or openrouter, ollama, llamacpp
 export OPENAI_API_KEY="sk-..."
 export SERPER_API_KEY="..."        # for search toolkit
 ```
