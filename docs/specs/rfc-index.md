@@ -2,7 +2,7 @@
 
 Master index of all RFC specifications.
 
-**Last Updated**: 2026-03-04
+**Last Updated**: 2026-03-05
 
 ---
 
@@ -55,6 +55,7 @@ Master index of all RFC specifications.
 |-----|-------|------|--------|---------|--------------|---------|
 | [RFC-9000](RFC-9000.md) | NoeCoder Design Philosophy and Principles | Conceptual Design | Draft | 2026-03-04 | 2026-03-04 | 001 |
 | [RFC-9001](RFC-9001.md) | NoeCoder Architecture Design | Architecture Design | Draft | 2026-03-04 | 2026-03-04 | 001 |
+| [RFC-9003](RFC-9003.md) | Extensible Subagent Interface for Core Agent Framework | Architecture Design | Draft | 2026-03-05 | 2026-03-05 | 001 |
 
 ---
 
@@ -86,12 +87,12 @@ Master index of all RFC specifications.
 ### By Kind
 
 - **Conceptual Design**: [RFC-0001](RFC-0001.md), [RFC-9000](RFC-9000.md)
-- **Architecture Design**: [RFC-0002](RFC-0002.md), [RFC-0003](RFC-0003.md), [RFC-0004](RFC-0004.md), [RFC-0005](RFC-0005.md), [RFC-0006](RFC-0006.md), [RFC-2001](RFC-2001.md), [RFC-2003](RFC-2003.md), [RFC-9001](RFC-9001.md)
+- **Architecture Design**: [RFC-0002](RFC-0002.md), [RFC-0003](RFC-0003.md), [RFC-0004](RFC-0004.md), [RFC-0005](RFC-0005.md), [RFC-0006](RFC-0006.md), [RFC-2001](RFC-2001.md), [RFC-2003](RFC-2003.md), [RFC-9001](RFC-9001.md), [RFC-9003](RFC-9003.md)
 - **Implementation Interface Design**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md), [RFC-1003](RFC-1003.md), [RFC-1004](RFC-1004.md), [RFC-1005](RFC-1005.md), [RFC-2002](RFC-2002.md), [RFC-2004](RFC-2004.md)
 
 ### By Status
 
-- **Draft**: RFC-0001, RFC-0002, RFC-0003, RFC-0004, RFC-0005, RFC-0006, RFC-1001, RFC-1002, RFC-1003, RFC-1004, RFC-1005, RFC-2001, RFC-2002, RFC-2003, RFC-2004, RFC-9000, RFC-9001
+- **Draft**: RFC-0001, RFC-0002, RFC-0003, RFC-0004, RFC-0005, RFC-0006, RFC-1001, RFC-1002, RFC-1003, RFC-1004, RFC-1005, RFC-2001, RFC-2002, RFC-2003, RFC-2004, RFC-9000, RFC-9001, RFC-9003
 - **Review**: _None yet_
 - **Frozen**: _None yet_
 
@@ -100,7 +101,7 @@ Master index of all RFC specifications.
 - **Global Architecture (0xxx)**: [RFC-0001](RFC-0001.md), [RFC-0002](RFC-0002.md), [RFC-0003](RFC-0003.md), [RFC-0004](RFC-0004.md), [RFC-0005](RFC-0005.md), [RFC-0006](RFC-0006.md)
 - **Core Framework (1xxx)**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md), [RFC-1003](RFC-1003.md), [RFC-1004](RFC-1004.md), [RFC-1005](RFC-1005.md)
 - **Enhancements (2xxx)**: [RFC-2001](RFC-2001.md), [RFC-2002](RFC-2002.md), [RFC-2003](RFC-2003.md), [RFC-2004](RFC-2004.md)
-- **Experimental (9xxx)**: [RFC-9000](RFC-9000.md), [RFC-9001](RFC-9001.md)
+- **Experimental (9xxx)**: [RFC-9000](RFC-9000.md), [RFC-9001](RFC-9001.md), [RFC-9003](RFC-9003.md)
 
 ---
 
