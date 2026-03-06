@@ -55,8 +55,8 @@ Master index of all RFC specifications.
 
 | RFC | Title | Kind | Status | Created | Last Updated | Version |
 |-----|-------|------|--------|---------|--------------|---------|
-| [RFC-9000](RFC-9000.md) | NoeCoder Design Philosophy and Principles | Conceptual Design | Draft | 2026-03-04 | 2026-03-04 | 001 |
-| [RFC-9001](RFC-9001.md) | NoeCoder Architecture Design | Architecture Design | Draft | 2026-03-04 | 2026-03-04 | 001 |
+| [RFC-9000](RFC-9000.md) | Voyager Design Philosophy and Principles | Conceptual Design | Draft | 2026-03-04 | 2026-03-04 | 001 |
+| [RFC-9001](RFC-9001.md) | Voyager Architecture Design | Architecture Design | Draft | 2026-03-04 | 2026-03-04 | 001 |
 
 ---
 

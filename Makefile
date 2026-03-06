@@ -2,8 +2,8 @@
 PYTHON = python3
 UV = uv
 PYTEST = pytest
-PYTHON_MODULES = noesium tests examples
-COVERAGE_MODULES = noesium
+PYTHON_MODULES = noesium noeagent voyager/backend/src examples
+COVERAGE_MODULES = noesium noeagent voyager
 TEST_DIR = tests
 LINE_LENGTH = 120
 
@@ -27,13 +27,18 @@ help: ## Show this help message
 # SETUP COMMANDS
 # =============================================================================
 
-.PHONY: install setup check-env
+.PHONY: install setup check-env install-workspace
 
 install: ## Install development dependencies
 	@echo "$(BLUE)🔧 Installing development dependencies...$(RESET)"
-	@$(UV) sync --extra dev --extra all
+	@$(UV) sync --all-packages
 
-setup: install ## Setup development environment
+install-workspace: ## Install all workspace packages
+	@echo "$(BLUE)🔧 Installing all workspace packages...$(RESET)"
+	@$(UV) sync --all-packages
+	@echo "$(GREEN)✅ Workspace ready$(RESET)"
+
+setup: install-workspace ## Setup development environment
 	@echo "$(GREEN)✅ Development environment ready$(RESET)"
 
 check-env: ## Check environment setup
@@ -48,6 +53,7 @@ check-env: ## Check environment setup
 # =============================================================================
 
 .PHONY: test test-unit test-integration test-coverage test-watch
+.PHONY: test-noesium test-noeagent test-voyager test-all
 
 test: ## Run all tests.
 	@echo "$(BLUE)🧪 Running all tests...$(RESET)"
@@ -68,6 +74,22 @@ test-coverage: ## Run tests with coverage
 test-watch: ## Run tests in watch mode
 	@echo "$(BLUE)👀 Running tests in watch mode...$(RESET)"
 	$(UV) run pytest-watch $(TEST_DIR) -- -v
+
+# Package-specific test targets
+test-noesium: ## Run noesium package tests
+	@echo "$(BLUE)🧪 Running noesium tests...$(RESET)"
+	cd noesium && $(UV) run $(PYTEST) tests/ -v
+
+test-noeagent: ## Run noeagent package tests
+	@echo "$(BLUE)🧪 Running noeagent tests...$(RESET)"
+	cd noeagent && $(UV) run $(PYTEST) tests/ -v
+
+test-voyager: ## Run voyager backend tests
+	@echo "$(BLUE)🧪 Running voyager backend tests...$(RESET)"
+	cd voyager/backend && $(UV) run $(PYTEST) tests/ -v
+
+test-all: test-noesium test-noeagent test-voyager ## Run all package tests
+	@echo "$(GREEN)✅ All package tests completed$(RESET)"
 
 # =============================================================================
 # CODE QUALITY COMMANDS
@@ -105,6 +127,7 @@ autofix: lint-fix format ## Auto-fix all code quality issues
 # =============================================================================
 
 .PHONY: build build-wheel build-sdist package
+.PHONY: build-noesium build-noeagent build-voyager build-all
 
 build: ## Build package
 	@echo "$(BLUE)🔨 Building package...$(RESET)"
@@ -119,6 +142,22 @@ build-sdist: ## Build source distribution
 	@$(UV) build --sdist
 
 package: clean build ## Build and package for distribution
+
+# Package-specific build targets
+build-noesium: ## Build noesium package
+	@echo "$(BLUE)🔨 Building noesium package...$(RESET)"
+	cd noesium && $(UV) build
+
+build-noeagent: ## Build noeagent package
+	@echo "$(BLUE)🔨 Building noeagent package...$(RESET)"
+	cd noeagent && $(UV) build
+
+build-voyager: ## Build voyager backend package
+	@echo "$(BLUE)🔨 Building voyager backend package...$(RESET)"
+	cd voyager/backend && $(UV) build
+
+build-all: build-noesium build-noeagent build-voyager ## Build all packages
+	@echo "$(GREEN)✅ All packages built$(RESET)"
 
 # =============================================================================
 # CLEAN COMMANDS

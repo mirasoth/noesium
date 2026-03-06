@@ -21,7 +21,7 @@ from noesium.noeagent.config import (
 )
 
 # Set to false to run actual LLM calls
-DEMO_MODE = os.environ.get("NOE_DEMO_MODE", "true").lower() == "true"
+DEMO_MODE = os.environ.get("NOESIUM_DEMO_MODE", "true").lower() == "true"
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
@@ -358,7 +358,7 @@ async def main():
         await example()
 
     print("\n" + "=" * 40)
-    print("Done. Set NOE_DEMO_MODE=false for live execution.")
+    print("Done. Set NOESIUM_DEMO_MODE=false for live execution.")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# NoeCoder Implementation Design
+# Voyager Implementation Design
 
 **Status**: Draft  
 **Authors**: Noesium Team  
@@ -11,9 +11,9 @@
 
 ## 1. Overview
 
-This document defines the concrete implementation plan for NoeCoder, translating the design philosophy (RFC-9000) and architecture (RFC-9001) into actionable specifications.
+This document defines the concrete implementation plan for Voyager, translating the design philosophy (RFC-9000) and architecture (RFC-9001) into actionable specifications.
 
-**Important**: NoeCoder is implemented as **standalone projects** separate from the noesium core framework:
+**Important**: Voyager is implemented as **standalone projects** separate from the noesium core framework:
 - `coder-backend/` - Standalone Python backend project
 - `coder-frontend/` - Standalone React frontend project
 
@@ -45,10 +45,10 @@ workspace/
 ├── coder-backend/              # Standalone backend project
 │   ├── pyproject.toml          # Independent Python project config
 │   ├── src/
-│   │   └── noecoder/
+│   │   └── voyager/
 │   │       ├── __init__.py
 │   │       ├── main.py         # FastAPI + SocketIO entry
-│   │       ├── config.py       # NoeCoderConfig
+│   │       ├── config.py       # VoyagerConfig
 │   │       ├── api/
 │   │       │   ├── __init__.py
 │   │       │   ├── repositories.py
@@ -97,7 +97,7 @@ workspace/
 ### 2.1 Core Entities
 
 ```python
-# noecoder/models/task.py
+# voyager/models/task.py
 
 from datetime import datetime
 from enum import Enum
@@ -187,7 +187,7 @@ class TaskUpdate(BaseModel):
 ```
 
 ```python
-# noecoder/models/repository.py
+# voyager/models/repository.py
 
 from datetime import datetime
 from pathlib import Path
@@ -215,7 +215,7 @@ class RepositoryCreate(BaseModel):
 ```
 
 ```python
-# noecoder/models/events.py
+# voyager/models/events.py
 
 from datetime import datetime
 from typing import Any, Optional
@@ -258,7 +258,7 @@ class TaskCompletedEvent(WebSocketEvent):
 ### 2.2 Configuration Model
 
 ```python
-# noecoder/config.py
+# voyager/config.py
 
 from pathlib import Path
 from typing import Any, Optional
@@ -266,8 +266,8 @@ from pydantic import BaseModel, Field
 from noesium.noeagent.config import NoeConfig, NoeMode
 
 
-class NoeCoderConfig(BaseModel):
-    """NoeCoder-specific configuration."""
+class VoyagerConfig(BaseModel):
+    """Voyager-specific configuration."""
     
     # Server settings
     host: str = "127.0.0.1"
@@ -275,7 +275,7 @@ class NoeCoderConfig(BaseModel):
     debug: bool = False
     
     # Paths
-    data_root: Path = Field(default_factory=lambda: Path.home() / ".noecoder")
+    data_root: Path = Field(default_factory=lambda: Path.home() / ".voyager")
     workspace_root: Path | None = None  # Derived from data_root if None
     
     # NoeAgent defaults
@@ -291,7 +291,7 @@ class NoeCoderConfig(BaseModel):
     # Git settings
     default_branch: str = "main"
     auto_commit: bool = True
-    commit_message_prefix: str = "[NoeCoder] "
+    commit_message_prefix: str = "[Voyager] "
     
     # UI settings
     theme: str = "dark"
@@ -327,10 +327,10 @@ class NoeCoderConfig(BaseModel):
         )
     
     @classmethod
-    def load(cls, config_path: Path | None = None) -> "NoeCoderConfig":
+    def load(cls, config_path: Path | None = None) -> "VoyagerConfig":
         """Load configuration from file or return defaults."""
         if config_path is None:
-            config_path = Path.home() / ".noecoder" / "config.json"
+            config_path = Path.home() / ".voyager" / "config.json"
         
         if config_path.exists():
             import json
@@ -349,20 +349,20 @@ class NoeCoderConfig(BaseModel):
 File-based persistence layer using JSON for structured data and JSONL for event streams.
 
 ```python
-# noecoder/services/state_manager.py
+# voyager/services/state_manager.py
 
 import aiofiles
 import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
-from noecoder.models.task import Task, TaskStatus
-from noecoder.models.repository import Repository
-from noecoder.models.events import ProgressEventData
+from voyager.models.task import Task, TaskStatus
+from voyager.models.repository import Repository
+from voyager.models.events import ProgressEventData
 
 
 class StateManager:
-    """File-based state persistence for NoeCoder."""
+    """File-based state persistence for Voyager."""
     
     def __init__(self, data_root: Path):
         self.data_root = data_root
@@ -522,7 +522,7 @@ class StateManager:
 GitPython-based repository operations.
 
 ```python
-# noecoder/services/git_client.py
+# voyager/services/git_client.py
 
 import asyncio
 from datetime import datetime
@@ -530,7 +530,7 @@ from pathlib import Path
 from typing import Optional
 import git
 from git import Repo, GitCommandError
-from noecoder.models.repository import Repository
+from voyager.models.repository import Repository
 
 
 class GitClient:
@@ -731,16 +731,16 @@ class GitClient:
 Manages NoeAgent instances per repository.
 
 ```python
-# noecoder/services/session_manager.py
+# voyager/services/session_manager.py
 
 import asyncio
 from pathlib import Path
 from typing import Optional
 from noesium.noeagent import NoeAgent
 from noesium.noeagent.config import NoeConfig, NoeMode
-from noecoder.config import NoeCoderConfig
-from noecoder.models.repository import Repository
-from noecoder.services.state_manager import StateManager
+from voyager.config import VoyagerConfig
+from voyager.models.repository import Repository
+from voyager.services.state_manager import StateManager
 
 
 class SessionManager:
@@ -749,7 +749,7 @@ class SessionManager:
     def __init__(
         self,
         state_manager: StateManager,
-        config: NoeCoderConfig,
+        config: VoyagerConfig,
     ):
         self._state = state_manager
         self._config = config
@@ -821,7 +821,7 @@ class SessionManager:
 Bridges WebSocket to NoeAgent execution.
 
 ```python
-# noecoder/services/task_orchestrator.py
+# voyager/services/task_orchestrator.py
 
 import asyncio
 from datetime import datetime
@@ -829,12 +829,12 @@ from typing import Any, Optional
 import socketio
 
 from noesium.noeagent.progress import ProgressEvent, ProgressEventType
-from noecoder.config import NoeCoderConfig
-from noecoder.models.task import Task, TaskStatus, TaskStep, CodeChange
-from noecoder.models.events import ProgressEventData
-from noecoder.services.state_manager import StateManager
-from noecoder.services.session_manager import SessionManager
-from noecoder.services.git_client import GitClient
+from voyager.config import VoyagerConfig
+from voyager.models.task import Task, TaskStatus, TaskStep, CodeChange
+from voyager.models.events import ProgressEventData
+from voyager.services.state_manager import StateManager
+from voyager.services.session_manager import SessionManager
+from voyager.services.git_client import GitClient
 
 
 class TaskOrchestrator:
@@ -845,7 +845,7 @@ class TaskOrchestrator:
         state_manager: StateManager,
         session_manager: SessionManager,
         git_client: GitClient,
-        config: NoeCoderConfig,
+        config: VoyagerConfig,
     ):
         self._state = state_manager
         self._sessions = session_manager
@@ -1092,13 +1092,13 @@ class TaskOrchestrator:
 ### 4.1 Repository Endpoints
 
 ```python
-# noecoder/api/repositories.py
+# voyager/api/repositories.py
 
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
-from noecoder.models.repository import Repository, RepositoryCreate
-from noecoder.services.state_manager import StateManager
-from noecoder.services.git_client import GitClient
+from voyager.models.repository import Repository, RepositoryCreate
+from voyager.services.state_manager import StateManager
+from voyager.services.git_client import GitClient
 
 router = APIRouter(prefix="/api/repositories", tags=["repositories"])
 
@@ -1216,12 +1216,12 @@ async def list_branches(repo_id: str):
 ### 4.2 Task Endpoints
 
 ```python
-# noecoder/api/tasks.py
+# voyager/api/tasks.py
 
 from fastapi import APIRouter, HTTPException, Query
-from noecoder.models.task import Task, TaskStatus, TaskCreate, TaskUpdate
-from noecoder.services.state_manager import StateManager
-from noecoder.services.task_orchestrator import TaskOrchestrator
+from voyager.models.task import Task, TaskStatus, TaskCreate, TaskUpdate
+from voyager.services.state_manager import StateManager
+from voyager.services.task_orchestrator import TaskOrchestrator
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -1325,10 +1325,10 @@ async def get_task_artifacts(task_id: str):
 ### 5.1 Socket.IO Handlers
 
 ```python
-# noecoder/api/websocket.py
+# voyager/api/websocket.py
 
 import socketio
-from noecoder.services.task_orchestrator import TaskOrchestrator
+from voyager.services.task_orchestrator import TaskOrchestrator
 
 # Socket.IO server instance
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
@@ -1382,7 +1382,7 @@ async def task_cancel(sid, data):
 ## 6. Main Application
 
 ```python
-# noecoder/main.py
+# voyager/main.py
 
 import asyncio
 from contextlib import asynccontextmanager
@@ -1393,17 +1393,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from noecoder.config import NoeCoderConfig
-from noecoder.services.state_manager import StateManager
-from noecoder.services.git_client import GitClient
-from noecoder.services.session_manager import SessionManager
-from noecoder.services.task_orchestrator import TaskOrchestrator
-from noecoder.api import repositories, tasks, websocket
-from noecoder.api.websocket import sio
+from voyager.config import VoyagerConfig
+from voyager.services.state_manager import StateManager
+from voyager.services.git_client import GitClient
+from voyager.services.session_manager import SessionManager
+from voyager.services.task_orchestrator import TaskOrchestrator
+from voyager.api import repositories, tasks, websocket
+from voyager.api.websocket import sio
 
 
 # Global instances
-config: NoeCoderConfig = None
+config: VoyagerConfig = None
 state_manager: StateManager = None
 git_client: GitClient = None
 session_manager: SessionManager = None
@@ -1416,7 +1416,7 @@ async def lifespan(app: FastAPI):
     global config, state_manager, git_client, session_manager, task_orchestrator
     
     # Initialize configuration
-    config = NoeCoderConfig.load()
+    config = VoyagerConfig.load()
     config.data_root.mkdir(parents=True, exist_ok=True)
     
     # Initialize services
@@ -1442,7 +1442,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="NoeCoder",
+    title="Voyager",
     description="Personal coding assistant webserver",
     version="0.1.0",
     lifespan=lifespan,
@@ -1476,7 +1476,7 @@ if frontend_dist.exists():
 
 
 def main():
-    """CLI entry point for `noecoder serve`."""
+    """CLI entry point for `voyager serve`."""
     import uvicorn
     import argparse
     
@@ -1487,7 +1487,7 @@ def main():
     args = parser.parse_args()
     
     uvicorn.run(
-        "noecoder.main:socket_app",
+        "voyager.main:socket_app",
         host=args.host,
         port=args.port,
         reload=args.reload,
@@ -1507,7 +1507,7 @@ if __name__ == "__main__":
 ```json
 // coder/frontend/package.json
 {
-  "name": "noecoder-frontend",
+  "name": "voyager-frontend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -1819,7 +1819,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "noecoder"
+name = "voyager"
 version = "0.1.0"
 description = "Personal coding assistant webserver"
 requires-python = ">=3.11"
@@ -1850,17 +1850,17 @@ dev = [
 ]
 
 [project.scripts]
-noecoder = "noecoder.main:main"
+voyager = "voyager.main:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/noecoder"]
+packages = ["src/voyager"]
 ```
 
 ### 9.2 Frontend (coder-frontend/package.json)
 
 ```json
 {
-  "name": "noecoder-frontend",
+  "name": "voyager-frontend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -1903,10 +1903,10 @@ cd coder-backend
 uv pip install -e .
 
 # Run server
-noecoder serve
+voyager serve
 
 # Or with custom options
-noecoder serve --host 0.0.0.0 --port 8080
+voyager serve --host 0.0.0.0 --port 8080
 ```
 
 ### 10.2 Frontend
