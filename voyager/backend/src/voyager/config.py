@@ -1,16 +1,16 @@
-"""NoeCoder configuration."""
+"""Voyager configuration."""
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class NoeCoderConfig(BaseModel):
-    """NoeCoder configuration."""
+class VoyagerConfig(BaseModel):
+    """Voyager configuration."""
 
     # Server settings
     host: str = "127.0.0.1"
@@ -18,7 +18,7 @@ class NoeCoderConfig(BaseModel):
     debug: bool = False
 
     # Paths
-    data_root: Path = Field(default_factory=lambda: Path.home() / ".noecoder")
+    data_root: Path = Field(default_factory=lambda: Path.home() / ".voyager")
 
     # NoeAgent defaults
     llm_provider: str = "openai"
@@ -33,7 +33,7 @@ class NoeCoderConfig(BaseModel):
     # Git settings
     default_branch: str = "main"
     auto_commit: bool = True
-    commit_message_prefix: str = "[NoeCoder] "
+    commit_message_prefix: str = "[Voyager] "
 
     # UI settings
     theme: str = "dark"
@@ -44,25 +44,25 @@ class NoeCoderConfig(BaseModel):
     model_config = {"extra": "ignore"}
 
     @classmethod
-    def from_env(cls) -> "NoeCoderConfig":
+    def from_env(cls) -> "VoyagerConfig":
         """Create config from environment variables."""
         return cls(
-            host=os.getenv("NOECODER_HOST", "127.0.0.1"),
-            port=int(os.getenv("NOECODER_PORT", "8000")),
-            debug=os.getenv("NOECODER_DEBUG", "false").lower() == "true",
-            data_root=Path(os.getenv("NOECODER_DATA_ROOT", str(Path.home() / ".noecoder"))),
-            llm_provider=os.getenv("NOECODER_LLM_PROVIDER", "openai"),
-            llm_model=os.getenv("NOECODER_LLM_MODEL"),
-            max_iterations=int(os.getenv("NOECODER_MAX_ITERATIONS", "25")),
-            reflection_interval=int(os.getenv("NOECODER_REFLECTION_INTERVAL", "3")),
-            max_concurrent_tasks=int(os.getenv("NOECODER_MAX_CONCURRENT_TASKS", "1")),
-            task_timeout_seconds=int(os.getenv("NOECODER_TASK_TIMEOUT_SECONDS", "600")),
-            default_branch=os.getenv("NOECODER_DEFAULT_BRANCH", "main"),
-            auto_commit=os.getenv("NOECODER_AUTO_COMMIT", "true").lower() == "true",
-            commit_message_prefix=os.getenv("NOECODER_COMMIT_MESSAGE_PREFIX", "[NoeCoder] "),
-            theme=os.getenv("NOECODER_THEME", "dark"),
-            show_thinking=os.getenv("NOECODER_SHOW_THINKING", "true").lower() == "true",
-            show_tool_details=os.getenv("NOECODER_SHOW_TOOL_DETAILS", "true").lower() == "true",
+            host=os.getenv("VOYAGER_HOST", "127.0.0.1"),
+            port=int(os.getenv("VOYAGER_PORT", "8000")),
+            debug=os.getenv("VOYAGER_DEBUG", "false").lower() == "true",
+            data_root=Path(os.getenv("VOYAGER_DATA_ROOT", str(Path.home() / ".voyager"))),
+            llm_provider=os.getenv("VOYAGER_LLM_PROVIDER", "openai"),
+            llm_model=os.getenv("VOYAGER_LLM_MODEL"),
+            max_iterations=int(os.getenv("VOYAGER_MAX_ITERATIONS", "25")),
+            reflection_interval=int(os.getenv("VOYAGER_REFLECTION_INTERVAL", "3")),
+            max_concurrent_tasks=int(os.getenv("VOYAGER_MAX_CONCURRENT_TASKS", "1")),
+            task_timeout_seconds=int(os.getenv("VOYAGER_TASK_TIMEOUT_SECONDS", "600")),
+            default_branch=os.getenv("VOYAGER_DEFAULT_BRANCH", "main"),
+            auto_commit=os.getenv("VOYAGER_AUTO_COMMIT", "true").lower() == "true",
+            commit_message_prefix=os.getenv("VOYAGER_COMMIT_MESSAGE_PREFIX", "[Voyager] "),
+            theme=os.getenv("VOYAGER_THEME", "dark"),
+            show_thinking=os.getenv("VOYAGER_SHOW_THINKING", "true").lower() == "true",
+            show_tool_details=os.getenv("VOYAGER_SHOW_TOOL_DETAILS", "true").lower() == "true",
         )
 
     @property
@@ -109,10 +109,10 @@ class NoeCoderConfig(BaseModel):
         }
 
     @classmethod
-    def load(cls, config_path: Path | None = None) -> "NoeCoderConfig":
+    def load(cls, config_path: Path | None = None) -> "VoyagerConfig":
         """Load configuration from file or return defaults."""
         if config_path is None:
-            config_path = Path.home() / ".noecoder" / "config.json"
+            config_path = Path.home() / ".voyager" / "config.json"
 
         if config_path.exists():
             import json

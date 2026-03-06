@@ -4,10 +4,9 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-
-from noecoder.models.repository import Repository, RepositoryCreate
-from noecoder.services.git_client import GitClient
-from noecoder.services.state_manager import StateManager
+from voyager.models.repository import Repository, RepositoryCreate
+from voyager.services.git_client import GitClient
+from voyager.services.state_manager import StateManager
 
 router = APIRouter(prefix="/api/repositories", tags=["repositories"])
 
@@ -109,9 +108,7 @@ async def list_files(repo_id: str, path: str = "") -> dict[str, list[dict[str, A
 
 
 @router.get("/{repo_id}/files/{file_path:path}")
-async def get_file_content(
-    repo_id: str, file_path: str, revision: str = "HEAD"
-) -> dict[str, str]:
+async def get_file_content(repo_id: str, file_path: str, revision: str = "HEAD") -> dict[str, str]:
     """Get file content."""
     if state_manager is None or git_client is None:
         raise HTTPException(500, "Server not initialized")

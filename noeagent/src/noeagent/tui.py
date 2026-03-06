@@ -8,7 +8,7 @@ Provides a Claude Code-style compact progress display with:
   * Partial results and final answer as markdown
   * Session-level JSONL logging for full detail
   * Slash commands for mode switching, plan display, memory stats (/help, /exit, /mode, etc.)
-  * Subagent selector: numeric prefix (2=Browser, 3=Research, 4=Claude; e.g. 2 3 message for multiple)
+  * Subagent selector: numeric prefix (2=Browser, 3=Research, 4=Coding; e.g. 2 3 message for multiple)
   * Multiline input (backslash continuation)
   * Command history with up/down arrow navigation
 """

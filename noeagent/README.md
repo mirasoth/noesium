@@ -103,23 +103,23 @@ NoeAgent is built on the Noesium framework and leverages:
 - **Noesium Core**: Memory, tools, and subagent management
 
 ```
-┌─────────────────────────────────────────┐
-│            NoeAgent TUI                 │
+┌────────────────────────────────────────┐
+│            NoeAgent TUI                │
 │  ┌─────────────────────────────────┐   │
 │  │   Ask Mode   │   Agent Mode     │   │
 │  └─────────────────────────────────┘   │
-│              ↓                          │
+│              ↓                         │
 │  ┌─────────────────────────────────┐   │
 │  │      Task Planner               │   │
 │  └─────────────────────────────────┘   │
-│              ↓                          │
+│              ↓                         │
 │  ┌─────────────────────────────────┐   │
 │  │   Noesium Framework Core        │   │
 │  │  - Memory Management            │   │
 │  │  - Tool Execution               │   │
 │  │  - Subagent Orchestration       │   │
 │  └─────────────────────────────────┘   │
-└─────────────────────────────────────────┘
+└────────────────────────────────────────┘
 ```
 
 ## Documentation

@@ -75,7 +75,7 @@ TOOLKIT_DISPLAY_NAMES: dict[str, tuple[str, str]] = {
 SUBAGENT_DISPLAY_NAMES: dict[str, str] = {
     SUBAGENT_BROWSER_USE: "BrowserUse",
     SUBAGENT_TACITUS: "Tacitus",
-    SUBAGENT_CLAUDE: "Claude",
+    SUBAGENT_CLAUDE: "Coding",
     SUBAGENT_ASKURA: "Askura",
 }
 
@@ -169,7 +169,7 @@ _SUBAGENT_NAME_TO_COMMAND_TYPE: dict[str, SubagentCommandType] = {
     SUBAGENT_CLAUDE: SubagentCommandType.CLAUDE,
 }
 
-# Ordered list for TUI selector (1=Main, 2=Browser, 3=Research, 4=Claude)
+# Ordered list for TUI selector (1=Main, 2=Browser, 3=Research, 4=Coding)
 BUILTIN_SUBAGENT_NAMES: list[str] = list(_SUBAGENT_NAME_TO_COMMAND_TYPE.keys())
 
 
@@ -177,7 +177,7 @@ def parse_subagent_selector(prefix: str) -> list[str]:
     """Parse a selector string into a list of valid subagent names.
 
     Accepts comma- or space-separated numbers: 1=Main (empty), 2=browser_use,
-    3=tacitus, 4=claude. Unknown numbers are skipped.
+    3=tacitus, 4=coding. Unknown numbers are skipped.
 
     Returns:
         List of technical subagent names (may be empty for Main).
@@ -205,7 +205,7 @@ def parse_subagent_prefix_from_input(user_input: str) -> tuple[list[str], str]:
     """Parse leading numeric selector from input; return (subagent_names, message).
 
     Leading tokens that are digits or comma-separated digits (e.g. "2", "3", "2,3")
-    are treated as subagent selector (1=Main, 2=Browser, 3=Research, 4=Claude).
+    are treated as subagent selector (1=Main, 2=Browser, 3=Research, 4=Coding).
     The rest is the message. If no leading digits, returns ([], user_input).
 
     Examples:

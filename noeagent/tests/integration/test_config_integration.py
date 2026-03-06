@@ -10,6 +10,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+from noeagent.config import NoeConfig
+
 from noesium.core.config import (
     AgentSubagentConfig,
     FrameworkConfig,
@@ -17,7 +19,6 @@ from noesium.core.config import (
     load_config,
     save_config,
 )
-from noesium.noeagent.config import NoeConfig
 
 
 class TestConfigIntegration:
@@ -237,7 +238,7 @@ class TestConfigCLI:
 
     def test_cli_config_path(self, capsys, monkeypatch):
         """Test 'noeagent config path' command."""
-        from noesium.noeagent.__main__ import cmd_config_path
+        from noeagent.__main__ import cmd_config_path
 
         with tempfile.TemporaryDirectory() as tmpdir:
             custom_path = Path(tmpdir) / "custom_config.json"
@@ -249,7 +250,7 @@ class TestConfigCLI:
 
     def test_cli_config_show(self, capsys, monkeypatch):
         """Test 'noeagent config show' command."""
-        from noesium.noeagent.__main__ import cmd_config_show
+        from noeagent.__main__ import cmd_config_show
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"
@@ -266,7 +267,7 @@ class TestConfigCLI:
 
     def test_cli_config_show_key(self, capsys, monkeypatch):
         """Test 'noeagent config show -k llm.provider' command."""
-        from noesium.noeagent.__main__ import cmd_config_show
+        from noeagent.__main__ import cmd_config_show
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"
@@ -283,7 +284,7 @@ class TestConfigCLI:
 
     def test_cli_config_init(self, capsys, monkeypatch):
         """Test 'noeagent config init' command."""
-        from noesium.noeagent.__main__ import cmd_config_init
+        from noeagent.__main__ import cmd_config_init
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"
@@ -302,7 +303,7 @@ class TestConfigCLI:
 
     def test_cli_config_set(self, capsys, monkeypatch):
         """Test 'noeagent config set' command."""
-        from noesium.noeagent.__main__ import cmd_config_set
+        from noeagent.__main__ import cmd_config_set
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.json"

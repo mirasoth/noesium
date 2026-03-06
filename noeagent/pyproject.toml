@@ -28,10 +28,8 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "noesium>=0.3.4",
+    "noesium[all]>=0.3.4",
     "rich>=13.0.0",
-    "langchain-core>=0.3.72",
-    "langgraph>=0.5.4",
     "pydantic>=2.0.0",
     "python-dotenv>=1.1.1",
     "uuid7>=0.1.0",

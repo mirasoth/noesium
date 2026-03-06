@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import socketio
-
-from noecoder.services.task_orchestrator import TaskOrchestrator
+from voyager.services.task_orchestrator import TaskOrchestrator
 
 # Socket.IO server instance
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")

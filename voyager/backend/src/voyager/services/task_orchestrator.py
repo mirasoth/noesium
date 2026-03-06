@@ -8,16 +8,14 @@ from pathlib import Path
 from typing import Any
 
 import socketio
+from voyager.config import VoyagerConfig
+from voyager.models.events import ProgressEventData
+from voyager.models.task import Task, TaskStatus, TaskStep
+from voyager.services.git_client import GitClient
+from voyager.services.session_manager import SessionManager
+from voyager.services.state_manager import StateManager
 
 from noesium.noeagent.progress import ProgressEvent, ProgressEventType
-
-from noecoder.config import NoeCoderConfig
-from noecoder.models.events import ProgressEventData
-from noecoder.models.repository import Repository
-from noecoder.models.task import Task, TaskStatus, TaskStep
-from noecoder.services.git_client import GitClient
-from noecoder.services.session_manager import SessionManager
-from noecoder.services.state_manager import StateManager
 
 
 class TaskOrchestrator:
@@ -28,7 +26,7 @@ class TaskOrchestrator:
         state_manager: StateManager,
         session_manager: SessionManager,
         git_client: GitClient,
-        config: NoeCoderConfig,
+        config: VoyagerConfig,
     ):
         self._state = state_manager
         self._sessions = session_manager
@@ -256,9 +254,7 @@ class TaskOrchestrator:
             error=event.error,
         )
 
-    async def _emit_error(
-        self, sio: socketio.AsyncServer, sid: str, task_id: str, error: str
-    ) -> None:
+    async def _emit_error(self, sio: socketio.AsyncServer, sid: str, task_id: str, error: str) -> None:
         """Emit error event."""
         await sio.emit(
             "task.error",

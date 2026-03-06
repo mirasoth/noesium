@@ -1,4 +1,4 @@
-# NoeCoder Backend
+# Voyager Backend
 
 Personal coding assistant webserver powered by NoeAgent.
 
@@ -11,5 +11,5 @@ uv pip install -e .
 ## Usage
 
 ```bash
-noecoder serve --port 8000
+voyager serve --port 8000
 ```

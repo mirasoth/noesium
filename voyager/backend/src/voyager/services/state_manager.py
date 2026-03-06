@@ -3,19 +3,17 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import aiofiles
-
-from noecoder.models.events import ProgressEventData
-from noecoder.models.repository import Repository
-from noecoder.models.task import Task, TaskStatus
+from voyager.models.events import ProgressEventData
+from voyager.models.repository import Repository
+from voyager.models.task import Task, TaskStatus
 
 
 class StateManager:
-    """File-based state persistence for NoeCoder."""
+    """File-based state persistence for Voyager."""
 
     def __init__(self, data_root: Path):
         self.data_root = data_root

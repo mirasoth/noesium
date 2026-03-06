@@ -1,10 +1,11 @@
 """Tests for toolkit-specific configuration integration."""
 
+from noeagent.config import NoeConfig
+
 from noesium.core.config import (
     FrameworkConfig,
     ToolkitConfigEntry,
 )
-from noesium.noeagent.config import NoeConfig
 
 
 class TestToolkitConfigEntry:

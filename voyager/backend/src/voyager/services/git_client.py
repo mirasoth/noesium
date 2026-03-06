@@ -6,10 +6,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-import git
 from git import Repo
-
-from noecoder.models.repository import Repository
 
 
 class GitClient:

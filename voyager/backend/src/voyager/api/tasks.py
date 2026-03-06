@@ -3,11 +3,9 @@
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-
-from noecoder.models.events import ProgressEventData
-from noecoder.models.task import Task, TaskStatus, TaskCreate, TaskUpdate
-from noecoder.services.state_manager import StateManager
-from noecoder.services.task_orchestrator import TaskOrchestrator
+from voyager.models.task import Task, TaskCreate, TaskStatus
+from voyager.services.state_manager import StateManager
+from voyager.services.task_orchestrator import TaskOrchestrator
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -85,9 +83,7 @@ async def cancel_task(task_id: str) -> dict[str, bool]:
 
 
 @router.get("/{task_id}/events")
-async def get_task_events(
-    task_id: str, limit: int = Query(100)
-) -> dict[str, list[dict[str, Any]]]:
+async def get_task_events(task_id: str, limit: int = Query(100)) -> dict[str, list[dict[str, Any]]]:
     """Get task event log."""
     if state_manager is None:
         raise HTTPException(500, "Server not initialized")

@@ -3,21 +3,19 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
-from typing import Any
+
+from voyager.config import VoyagerConfig
+from voyager.models.repository import Repository
+from voyager.services.state_manager import StateManager
 
 from noesium.noeagent import NoeAgent
 from noesium.noeagent.config import NoeConfig, NoeMode
-
-from noecoder.config import NoeCoderConfig
-from noecoder.models.repository import Repository
-from noecoder.services.state_manager import StateManager
 
 
 class SessionManager:
     """Manages NoeAgent instances for repositories."""
 
-    def __init__(self, state_manager: StateManager, config: NoeCoderConfig):
+    def __init__(self, state_manager: StateManager, config: VoyagerConfig):
         self._state = state_manager
         self._config = config
         self._agents: dict[str, NoeAgent] = {}

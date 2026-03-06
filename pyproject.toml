@@ -14,4 +14,4 @@ members = [
 [tool.uv.sources]
 noesium = { workspace = true }
 noeagent = { workspace = true }
-noecoder = { workspace = true }
+voyager = { workspace = true }
