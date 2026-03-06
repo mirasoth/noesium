@@ -31,11 +31,11 @@ help: ## Show this help message
 
 install: ## Install development dependencies
 	@echo "$(BLUE)🔧 Installing development dependencies...$(RESET)"
-	@$(UV) sync --extra dev --extra all
+	@$(UV) sync --all-packages
 
 install-workspace: ## Install all workspace packages
 	@echo "$(BLUE)🔧 Installing all workspace packages...$(RESET)"
-	@$(UV) sync --all-packages --extra dev --extra all
+	@$(UV) sync --all-packages
 	@echo "$(GREEN)✅ Workspace ready$(RESET)"
 
 setup: install-workspace ## Setup development environment

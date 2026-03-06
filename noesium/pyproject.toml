@@ -157,7 +157,10 @@ line-length = 120
 "noesium/subagents/bu/agent/__init__.py" = ["E402"]
 "noesium/subagents/bu/agent/service.py" = ["E402"]
 "noesium/subagents/bu/tokens/service.py" = ["E402"]
+"noesium/tests/**/*.py" = ["E402"]
 "examples/**/*.py" = ["E402"]
+"voyager/backend/src/**/*.py" = ["E402"]
+"noeagent/src/**/*.py" = ["E402"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
