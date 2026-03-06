@@ -1,4 +1,4 @@
-"""Task models for NoeCoder."""
+"""Task models for Voyager."""
 
 from __future__ import annotations
 

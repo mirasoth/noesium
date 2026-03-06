@@ -1,4 +1,4 @@
-"""Repository models for NoeCoder."""
+"""Repository models for Voyager."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from uuid_extensions import uuid7str
 
 
 class Repository(BaseModel):
-    """A Git repository managed by NoeCoder."""
+    """A Git repository managed by Voyager."""
 
     id: str = Field(default_factory=uuid7str)
     name: str

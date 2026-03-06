@@ -1,4 +1,4 @@
-"""WebSocket event models for NoeCoder."""
+"""WebSocket event models for Voyager."""
 
 from __future__ import annotations
 

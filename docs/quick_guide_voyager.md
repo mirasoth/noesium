@@ -1,6 +1,6 @@
 # Voyager Quick Guide
 
-**Voyager** (formerly NoeCoder) is a 24/7 digital companion built on NoeAgent, providing continuous assistance through a web-based interface.
+**Voyager** is a 24/7 digital companion built on NoeAgent, providing continuous assistance through a web-based interface.
 
 ## Installation
 

@@ -1,4 +1,4 @@
-"""NoeCoder API routes."""
+"""Voyager API routes."""
 
 from .repositories import router as repositories_router
 from .tasks import router as tasks_router

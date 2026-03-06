@@ -1,11 +1,11 @@
-"""Path utilities for NoeCoder."""
+"""Path utilities for Voyager."""
 
 from pathlib import Path
 
 
 def get_data_root() -> Path:
-    """Get the root data directory for NoeCoder."""
-    data_root = Path.home() / ".noecoder"
+    """Get the root data directory for Voyager."""
+    data_root = Path.home() / ".voyager"
     data_root.mkdir(parents=True, exist_ok=True)
     return data_root
 

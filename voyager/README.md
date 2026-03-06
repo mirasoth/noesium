@@ -80,7 +80,7 @@ WORKSPACE_ROOT=/path/to/your/projects
 ```bash
 # Terminal 1: Start backend
 cd voyager/backend
-uv run noecoder
+uv run voyager
 
 # Terminal 2: Start frontend
 cd voyager/frontend
@@ -117,7 +117,7 @@ docker-compose -f docker-compose.dev.yml down
 ```
 voyager/
 ├── backend/           # FastAPI Python backend
-│   ├── src/noecoder/  # Source code
+│   ├── src/voyager/  # Source code
 │   ├── tests/         # Test suite
 │   └── pyproject.toml # Python package config
 ├── frontend/          # React TypeScript frontend

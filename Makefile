@@ -3,7 +3,7 @@ PYTHON = python3
 UV = uv
 PYTEST = pytest
 PYTHON_MODULES = noesium noeagent voyager/backend/src examples
-COVERAGE_MODULES = noesium noeagent noecoder
+COVERAGE_MODULES = noesium noeagent voyager
 TEST_DIR = tests
 LINE_LENGTH = 120
 

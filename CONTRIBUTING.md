@@ -51,7 +51,7 @@ noesium/
 │   └── pyproject.toml
 ├── voyager/              # Web application
 │   ├── backend/          # FastAPI backend
-│   │   ├── src/noecoder/
+│   │   ├── src/voyager/
 │   │   └── pyproject.toml
 │   └── frontend/         # React frontend
 │       ├── src/
@@ -142,7 +142,7 @@ uv run noeagent
 
 # Run voyager backend
 cd voyager/backend
-uv run noecoder
+uv run voyager
 
 # Run voyager frontend
 cd voyager/frontend

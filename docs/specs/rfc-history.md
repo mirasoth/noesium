@@ -35,11 +35,11 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 
 ### 2026-03-04
 
-- **Created**: RFC-9000 - NoeCoder Design Philosophy and Principles; personal coding assistant webserver design philosophy; task-centric workflow; single-user model; autonomous execution; GitHub integration boundaries
-- **Created**: RFC-9001 - NoeCoder Architecture Design; three-tier architecture (Frontend SPA, Backend FastAPI, Execution NoeAgent); WebSocket streaming; file-based state persistence; GitHub client integration; REST API design; task orchestrator
+- **Created**: RFC-9000 - Voyager Design Philosophy and Principles; personal coding assistant webserver design philosophy; task-centric workflow; single-user model; autonomous execution; GitHub integration boundaries
+- **Created**: RFC-9001 - Voyager Architecture Design; three-tier architecture (Frontend SPA, Backend FastAPI, Execution NoeAgent); WebSocket streaming; file-based state persistence; GitHub client integration; REST API design; task orchestrator
 - **Reference Updated**: rfc-index.md - Registered RFC-9000 and RFC-9001 under Experimental (9xxx)
-- **Reference Updated**: rfc-history.md - Added NoeCoder RFC creation entries
-- **Reference Updated**: rfc-namings.md - Added NoeCoder terminology (NoeCoder, Task, Task Orchestrator, Task Status, Task Step, Repository, Session, Session Manager, State Manager, GitHub Client, CodeChange, Artifact)
+- **Reference Updated**: rfc-history.md - Added Voyager RFC creation entries
+- **Reference Updated**: rfc-namings.md - Added Voyager terminology (Voyager, Task, Task Orchestrator, Task Status, Task Step, Repository, Session, Session Manager, State Manager, GitHub Client, CodeChange, Artifact)
 
 ### 2026-03-03
 

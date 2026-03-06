@@ -9,7 +9,7 @@ export default function Header() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link to="/" className="text-xl font-bold text-primary-400 hover:text-primary-300">
-            NoeCoder
+            Voyager
           </Link>
           <nav className="flex items-center gap-4">
             <Link 

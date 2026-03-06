@@ -1,4 +1,4 @@
-"""Utility functions for NoeCoder."""
+"""Utility functions for Voyager."""
 
 from .paths import get_data_root, get_tasks_dir, get_workspace_root
 

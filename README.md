@@ -52,7 +52,7 @@ Features:
 
 ### [Voyager](voyager/) — Digital Companion
 
-**A 24/7 digital companion** (formerly NoeCoder) built on NoeAgent, providing continuous assistance through web-based interface.
+**A 24/7 digital companion** built on NoeAgent, providing continuous assistance through web-based interface.
 
 Features:
 - Web-based coding assistant

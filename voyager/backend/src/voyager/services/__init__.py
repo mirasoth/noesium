@@ -1,4 +1,4 @@
-"""NoeCoder services."""
+"""Voyager services."""
 
 from .git_client import GitClient
 from .session_manager import SessionManager

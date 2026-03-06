@@ -1,4 +1,4 @@
-"""NoeCoder data models."""
+"""Voyager data models."""
 
 from .events import ProgressEventData, WebSocketEvent
 from .repository import Repository, RepositoryCreate
