@@ -8,9 +8,9 @@ Usage: uv run python examples/noeagent/noe_demo.py
 import asyncio
 import logging
 
-from noesium.noeagent import NoeAgent
-from noesium.noeagent.config import NoeConfig, NoeMode
-from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+from noeagent import NoeAgent
+from noeagent.config import NoeConfig, NoeMode
+from noeagent.progress import ProgressEvent, ProgressEventType
 
 # Configure logging to see what's happening
 logging.basicConfig(

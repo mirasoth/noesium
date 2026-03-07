@@ -4,7 +4,7 @@
 >
 > **Module**: `noesium/agents/`, `noesium/core/agent/`
 > **Source**: Derived from [RFC-1002](../../specs/RFC-1002.md) (LangGraph-Based Agent Implementation Design)
-> **Related RFCs**: [RFC-0003](../../specs/RFC-0003.md), [RFC-0005](../../specs/RFC-0005.md), [RFC-1001](../../specs/RFC-1001.md)
+> **Related RFCs**: [RFC-0005](../../specs/RFC-0005.md), [RFC-1001](../../specs/RFC-1001.md)
 
 ---
 

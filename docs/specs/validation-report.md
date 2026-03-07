@@ -147,7 +147,7 @@ No conflicts detected.
 - Core layer (noesium.core) provides primitives
 - Toolkits layer extends core
 - Subagents layer builds on core + toolkits
-- Application layer (noesium.noeagent) integrates all
+- Application layer (noeagent) integrates all
 
 RFC-1006 subagent abstractions correctly placed in `noesium/core/agent/subagent/`.
 

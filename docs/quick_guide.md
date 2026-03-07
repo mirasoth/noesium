@@ -92,7 +92,7 @@ result = client.structured_completion(messages, Answer)
 Autonomous research assistant with planning capabilities:
 
 ```python
-from noesium.noeagent.agent import NoeAgent
+from noeagent.agent import NoeAgent
 
 agent = Noet()
 result = await agent.run("Research quantum computing applications")
@@ -169,8 +169,8 @@ result = await agent.run("What is the meaning of life?")
 
 - **BaseAgent**: Abstract base class with common functionality
 - **BaseGraphicAgent**: LangGraph-based agents with state management
-- **BaseHitlAgent**: Conversation-style agents with session management
-- **BaseResearcher**: Research-style agents with source management
+- **AskuraAgent**: Conversation agent with built-in session management
+- **TacitusAgent**: Research agent with source management and structured output
 
 ### Using Toolkits
 

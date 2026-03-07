@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from noesium.core.event import ProgressEvent, ProgressEventType
-from noesium.noeagent.config import NoeConfig, NoeMode
+from noeagent.config import NoeConfig, NoeMode
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -53,7 +53,7 @@ class TestNoeAgentLibraryMode:
     @pytest.mark.unit
     async def test_arun_returns_string(self, minimal_config, monkeypatch):
         """arun() should return a string answer."""
-        from noesium.noeagent.agent import NoeAgent
+        from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config)
 
@@ -81,7 +81,7 @@ class TestNoeAgentLibraryMode:
     @pytest.mark.unit
     async def test_run_sync_wrapper(self, minimal_config, monkeypatch):
         """run() should work as a sync wrapper for arun()."""
-        from noesium.noeagent.agent import NoeAgent
+        from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config)
         agent.initialize = AsyncMock()
@@ -105,7 +105,7 @@ class TestNoeAgentLibraryMode:
     @pytest.mark.unit
     async def test_stream_yields_final_answer(self, minimal_config):
         """stream() should yield the final answer."""
-        from noesium.noeagent.agent import NoeAgent
+        from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config)
         agent.initialize = AsyncMock()
@@ -139,7 +139,7 @@ class TestProgressExposure:
     @pytest.mark.unit
     async def test_astream_progress_yields_events(self, minimal_config):
         """astream_progress() should yield ProgressEvent objects."""
-        from noesium.noeagent.agent import NoeAgent
+        from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config)
         agent.initialize = AsyncMock()
@@ -170,7 +170,7 @@ class TestProgressExposure:
     @pytest.mark.unit
     async def test_progress_events_have_required_fields(self, minimal_config):
         """Progress events should have required fields populated."""
-        from noesium.noeagent.agent import NoeAgent
+        from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config)
         agent.initialize = AsyncMock()
@@ -200,7 +200,7 @@ class TestProgressExposure:
     @pytest.mark.unit
     async def test_progress_callback_invoked(self, minimal_config):
         """Progress callbacks should be invoked for each event."""
-        from noesium.noeagent.agent import NoeAgent
+        from noeagent.agent import NoeAgent
 
         callback_events = []
 
@@ -242,7 +242,7 @@ class TestProgressExposure:
         """Tool usage should emit TOOL_START and TOOL_END events."""
         from langchain_core.messages import AIMessage
 
-        from noesium.noeagent.agent import NoeAgent
+        from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config)
         agent.initialize = AsyncMock()
@@ -280,7 +280,7 @@ class TestProgressExposure:
     @pytest.mark.unit
     async def test_error_event_on_exception(self, minimal_config):
         """Exceptions should emit ERROR events."""
-        from noesium.noeagent.agent import NoeAgent
+        from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config)
         agent.initialize = AsyncMock()
@@ -319,7 +319,7 @@ class TestTaskRunningStatus:
     @pytest.mark.unit
     async def test_session_lifecycle_events(self, minimal_config):
         """Session should emit start and end events."""
-        from noesium.noeagent.agent import NoeAgent
+        from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config)
         agent.initialize = AsyncMock()
@@ -347,8 +347,8 @@ class TestTaskRunningStatus:
     @pytest.mark.unit
     async def test_plan_created_event(self, minimal_config):
         """Plan creation should emit PLAN_CREATED event when plan is in node output."""
-        from noesium.noeagent.agent import NoeAgent
-        from noesium.noeagent.state import TaskPlan, TaskStep
+        from noeagent.agent import NoeAgent
+        from noeagent.state import TaskPlan, TaskStep
 
         agent = NoeAgent(minimal_config)
         agent.initialize = AsyncMock()
@@ -385,8 +385,8 @@ class TestTaskRunningStatus:
     @pytest.mark.unit
     async def test_step_events_tracked(self, minimal_config):
         """Step execution should emit STEP_START and STEP_COMPLETE events."""
-        from noesium.noeagent.agent import NoeAgent
-        from noesium.noeagent.state import TaskPlan, TaskStep
+        from noeagent.agent import NoeAgent
+        from noeagent.state import TaskPlan, TaskStep
 
         agent = NoeAgent(minimal_config)
         agent.initialize = AsyncMock()
@@ -431,7 +431,7 @@ class TestBackwardCompatibility:
     @pytest.mark.unit
     async def test_astream_events_returns_dicts(self, minimal_config):
         """astream_events() should return dicts for backward compatibility."""
-        from noesium.noeagent.agent import NoeAgent
+        from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config)
         agent.initialize = AsyncMock()

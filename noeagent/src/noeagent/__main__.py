@@ -6,7 +6,7 @@ Usage:
     noeagent config show [-k KEY]  Show current config
     noeagent config init [--provider PROVIDER]  Initialize config
     noeagent config set KEY VALUE  Set config value
-    python -m noesium.noeagent
+    python -m noeagent
 """
 
 import argparse
@@ -74,7 +74,7 @@ def handle_config_command(args: argparse.Namespace) -> None:
 def cmd_config_path() -> None:
     """Show config file path."""
     try:
-        from noesium.noeagent.config import get_noe_config_path
+        from noeagent.config import get_noe_config_path
 
         print(str(get_noe_config_path()))
     except ImportError:
@@ -91,7 +91,7 @@ def cmd_config_show(key: str | None = None) -> None:
     """
     try:
         from noesium.core.config import load_config
-        from noesium.noeagent.config import get_noe_config_path
+        from noeagent.config import get_noe_config_path
 
         config = load_config(get_noe_config_path())
 
@@ -125,7 +125,7 @@ def cmd_config_init(provider: str | None = None) -> None:
     """
     try:
         from noesium.core.config import FrameworkConfig, save_config
-        from noesium.noeagent.config import get_noe_config_path
+        from noeagent.config import get_noe_config_path
 
         config_path = get_noe_config_path()
 
@@ -155,7 +155,7 @@ def cmd_config_set(key: str, value: str) -> None:
     """
     try:
         from noesium.core.config import FrameworkConfig, load_config, save_config
-        from noesium.noeagent.config import get_noe_config_path
+        from noeagent.config import get_noe_config_path
 
         config = load_config(get_noe_config_path())
 
@@ -189,7 +189,7 @@ def cmd_config_set(key: str, value: str) -> None:
 def launch_tui() -> None:
     """Launch the TUI interface."""
     try:
-        from noesium.noeagent.tui import main as tui_main
+        from noeagent.tui import main as tui_main
 
         tui_main()
     except ImportError as e:

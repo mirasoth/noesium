@@ -9,12 +9,9 @@ from noesium.core.event.types import (
     CapabilityCompleted,
     CapabilityInvoked,
     CapabilityRegistered,
-    CheckpointCreated,
     DomainEvent,
     ErrorOccurred,
     MemoryWritten,
-    NodeCompleted,
-    NodeEntered,
     TaskCompleted,
     TaskRequested,
 )
@@ -33,9 +30,6 @@ def trace():
 EVENT_CASES = [
     (AgentStarted, {"agent_id": "a1", "agent_type": "test"}, "agent.started"),
     (AgentStopped, {"agent_id": "a1"}, "agent.stopped"),
-    (NodeEntered, {"node_id": "n1", "graph_id": "g1"}, "kernel.node.entered"),
-    (NodeCompleted, {"node_id": "n1", "graph_id": "g1", "duration_ms": 123.4}, "kernel.node.completed"),
-    (CheckpointCreated, {"checkpoint_id": "cp1", "node_id": "n1"}, "kernel.checkpoint.created"),
     (CapabilityRegistered, {"capability_id": "c1", "version": "1.0", "agent_id": "a1"}, "capability.registered"),
     (
         CapabilityInvoked,

@@ -13,7 +13,7 @@ Usage:
 import asyncio
 import sys
 
-from noesium.noeagent import (
+from noeagent import (
     CliSubagentConfig,
     NoeAgent,
     NoeConfig,
@@ -102,7 +102,7 @@ async def progress_handler(event: ProgressEvent) -> None:
 
 async def example_direct_cli() -> None:
     """Directly invoke Claude CLI without NoeAgent orchestration."""
-    from noesium.noeagent.cli_adapter import ClaudeCliAdapter
+    from noeagent.cli_adapter import ClaudeCliAdapter
 
     config = CliSubagentConfig(
         name="claude",

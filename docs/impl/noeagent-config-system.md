@@ -4,7 +4,7 @@
 
 This document describes the configuration system for NoeAgent, providing a centralized, flexible, and hierarchical configuration management approach.
 
-## Module Layering: `noesium.core` vs `noesium.noeagent`
+## Module Layering: `noesium.core` vs `noeagent`
 
 `noesium.core` is a **general-purpose agentic framework** module. It provides
 reusable infrastructure (LLM clients, toolkits, memory, config loading, logging)
@@ -16,11 +16,11 @@ implementation** of a multi-agent system built on top of `noesium.core`.
 | Concern | Belongs in | NOT in |
 |---------|-----------|--------|
 | LLM config, tool config, memory config, tracing, logging | `noesium.core` | — |
-| TUI config (history file, history size) | `noesium.noeagent` | `noesium.core` |
+| TUI config (history file, history size) | `noeagent` | `noesium.core` |
 | Default logging levels (INFO/INFO for console/file) | `noesium.core` | — |
-| NoeAgent-specific console logging policy (WARNING) | `noesium.noeagent` | `noesium.core` |
-| Session isolation, session_id, session_dir | `noesium.noeagent` | `noesium.core` |
-| Subagent routing descriptors, planning models | `noesium.noeagent` | `noesium.core` |
+| NoeAgent-specific console logging policy (WARNING) | `noeagent` | `noesium.core` |
+| Session isolation, session_id, session_dir | `noeagent` | `noesium.core` |
+| Subagent routing descriptors, planning models | `noeagent` | `noesium.core` |
 
 **Core `LoggingConfig`** provides two common knobs:
 - `level` — default log level for both console and file (default `"INFO"`)

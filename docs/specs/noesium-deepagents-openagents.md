@@ -28,7 +28,7 @@ They operate at different abstraction layers and optimize for different system p
 
 * Protocol-first architecture
 * Event-sourced state as system-of-record
-* Deterministic kernel execution (RFC-0003)
+* Deterministic kernel execution
 * Contract-based capability delegation
 * Infrastructure-aligned distributed model
 
@@ -458,7 +458,7 @@ Embed OpenAgents-style interactive agents as:
 
 * Human-facing gateway capabilities
 * Sandbox-executed tool operators
-* Conversational frontends backed by deterministic kernel transitions
+* Conversational frontends backed by deterministic execution transitions
 
 This improves usability without weakening guarantees.
 

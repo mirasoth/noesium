@@ -40,7 +40,7 @@ class NoePromptManager:
         # Load from cache or package resources
         if name not in self._cache:
             try:
-                with importlib.resources.files("noesium.noeagent.prompts").joinpath(f"{name}.md").open("r") as f:
+                with importlib.resources.files("noeagent.prompts").joinpath(f"{name}.md").open("r") as f:
                     self._cache[name] = f.read()
             except Exception as exc:
                 raise FileNotFoundError(f"Prompt '{name}' not found in noeagent.prompts package: {exc}") from exc

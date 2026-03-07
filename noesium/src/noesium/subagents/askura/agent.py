@@ -28,7 +28,7 @@ except ImportError:
     add_messages = None
     LANGCHAIN_AVAILABLE = False
 
-from noesium.core.agent import BaseHitlAgent
+from noesium.core.agent import BaseGraphicAgent
 from noesium.core.tracing import NodeLoggingCallback, TokenUsageCallback
 from noesium.core.utils.logging import get_logger
 from noesium.core.utils.typing import override
@@ -44,7 +44,7 @@ from .summarizer import Summarizer
 logger = get_logger(__name__)
 
 
-class AskuraAgent(BaseHitlAgent):
+class AskuraAgent(BaseGraphicAgent):
     """
     A general-purpose dynamic conversation agent.
 
@@ -61,6 +61,7 @@ class AskuraAgent(BaseHitlAgent):
         self.config = config
         self.extraction_tools = extraction_tools or {}
         self.checkpointer = InMemorySaver()
+        self._session_states: Dict[str, Any] = {}
 
         # Initialize components (pass LLM client to enable intelligent behavior)
         self.conversation_manager = ConversationManager(config, llm_client=self.llm)
@@ -85,7 +86,7 @@ class AskuraAgent(BaseHitlAgent):
 
     @override
     def start_conversation(self, user_id: str, initial_message: Optional[str] = None) -> AskuraResponse:
-        """Start a new conversation with a user. Required by BaseHitlAgent."""
+        """Start a new conversation with a user."""
         session_id = str(uuid.uuid4())
         now = self._now_iso()
 
@@ -124,7 +125,7 @@ class AskuraAgent(BaseHitlAgent):
 
     @override
     def process_user_message(self, user_id: str, session_id: str, message: str) -> AskuraResponse:
-        """Process a user message and return the agent's response. Required by BaseHitlAgent."""
+        """Process a user message and return the agent's response."""
 
         # Get the current state
         state = self._session_states.get(session_id)
@@ -236,7 +237,7 @@ class AskuraAgent(BaseHitlAgent):
         return builder.compile(checkpointer=self.checkpointer, interrupt_before=["human_review"])
 
     def _create_response(self, state: AskuraState) -> AskuraResponse:
-        """Create response from final state. Required by BaseHitlAgent."""
+        """Create response from final state."""
         # Get last assistant message
         last_message = None
         for msg in reversed(state.messages):
@@ -478,3 +479,39 @@ class AskuraAgent(BaseHitlAgent):
             user_messages.append(content)
 
         return user_messages
+
+    def get_session_state(self, session_id: str) -> Optional[Any]:
+        """Get the state for a specific session."""
+        return self._session_states.get(session_id)
+
+    def list_sessions(self) -> list[str]:
+        """List all active session IDs."""
+        return list(self._session_states.keys())
+
+    def clear_session(self, session_id: str) -> bool:
+        """Clear a specific session."""
+        if session_id in self._session_states:
+            del self._session_states[session_id]
+            self.logger.info(f"Cleared session {session_id}")
+            return True
+        return False
+
+    def clear_all_sessions(self):
+        """Clear all sessions."""
+        session_count = len(self._session_states)
+        self._session_states.clear()
+        self.logger.info(f"Cleared {session_count} sessions")
+
+    async def run(
+        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+    ) -> str:
+        """Run the agent with a user message and context. Required by BaseAgent."""
+        # Create a temporary user ID for standalone run
+        response = self.start_conversation("standalone_user", user_message)
+        return response.message
+
+    async def arun(
+        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+    ) -> str:
+        """Async alias for run()."""
+        return await self.run(user_message, context, config)

@@ -78,7 +78,7 @@ Specifications define the Noesium system. Follow them in priority order:
 
 ### Priority 1: Core Standards (Must Comply)
 
-- **`specs/RFC-0001.md` ~ `specs/RFC-0003.md`** - Global product design: product definition, development specification, design principles
+- **`specs/RFC-0001.md` ~ `specs/RFC-0002.md`** - Core architecture (event-sourced multi-agent kernel, event envelope spec)
 - **`specs/RFC-1001.md` ~ `specs/RFC-1004.md`** - Frontend design: UI layout, interaction/state model, tasks/actions, research space/RO
 - **`specs/rfc-namings.md`** - Authoritative naming reference for all layers
 
@@ -87,7 +87,7 @@ Specifications define the Noesium system. Follow them in priority order:
 Each RFC defines specific system aspects. Index: `specs/rfc-index.md`
 
 RFC classification:
-- **RFC-0xxx**: Global product design (RFC-0001 ~ RFC-0003)
+- **RFC-0xxx**: Global Architecture Design (RFC-0001, RFC-0002, RFC-0004, RFC-0005, RFC-0006)
 - **RFC-1xxx**: Frontend design principles (RFC-1001 ~ RFC-1006)
 - **RFC-2xxx**: Abstract contracts between frontend-backend, UI semantics, agents (RFC-2001 ~ RFC-2004)
 - **RFC-3xxx**: Backend design and principles
@@ -332,9 +332,9 @@ The agent system is built on a hierarchical class structure located in `noesium/
 
 ```
 BaseAgent (abstract)
-├── BaseGraphicAgent (LangGraph-based)
-│   ├── BaseHitlAgent (conversation-style agents)
-│   └── BaseResearcher (research-style agents)
+└── BaseGraphicAgent (LangGraph-based)
+    ├── AskuraAgent (conversation-style agent)
+    └── TacitusAgent (research-style agent)
 ```
 
 ### Base Classes
@@ -351,17 +351,19 @@ BaseAgent (abstract)
 - Graph building abstractions
 - Graph export functionality (PNG/Mermaid formats)
 
-**BaseHitlAgent** - For conversation-style agents:
-- Session management patterns
-- Message handling abstractions
-- Conversation state management
-- Response generation patterns
+### Concrete Agents
 
-**BaseResearcher** - For research-style agents:
-- Research workflow patterns
-- Source management
-- Query generation abstractions
-- Result compilation patterns
+**AskuraAgent** - Conversation-style agent with built-in session management:
+- Session state storage and lifecycle management
+- Message handling and conversation flow
+- Context-aware response generation
+- Information extraction and tracking
+
+**TacitusAgent** - Research-style agent with structured output:
+- Multi-loop research workflow with reflection
+- Query generation and web search orchestration
+- Source management and citation handling
+- Answer synthesis with structured LLM output
 
 ---
 

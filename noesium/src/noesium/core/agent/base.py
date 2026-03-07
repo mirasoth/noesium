@@ -1,9 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
-
-from pydantic import BaseModel, Field
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 if TYPE_CHECKING:
     from .subagent import SubagentProtocol
@@ -21,7 +18,6 @@ except ImportError:
 from noesium.core.llm import get_llm_client
 from noesium.core.tracing import get_token_tracker
 from noesium.core.utils.logging import get_logger
-from noesium.core.utils.typing import override
 
 
 class BaseAgent(ABC):
@@ -157,116 +153,3 @@ class BaseGraphicAgent(BaseAgent):
         from datetime import datetime, timezone
 
         return datetime.now(timezone.utc).isoformat()
-
-
-class BaseHitlAgent(BaseGraphicAgent):
-    """
-    Abstract base class for conversation-style agents like AskuraAgent.
-
-    Provides:
-    - Session management patterns
-    - Message handling abstractions
-    - Conversation state management
-    - Response generation patterns
-    """
-
-    def __init__(self, llm_provider: str = "openai", model_name: Optional[str] = None):
-        """Initialize conversation agent."""
-        super().__init__(llm_provider, model_name)
-        self._session_states: Dict[str, Any] = {}
-
-    @abstractmethod
-    def start_conversation(self, user_id: str, initial_message: Optional[str] = None) -> Any:
-        """Start a new conversation with a user."""
-
-    @abstractmethod
-    def process_user_message(self, user_id: str, session_id: str, message: str) -> Any:
-        """Process a user message and return the agent's response."""
-
-    def get_session_state(self, session_id: str) -> Optional[Any]:
-        """Get the state for a specific session."""
-        return self._session_states.get(session_id)
-
-    def list_sessions(self) -> list[str]:
-        """List all active session IDs."""
-        return list(self._session_states.keys())
-
-    def clear_session(self, session_id: str) -> bool:
-        """Clear a specific session."""
-        if session_id in self._session_states:
-            del self._session_states[session_id]
-            self.logger.info(f"Cleared session {session_id}")
-            return True
-        return False
-
-    def clear_all_sessions(self):
-        """Clear all sessions."""
-        session_count = len(self._session_states)
-        self._session_states.clear()
-        self.logger.info(f"Cleared {session_count} sessions")
-
-    @override
-    async def run(
-        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
-    ) -> str:
-        """Run the agent with a user message and context. Required by BaseAgent."""
-        # Create a temporary user ID for standalone run
-        response = self.start_conversation("standalone_user", user_message)
-        return response.message
-
-    async def arun(
-        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
-    ) -> str:
-        """Async alias for run()."""
-        return await self.run(user_message, context, config)
-
-
-class ResearchOutput(BaseModel):
-    """Output from research process."""
-
-    content: str = Field(default="")
-    sources: List[Dict[str, Any]] = Field(default_factory=list)
-    summary: str = Field(default="")
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-
-class BaseResearcher(BaseGraphicAgent):
-    """
-    Abstract base class for research-style agents like SeekraAgent.
-
-    Provides:
-    - Research workflow patterns
-    - Source management
-    - Query generation abstractions
-    - Result compilation patterns
-    """
-
-    def __init__(self, llm_provider: str = "openai", model_name: Optional[str] = None):
-        """Initialize researcher agent."""
-        super().__init__(llm_provider, model_name)
-
-    @abstractmethod
-    async def research(
-        self,
-        user_message: str,
-        context: Dict[str, Any] = None,
-        config: Optional[RunnableConfig] = None,
-    ) -> ResearchOutput:
-        """Research a topic and return structured results."""
-
-    @override
-    async def run(
-        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
-    ) -> str:
-        """
-        Default implementation of run() for researchers.
-        Calls research() and returns the content.
-        """
-        result = await self.research(user_message, context, config)
-        return result.content if result else "Research failed to produce results."
-
-    async def arun(
-        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
-    ) -> str:
-        """Async alias for run()."""
-        return await self.run(user_message, context, config)

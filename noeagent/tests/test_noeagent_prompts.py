@@ -2,7 +2,7 @@
 
 import pytest
 
-from noesium.noeagent.prompts import get_prompt_manager
+from noeagent.prompts import get_prompt_manager
 
 
 def get_test_variables(prompt_name: str) -> dict:

@@ -12,8 +12,8 @@ import asyncio
 import logging
 import os
 
-from noesium.noeagent import NoeAgent
-from noesium.noeagent.config import (
+from noeagent import NoeAgent
+from noeagent.config import (
     AgentSubagentConfig,
     CliSubagentConfig,
     NoeConfig,

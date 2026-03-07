@@ -263,7 +263,7 @@ class TaskCompletedEvent(WebSocketEvent):
 from pathlib import Path
 from typing import Any, Optional
 from pydantic import BaseModel, Field
-from noesium.noeagent.config import NoeConfig, NoeMode
+from noeagent.config import NoeConfig, NoeMode
 
 
 class VoyagerConfig(BaseModel):
@@ -736,8 +736,8 @@ Manages NoeAgent instances per repository.
 import asyncio
 from pathlib import Path
 from typing import Optional
-from noesium.noeagent import NoeAgent
-from noesium.noeagent.config import NoeConfig, NoeMode
+from noeagent import NoeAgent
+from noeagent.config import NoeConfig, NoeMode
 from voyager.config import VoyagerConfig
 from voyager.models.repository import Repository
 from voyager.services.state_manager import StateManager
@@ -828,7 +828,7 @@ from datetime import datetime
 from typing import Any, Optional
 import socketio
 
-from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+from noeagent.progress import ProgressEvent, ProgressEventType
 from voyager.config import VoyagerConfig
 from voyager.models.task import Task, TaskStatus, TaskStep, CodeChange
 from voyager.models.events import ProgressEventData

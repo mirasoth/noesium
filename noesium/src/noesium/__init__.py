@@ -46,8 +46,6 @@ __version__ = "0.3.4"
 from noesium.core.agent import (
     BaseAgent,
     BaseGraphicAgent,
-    BaseHitlAgent,
-    BaseResearcher,
 )
 
 # Configuration
@@ -187,8 +185,6 @@ __all__ = [
     "get_llm_client",
     "BaseAgent",
     "BaseGraphicAgent",
-    "BaseHitlAgent",
-    "BaseResearcher",
     # Tier 2: Core Systems
     "MemoryManager",
     "DurableMemory",

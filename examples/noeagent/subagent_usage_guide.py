@@ -8,14 +8,14 @@ Usage: uv run python examples/noeagent/subagent_usage_guide.py
 import asyncio
 import logging
 
-from noesium.noeagent import NoeAgent
-from noesium.noeagent.config import (
+from noeagent import NoeAgent
+from noeagent.config import (
     AgentSubagentConfig,
     CliSubagentConfig,
     NoeConfig,
     NoeMode,
 )
-from noesium.noeagent.progress import ProgressEvent
+from noeagent.progress import ProgressEvent
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 

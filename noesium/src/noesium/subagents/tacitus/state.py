@@ -5,9 +5,11 @@ State definitions for the TacitusAgent agent.
 from __future__ import annotations
 
 import operator
+from datetime import datetime
 from typing import Any, Dict, List, TypedDict
 
 from langgraph.graph import add_messages
+from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
 
@@ -52,3 +54,12 @@ class ReflectionState(TypedDict):
     follow_up_queries: Annotated[list, operator.add]
     research_loop_count: int
     number_of_ran_queries: int
+
+
+class ResearchOutput(BaseModel):
+    """Output from research process."""
+
+    content: str = Field(default="")
+    sources: List[Dict[str, Any]] = Field(default_factory=list)
+    summary: str = Field(default="")
+    timestamp: datetime = Field(default_factory=datetime.now)

@@ -9,7 +9,7 @@ from datetime import datetime
 import pytest
 from pydantic import BaseModel
 
-from noesium.future.gem_parser import (
+from noeagent.future.gem_parser import (
     CircularReferenceError,
     GemParser,
     GemParserError,

@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 
 # Subagent interface (RFC-9003)
 from . import subagent
-from .base import BaseAgent, BaseGraphicAgent, BaseHitlAgent, BaseResearcher, ResearchOutput
+from .base import BaseAgent, BaseGraphicAgent
 from .subagent import (
     BaseSubagentRuntime,
     SubagentContext,
@@ -20,9 +20,6 @@ __all__ = [
     # Base agent classes
     "BaseAgent",
     "BaseGraphicAgent",
-    "BaseResearcher",
-    "BaseHitlAgent",
-    "ResearchOutput",
     # Subagent interface (RFC-9003)
     "subagent",
     "SubagentContext",

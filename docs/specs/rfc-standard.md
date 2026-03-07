@@ -37,6 +37,38 @@ RFCs serve as:
 
 ---
 
+## Classification Scheme
+
+RFCs are organized using a **Kind-based classification** with numbered ranges corresponding to spec kinds. Each range may have sub-ranges for logical grouping.
+
+### RFC Number Ranges
+
+| Range | Category | Description | Kind(s) |
+|-------|----------|-------------|---------|
+| **RFC-0xxx** | Conceptual Design | Vision, principles, taxonomy, invariants | Conceptual Design |
+| **RFC-1xxx** | Architecture Design | Components, layers, data flow, constraints | Architecture Design |
+| **RFC-2xxx** | Implementation Interface | API contracts, naming conventions, interfaces | Implementation Interface Design |
+| **RFC-9xxx** | Applications & Research | End-user applications, prototypes, deprecated | All Kinds |
+
+### Sub-ranges
+
+Within Architecture Design (1xxx):
+- **1000-1099**: Core & Agent Architecture
+- **1100-1199**: Memory Architecture
+- **1200-1299**: Tool & Capability Architecture
+- **1300-1399**: Security & Isolation Architecture
+
+Within Implementation Interface (2xxx):
+- **2000-2099**: Core Framework Implementation
+- **2100-2199**: Infrastructure Implementation
+
+Within Applications & Research (9xxx):
+- **9000-9099**: Research Projects
+- **9100-9199**: Application Designs
+- **9900-9999**: Deprecated RFCs
+
+---
+
 ## Spec Kinds
 
 noesium RFCs fall into three kinds, each with a distinct purpose and level of abstraction:
@@ -178,13 +210,20 @@ stateDiagram-v2
 **Format**: `RFC-NNNN.md`
 
 - `NNNN`: 4-digit zero-padded number (0001, 0002, etc.)
-- Sequential numbering
+- Number assignment follows the classification scheme:
+  - **0xxx**: Conceptual Design RFCs
+  - **1xxx**: Architecture Design RFCs (with sub-ranges)
+  - **2xxx**: Implementation Interface RFCs (with sub-ranges)
+  - **9xxx**: Applications & Research RFCs
+- Within each (sub-)range, numbers are sequential
 - Numbers are reserved once assigned, even if RFC is deleted
 
 **Examples**:
-- `RFC-0001.md` - First RFC
-- `RFC-0042.md` - Forty-second RFC
-- `RFC-0100.md` - One hundredth RFC
+- `RFC-0001.md` - Conceptual design RFC
+- `RFC-1005.md` - Architecture design RFC (Core & Agent sub-range)
+- `RFC-1101.md` - Architecture design RFC (Memory sub-range)
+- `RFC-2002.md` - Implementation interface RFC (Core Implementation sub-range)
+- `RFC-9000.md` - Research project RFC
 
 ### Special RFCs
 

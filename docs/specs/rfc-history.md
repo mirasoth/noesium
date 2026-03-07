@@ -2,7 +2,7 @@
 
 This document tracks all RFC lifecycle events in chronological order (newest first).
 
-**Last Updated**: 2026-03-05
+**Last Updated**: 2026-03-07
 
 ---
 
@@ -20,6 +20,30 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 ---
 
 ## Change History
+
+### 2026-03-07
+
+- **Updated**: RFC-0001 - Event-Sourced Multi-Agent Kernel Architecture; added implementation status notes; updated Section 3 to prefer mutable state and direct invocation with event-sourced as alternative; rewrote Section 5.2 (Agent Kernel) to document LangGraph-based implementation; rewrote Section 6 (Execution Semantics) to describe direct invocation patterns; added Section 13 (Alternative Architectural Patterns) documenting event-sourced patterns as optional approaches; added Section 14 (Event Infrastructure Overview)
+- **Updated**: RFC-0002 - Event Schema and Envelope Specification; added implementation status note; added Section 19 (Implementation and Usage) documenting when to use EventEnvelope with code examples and performance considerations
+- **Reference Updated**: rfc-history.md - Added RFC-0001 and RFC-0002 update entries
+
+### 2026-03-07
+
+- **Created**: RFC-0007 - NoeAgent Autonomous Architecture; defines 24/7 autonomous cognitive system with Goal Engine and Cognitive Loop; minimal architecture with five core components; integrates with existing NoeAgent systems
+- **Created**: RFC-0008 - Autonomous Goal Engine; defines motivational layer for autonomous architecture; goal model, lifecycle, queue, and scheduling; deterministic goal management without reasoning
+- **Created**: RFC-0009 - Event System & Triggers; defines reactive layer for autonomous agent; event model, sources, trigger rules, and Goal Engine integration; minimal deterministic event processing
+- **Reference Updated**: rfc-namings.md - Added new terms: Cognitive Loop, Event Queue, Event System, Goal, Goal Engine, Goal Queue, Trigger Rules
+- **Reference Updated**: rfc-index.md - Registered RFC-0007, RFC-0008, RFC-0009 under Global Architecture (0xxx); updated quick links and status lists
+- **Reference Updated**: rfc-history.md - Added RFC-0007, RFC-0008, RFC-0009 creation entries
+
+### 2026-03-07
+
+- **Deleted**: RFC-0003 - Deterministic Kernel Execution Constraints; design moved to RFC-1001 implementation layer; kernel executor concept retained but not as separate architectural spec
+- **Reference Updated**: All RFCs updated to remove RFC-0003 from dependencies and references
+- **Reference Updated**: rfc-index.md - Removed RFC-0003 from Global Architecture section
+- **Reference Updated**: rfc-namings.md - Removed terms: Checkpoint, Deterministic Kernel, State Graph
+- **Reference Updated**: rfc-history.md - Added deletion entry
+- **Reference Updated**: AGENTS.md, all implementation docs - Updated RFC references
 
 ### 2026-03-05
 
@@ -84,7 +108,6 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 - **Reference Updated**: rfc-namings.md - Populated terminology from all active RFCs
 - **Updated**: RFC-0001 - Fixed metadata compliance (added Authors, Created, Last Updated, Kind)
 - **Updated**: RFC-0002 - Fixed metadata compliance (added Created, Last Updated, Kind)
-- **Updated**: RFC-0003 - Fixed metadata compliance (added Created, Last Updated, Kind)
 - **Updated**: RFC-0004 - Fixed metadata compliance (replaced Related with Depends on, added dates, Kind)
 - **Updated**: RFC-0005 - Fixed metadata compliance (replaced Related with Depends on, added dates, Kind)
 
@@ -92,7 +115,6 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 
 - **Created**: RFC-0001 - Event-Sourced Multi-Agent Kernel Architecture
 - **Created**: RFC-0002 - Event Schema and Envelope Specification
-- **Created**: RFC-0003 - Deterministic Kernel Execution Constraints
 - **Created**: RFC-0004 - Projection and Memory Formal Model
 - **Created**: RFC-0005 - Capability Registry and Discovery Protocol
 

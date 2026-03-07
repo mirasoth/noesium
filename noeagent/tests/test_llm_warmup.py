@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from noesium.noeagent.agent import NoeAgent
-from noesium.noeagent.config import NoeConfig
+from noeagent.agent import NoeAgent
+from noeagent.config import NoeConfig
 
 
 @pytest.fixture

@@ -63,7 +63,7 @@ Subagents are invoked **only by explicit selection**; there is no slash parsing 
 ### 1.3 Library / API
 
 ```python
-from noesium.noeagent import NoeAgent
+from noeagent import NoeAgent
 
 agent = NoeAgent()
 
@@ -179,7 +179,7 @@ Technical names are converted to user-friendly display names for TUI and LLM pro
 ### 3.4 Usage in Code
 
 ```python
-from noesium.noeagent.commands import (
+from noeagent.commands import (
     get_toolkit_display_name,
     get_subagent_display_name,
 )
@@ -466,7 +466,7 @@ All built-in subagents should implement this interface:
 
 ```python
 from typing import AsyncGenerator, Protocol
-from noesium.noeagent.progress import ProgressEvent
+from noeagent.progress import ProgressEvent
 
 class ProgressStreamingAgent(Protocol):
     """Protocol for agents that stream progress events."""
@@ -495,7 +495,7 @@ class ProgressStreamingAgent(Protocol):
 
 ```python
 from typing import AsyncGenerator
-from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+from noeagent.progress import ProgressEvent, ProgressEventType
 
 class BrowserUseAgent(BaseAgent, Generic[T]):
     
@@ -650,7 +650,7 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
 
 ```python
 from typing import AsyncGenerator
-from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+from noeagent.progress import ProgressEvent, ProgressEventType
 
 class TacitusAgent(BaseResearcher):
     
@@ -1200,7 +1200,7 @@ noesium/noeagent/prompts/
 ### 14.2 Prompt Loading
 
 ```python
-from noesium.noeagent.prompts import get_prompt_manager
+from noeagent.prompts import get_prompt_manager
 
 pm = get_prompt_manager()
 prompt = pm.render('planning', goal='My task', context='...')

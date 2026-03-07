@@ -8,8 +8,8 @@ from voyager.config import VoyagerConfig
 from voyager.models.repository import Repository
 from voyager.services.state_manager import StateManager
 
-from noesium.noeagent import NoeAgent
-from noesium.noeagent.config import NoeConfig, NoeMode
+from noeagent import NoeAgent
+from noeagent.config import NoeConfig, NoeMode
 
 
 class SessionManager:

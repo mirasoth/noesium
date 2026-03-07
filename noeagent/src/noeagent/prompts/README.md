@@ -20,7 +20,7 @@ This directory contains production-ready prompt templates used by NoeAgent in bo
 ## Usage
 
 ```python
-from noesium.noeagent.prompts import get_prompt_manager
+from noeagent.prompts import get_prompt_manager
 
 pm = get_prompt_manager()
 

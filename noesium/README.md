@@ -194,9 +194,10 @@ result = await python_exec.execute_code("print('Hello, World!')")
 
 | Type | Description | Use Case |
 |------|-------------|----------|
+| `BaseAgent` | Abstract base with LLM and token tracking | Foundation for all agents |
 | `BaseGraphicAgent` | LangGraph-based with state management | Complex multi-step workflows |
-| `BaseHitlAgent` | Conversation-style with sessions | Interactive chat applications |
-| `BaseResearcher` | Research with source management | Information gathering & synthesis |
+| `AskuraAgent` | Conversation agent with sessions | Interactive chat applications |
+| `TacitusAgent` | Research agent with source management | Information gathering & synthesis |
 | `BaseSubagentRuntime` | Reusable subagent components | Modular capability providers |
 
 ## LLM Providers

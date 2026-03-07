@@ -81,7 +81,7 @@ class Capability(BaseModel):
 ✅ Pure function: `P_registry : (State, Event) → State`
 ✅ Deterministic and replayable
 ✅ No IO in projection
-✅ Aligned with RFC-0003 and RFC-0004
+✅ Aligned with RFC-0004
 
 **Files Analyzed**:
 - `noesium/core/capability/registry.py` - CapabilityProjection and CapabilityRegistry
@@ -620,7 +620,7 @@ async def find(self, capability_id: str, version_range: str | None = None):
 1. **Solid Event Sourcing Foundation**
    - Registry projection correctly implements fold pattern
    - Deterministic and replayable
-   - Aligned with RFC-0003/RFC-0004
+   - Aligned with RFC-0004
 
 2. **Comprehensive Subagent Lifecycle**
    - Full state machine implementation

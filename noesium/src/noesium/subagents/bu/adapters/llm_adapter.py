@@ -6,6 +6,7 @@ noesium's LLM infrastructure and the community browser-use repository.
 """
 
 import asyncio
+import inspect
 import logging
 from typing import Any, Generic, Literal, TypeVar, Union
 
@@ -277,7 +278,7 @@ class BaseChatModel:
             if output_format is not None:
                 # Use structured completion for structured output
                 try:
-                    if asyncio.iscoroutinefunction(self.llm_client.structured_completion):
+                    if inspect.iscoroutinefunction(self.llm_client.structured_completion):
                         structured_response = await self.llm_client.structured_completion(
                             noesium_messages, output_format
                         )
@@ -289,7 +290,7 @@ class BaseChatModel:
                     raise
             else:
                 # Use regular completion for string output
-                if asyncio.iscoroutinefunction(self.llm_client.completion):
+                if inspect.iscoroutinefunction(self.llm_client.completion):
                     response = await self.llm_client.completion(noesium_messages)
                 else:
                     response = self.llm_client.completion(noesium_messages)

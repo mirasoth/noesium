@@ -6,8 +6,11 @@ import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-import pandas as pd
 import pytest
+
+# Skip all tests in this file if pandas is not available
+pytest.importorskip("pandas")
+import pandas as pd
 
 from noesium.core.toolify import ToolkitConfig, get_toolkit
 

@@ -16,7 +16,7 @@ The Noesium codebase provides a functional agent framework with LangGraph integr
 | Module | RFC Coverage | Implementation Status | Gap Severity |
 |--------|-------------|----------------------|--------------|
 | Event System | RFC-0001, RFC-0002, RFC-1001 | **Missing** | Critical |
-| Kernel Executor | RFC-0003, RFC-1001 | **Missing** | Critical |
+| Kernel Executor | RFC-1001 | **Missing** | Critical |
 | Projection Layer | RFC-0004, RFC-1001 | **Missing** | Critical |
 | Capability Registry | RFC-0005, RFC-1001 | **Missing** | Major |
 | Memory Hierarchy | RFC-0004, RFC-1001 | **Partial** | Moderate |
@@ -53,7 +53,7 @@ The Noesium codebase provides a functional agent framework with LangGraph integr
 
 ### 2.2 Kernel Executor (`core/kernel/`) — NOT IMPLEMENTED
 
-**RFC Reference**: RFC-0003 (entire), RFC-1001 §7
+**RFC Reference**: RFC-1001 §7
 
 **What's Missing**:
 - `KernelExecutor` wrapping LangGraph with event emission
@@ -205,7 +205,7 @@ The Noesium codebase provides a functional agent framework with LangGraph integr
 
 **Current State**: The entire Goalith module (`noesium/core/goalith/`) has been removed as it was deprecated and superseded by the TaskPlanner in `noesium/noe/planner.py`.
 
-**Replacement**: Use `TaskPlanner` from `noesium.noeagent.planner` for goal decomposition functionality.
+**Replacement**: Use `TaskPlanner` from `noeagent.planner` for goal decomposition functionality.
 
 ---
 

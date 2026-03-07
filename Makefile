@@ -29,13 +29,16 @@ help: ## Show this help message
 
 .PHONY: install setup check-env install-workspace
 
-install: ## Install development dependencies
-	@echo "$(BLUE)🔧 Installing development dependencies...$(RESET)"
+install: ## Install all dependencies (production + dev) for all workspace packages
+	@echo "$(BLUE)🔧 Installing all dependencies...$(RESET)"
 	@$(UV) sync --all-packages
+	@$(UV) pip install pytest pytest-asyncio pytest-cov
+	@echo "$(GREEN)✅ All dependencies installed$(RESET)"
 
-install-workspace: ## Install all workspace packages
+install-workspace: ## Install all workspace packages with dependencies
 	@echo "$(BLUE)🔧 Installing all workspace packages...$(RESET)"
 	@$(UV) sync --all-packages
+	@$(UV) pip install pytest pytest-asyncio pytest-cov
 	@echo "$(GREEN)✅ Workspace ready$(RESET)"
 
 setup: install-workspace ## Setup development environment
@@ -59,13 +62,17 @@ test: ## Run all tests.
 	@echo "$(BLUE)🧪 Running all tests...$(RESET)"
 	$(UV) run $(PYTEST) $(TEST_DIR) -v
 
-test-unit: ## Run unit tests only
+test-unit: ## Run unit tests only (all packages)
 	@echo "$(BLUE)🧪 Running unit tests...$(RESET)"
-	$(UV) run $(PYTEST) $(TEST_DIR) -v -m "not integration"
+	@cd noesium && $(UV) run $(PYTEST) tests/ -v -m "not integration"
+	@cd noeagent && $(UV) run $(PYTEST) tests/ -v -m "not integration"
+	@cd voyager/backend && $(UV) run $(PYTEST) tests/ -v -m "not integration"
 
-test-integration: ## Run integration tests only
+test-integration: ## Run integration tests only (all packages)
 	@echo "$(BLUE)🧪 Running integration tests...$(RESET)"
-	$(UV) run $(PYTEST) $(TEST_DIR) -v -m "integration" --runintegration --runslow
+	@cd noesium && $(UV) run $(PYTEST) tests/ -v -m "integration" --runintegration --runslow
+	@cd noeagent && $(UV) run $(PYTEST) tests/ -v -m "integration" --runintegration --runslow
+	@cd voyager/backend && $(UV) run $(PYTEST) tests/ -v -m "integration" --runintegration --runslow
 
 test-coverage: ## Run tests with coverage
 	@echo "$(BLUE)🧪 Running tests with coverage...$(RESET)"
@@ -86,7 +93,11 @@ test-noeagent: ## Run noeagent package tests
 
 test-voyager: ## Run voyager backend tests
 	@echo "$(BLUE)🧪 Running voyager backend tests...$(RESET)"
-	cd voyager/backend && $(UV) run $(PYTEST) tests/ -v
+	@if [ -d "voyager/backend/tests" ]; then \
+		cd voyager/backend && $(UV) run $(PYTEST) tests/ -v; \
+	else \
+		echo "$(YELLOW)⚠️  No tests found for voyager backend$(RESET)"; \
+	fi
 
 test-all: test-noesium test-noeagent test-voyager ## Run all package tests
 	@echo "$(GREEN)✅ All package tests completed$(RESET)"

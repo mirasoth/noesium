@@ -1,6 +1,6 @@
 """Unit tests for Noe task planning helpers and Rich TUI components."""
 
-from noesium.noeagent.state import TaskPlan, TaskStep
+from noeagent.state import TaskPlan, TaskStep
 
 
 def test_taskplan_todo_markdown_marks_completed_steps():
@@ -39,7 +39,7 @@ def test_taskplan_advance():
 
 
 def test_render_plan_table_columns():
-    from noesium.noeagent.tui import render_plan_table
+    from noeagent.tui import render_plan_table
 
     plan = TaskPlan(
         goal="Build app",
@@ -56,7 +56,7 @@ def test_render_plan_table_columns():
 def test_render_plan_tree():
     from rich.tree import Tree as RichTree
 
-    from noesium.noeagent.tui import render_plan_tree
+    from noeagent.tui import render_plan_tree
 
     plan = TaskPlan(
         goal="Build app",
@@ -73,7 +73,7 @@ def test_render_plan_tree():
 
 
 def test_slash_commands_constant():
-    from noesium.noeagent.tui import SLASH_COMMANDS
+    from noeagent.tui import SLASH_COMMANDS
 
     assert "/exit" in SLASH_COMMANDS
     assert "/quit" in SLASH_COMMANDS

@@ -15,7 +15,7 @@ from voyager.services.git_client import GitClient
 from voyager.services.session_manager import SessionManager
 from voyager.services.state_manager import StateManager
 
-from noesium.noeagent.progress import ProgressEvent, ProgressEventType
+from noeagent.progress import ProgressEvent, ProgressEventType
 
 
 class TaskOrchestrator:

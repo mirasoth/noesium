@@ -55,34 +55,6 @@ class AgentStopped(DomainEvent):
         return "agent.stopped"
 
 
-# --- Kernel node lifecycle ---
-
-
-class NodeEntered(DomainEvent):
-    node_id: str
-    graph_id: str
-
-    def event_type(self) -> str:
-        return "kernel.node.entered"
-
-
-class NodeCompleted(DomainEvent):
-    node_id: str
-    graph_id: str
-    duration_ms: float
-
-    def event_type(self) -> str:
-        return "kernel.node.completed"
-
-
-class CheckpointCreated(DomainEvent):
-    checkpoint_id: str
-    node_id: str
-
-    def event_type(self) -> str:
-        return "kernel.checkpoint.created"
-
-
 # --- Capability lifecycle ---
 
 

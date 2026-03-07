@@ -4,7 +4,7 @@
 >
 > **Module**: `noesium/core/`
 > **Source**: Derived from [RFC-1001](../../specs/RFC-1001.md) (Core Framework Implementation Design)
-> **Related RFCs**: [RFC-0001](../../specs/RFC-0001.md), [RFC-0002](../../specs/RFC-0002.md), [RFC-0003](../../specs/RFC-0003.md), [RFC-0004](../../specs/RFC-0004.md), [RFC-0005](../../specs/RFC-0005.md)
+> **Related RFCs**: [RFC-0001](../../specs/RFC-0001.md), [RFC-0002](../../specs/RFC-0002.md), [RFC-0004](../../specs/RFC-0004.md), [RFC-0005](../../specs/RFC-0005.md)
 
 ---
 

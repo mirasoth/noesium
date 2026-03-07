@@ -80,8 +80,8 @@ Global Config (config.json)
 
 **Programmatic usage:**
 ```python
-from noesium.noeagent import NoeAgent
-from noesium.noeagent.config import NoeConfig
+from noeagent import NoeAgent
+from noeagent.config import NoeConfig
 
 # Via global config
 agent = NoeAgent()

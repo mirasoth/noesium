@@ -24,14 +24,14 @@ except ImportError:
     Send = None
     LANGCHAIN_AVAILABLE = False
 
-from noesium.core.agent import BaseResearcher, ResearchOutput
+from noesium.core.agent import BaseGraphicAgent
 from noesium.core.llm import BaseLLMClient
 from noesium.core.utils.logging import get_logger
 from noesium.core.utils.typing import override
 
 from .prompts import answer_instructions, query_writer_instructions, reflection_instructions
 from .schemas import Reflection, SearchQueryList
-from .state import QueryState, ReflectionState, ResearchState, WebSearchState
+from .state import QueryState, ReflectionState, ResearchOutput, ResearchState, WebSearchState
 
 # Configure logging
 logger = get_logger(__name__)
@@ -42,7 +42,7 @@ def get_current_date() -> str:
     return datetime.now().strftime("%B %d, %Y")
 
 
-class TacitusAgent(BaseResearcher):
+class TacitusAgent(BaseGraphicAgent):
     """
     Advanced research agent using LangGraph and LLM integration.
     """
@@ -610,3 +610,19 @@ class TacitusAgent(BaseResearcher):
                 type=ProgressEventType.SESSION_END,
                 session_id=session_id,
             )
+
+    async def run(
+        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+    ) -> str:
+        """
+        Default implementation of run() for researchers.
+        Calls research() and returns the content.
+        """
+        result = await self.research(user_message, context, config)
+        return result.content if result else "Research failed to produce results."
+
+    async def arun(
+        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+    ) -> str:
+        """Async alias for run()."""
+        return await self.run(user_message, context, config)

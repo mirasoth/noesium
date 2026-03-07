@@ -7,6 +7,7 @@ supporting multiple backends including Chunkr and PyMuPDF.
 
 import hashlib
 import os
+import warnings
 from pathlib import Path
 from typing import Callable, Dict, Optional
 from urllib.parse import urlparse
@@ -26,7 +27,12 @@ logger = get_logger(__name__)
 
 # Document processing backends
 try:
-    import fitz  # PyMuPDF
+    # Suppress SWIG deprecation warnings from PyMuPDF
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*SwigPyPacked.*")
+        warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*SwigPyObject.*")
+        warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*swigvarlink.*")
+        import fitz  # PyMuPDF
 
     PYMUPDF_AVAILABLE = True
 except ImportError:
