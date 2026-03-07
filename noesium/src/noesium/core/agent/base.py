@@ -26,7 +26,7 @@ class BaseAgent(ABC):
     Provides:
     - LLM client management with instructor support
     - Token usage tracking
-    - Capability declaration for the unified registry (RFC-0005 / RFC-1004)
+    - Capability declaration for the unified registry (RFC-1003 / RFC-2003)
     - Logging capabilities
     - Configuration management
     - Error handling patterns
@@ -46,7 +46,7 @@ class BaseAgent(ABC):
         """Run the agent with a user message and context."""
 
     def declare_capabilities(self) -> list:
-        """Declare capabilities this agent provides (RFC-0005 §12).
+        """Declare capabilities this agent provides (RFC-1003 §12).
 
         Returns a list of ``CapabilityDescriptor`` instances.  Override in
         subclasses to register the agent's capabilities with the

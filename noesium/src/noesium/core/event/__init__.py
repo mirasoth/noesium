@@ -1,4 +1,4 @@
-"""Event system: envelope, domain events, stores, and progress events (RFC-0002, RFC-1001, RFC-1007)."""
+"""Event system: envelope, domain events, stores, and progress events (RFC-1001, RFC-1007)."""
 
 from .codec import canonicalize, deserialize, serialize
 from .envelope import AgentRef, EventEnvelope, SignatureBlock, TraceContext

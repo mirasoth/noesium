@@ -1,4 +1,4 @@
-"""RFC-0002 compliant event envelope and identity models."""
+"""RFC-1001 compliant event envelope and identity models."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def _utc_now() -> datetime:
 
 
 class AgentRef(BaseModel):
-    """Producer identity (RFC-0002 Section 5)."""
+    """Producer identity (RFC-1001 Section 5)."""
 
     agent_id: str
     agent_type: str
@@ -27,7 +27,7 @@ class AgentRef(BaseModel):
 
 
 class TraceContext(BaseModel):
-    """Distributed trace propagation (RFC-0002 Section 6)."""
+    """Distributed trace propagation (RFC-1001 Section 6)."""
 
     trace_id: str = Field(default_factory=_uuid7_str)
     span_id: str = Field(default_factory=_uuid7_str)
@@ -44,7 +44,7 @@ class TraceContext(BaseModel):
 
 
 class SignatureBlock(BaseModel):
-    """Optional cryptographic signature (RFC-0002 Section 11)."""
+    """Optional cryptographic signature (RFC-1001 Section 11)."""
 
     algorithm: str
     public_key_id: str
@@ -52,7 +52,7 @@ class SignatureBlock(BaseModel):
 
 
 class EventEnvelope(BaseModel):
-    """Canonical immutable event wrapper (RFC-0002 Section 3)."""
+    """Canonical immutable event wrapper (RFC-1001 Section 3)."""
 
     spec_version: str = "1.0.0"
     event_id: str = Field(default_factory=_uuid7_str)

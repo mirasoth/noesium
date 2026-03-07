@@ -5,7 +5,7 @@ Manages CLI subagent execution in two modes:
 2. oneshot: Single execution per request, process exits after completion
 
 Supports various CLI agents including Claude Code CLI with proper NDJSON parsing.
-Implements the persistent daemon model from RFC-0005 §10.
+Implements the persistent daemon model from RFC-1003 §10.
 """
 
 from __future__ import annotations

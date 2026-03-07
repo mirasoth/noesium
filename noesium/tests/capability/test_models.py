@@ -1,4 +1,4 @@
-"""Tests for capability models (RFC-0005, RFC-1004)."""
+"""Tests for capability models (RFC-1003, RFC-1004)."""
 
 from noesium.core.capability.models import (
     STATEFUL_TYPES,

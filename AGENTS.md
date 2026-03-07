@@ -78,21 +78,24 @@ Specifications define the Noesium system. Follow them in priority order:
 
 ### Priority 1: Core Standards (Must Comply)
 
-- **`specs/RFC-0001.md` ~ `specs/RFC-0002.md`** - Core architecture (event-sourced multi-agent kernel, event envelope spec)
-- **`specs/RFC-1001.md` ~ `specs/RFC-1004.md`** - Frontend design: UI layout, interaction/state model, tasks/actions, research space/RO
-- **`specs/rfc-namings.md`** - Authoritative naming reference for all layers
+- **`docs/specs/RFC-0001.md`** - Conceptual design: Event-Sourced Multi-Agent Kernel Architecture
+- **`docs/specs/RFC-1001.md` ~ `docs/specs/RFC-1009.md`** - Architecture design: Core & Agent architecture, Memory, Tools
+- **`docs/specs/rfc-namings.md`** - Authoritative naming reference for all layers
 
 ### Priority 2: RFC Specifications (Must Comply)
 
 Each RFC defines specific system aspects. Index: `specs/rfc-index.md`
 
-RFC classification:
-- **RFC-0xxx**: Global Architecture Design (RFC-0001, RFC-0002, RFC-0004, RFC-0005, RFC-0006)
-- **RFC-1xxx**: Frontend design principles (RFC-1001 ~ RFC-1006)
-- **RFC-2xxx**: Abstract contracts between frontend-backend, UI semantics, agents (RFC-2001 ~ RFC-2004)
-- **RFC-3xxx**: Backend design and principles
-- **RFC-4xxx**: Agent design and principles
-- **RFC-6xxx**: Backend and agent impl architectures
+RFC classification (Kind-based with sub-ranges):
+- **RFC-0xxx**: Conceptual Design (RFC-0001)
+- **RFC-1xxx**: Architecture Design
+  - 1000-1099: Core & Agent Architecture (RFC-1001 ~ RFC-1009)
+  - 1100-1199: Memory Architecture (RFC-1101)
+  - 1200-1299: Tool & Capability Architecture (RFC-1201)
+- **RFC-2xxx**: Implementation Interface Design
+  - 2000-2099: Core Implementation (RFC-2001 ~ RFC-2004)
+  - 2100-2199: Infrastructure Implementation (RFC-2101 ~ RFC-2103)
+- **RFC-9xxx**: Applications & Research (RFC-9000, RFC-9001)
 
 ---
 
@@ -100,10 +103,10 @@ RFC classification:
 
 | Resource | Location |
 |----------|----------|
-| All RFCs | `specs/RFC-*.md` |
-| RFC Index | `specs/rfc-index.md` |
-| RFC Naming | `specs/rfc-namings.md` |
-| API Contract | `specs/RFC-2004.md` |
+| All RFCs | `docs/specs/RFC-*.md` |
+| RFC Index | `docs/specs/rfc-index.md` |
+| RFC Naming | `docs/specs/rfc-namings.md` |
+| API Contract | `docs/specs/RFC-2004.md` |
 | Milestones | `docs/impl/` |
 
 ---

@@ -319,7 +319,7 @@ class SubagentProgressEvent:
         )
 
 
-# Standard error codes (RFC-9003 Section 8)
+# Standard error codes (RFC-1008 Section 8)
 class SubagentErrorCode(str, Enum):
     """Standard error codes for subagent failures."""
 

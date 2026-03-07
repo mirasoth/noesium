@@ -1,4 +1,4 @@
-"""Tests for unified CapabilityRegistry (RFC-0005, RFC-1004)."""
+"""Tests for unified CapabilityRegistry (RFC-1003, RFC-2003)."""
 
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, PropertyMock
