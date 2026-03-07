@@ -2,6 +2,8 @@
 
 Usage:
     noeagent                       Launch TUI interface
+    noeagent --autonomous          Run in autonomous mode
+    noeagent --autonomous --goal "Monitor issues"  Autonomous with initial goal
     noeagent config path           Show config file path
     noeagent config show [-k KEY]  Show current config
     noeagent config init [--provider PROVIDER]  Initialize config
@@ -24,6 +26,25 @@ def main() -> None:
         prog="noeagent",
         description="NoeAgent - An intelligent agent framework",
     )
+
+    # Add global options for autonomous mode
+    parser.add_argument(
+        "--autonomous",
+        action="store_true",
+        help="Run in autonomous mode (RFC-1005)",
+    )
+    parser.add_argument(
+        "--goal",
+        type=str,
+        help="Initial goal for autonomous mode",
+    )
+    parser.add_argument(
+        "--tick-interval",
+        type=float,
+        default=10.0,
+        help="Cognitive loop tick interval in seconds (default: 10.0)",
+    )
+
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Config subcommand
@@ -51,6 +72,9 @@ def main() -> None:
     # Route to appropriate handler
     if args.command == "config":
         handle_config_command(args)
+    elif args.autonomous:
+        # Run in autonomous mode
+        launch_autonomous(args.goal, args.tick_interval)
     else:
         # Default: launch TUI
         launch_tui()
@@ -202,6 +226,51 @@ def launch_tui() -> None:
         sys.exit(0)
     except Exception as e:
         print(f"Error starting NoeAgent: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def launch_autonomous(initial_goal: str | None, tick_interval: float) -> None:
+    """Launch NoeAgent in autonomous mode.
+
+    Args:
+        initial_goal: Optional initial goal for autonomous mode
+        tick_interval: Cognitive loop tick interval in seconds
+    """
+    try:
+        import asyncio
+
+        from noeagent.agent import NoeAgent
+        from noeagent.autonomous import run_autonomous_mode
+        from noeagent.config import get_noe_config_path
+
+        from noesium.core.config import load_config
+
+        print("🤖 Starting NoeAgent in autonomous mode...")
+        print(f"   Tick interval: {tick_interval}s")
+        if initial_goal:
+            print(f"   Initial goal: {initial_goal}")
+        print()
+
+        # Load config and initialize agent
+        config_path = get_noe_config_path()
+        config = load_config(config_path)
+
+        # Create NoeAgent instance
+        agent = NoeAgent(config=config)
+
+        # Run autonomous mode
+        asyncio.run(run_autonomous_mode(agent, initial_goal))
+
+    except ImportError as e:
+        _handle_import_error(e)
+    except KeyboardInterrupt:
+        print("\n\n✓ Interrupted by user.")
+        sys.exit(0)
+    except Exception as e:
+        print(f"Error starting autonomous mode: {e}", file=sys.stderr)
+        import traceback
+
+        traceback.print_exc()
         sys.exit(1)
 
 
