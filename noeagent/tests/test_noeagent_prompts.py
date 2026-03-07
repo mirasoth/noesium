@@ -1,7 +1,6 @@
 """Tests for NoeAgent prompt loading and rendering."""
 
 import pytest
-
 from noeagent.prompts import get_prompt_manager
 
 

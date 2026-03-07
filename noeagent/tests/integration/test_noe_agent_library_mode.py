@@ -11,9 +11,9 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from noeagent.config import NoeConfig, NoeMode
 
 from noesium.core.event import ProgressEvent, ProgressEventType
-from noeagent.config import NoeConfig, NoeMode
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -241,7 +241,6 @@ class TestProgressExposure:
     async def test_tool_start_and_end_events(self, minimal_config):
         """Tool usage should emit TOOL_START and TOOL_END events."""
         from langchain_core.messages import AIMessage
-
         from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config)

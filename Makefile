@@ -27,18 +27,48 @@ help: ## Show this help message
 # SETUP COMMANDS
 # =============================================================================
 
-.PHONY: install setup check-env install-workspace
+.PHONY: install install-python install-frontend install-clean setup check-env install-workspace
 
-install: ## Install all dependencies (production + dev) for all workspace packages
-	@echo "$(BLUE)🔧 Installing all dependencies...$(RESET)"
-	@$(UV) sync --all-packages
-	@$(UV) pip install pytest pytest-asyncio pytest-cov
-	@echo "$(GREEN)✅ All dependencies installed$(RESET)"
+install: ## Install all dependencies (production + dev + extras) for all workspace packages and frontend
+	@echo "$(BLUE)🔧 Installing Python dependencies...$(RESET)"
+	@$(UV) sync --all-packages --all-extras
+	@echo "$(GREEN)✅ Python dependencies installed$(RESET)"
+	@echo "$(BLUE)📦 Installing frontend dependencies...$(RESET)"
+	@if command -v npm >/dev/null 2>&1; then \
+		cd voyager/frontend && npm install; \
+		echo "$(GREEN)✅ Frontend dependencies installed$(RESET)"; \
+	else \
+		echo "$(YELLOW)⚠️  npm not found, skipping frontend dependencies$(RESET)"; \
+	fi
 
-install-workspace: ## Install all workspace packages with dependencies
-	@echo "$(BLUE)🔧 Installing all workspace packages...$(RESET)"
-	@$(UV) sync --all-packages
-	@$(UV) pip install pytest pytest-asyncio pytest-cov
+install-python: ## Install Python dependencies only (production + dev + extras)
+	@echo "$(BLUE)🔧 Installing Python dependencies...$(RESET)"
+	@$(UV) sync --all-packages --all-extras
+	@echo "$(GREEN)✅ Python dependencies installed$(RESET)"
+
+install-frontend: ## Install frontend dependencies only
+	@echo "$(BLUE)📦 Installing frontend dependencies...$(RESET)"
+	@if command -v npm >/dev/null 2>&1; then \
+		cd voyager/frontend && npm install; \
+		echo "$(GREEN)✅ Frontend dependencies installed$(RESET)"; \
+	else \
+		echo "$(RED)❌ npm not found. Please install Node.js first.$(RESET)"; \
+		exit 1; \
+	fi
+
+install-clean: ## Clean install - remove caches and reinstall everything
+	@echo "$(BLUE)🧹 Cleaning all caches...$(RESET)"
+	@rm -rf .venv voyager/frontend/node_modules voyager/frontend/package-lock.json
+	@$(UV) sync --all-packages --all-extras
+	@echo "$(BLUE)📦 Installing frontend dependencies...$(RESET)"
+	@if command -v npm >/dev/null 2>&1; then \
+		cd voyager/frontend && npm install; \
+		echo "$(GREEN)✅ Clean installation complete$(RESET)"; \
+	else \
+		echo "$(YELLOW)⚠️  npm not found, skipping frontend dependencies$(RESET)"; \
+	fi
+
+install-workspace: install-python ## Install all workspace packages (deprecated: use install-python)
 	@echo "$(GREEN)✅ Workspace ready$(RESET)"
 
 setup: install-workspace ## Setup development environment

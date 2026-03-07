@@ -54,9 +54,8 @@ def test_render_plan_table_columns():
 
 
 def test_render_plan_tree():
-    from rich.tree import Tree as RichTree
-
     from noeagent.tui import render_plan_tree
+    from rich.tree import Tree as RichTree
 
     plan = TaskPlan(
         goal="Build app",

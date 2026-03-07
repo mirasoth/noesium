@@ -26,10 +26,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
-from noesium.core.event import ProgressEvent, ProgressEventType
 from noeagent.agent import NoeAgent
 from noeagent.config import NoeConfig, NoeMode
+
+from noesium.core.event import ProgressEvent, ProgressEventType
 
 logger = logging.getLogger(__name__)
 

@@ -17,11 +17,11 @@ import os
 from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
 import pytest
-
-from noesium.core.capability.models import CapabilityDescriptor, CapabilityType
 from noeagent.config import NoeConfig, NoeMode
 from noeagent.schemas import AgentAction, SubagentAction, ToolCallAction
 from noeagent.state import AgentState, TaskPlan, TaskStep
+
+from noesium.core.capability.models import CapabilityDescriptor, CapabilityType
 
 # ---------------------------------------------------------------------------
 # Schema tests
@@ -109,9 +109,8 @@ class TestRichTUIRendering:
         assert table.row_count == 4
 
     def test_render_plan_tree(self):
-        from rich.tree import Tree as RichTree
-
         from noeagent.tui import render_plan_tree
+        from rich.tree import Tree as RichTree
 
         plan = TaskPlan(
             goal="Test goal",
@@ -131,8 +130,9 @@ class TestRichTUIRendering:
         assert "[sub] Plan: custom" in str(tree2.label)
 
     def test_activity_line_tool_start(self):
-        from noesium.core.event import ProgressEvent, ProgressEventType
         from noeagent.tui import _activity_line
+
+        from noesium.core.event import ProgressEvent, ProgressEventType
 
         evt = ProgressEvent(
             type=ProgressEventType.TOOL_START,
@@ -144,8 +144,9 @@ class TestRichTUIRendering:
         assert "run_bash" in line.plain
 
     def test_activity_line_tool_end(self):
-        from noesium.core.event import ProgressEvent, ProgressEventType
         from noeagent.tui import _activity_line
+
+        from noesium.core.event import ProgressEvent, ProgressEventType
 
         evt = ProgressEvent(
             type=ProgressEventType.TOOL_END,
@@ -157,8 +158,9 @@ class TestRichTUIRendering:
         assert "run_bash" in line.plain
 
     def test_activity_line_subagent_start(self):
-        from noesium.core.event import ProgressEvent, ProgressEventType
         from noeagent.tui import _activity_line
+
+        from noesium.core.event import ProgressEvent, ProgressEventType
 
         evt = ProgressEvent(
             type=ProgressEventType.SUBAGENT_START,
@@ -216,9 +218,8 @@ class TestSlashCommands:
     def test_exit_command(self):
         from unittest.mock import MagicMock
 
-        from rich.console import Console
-
         from noeagent.tui import handle_slash_command
+        from rich.console import Console
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -227,9 +228,8 @@ class TestSlashCommands:
     def test_quit_command(self):
         from unittest.mock import MagicMock
 
-        from rich.console import Console
-
         from noeagent.tui import handle_slash_command
+        from rich.console import Console
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -238,9 +238,8 @@ class TestSlashCommands:
     def test_help_command(self):
         from unittest.mock import MagicMock
 
-        from rich.console import Console
-
         from noeagent.tui import handle_slash_command
+        from rich.console import Console
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -249,9 +248,8 @@ class TestSlashCommands:
     def test_mode_switch_to_ask(self):
         from unittest.mock import MagicMock
 
-        from rich.console import Console
-
         from noeagent.tui import handle_slash_command
+        from rich.console import Console
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -262,9 +260,8 @@ class TestSlashCommands:
     def test_mode_switch_to_agent(self):
         from unittest.mock import MagicMock
 
-        from rich.console import Console
-
         from noeagent.tui import handle_slash_command
+        from rich.console import Console
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -275,9 +272,8 @@ class TestSlashCommands:
     def test_mode_switch_invalid(self):
         from unittest.mock import MagicMock
 
-        from rich.console import Console
-
         from noeagent.tui import handle_slash_command
+        from rich.console import Console
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -286,9 +282,8 @@ class TestSlashCommands:
     def test_plan_command_no_plan(self):
         from unittest.mock import MagicMock
 
-        from rich.console import Console
-
         from noeagent.tui import handle_slash_command
+        from rich.console import Console
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -297,9 +292,8 @@ class TestSlashCommands:
     def test_plan_command_with_plan(self):
         from unittest.mock import MagicMock
 
-        from rich.console import Console
-
         from noeagent.tui import handle_slash_command
+        from rich.console import Console
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -309,9 +303,8 @@ class TestSlashCommands:
     def test_clear_command(self):
         from unittest.mock import MagicMock
 
-        from rich.console import Console
-
         from noeagent.tui import handle_slash_command
+        from rich.console import Console
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -320,9 +313,8 @@ class TestSlashCommands:
     def test_unknown_command(self):
         from unittest.mock import MagicMock
 
-        from rich.console import Console
-
         from noeagent.tui import handle_slash_command
+        from rich.console import Console
 
         console = Console(file=MagicMock())
         agent = MagicMock()
@@ -405,7 +397,6 @@ class TestStreamEvents:
     async def test_tool_start_event(self):
         """astream_events yields tool.start from AIMessage.tool_calls."""
         from langchain_core.messages import AIMessage
-
         from noeagent.agent import NoeAgent
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
@@ -540,6 +531,7 @@ class TestNoeConfig:
         """Test headless precedence: env var > config > default."""
         from noeagent.agent import NoeAgent
         from noeagent.config import AgentSubagentConfig
+
         from noesium.subagents.bu.config import DEFAULT_HEADLESS
 
         # Save original env var state
@@ -755,7 +747,6 @@ class TestExecuteStepNode:
     @pytest.mark.asyncio
     async def test_tool_call_produces_ai_message_with_tool_calls(self):
         from langchain_core.messages import AIMessage, HumanMessage
-
         from noeagent.nodes import execute_step_node
 
         mock_llm = MagicMock()
@@ -786,7 +777,6 @@ class TestExecuteStepNode:
     @pytest.mark.asyncio
     async def test_text_response_produces_plain_ai_message(self):
         from langchain_core.messages import AIMessage, HumanMessage
-
         from noeagent.nodes import execute_step_node
 
         mock_llm = MagicMock()
@@ -817,7 +807,6 @@ class TestExecuteStepNode:
     @pytest.mark.asyncio
     async def test_subagent_action_sets_additional_kwargs(self):
         from langchain_core.messages import HumanMessage
-
         from noeagent.nodes import execute_step_node
 
         mock_llm = MagicMock()
@@ -847,7 +836,6 @@ class TestExecuteStepNode:
     @pytest.mark.asyncio
     async def test_fallback_on_structured_completion_failure(self):
         from langchain_core.messages import HumanMessage
-
         from noeagent.nodes import execute_step_node
 
         mock_llm = MagicMock()
@@ -880,7 +868,6 @@ class TestSubagentNode:
     @pytest.mark.asyncio
     async def test_spawn_subagent(self):
         from langchain_core.messages import AIMessage, HumanMessage
-
         from noeagent.nodes import subagent_node
 
         mock_agent = AsyncMock()

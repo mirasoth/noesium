@@ -13,14 +13,14 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from noesium.core.event import ProgressEvent, ProgressEventType
 from noeagent.config import (
     AgentSubagentConfig,
     CliSubagentConfig,
     NoeConfig,
     NoeMode,
 )
+
+from noesium.core.event import ProgressEvent, ProgressEventType
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -134,8 +134,9 @@ class TestBrowserUseSubagent:
     @pytest.mark.integration
     async def test_interact_with_subagent(self, minimal_config_with_subagents):
         """Interact with a spawned subagent via invoke_subagent()."""
-        from noesium.core.agent.subagent import SubagentManager
         from noeagent.agent import NoeAgent
+
+        from noesium.core.agent.subagent import SubagentManager
 
         agent = NoeAgent(minimal_config_with_subagents)
         # Set up SubagentManager so spawn_subagent can register the child
@@ -158,7 +159,6 @@ class TestBrowserUseSubagent:
     async def test_subagent_events_in_progress_stream(self, minimal_config_with_subagents):
         """Subagent activity should emit progress events."""
         from langchain_core.messages import AIMessage
-
         from noeagent.agent import NoeAgent
 
         agent = NoeAgent(minimal_config_with_subagents)
@@ -584,8 +584,9 @@ class TestBuiltInBuiltinSubagentSetup:
     @pytest.mark.unit
     async def test_setup_builtin_subagents_registers_providers(self, minimal_config_with_subagents):
         """_setup_builtin_subagents should register built-in agents in SubagentManager."""
-        from noesium.core.agent.subagent import SubagentManager
         from noeagent.agent import NoeAgent
+
+        from noesium.core.agent.subagent import SubagentManager
 
         agent = NoeAgent(minimal_config_with_subagents)
         agent._subagent_manager = SubagentManager()
@@ -602,8 +603,9 @@ class TestBuiltInBuiltinSubagentSetup:
     @pytest.mark.unit
     async def test_setup_builtin_subagents_skips_disabled(self):
         """_setup_builtin_subagents should skip disabled subagents."""
-        from noesium.core.agent.subagent import SubagentManager
         from noeagent.agent import NoeAgent
+
+        from noesium.core.agent.subagent import SubagentManager
 
         config = NoeConfig(
             mode=NoeMode.AGENT,
@@ -630,8 +632,9 @@ class TestBuiltInBuiltinSubagentSetup:
     @pytest.mark.unit
     async def test_setup_builtin_subagents_handles_unknown_type(self):
         """_setup_builtin_subagents should skip unknown agent types."""
-        from noesium.core.agent.subagent import SubagentManager
         from noeagent.agent import NoeAgent
+
+        from noesium.core.agent.subagent import SubagentManager
 
         config = NoeConfig(
             mode=NoeMode.AGENT,
@@ -659,8 +662,9 @@ class TestBuiltInBuiltinSubagentSetup:
     @pytest.mark.unit
     async def test_setup_builtin_subagents_binds_correct_factory_per_subagent(self):
         """Each built-in provider should keep its own factory callable."""
-        from noesium.core.agent.subagent import SubagentManager
         from noeagent.agent import NoeAgent
+
+        from noesium.core.agent.subagent import SubagentManager
 
         config = NoeConfig(
             mode=NoeMode.AGENT,
@@ -700,11 +704,11 @@ class TestInvokeBuiltinAction:
     async def test_invoke_builtin_action(self):
         """invoke_builtin action should invoke the built-in agent via SubagentManager."""
         from langchain_core.messages import AIMessage
-
-        from noesium.core.agent.subagent import SubagentManager
         from noeagent.agent import NoeAgent
         from noeagent.nodes import subagent_node
         from noeagent.state import AgentState
+
+        from noesium.core.agent.subagent import SubagentManager
 
         # Create agent and set up SubagentManager
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
@@ -743,11 +747,11 @@ class TestInvokeBuiltinAction:
     async def test_invoke_builtin_missing_agent(self):
         """invoke_builtin should handle missing agent gracefully via SubagentManager."""
         from langchain_core.messages import AIMessage
-
-        from noesium.core.agent.subagent import SubagentManager
         from noeagent.agent import NoeAgent
         from noeagent.nodes import subagent_node
         from noeagent.state import AgentState
+
+        from noesium.core.agent.subagent import SubagentManager
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
         # Set up empty SubagentManager (no providers registered)
@@ -1071,7 +1075,6 @@ class TestInvokeCliAction:
     async def test_invoke_cli_action_success(self):
         """invoke_cli action should execute CLI in oneshot mode."""
         from langchain_core.messages import AIMessage
-
         from noeagent.agent import NoeAgent
         from noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
         from noeagent.nodes import subagent_node
@@ -1119,7 +1122,6 @@ class TestInvokeCliAction:
     async def test_invoke_cli_action_with_options(self):
         """invoke_cli action should pass allowed_tools option."""
         from langchain_core.messages import AIMessage
-
         from noeagent.agent import NoeAgent
         from noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
         from noeagent.nodes import subagent_node
@@ -1170,7 +1172,6 @@ class TestInvokeCliAction:
     async def test_invoke_cli_action_failure(self):
         """invoke_cli action should handle execution failure."""
         from langchain_core.messages import AIMessage
-
         from noeagent.agent import NoeAgent
         from noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
         from noeagent.nodes import subagent_node
@@ -1356,8 +1357,9 @@ class TestNoeAgentBuiltinStreaming:
     @pytest.mark.unit
     async def test_execute_builtin_subagent_streaming(self):
         """execute_builtin_subagent_streaming delegates to invoke_subagent."""
-        from noesium.core.event import ProgressEvent, ProgressEventType
         from noeagent.agent import NoeAgent
+
+        from noesium.core.event import ProgressEvent, ProgressEventType
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
         agent._subagent_event_queue = asyncio.Queue()
@@ -1414,11 +1416,11 @@ class TestNoeAgentBuiltinStreaming:
     async def test_invoke_builtin_uses_streaming(self):
         """invoke_builtin action delegates to agent.invoke_subagent."""
         from langchain_core.messages import AIMessage
-
-        from noesium.core.agent.subagent import SubagentManager
         from noeagent.agent import NoeAgent
         from noeagent.nodes import subagent_node
         from noeagent.state import AgentState
+
+        from noesium.core.agent.subagent import SubagentManager
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
         agent._subagent_manager = SubagentManager()
@@ -1659,10 +1661,10 @@ class TestEndToEndStreamingIntegration:
     async def test_subagent_progress_in_astream_progress(self):
         """SUBAGENT_PROGRESS events should appear in NoeAgent.astream_progress()."""
         from langchain_core.messages import AIMessage
+        from noeagent.agent import NoeAgent
 
         from noesium.core.agent.subagent import SubagentManager
         from noesium.core.event import ProgressEvent, ProgressEventType
-        from noeagent.agent import NoeAgent
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
         agent._subagent_manager = SubagentManager()
@@ -1742,8 +1744,9 @@ class TestEndToEndStreamingIntegration:
     @pytest.mark.integration
     async def test_tui_receives_subagent_events(self):
         """TUI should receive and display subagent progress events."""
-        from noesium.core.event import ProgressEventType
         from noeagent.tui import SubagentTracker
+
+        from noesium.core.event import ProgressEventType
 
         tracker = SubagentTracker(max_display=3)
 
@@ -1799,8 +1802,9 @@ class TestCliAgentCapabilityProviderUpdated:
     @pytest.mark.unit
     async def test_provider_oneshot_mode(self):
         """Provider should execute in oneshot mode."""
-        from noesium.core.capability.providers import CliAgentCapabilityProvider
         from noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
+
+        from noesium.core.capability.providers import CliAgentCapabilityProvider
 
         adapter = ExternalCliAdapter()
         mock_result = CliExecutionResult(success=True, content="Task completed")
@@ -1822,8 +1826,9 @@ class TestCliAgentCapabilityProviderUpdated:
     @pytest.mark.unit
     async def test_provider_descriptor_includes_mode(self):
         """Provider descriptor should include mode in tags."""
-        from noesium.core.capability.providers import CliAgentCapabilityProvider
         from noeagent.cli_adapter import ExternalCliAdapter
+
+        from noesium.core.capability.providers import CliAgentCapabilityProvider
 
         adapter = ExternalCliAdapter()
 

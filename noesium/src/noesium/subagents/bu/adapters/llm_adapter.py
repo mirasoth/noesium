@@ -5,7 +5,6 @@ This module provides LLM compatibility types and adapters to bridge between
 noesium's LLM infrastructure and the community browser-use repository.
 """
 
-import asyncio
 import inspect
 import logging
 from typing import Any, Generic, Literal, TypeVar, Union

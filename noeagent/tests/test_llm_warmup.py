@@ -4,7 +4,6 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from noeagent.agent import NoeAgent
 from noeagent.config import NoeConfig
 

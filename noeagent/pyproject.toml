@@ -74,6 +74,13 @@ line_length = 120
 [tool.ruff]
 line-length = 120
 
+[tool.ruff.lint.per-file-ignores]
+# Late/conditional imports for environment setup and sys.path manipulation
+"src/noeagent/__init__.py" = ["E402"]
+"src/noeagent/config.py" = ["E402"]
+"src/noeagent/tui.py" = ["E402"]
+"tests/**/*.py" = ["E402"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [

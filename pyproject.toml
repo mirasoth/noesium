@@ -15,3 +15,25 @@ members = [
 noesium = { workspace = true }
 noeagent = { workspace = true }
 voyager = { workspace = true }
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint.per-file-ignores]
+# Late/conditional imports for optional deps, lazy loading, or sys.path manipulation
+"noesium/src/noesium/__init__.py" = ["E402"]
+"noesium/src/noesium/toolkits/__init__.py" = ["E402"]
+"noesium/src/noesium/subagents/__init__.py" = ["E402"]
+"noesium/src/noesium/core/toolify/mcp_integration.py" = ["E402"]
+"noesium/src/noesium/core/memory/memu/llm_adapter.py" = ["E402"]
+"noesium/src/noesium/subagents/bu/agent/__init__.py" = ["E402"]
+"noesium/src/noesium/subagents/bu/agent/service.py" = ["E402"]
+"noesium/src/noesium/subagents/bu/tokens/service.py" = ["E402"]
+"noesium/tests/**/*.py" = ["E402"]
+"noeagent/src/noeagent/__init__.py" = ["E402"]
+"noeagent/src/noeagent/config.py" = ["E402"]
+"noeagent/src/noeagent/tui.py" = ["E402"]
+"noeagent/tests/**/*.py" = ["E402"]
+"examples/**/*.py" = ["E402"]
+"voyager/backend/src/**/*.py" = ["E402"]
+"noeagent/src/**/*.py" = ["E402"]

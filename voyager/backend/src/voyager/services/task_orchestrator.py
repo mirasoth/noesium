@@ -8,14 +8,13 @@ from pathlib import Path
 from typing import Any
 
 import socketio
+from noeagent.progress import ProgressEvent, ProgressEventType
 from voyager.config import VoyagerConfig
 from voyager.models.events import ProgressEventData
 from voyager.models.task import Task, TaskStatus, TaskStep
 from voyager.services.git_client import GitClient
 from voyager.services.session_manager import SessionManager
 from voyager.services.state_manager import StateManager
-
-from noeagent.progress import ProgressEvent, ProgressEventType
 
 
 class TaskOrchestrator:

@@ -90,8 +90,9 @@ def cmd_config_show(key: str | None = None) -> None:
         key: Optional config key to show (e.g., llm.provider)
     """
     try:
-        from noesium.core.config import load_config
         from noeagent.config import get_noe_config_path
+
+        from noesium.core.config import load_config
 
         config = load_config(get_noe_config_path())
 
@@ -124,8 +125,9 @@ def cmd_config_init(provider: str | None = None) -> None:
         provider: Optional LLM provider name to set as default
     """
     try:
-        from noesium.core.config import FrameworkConfig, save_config
         from noeagent.config import get_noe_config_path
+
+        from noesium.core.config import FrameworkConfig, save_config
 
         config_path = get_noe_config_path()
 
@@ -154,8 +156,9 @@ def cmd_config_set(key: str, value: str) -> None:
         value: Config value (JSON or string)
     """
     try:
-        from noesium.core.config import FrameworkConfig, load_config, save_config
         from noeagent.config import get_noe_config_path
+
+        from noesium.core.config import FrameworkConfig, load_config, save_config
 
         config = load_config(get_noe_config_path())
 

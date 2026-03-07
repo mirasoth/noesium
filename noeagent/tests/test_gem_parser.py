@@ -7,8 +7,6 @@ import tempfile
 from datetime import datetime
 
 import pytest
-from pydantic import BaseModel
-
 from noeagent.future.gem_parser import (
     CircularReferenceError,
     GemParser,
@@ -18,6 +16,7 @@ from noeagent.future.gem_parser import (
     parse_yaml_file,
     parse_yaml_models,
 )
+from pydantic import BaseModel
 
 
 class TestGemParser:
