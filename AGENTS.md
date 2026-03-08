@@ -70,6 +70,41 @@ Before ending a session, AI agents MUST:
 
 Template: `docs/worklogs/_template.md`
 
+### 4. Persistent Plan Documentation
+
+**For tasks requiring planning and multi-step implementation, AI agents MUST create persistent plan files in `docs/plans/` for audit and reference.**
+
+#### When Required
+
+Create a persistent plan when the task involves:
+- Multi-step implementation (3+ steps)
+- Architecture changes or refactoring
+- Specification-driven implementation
+- Cross-module changes
+
+#### File Naming
+
+Format: `plan-YYYY-MM-DD-NNN.md`
+
+Example: `docs/plans/plan-2026-03-08-001.md`
+
+#### Required Sections
+
+| Section | Content |
+|---------|---------|
+| Context | Why this change is being made |
+| Implementation | Step-by-step plan |
+| Files Changed | List of files to modify/create/delete |
+| Verification | How to test the changes |
+
+#### Process
+
+1. Use plan mode to design the implementation
+2. After plan approval, copy plan to `docs/plans/` before execution
+3. Update the persistent plan if implementation deviates
+
+This ensures plans are preserved for future reference and provide audit trails.
+
 ---
 
 ## Specification Hierarchy

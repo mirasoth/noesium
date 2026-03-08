@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Optional, Type
 try:
     from langchain_core.messages import HumanMessage
     from langchain_core.runnables import RunnableConfig
-    from langgraph.graph import END, START, StateGraph
+    from langgraph.graph import StateGraph
 except ImportError:
     raise ImportError(
         "Noe requires langchain-core and langgraph. " "Install them with: uv run pip install langchain-core langgraph"
@@ -28,8 +28,6 @@ from noesium.core.agent.subagent import (
     SubagentProvider,
 )
 from noesium.core.capability.providers import (
-    CliAgentCapabilityProvider,
-    MCPCapabilityProvider,
     ToolCapabilityProvider,
 )
 from noesium.core.capability.registry import CapabilityRegistry
@@ -41,14 +39,13 @@ from noesium.core.memory.provider_manager import ProviderMemoryManager
 from noesium.core.memory.providers.event_sourced import EventSourcedProvider
 from noesium.core.memory.providers.memu import MemuProvider
 from noesium.core.memory.providers.working import WorkingMemoryProvider
-from noesium.core.toolify.adapters.builtin_adapter import BuiltinAdapter
 from noesium.core.toolify.adapters.function_adapter import FunctionAdapter
-from noesium.core.toolify.atomic import ToolContext, ToolPermission
+from noesium.core.toolify.atomic import ToolContext
 from noesium.core.toolify.executor import ToolExecutor
 from noesium.subagents import SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS
 
-from . import nodes
 from .config import _NOEAGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
+from .graph import builder
 from .planner import TaskPlanner
 from .state import AgentState, AskState
 
@@ -94,6 +91,25 @@ class NoeAgent(BaseGraphicAgent):
         self._tool_desc_provider_count: int = -1
         self._subagent_event_queue: asyncio.Queue[ProgressEvent] | None = None
         self._subagent_manager: SubagentManager | None = None
+
+    # ------------------------------------------------------------------
+    # Properties for autonomous runner / cognitive loop (RFC-1005)
+    # ------------------------------------------------------------------
+
+    @property
+    def memory_manager(self) -> ProviderMemoryManager | None:
+        """Memory manager for context projection and goal persistence."""
+        return self._memory_manager
+
+    @property
+    def capability_registry(self) -> CapabilityRegistry | None:
+        """Capability registry for tools and subagents."""
+        return self._registry
+
+    @property
+    def producer(self) -> AgentRef:
+        """Producer identity for event envelope and storage."""
+        return AgentRef(agent_id=self._agent_id, agent_type="noe")
 
     # ------------------------------------------------------------------
     # Initialization
@@ -189,7 +205,7 @@ class NoeAgent(BaseGraphicAgent):
         provider_count = len(self._registry.list_providers())
         if self._tool_desc_cache is not None and self._tool_desc_provider_count == provider_count:
             return self._tool_desc_cache
-        from .nodes import _build_tool_descriptions
+        from .graph.nodes import _build_tool_descriptions
 
         self._tool_desc_cache = _build_tool_descriptions(self._registry)
         self._tool_desc_provider_count = provider_count
@@ -223,108 +239,36 @@ class NoeAgent(BaseGraphicAgent):
         self._memory_manager = ProviderMemoryManager(providers)
 
     async def _setup_capabilities(self) -> None:
-        """Create CapabilityRegistry and register all providers (parallel toolkit loading)."""
-        import os
+        """Create CapabilityRegistry and register all providers."""
+        from noeagent.capabilities.tools import register_subagent_tool, setup_tools
 
-        from noesium.core.toolify.base import AsyncBaseToolkit
-        from noesium.core.toolify.config import ToolkitConfig
-        from noesium.core.toolify.registry import ToolkitRegistry
-
-        producer = AgentRef(agent_id=self._agent_id, agent_type="noe")
-
-        self._tool_executor = ToolExecutor(
-            event_store=self._event_store,
-            producer=producer,
-        )
-        self._tool_context = ToolContext(
-            agent_id=self._agent_id,
-            granted_permissions=[ToolPermission(p) for p in self.config.permissions],
-            working_directory=self.config.working_directory,
-        )
         self._registry = CapabilityRegistry(
             event_store=self._event_store,
-            producer=producer,
+            producer=AgentRef(agent_id=self._agent_id, agent_type="noe"),
         )
 
-        work_dir = self.config.working_directory or os.getcwd()
-        session_dir = Path(self.config.session_dir)
-        toolkit_session_base = session_dir / "toolkits"
+        # Setup tools, MCP servers, and custom tools
+        self._tool_executor, self._tool_context = await setup_tools(
+            registry=self._registry,
+            event_store=self._event_store,
+            agent_id=self._agent_id,
+            enabled_toolkits=self.config.enabled_toolkits,
+            permissions=self.config.permissions,
+            working_directory=self.config.working_directory,
+            session_dir=self.config.session_dir,
+            toolkit_configs=self.config.toolkit_configs,
+            custom_tools=self.config.custom_tools,
+            mcp_servers=self.config.mcp_servers,
+        )
 
-        # Per-toolkit session-scoped directory overrides (under session_dir/toolkits/<name>/)
-        _SESSION_DIR_OVERRIDES: dict[str, dict[str, str]] = {
-            "document": {"cache_dir": "cache", "download_dir": "downloads"},
-            "audio": {"cache_dir": "cache", "download_dir": "downloads"},
-            "tabular_data": {"cache_dir": "cache"},
-            "python_executor": {"default_workdir": "workdir"},
-            "arxiv": {"default_download_dir": "papers"},
-            "bash": {"workspace_root": "workspace"},
-            "memory": {"storage_dir": "storage"},
-            "file_edit": {"work_dir": "workspace"},
-        }
-
-        # Load toolkits in parallel for better performance
-        async def _load_toolkit(toolkit_name: str) -> list:
-            """Load a single toolkit and return its providers."""
-            try:
-                base_config: dict[str, Any] = {
-                    "workspace_root": work_dir,
-                    "work_dir": work_dir,
-                }
-                overrides = _SESSION_DIR_OVERRIDES.get(toolkit_name)
-                if overrides:
-                    toolkit_session_dir = toolkit_session_base / toolkit_name
-                    for key, subdir in overrides.items():
-                        base_config[key] = str(toolkit_session_dir / subdir)
-
-                # Merge toolkit-specific config from self.config.toolkit_configs
-                toolkit_specific_config = self.config.toolkit_configs.get(toolkit_name, {})
-                base_config.update(toolkit_specific_config)
-
-                toolkit_config = ToolkitConfig(
-                    name=toolkit_name,
-                    config=base_config,
-                )
-                toolkit = ToolkitRegistry.create_toolkit(toolkit_name, toolkit_config)
-                if isinstance(toolkit, AsyncBaseToolkit):
-                    await toolkit.build()
-                tools = await BuiltinAdapter.from_toolkit(toolkit, toolkit_name)
-                providers = []
-                for tool in tools:
-                    provider = ToolCapabilityProvider(tool, self._tool_executor, self._tool_context)
-                    providers.append(provider)
-                return providers
-            except Exception as exc:
-                logger.warning("Failed to load toolkit %s: %s", toolkit_name, exc)
-                return []
-
-        # Load all toolkits concurrently
-        if self.config.enabled_toolkits:
-            toolkit_tasks = [_load_toolkit(name) for name in self.config.enabled_toolkits]
-            toolkit_results = await asyncio.gather(*toolkit_tasks, return_exceptions=True)
-
-            # Register all providers from successfully loaded toolkits
-            for result in toolkit_results:
-                if isinstance(result, list):
-                    for provider in result:
-                        self._registry.register(provider)
-                # Exceptions are already logged in _load_toolkit
-
-        # MCP servers are disabled by default (mcp_servers defaults to empty list)
-        # Only load if explicitly configured
-        if self.config.mcp_servers:
-            logger.info("Loading %d MCP server(s)...", len(self.config.mcp_servers))
-            for mcp_config in self.config.mcp_servers:
-                try:
-                    session = await self._connect_mcp(mcp_config)
-                    from noesium.core.toolify.adapters.mcp_adapter import MCPAdapter
-
-                    adapter = MCPAdapter(session)
-                    mcp_tools = await adapter.discover_tools()
-                    for tool in mcp_tools:
-                        provider = MCPCapabilityProvider(tool, self._tool_executor, self._tool_context)
-                        self._registry.register(provider)
-                except Exception as exc:
-                    logger.warning("Failed to load MCP server: %s", exc)
+        # Register subagent spawn as a tool if enabled
+        if self.config.enable_subagents:
+            register_subagent_tool(
+                registry=self._registry,
+                tool_executor=self._tool_executor,
+                tool_context=self._tool_context,
+                agent=self,
+            )
 
         for func in self.config.custom_tools:
             tool = FunctionAdapter.from_function(func)
@@ -354,45 +298,19 @@ class NoeAgent(BaseGraphicAgent):
         self._registry.register(provider)
 
     async def _setup_external_subagents(self) -> None:
-        if not self.config.external:
-            return
-        from .cli_adapter import ExternalCliAdapter
-        from .subagent_runtimes import NoeCliSubagentRuntime
+        """Setup external CLI subagents."""
+        from noeagent.capabilities.subagents import setup_external_subagents
 
-        self._cli_adapter = ExternalCliAdapter()
-        for cli_cfg in self.config.external:
-            try:
-                # Register config so oneshot/daemon spawn works
-                result = await self._cli_adapter.spawn_from_config(cli_cfg)
-                # Register runtime with SubagentManager (new interface)
-                runtime = NoeCliSubagentRuntime(self._cli_adapter, cli_cfg)
-                if self._subagent_manager is not None:
-                    self._subagent_manager.register(SubagentProvider.from_instance(runtime))
-                # Also register legacy capability provider for tool registry compat
-                provider = CliAgentCapabilityProvider(
-                    cli_cfg.name,
-                    self._cli_adapter,
-                    task_types=cli_cfg.task_types,
-                    mode=cli_cfg.mode,
-                )
-                self._registry.register(provider)
-                logger.info(
-                    "CLI subagent '%s' registered (mode=%s): %s",
-                    cli_cfg.name,
-                    cli_cfg.mode,
-                    result,
-                )
-            except Exception as exc:
-                logger.warning("Failed to setup CLI subagent '%s': %s", cli_cfg.name, exc)
+        self._cli_adapter = await setup_external_subagents(
+            external_configs=self.config.external,
+            registry=self._registry,
+            subagent_manager=self._subagent_manager,
+            cli_adapter=self._cli_adapter,
+        )
 
     async def _setup_builtin_subagents(self) -> None:
-        """Register built-in agent subagents with SubagentManager.
-
-        Creates NoeBuiltinSubagentRuntime instances for each configured
-        built-in subagent (browser_use, tacitus, etc.) and registers them
-        with the SubagentManager for invocation via invoke_subagent().
-        """
-        from .subagent_runtimes import NoeBuiltinSubagentRuntime
+        """Register built-in agent subagents with SubagentManager."""
+        from noeagent.capabilities.subagents import setup_builtin_subagents
 
         enabled_subagents = self.config.get_enabled_builtin_subagents()
         if not enabled_subagents:
@@ -404,45 +322,11 @@ class NoeAgent(BaseGraphicAgent):
             SUBAGENT_TACITUS: self._create_tacitus_agent,
         }
 
-        for subagent_cfg in enabled_subagents:
-            factory_callable = agent_factories.get(subagent_cfg.agent_type)
-            if factory_callable is None:
-                logger.warning(
-                    "Unknown agent type '%s' for subagent '%s'",
-                    subagent_cfg.agent_type,
-                    subagent_cfg.name,
-                )
-                continue
-
-            # Bind subagent config so the factory receives it when invoked
-            def make_factory(cfg: Any, factory_fn: Any) -> Any:
-                def factory() -> Any:
-                    return factory_fn(cfg)
-
-                return factory
-
-            try:
-                runtime = NoeBuiltinSubagentRuntime(
-                    agent_factory=make_factory(subagent_cfg, factory_callable),
-                    subagent_id=subagent_cfg.name,
-                    display_name=subagent_cfg.name,
-                    description=subagent_cfg.description or f"Built-in {subagent_cfg.agent_type} subagent",
-                    task_types=subagent_cfg.task_types,
-                )
-                if self._subagent_manager is not None:
-                    self._subagent_manager.register(SubagentProvider.from_instance(runtime))
-                logger.info(
-                    "Registered built-in subagent: %s (type=%s, tasks=%s)",
-                    subagent_cfg.name,
-                    subagent_cfg.agent_type,
-                    subagent_cfg.task_types,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Failed to register built-in subagent '%s': %s",
-                    subagent_cfg.name,
-                    exc,
-                )
+        await setup_builtin_subagents(
+            enabled_subagents=enabled_subagents,
+            subagent_manager=self._subagent_manager,
+            agent_factories=agent_factories,
+        )
 
     async def _warmup_llm(self) -> None:
         """Send lightweight request to pre-load LLM model and warm connection.
@@ -556,134 +440,22 @@ class NoeAgent(BaseGraphicAgent):
     def get_state_class(self) -> Type:
         return AskState if self.config.mode == NoeMode.ASK else AgentState
 
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self) -> "StateGraph":
+        """Return compiled state graph for current mode."""
         if self.config.mode == NoeMode.ASK:
-            return self._build_ask_graph()
-        return self._build_agent_graph()
-
-    def _build_ask_graph(self) -> StateGraph:
-        workflow = StateGraph(AskState)
-
-        async def _recall(state: AskState) -> dict:
-            return await nodes.recall_memory_node(state, memory_manager=self._memory_manager)
-
-        async def _answer(state: AskState) -> dict:
-            return await nodes.generate_answer_node(state, llm=self.llm)
-
-        workflow.add_node("recall_memory", _recall)
-        workflow.add_node("generate_answer", _answer)
-        workflow.add_edge(START, "recall_memory")
-        workflow.add_edge("recall_memory", "generate_answer")
-        workflow.add_edge("generate_answer", END)
-        return workflow
-
-    def _build_agent_graph(self) -> StateGraph:
-        workflow = StateGraph(AgentState)
-
-        async def _plan(state: AgentState) -> dict:
-            return await nodes.plan_node(
-                state,
-                planner=self._planner,
+            return builder.build_ask_graph(
                 memory_manager=self._memory_manager,
-            )
-
-        async def _execute(state: AgentState) -> dict:
-            return await nodes.execute_step_node(
-                state,
                 llm=self.llm,
-                registry=self._registry,
-                memory_manager=self._memory_manager,
-                max_tool_calls=self.config.max_tool_calls_per_step,
-                tool_desc_cache=self.get_tool_descriptions(),
             )
-
-        async def _tools(state: AgentState) -> dict:
-            return await nodes.tool_node(
-                state,
-                registry=self._registry,
-                max_tool_calls=self.config.max_tool_calls_per_step,
-            )
-
-        async def _subagent(state: AgentState) -> dict:
-            return await nodes.subagent_node(state, agent=self)
-
-        async def _reflect(state: AgentState) -> dict:
-            return await nodes.reflect_node(state, llm=self.llm)
-
-        async def _revise(state: AgentState) -> dict:
-            return await nodes.revise_plan_node(
-                state,
-                planner=self._planner,
-                memory_manager=self._memory_manager,
-            )
-
-        async def _finalize(state: AgentState) -> dict:
-            return await nodes.finalize_node(state, llm=self.llm)
-
-        workflow.add_node("plan", _plan)
-        workflow.add_node("execute_step", _execute)
-        workflow.add_node("tool_node", _tools)
-        workflow.add_node("subagent_node", _subagent)
-        workflow.add_node("reflect", _reflect)
-        workflow.add_node("revise_plan", _revise)
-        workflow.add_node("finalize", _finalize)
-
-        workflow.add_edge(START, "plan")
-        workflow.add_edge("plan", "execute_step")
-        workflow.add_conditional_edges(
-            "execute_step",
-            self._route_after_execute,
-            {
-                "tool_node": "tool_node",
-                "subagent_node": "subagent_node",
-                "reflect": "reflect",
-                "finalize": "finalize",
-                "execute_step": "execute_step",
-            },
+        return builder.build_agent_graph(
+            planner=self._planner,
+            memory_manager=self._memory_manager,
+            registry=self._registry,
+            llm=self.llm,
+            config=self.config,
+            tool_desc_cache=self.get_tool_descriptions(),
+            agent=self,
         )
-        workflow.add_edge("tool_node", "execute_step")
-        workflow.add_edge("subagent_node", "execute_step")
-        workflow.add_conditional_edges(
-            "reflect",
-            self._route_after_reflect,
-            {
-                "revise_plan": "revise_plan",
-                "finalize": "finalize",
-                "execute_step": "execute_step",
-            },
-        )
-        workflow.add_edge("revise_plan", "execute_step")
-        workflow.add_edge("finalize", END)
-        return workflow
-
-    # ------------------------------------------------------------------
-    # Routing
-    # ------------------------------------------------------------------
-
-    def _route_after_execute(self, state: AgentState) -> str:
-        plan = state.get("plan")
-        if plan and plan.is_complete:
-            return "finalize"
-
-        last_msg = state["messages"][-1] if state.get("messages") else None
-        if last_msg and getattr(last_msg, "tool_calls", None):
-            return "tool_node"
-        if last_msg and getattr(last_msg, "additional_kwargs", {}).get("subagent_action"):
-            return "subagent_node"
-
-        iteration = state.get("iteration", 0)
-        if iteration >= self.config.max_iterations:
-            return "finalize"
-        if iteration > 0 and iteration % self.config.reflection_interval == 0:
-            return "reflect"
-        return "execute_step"
-
-    def _route_after_reflect(self, state: AgentState) -> str:
-        reflection = state.get("reflection", "")
-        if "REVISE" in reflection.upper():
-            return "revise_plan"
-        plan = state.get("plan")
-        return "finalize" if plan and plan.is_complete else "execute_step"
 
     # ------------------------------------------------------------------
     # Progress helpers
@@ -1148,7 +920,7 @@ class NoeAgent(BaseGraphicAgent):
 
         # Register with SubagentManager via NoeChildSubagentRuntime
         if self._subagent_manager is not None:
-            from .subagent_runtimes import NoeChildSubagentRuntime
+            from noeagent.capabilities.subagents import NoeChildSubagentRuntime
 
             runtime = NoeChildSubagentRuntime(child, subagent_id)
             self._subagent_manager.register(SubagentProvider.from_instance(runtime))

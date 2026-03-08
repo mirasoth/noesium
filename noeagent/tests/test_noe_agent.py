@@ -747,7 +747,7 @@ class TestExecuteStepNode:
     @pytest.mark.asyncio
     async def test_tool_call_produces_ai_message_with_tool_calls(self):
         from langchain_core.messages import AIMessage, HumanMessage
-        from noeagent.nodes import execute_step_node
+        from noeagent.graph.nodes import execute_step_node
 
         mock_llm = MagicMock()
         mock_action = AgentAction(
@@ -777,7 +777,7 @@ class TestExecuteStepNode:
     @pytest.mark.asyncio
     async def test_text_response_produces_plain_ai_message(self):
         from langchain_core.messages import AIMessage, HumanMessage
-        from noeagent.nodes import execute_step_node
+        from noeagent.graph.nodes import execute_step_node
 
         mock_llm = MagicMock()
         mock_action = AgentAction(
@@ -807,7 +807,7 @@ class TestExecuteStepNode:
     @pytest.mark.asyncio
     async def test_subagent_action_sets_additional_kwargs(self):
         from langchain_core.messages import HumanMessage
-        from noeagent.nodes import execute_step_node
+        from noeagent.graph.nodes import execute_step_node
 
         mock_llm = MagicMock()
         mock_action = AgentAction(
@@ -836,7 +836,7 @@ class TestExecuteStepNode:
     @pytest.mark.asyncio
     async def test_fallback_on_structured_completion_failure(self):
         from langchain_core.messages import HumanMessage
-        from noeagent.nodes import execute_step_node
+        from noeagent.graph.nodes import execute_step_node
 
         mock_llm = MagicMock()
         mock_llm.structured_completion = MagicMock(side_effect=Exception("Instructor failed"))
@@ -868,7 +868,7 @@ class TestSubagentNode:
     @pytest.mark.asyncio
     async def test_spawn_subagent(self):
         from langchain_core.messages import AIMessage, HumanMessage
-        from noeagent.nodes import subagent_node
+        from noeagent.graph.nodes import subagent_node
 
         mock_agent = AsyncMock()
         mock_agent.spawn_subagent = AsyncMock(return_value="helper-1")
@@ -907,7 +907,7 @@ class TestSubagentNode:
 class TestTodoPersistence:
     @pytest.mark.asyncio
     async def test_plan_persisted_to_memory(self):
-        from noeagent.nodes import _persist_plan_to_memory
+        from noeagent.graph.nodes import _persist_plan_to_memory
 
         plan = TaskPlan(
             goal="Test",
@@ -923,7 +923,7 @@ class TestTodoPersistence:
 
     @pytest.mark.asyncio
     async def test_plan_persist_skips_when_no_memory(self):
-        from noeagent.nodes import _persist_plan_to_memory
+        from noeagent.graph.nodes import _persist_plan_to_memory
 
         plan = TaskPlan(goal="x", steps=[TaskStep(description="y")])
         await _persist_plan_to_memory(plan, None)
@@ -1048,7 +1048,7 @@ class TestRouting:
 
 class TestToolDescriptions:
     def test_build_tool_descriptions_with_tools(self):
-        from noeagent.nodes import _build_tool_descriptions
+        from noeagent.graph.nodes import _build_tool_descriptions
 
         registry = _mock_registry_with_tools(
             [
@@ -1070,7 +1070,7 @@ class TestToolDescriptions:
         assert "(required)" in result
 
     def test_build_tool_descriptions_empty(self):
-        from noeagent.nodes import _build_tool_descriptions
+        from noeagent.graph.nodes import _build_tool_descriptions
 
         assert _build_tool_descriptions(None) == "No tools available."
 

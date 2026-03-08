@@ -10,10 +10,17 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
-from noesium.core.autonomous import Goal, GoalEngine
+from noeagent.autonomous import Goal, GoalEngine
+from noeagent.autonomous.decision_schema import (
+    Decision,
+    DecisionAction,
+    MemoryUpdateDecision,
+    SubagentCallDecision,
+    ToolCallDecision,
+)
 
 if TYPE_CHECKING:
-    from noeagent.agent import NoeAgent
+    from noeagent.kernel import AgentKernel
 
     from noesium.core.capability.registry import CapabilityRegistry
     from noesium.core.memory.provider_manager import ProviderMemoryManager
@@ -49,7 +56,7 @@ class CognitiveLoop:
         self,
         goal_engine: GoalEngine,
         memory: ProviderMemoryManager,
-        agent_kernel: NoeAgent,
+        agent_kernel: AgentKernel,
         capability_registry: CapabilityRegistry,
         tick_interval: float = 5.0,
     ):
@@ -58,7 +65,7 @@ class CognitiveLoop:
         Args:
             goal_engine: Goal engine for goal selection
             memory: Memory manager for context projection
-            agent_kernel: Agent kernel for reasoning
+            agent_kernel: Agent kernel for reasoning (RFC-1005 §8)
             capability_registry: Capability registry for execution
             tick_interval: Seconds between ticks (default: 5.0)
         """
@@ -197,7 +204,7 @@ class CognitiveLoop:
                 "goal_priority": goal.priority,
             }
 
-    async def _reason(self, goal: Goal, context: dict[str, Any]) -> dict[str, Any]:
+    async def _reason(self, goal: Goal, context: dict[str, Any]) -> Decision:
         """Agent kernel reasoning step.
 
         Uses the Agent Kernel to decide what action to take for the goal.
@@ -207,42 +214,44 @@ class CognitiveLoop:
             context: Memory context
 
         Returns:
-            Decision dictionary with action to take
+            Typed Decision object with action to take
         """
         try:
             # Use the agent kernel's step method
             # The agent kernel performs reasoning and returns a decision
-            # TODO: Define decision format with agent kernel
-            decision = {
-                "action": "think",  # or "tool_call", "subagent_call", etc.
-                "goal_id": goal.id,
-                "context": context,
-                "reasoning": f"Processing goal: {goal.description}",
-            }
+            # TODO: Integrate with actual agent kernel reasoning
+            # For now, return a default thinking decision
+            decision = Decision(
+                action=DecisionAction.TOOL_CALL,  # Placeholder
+                goal_id=goal.id,
+                reasoning=f"Processing goal: {goal.description}",
+            )
 
-            logger.debug(f"Agent kernel decision: {decision.get('action')}")
+            logger.debug(f"Agent kernel decision: {decision.action}")
             return decision
 
         except Exception as e:
             logger.error(f"Agent kernel reasoning failed: {e}", exc_info=True)
             raise
 
-    async def _execute_decision(self, decision: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_decision(self, decision: Decision) -> dict[str, Any]:
         """Execute agent decision (tool call, subagent call, etc.).
 
         Args:
-            decision: Decision from agent kernel
+            decision: Typed Decision from agent kernel
 
         Returns:
             Observation dictionary with execution results
         """
-        action = decision.get("action", "think")
-
         try:
-            if action == "tool_call":
+            if decision.action == DecisionAction.TOOL_CALL:
                 # Execute tool via capability registry
-                tool_id = decision.get("tool_id")
-                tool_input = decision.get("input", {})
+                if isinstance(decision, ToolCallDecision):
+                    tool_id = decision.tool_id
+                    tool_input = decision.tool_input
+                else:
+                    tool_id = decision.tool_id
+                    tool_input = decision.tool_input or {}
 
                 provider = await self.capability_registry.resolve(tool_id)
                 result = await provider.invoke(tool_input)
@@ -254,20 +263,49 @@ class CognitiveLoop:
                     "success": True,
                 }
 
-            elif action == "subagent_call":
+            elif decision.action == DecisionAction.SUBAGENT_CALL:
                 # Delegate to subagent
-                subagent_type = decision.get("subagent_type")
-                decision.get("task")
+                if isinstance(decision, SubagentCallDecision):
+                    subagent_type = decision.subagent_type
+                    subagent_task = decision.subagent_task
+                else:
+                    subagent_type = decision.subagent_type or "unknown"
+                    subagent_task = decision.subagent_task or ""
 
                 # TODO: Implement subagent invocation
                 observation = {
                     "action": "subagent_call",
                     "subagent_type": subagent_type,
+                    "task": subagent_task,
                     "result": "Subagent execution not implemented",
                     "success": False,
                 }
 
-            elif action == "finish_goal":
+            elif decision.action == DecisionAction.MEMORY_UPDATE:
+                # Update memory with new information
+                if isinstance(decision, MemoryUpdateDecision):
+                    memory_key = decision.memory_key
+                    decision.memory_value
+                else:
+                    memory_key = decision.memory_key or "unknown"
+                    decision.memory_value
+
+                # TODO: Implement memory update
+                observation = {
+                    "action": "memory_update",
+                    "key": memory_key,
+                    "success": True,
+                }
+
+            elif decision.action == DecisionAction.GOAL_UPDATE:
+                # Update goal status
+                observation = {
+                    "action": "goal_update",
+                    "new_status": decision.new_goal_status,
+                    "success": True,
+                }
+
+            elif decision.action == DecisionAction.FINISH_GOAL:
                 # Mark goal as completed
                 observation = {
                     "action": "finish_goal",
@@ -275,20 +313,20 @@ class CognitiveLoop:
                 }
 
             else:
-                # Default: thinking action
+                # Unknown action
                 observation = {
-                    "action": "think",
-                    "thoughts": decision.get("reasoning", ""),
-                    "success": True,
+                    "action": str(decision.action),
+                    "success": False,
+                    "error": f"Unknown action type: {decision.action}",
                 }
 
-            logger.info(f"Executed action: {action} (success={observation.get('success')})")
+            logger.info(f"Executed action: {decision.action} (success={observation.get('success')})")
             return observation
 
         except Exception as e:
             logger.error(f"Decision execution failed: {e}", exc_info=True)
             return {
-                "action": action,
+                "action": str(decision.action),
                 "error": str(e),
                 "success": False,
             }

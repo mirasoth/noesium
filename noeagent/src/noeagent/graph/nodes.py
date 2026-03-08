@@ -7,11 +7,11 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from noesium.core.memory.provider import MemoryTier, RecallQuery, RecallScope
+from noeagent.prompts import get_prompt_manager
+from noeagent.schemas import AgentAction
+from noeagent.state import AgentState, AskState, TaskPlan
 
-from .prompts import get_prompt_manager
-from .schemas import AgentAction
-from .state import AgentState, AskState, TaskPlan
+from noesium.core.memory.provider import MemoryTier, RecallQuery, RecallScope
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ def _build_tool_descriptions(registry: Any) -> str:
 
     Uses display names for better readability (e.g., 'WebSearch' instead of 'web_search').
     """
-    from .commands import get_toolkit_display_name
+    from noeagent.commands import get_toolkit_display_name
 
     if registry is None:
         return "No tools available."
@@ -439,12 +439,12 @@ async def subagent_node(
     if not sa_data:
         return {"messages": [AIMessage(content="No subagent action found.")]}
 
-    from .schemas import SubagentAction
+    from noeagent.schemas import SubagentAction
 
     sa = SubagentAction(**sa_data)
     try:
         if sa.action == "spawn":
-            from .config import NoeMode
+            from noeagent.config import NoeMode
 
             mode = NoeMode(sa.mode) if sa.mode in ("ask", "agent") else NoeMode.AGENT
             subagent_id = await agent.spawn_subagent(sa.name, mode=mode)
@@ -483,7 +483,7 @@ async def subagent_node(
                 result = "SubagentManager not configured."
             else:
                 # Check if this subagent requires explicit command
-                from .commands import get_subagent_display_name
+                from noeagent.commands import get_subagent_display_name
 
                 subagent_name = sa.name
                 requires_explicit = False

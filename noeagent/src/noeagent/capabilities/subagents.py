@@ -1,14 +1,9 @@
-"""NoeAgent-specific subagent runtime implementations (RFC-1006 Section 6.2).
+"""Subagent runtime implementations and setup for NoeAgent (RFC-1006 Section 6.2).
 
-These runtimes implement the BaseSubagentRuntime interface for the different
-subagent backends used by NoeAgent:
-- NoeChildSubagentRuntime: In-process NoeAgent child agents
-- NoeBuiltinSubagentRuntime: Built-in specialized agents (browser_use, tacitus)
-- NoeCliSubagentRuntime: External CLI agents via ExternalCliAdapter
-
-These classes live in the noeagent module (not core) because they have
-NoeAgent-specific dependencies. They are registered with SubagentManager
-during NoeAgent initialization.
+This module provides:
+- Runtime adapters for different subagent backends (in-process, builtin, CLI)
+- Setup functions for external and built-in subagents
+- Registration with SubagentManager and CapabilityRegistry
 """
 
 from __future__ import annotations
@@ -16,6 +11,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, AsyncGenerator
 
+from noesium.core.agent.subagent import SubagentProvider
 from noesium.core.agent.subagent.descriptor import (
     BackendType,
     CostHint,
@@ -24,11 +20,20 @@ from noesium.core.agent.subagent.descriptor import (
 )
 from noesium.core.agent.subagent.events import SubagentErrorCode, SubagentProgressEvent
 from noesium.core.agent.subagent.protocol import BaseSubagentRuntime
+from noesium.core.capability.providers import CliAgentCapabilityProvider
 
 if TYPE_CHECKING:
-    pass
+    from noeagent.cli_adapter import ExternalCliAdapter
+    from noeagent.config import CliSubagentConfig
+
+    from noesium.core.capability.registry import CapabilityRegistry
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Runtime Adapters
+# ============================================================================
 
 
 class NoeChildSubagentRuntime(BaseSubagentRuntime):
@@ -217,7 +222,6 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
                     ):
                         pass  # suppress session wrapper events from subagent
                     elif etype == ProgressEventType.TOOL_START:
-                        # tool_call() already sets summary; pass extra fields via kwargs only
                         yield SubagentProgressEvent.tool_call(
                             request_id=request_id,
                             subagent_id=self._subagent_id,
@@ -226,7 +230,6 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
                             payload={"child_event_type": "tool.start", "agent_type": self._subagent_id},
                         )
                     elif etype == ProgressEventType.TOOL_END:
-                        # create_tool_result() already sets summary; pass extra fields via kwargs only
                         yield SubagentProgressEvent.create_tool_result(
                             request_id=request_id,
                             subagent_id=self._subagent_id,
@@ -284,7 +287,6 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
                             },
                         )
                     elif etype == ProgressEventType.THINKING:
-                        # thought() sets detail=thought; do not pass detail= again via kwargs
                         yield SubagentProgressEvent.thought(
                             request_id=request_id,
                             subagent_id=self._subagent_id,
@@ -445,3 +447,117 @@ class NoeCliSubagentRuntime(BaseSubagentRuntime):
             except Exception as e:
                 logger.warning("Failed to terminate CLI subagent '%s': %s", self._subagent_id, e)
         await super().shutdown()
+
+
+# ============================================================================
+# Setup Functions
+# ============================================================================
+
+
+async def setup_external_subagents(
+    external_configs: list["CliSubagentConfig"],
+    registry: "CapabilityRegistry",
+    subagent_manager: Any,
+    cli_adapter: "ExternalCliAdapter | None",
+) -> "ExternalCliAdapter | None":
+    """Setup external CLI subagents.
+
+    Args:
+        external_configs: CLI subagent configurations
+        registry: Capability registry for tool registration
+        subagent_manager: Subagent manager for runtime registration
+        cli_adapter: Existing CLI adapter or None to create new
+
+    Returns:
+        CLI adapter instance
+    """
+    if not external_configs:
+        return cli_adapter
+
+    from noeagent.cli_adapter import ExternalCliAdapter
+
+    if cli_adapter is None:
+        cli_adapter = ExternalCliAdapter()
+
+    for cli_cfg in external_configs:
+        try:
+            # Register config so oneshot/daemon spawn works
+            result = await cli_adapter.spawn_from_config(cli_cfg)
+            # Register runtime with SubagentManager
+            runtime = NoeCliSubagentRuntime(cli_adapter, cli_cfg)
+            if subagent_manager is not None:
+                subagent_manager.register(SubagentProvider.from_instance(runtime))
+            # Also register legacy capability provider for tool registry compat
+            provider = CliAgentCapabilityProvider(
+                cli_cfg.name,
+                cli_adapter,
+                task_types=cli_cfg.task_types,
+                mode=cli_cfg.mode,
+            )
+            registry.register(provider)
+            logger.info(
+                "CLI subagent '%s' registered (mode=%s): %s",
+                cli_cfg.name,
+                cli_cfg.mode,
+                result,
+            )
+        except Exception as exc:
+            logger.warning("Failed to setup CLI subagent '%s': %s", cli_cfg.name, exc)
+
+    return cli_adapter
+
+
+async def setup_builtin_subagents(
+    enabled_subagents: list[Any],
+    subagent_manager: Any,
+    agent_factories: dict[str, Any],
+) -> None:
+    """Setup built-in agent subagents.
+
+    Args:
+        enabled_subagents: List of AgentSubagentConfig objects
+        subagent_manager: Subagent manager for runtime registration
+        agent_factories: Map from agent_type to factory method
+    """
+    if not enabled_subagents:
+        return
+
+    for subagent_cfg in enabled_subagents:
+        factory_callable = agent_factories.get(subagent_cfg.agent_type)
+        if factory_callable is None:
+            logger.warning(
+                "Unknown agent type '%s' for subagent '%s'",
+                subagent_cfg.agent_type,
+                subagent_cfg.name,
+            )
+            continue
+
+        # Bind subagent config so the factory receives it when invoked
+        def make_factory(cfg: Any, factory_fn: Any) -> Any:
+            def factory() -> Any:
+                return factory_fn(cfg)
+
+            return factory
+
+        try:
+            runtime = NoeBuiltinSubagentRuntime(
+                agent_factory=make_factory(subagent_cfg, factory_callable),
+                subagent_id=subagent_cfg.name,
+                display_name=subagent_cfg.name,
+                description=subagent_cfg.description or f"Built-in {subagent_cfg.agent_type} subagent",
+                task_types=subagent_cfg.task_types,
+            )
+            if subagent_manager is not None:
+                subagent_manager.register(SubagentProvider.from_instance(runtime))
+            logger.info(
+                "Registered built-in subagent: %s (type=%s, tasks=%s)",
+                subagent_cfg.name,
+                subagent_cfg.agent_type,
+                subagent_cfg.task_types,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to register built-in subagent '%s': %s",
+                subagent_cfg.name,
+                exc,
+            )

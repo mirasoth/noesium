@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .event_system import AutonomousEvent
 
@@ -199,7 +199,7 @@ class WebhookEventSource:
         self,
         type: str,
         source: str,
-        payload: dict[str, any],
+        payload: dict[str, Any],
     ) -> AutonomousEvent:
         """Receive and emit an external event.
 

@@ -10,13 +10,14 @@ import logging
 from typing import TYPE_CHECKING
 
 from bubus import EventBus
-
-from noesium.core.autonomous import (
+from noeagent.autonomous import (
     EventProcessor,
     GoalEngine,
     TimerEventSource,
     Trigger,
 )
+from noeagent.kernel import AgentKernel
+
 from noesium.core.event.store import InMemoryEventStore
 
 from .cognitive_loop import CognitiveLoop
@@ -78,11 +79,12 @@ class AutonomousRunner:
             producer=agent.producer,
         )
 
-        # Initialize Cognitive Loop
+        # Initialize Cognitive Loop (use AgentKernel for step(goal, context) interface)
+        agent_kernel = AgentKernel(agent)
         self.cognitive_loop = CognitiveLoop(
             goal_engine=self.goal_engine,
             memory=agent.memory_manager,
-            agent_kernel=agent,
+            agent_kernel=agent_kernel,
             capability_registry=agent.capability_registry,
             tick_interval=tick_interval,
         )

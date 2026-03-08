@@ -4,6 +4,7 @@ Provides a unified event model for reactive behavior in autonomous systems.
 """
 
 from datetime import datetime, timezone
+from typing import Any
 
 from pydantic import BaseModel, Field
 from uuid_extensions import uuid7str
@@ -28,7 +29,7 @@ class AutonomousEvent(BaseModel):
         default_factory=lambda: datetime.now(tz=timezone.utc),
         description="Event timestamp",
     )
-    payload: dict[str, any] = Field(default_factory=dict, description="Event-specific data")
+    payload: dict[str, Any] = Field(default_factory=dict, description="Event-specific data")
 
     def to_envelope(self, producer: AgentRef) -> EventEnvelope:
         """Convert to RFC-1001 compliant envelope.

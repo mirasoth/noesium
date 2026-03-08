@@ -7,7 +7,7 @@ import tempfile
 from datetime import datetime
 
 import pytest
-from noeagent.future.gem_parser import (
+from noeagent.legacy.gem_parser import (
     CircularReferenceError,
     GemParser,
     GemParserError,

@@ -13,12 +13,11 @@ from bubus import BaseEvent
 from noesium.core.msgbus import BaseWatchdog
 
 from .event_system import AutonomousEvent
+from .goal_engine import GoalEngine
 from .trigger import Trigger
 
 if TYPE_CHECKING:
     from noesium.core.msgbus import EventBus
-
-    from .goal_engine import GoalEngine
 
 
 logger = logging.getLogger(__name__)

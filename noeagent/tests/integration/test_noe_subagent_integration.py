@@ -705,7 +705,7 @@ class TestInvokeBuiltinAction:
         """invoke_builtin action should invoke the built-in agent via SubagentManager."""
         from langchain_core.messages import AIMessage
         from noeagent.agent import NoeAgent
-        from noeagent.nodes import subagent_node
+        from noeagent.graph.nodes import subagent_node
         from noeagent.state import AgentState
 
         from noesium.core.agent.subagent import SubagentManager
@@ -748,7 +748,7 @@ class TestInvokeBuiltinAction:
         """invoke_builtin should handle missing agent gracefully via SubagentManager."""
         from langchain_core.messages import AIMessage
         from noeagent.agent import NoeAgent
-        from noeagent.nodes import subagent_node
+        from noeagent.graph.nodes import subagent_node
         from noeagent.state import AgentState
 
         from noesium.core.agent.subagent import SubagentManager
@@ -1077,7 +1077,7 @@ class TestInvokeCliAction:
         from langchain_core.messages import AIMessage
         from noeagent.agent import NoeAgent
         from noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
-        from noeagent.nodes import subagent_node
+        from noeagent.graph.nodes import subagent_node
         from noeagent.state import AgentState
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
@@ -1124,7 +1124,7 @@ class TestInvokeCliAction:
         from langchain_core.messages import AIMessage
         from noeagent.agent import NoeAgent
         from noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
-        from noeagent.nodes import subagent_node
+        from noeagent.graph.nodes import subagent_node
         from noeagent.state import AgentState
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
@@ -1174,7 +1174,7 @@ class TestInvokeCliAction:
         from langchain_core.messages import AIMessage
         from noeagent.agent import NoeAgent
         from noeagent.cli_adapter import CliExecutionResult, ExternalCliAdapter
-        from noeagent.nodes import subagent_node
+        from noeagent.graph.nodes import subagent_node
         from noeagent.state import AgentState
 
         agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
@@ -1417,7 +1417,7 @@ class TestNoeAgentBuiltinStreaming:
         """invoke_builtin action delegates to agent.invoke_subagent."""
         from langchain_core.messages import AIMessage
         from noeagent.agent import NoeAgent
-        from noeagent.nodes import subagent_node
+        from noeagent.graph.nodes import subagent_node
         from noeagent.state import AgentState
 
         from noesium.core.agent.subagent import SubagentManager
