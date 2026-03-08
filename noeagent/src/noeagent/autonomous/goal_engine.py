@@ -22,6 +22,17 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# Valid goal state transitions (RFC-1006 Phase 3)
+# Terminal states (COMPLETED, FAILED) have no valid transitions
+VALID_TRANSITIONS: dict[GoalStatus, set[GoalStatus]] = {
+    GoalStatus.PENDING: {GoalStatus.ACTIVE, GoalStatus.BLOCKED},
+    GoalStatus.ACTIVE: {GoalStatus.COMPLETED, GoalStatus.FAILED, GoalStatus.BLOCKED},
+    GoalStatus.BLOCKED: {GoalStatus.ACTIVE, GoalStatus.FAILED},
+    GoalStatus.COMPLETED: set(),  # Terminal state
+    GoalStatus.FAILED: set(),  # Terminal state
+}
+
+
 class GoalEngine:
     """Autonomous Goal Engine (RFC-1006).
 
@@ -184,6 +195,15 @@ class GoalEngine:
             raise ValueError(f"Goal {goal_id} not found")
 
         old_status = goal.status
+
+        # Validate state transition (RFC-1006 Phase 3)
+        valid_targets = VALID_TRANSITIONS.get(old_status, set())
+        if status not in valid_targets:
+            logger.warning(
+                f"Invalid goal state transition: {goal_id[:8]} "
+                f"{old_status.value} → {status.value} (allowed: {[s.value for s in valid_targets]})"
+            )
+
         goal.status = status
         goal.updated_at = datetime.now(tz=timezone.utc)
 

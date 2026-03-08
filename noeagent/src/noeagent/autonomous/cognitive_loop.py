@@ -18,6 +18,7 @@ from noeagent.autonomous.decision_schema import (
     SubagentCallDecision,
     ToolCallDecision,
 )
+from noeagent.autonomous.models import GoalStatus
 
 if TYPE_CHECKING:
     from noeagent.kernel import AgentKernel
@@ -217,15 +218,8 @@ class CognitiveLoop:
             Typed Decision object with action to take
         """
         try:
-            # Use the agent kernel's step method
-            # The agent kernel performs reasoning and returns a decision
-            # TODO: Integrate with actual agent kernel reasoning
-            # For now, return a default thinking decision
-            decision = Decision(
-                action=DecisionAction.TOOL_CALL,  # Placeholder
-                goal_id=goal.id,
-                reasoning=f"Processing goal: {goal.description}",
-            )
+            # Use the agent kernel's step method for reasoning
+            decision = await self.agent_kernel.step(goal, context)
 
             logger.debug(f"Agent kernel decision: {decision.action}")
             return decision
@@ -285,12 +279,21 @@ class CognitiveLoop:
                 # Update memory with new information
                 if isinstance(decision, MemoryUpdateDecision):
                     memory_key = decision.memory_key
-                    decision.memory_value
+                    memory_value = decision.memory_value
+                    memory_content_type = decision.memory_content_type
                 else:
                     memory_key = decision.memory_key or "unknown"
-                    decision.memory_value
+                    memory_value = decision.memory_value
+                    memory_content_type = decision.memory_content_type or "fact"
 
-                # TODO: Implement memory update
+                # Get working memory provider and write
+                working_provider = self.memory.get_provider("working")
+                await working_provider.write(
+                    key=memory_key,
+                    value=memory_value,
+                    content_type=memory_content_type,
+                )
+
                 observation = {
                     "action": "memory_update",
                     "key": memory_key,
@@ -299,9 +302,15 @@ class CognitiveLoop:
 
             elif decision.action == DecisionAction.GOAL_UPDATE:
                 # Update goal status
+                new_status_str = decision.new_goal_status
+                if new_status_str:
+                    # Convert string to GoalStatus enum
+                    new_status = GoalStatus(new_status_str)
+                    await self.goal_engine.update_goal(decision.goal_id, new_status)
+
                 observation = {
                     "action": "goal_update",
-                    "new_status": decision.new_goal_status,
+                    "new_status": new_status_str,
                     "success": True,
                 }
 
