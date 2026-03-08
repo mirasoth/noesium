@@ -11,14 +11,12 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from langchain_core.messages import HumanMessage
-
 from noeagent.autonomous import Goal
 from noeagent.autonomous.decision_schema import (
     Decision,
     DecisionAction,
 )
 from noeagent.graph.nodes import _build_tool_descriptions, execute_step_node
-from noeagent.schemas import AgentAction
 from noeagent.state import AgentState, TaskPlan
 
 if TYPE_CHECKING:
@@ -157,6 +155,7 @@ class AgentKernel:
         if previous_exec:
             # Include previous execution results as context
             from langchain_core.messages import SystemMessage
+
             exec_context = SystemMessage(content=f"Previous execution: {previous_exec}")
             messages.append(exec_context)
 
@@ -165,10 +164,12 @@ class AgentKernel:
         related_memories = context.get("related_memories", [])
         if related_memories:
             for mem in related_memories[:5]:
-                tool_results.append({
-                    "tool": mem.get("key", "memory"),
-                    "result": mem.get("value", ""),
-                })
+                tool_results.append(
+                    {
+                        "tool": mem.get("key", "memory"),
+                        "result": mem.get("value", ""),
+                    }
+                )
 
         return AgentState(
             messages=messages,
@@ -191,10 +192,7 @@ class AgentKernel:
 
         # Check if cache is still valid
         provider_count = len(registry.list_providers())
-        if (
-            self._tool_desc_cache is not None
-            and self._tool_desc_provider_count == provider_count
-        ):
+        if self._tool_desc_cache is not None and self._tool_desc_provider_count == provider_count:
             return self._tool_desc_cache
 
         # Build new cache
