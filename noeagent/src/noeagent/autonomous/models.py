@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from uuid_extensions import uuid7str
 
 
@@ -38,10 +38,4 @@ class Goal(BaseModel):
     )
     parent_goal_id: str | None = Field(default=None, description="Parent goal ID for hierarchical goals")
 
-    class Config:
-        """Pydantic config."""
-
-        use_enum_values = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-        }
+    model_config = ConfigDict(use_enum_values=True)

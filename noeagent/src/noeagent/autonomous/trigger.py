@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from .event_system import AutonomousEvent
@@ -43,10 +43,7 @@ class Trigger(BaseModel):
     )
     priority: int = Field(ge=0, le=100, default=50, description="Priority for created goals")
 
-    class Config:
-        """Pydantic config."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def evaluate(self, event: AutonomousEvent) -> bool:
         """Check if trigger fires for this event.

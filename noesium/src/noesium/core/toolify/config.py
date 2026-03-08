@@ -5,7 +5,7 @@ Unified configuration system for noesium tools.
 import os
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from noesium.core.llm import get_llm_client
 
@@ -58,10 +58,7 @@ class ToolkitConfig(BaseModel):
     enable_tracing: bool = Field(default_factory=lambda: os.getenv("NOESIUM_ENABLE_TRACING", "false").lower() == "true")
     """Enable detailed tracing for debugging"""
 
-    class Config:
-        """Pydantic configuration"""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def get_llm_client(self, **kwargs):
         """

@@ -15,6 +15,9 @@ from noeagent.config import NoeConfig
 from noesium.core.config import (
     AgentSubagentConfig,
     FrameworkConfig,
+    LLMProviderConfig,
+    MCPServerConfig,
+    ToolkitConfigEntry,
     init_default_config,
     load_config,
     save_config,
@@ -76,12 +79,12 @@ class TestConfigIntegration:
         """Test configuration with MCP servers."""
         config = FrameworkConfig()
         config.tools.mcp_servers = [
-            {
-                "name": "filesystem",
-                "command": "mcp-filesystem-server",
-                "args": ["/allowed/path"],
-                "env": {},
-            }
+            MCPServerConfig(
+                name="filesystem",
+                command="mcp-filesystem-server",
+                args=["/allowed/path"],
+                env={},
+            )
         ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -142,8 +145,8 @@ class TestConfigIntegration:
         """Test configuration with toolkit-specific settings."""
         config = FrameworkConfig()
         config.tools.toolkit_configs = {
-            "bash": {"timeout": 600, "shell": "/bin/zsh"},
-            "python_executor": {"timeout": 300, "max_output_length": 20000},
+            "bash": ToolkitConfigEntry(timeout=600, shell="/bin/zsh"),
+            "python_executor": ToolkitConfigEntry(timeout=300, max_output_length=20000),
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -167,7 +170,7 @@ class TestNoeConfigIntegration:
             # Create global config
             global_config = FrameworkConfig()
             global_config.llm.provider = "ollama"
-            global_config.llm.providers["ollama"] = {"chat_model": "llama3.2"}
+            global_config.llm.providers["ollama"] = LLMProviderConfig(chat_model="llama3.2")
             global_config.agent.max_iterations = 50
             global_config.tools.enabled_toolkits = ["bash", "python_executor"]
             save_config(global_config, config_path)

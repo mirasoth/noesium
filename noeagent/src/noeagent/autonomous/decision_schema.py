@@ -7,7 +7,7 @@ reasoning step in the Cognitive Loop.
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DecisionAction(str, Enum):
@@ -60,10 +60,7 @@ class Decision(BaseModel):
     context: dict[str, Any] = Field(default_factory=dict, description="Additional context")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Decision metadata")
 
-    class Config:
-        """Pydantic config."""
-
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class ToolCallDecision(Decision):

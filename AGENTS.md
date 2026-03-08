@@ -150,10 +150,12 @@ RFC classification (Kind-based with sub-ranges):
 
 - [Agents](#agents)
   - [NoeAgent](#noeagent)
-  - [BrowserUseAgent](#browseruseagent)
-  - [TacitusAgent](#tacitusagent)
+  - [Subagents](#subagents)
+    - [AskuraAgent](#askuraagent)
+    - [TacitusAgent](#tacitusagent)
+    - [BrowserUse](#browseruse)
 - [Toolkits](#toolkits)
-  - [WizSearch Toolkit](#wizsearch-toolkit)
+  - [Web Search Toolkit](#web-search-toolkit)
   - [Jina Research Toolkit](#jina-research-toolkit)
   - [Bash Toolkit](#bash-toolkit)
   - [Memory Toolkit](#memory-toolkit)
@@ -169,56 +171,67 @@ RFC classification (Kind-based with sub-ranges):
 
 ### NoeAgent
 
-**Location:** `noesium/noe/`
+**Location:** `noeagent/src/noeagent/`
 
-**Purpose:** Autonomous research assistant with dual modes (Ask/Agent) featuring planning, execution, and reflection cycles using LangGraph.
+**Purpose:** Long-running autonomous research assistant with structured tool calling, subagent orchestration, and multi-tier memory management.
 
 **Key Features:**
 - Dual operation modes: Ask (Q&A) and Agent (autonomous)
-- LLM-powered task planning and decomposition
-- Tool usage with permission system
-- Reflection-based quality control
-- LangGraph stateful workflow
+- Capability-based tool and subagent management via `CapabilityRegistry`
+- Multi-tier memory system (Event-Sourced, Memu, Working Memory)
+- Subagent orchestration (Tacitus, BrowserUse)
+- LangGraph stateful workflow with reflection
+- Event-sourced architecture with progress tracking
 
 **Components:**
 - `agent.py` - Main agent implementation with LangGraph workflow
-- `task_planner.py` - Task decomposition and planning
-- `schemas.py` - State classes (AskState, AgentState)
-- `prompts.py` - Prompt templates
+- `planner.py` - Task decomposition and planning
+- `config.py` - Configuration management
+- `state.py` - State classes (AgentState, AskState)
+- `graph/` - Graph building and execution logic
+- `prompts/` - Prompt templates
+- `capabilities/` - Capability providers and subagent integration
 
-**Graph Workflow:**
-```
-START → task_planner → tool_executor → reflection → [conditional]
-    → (loop for more actions if needed) OR finalize_answer → END
-```
-
-**Demo:** `examples/agents/noe_demo.py`
+**Demo:** `examples/noeagent/noe_demo.py`
 
 ---
 
-### BrowserUseAgent
+## Subagents
 
-**Location:** `noesium/agents/browser_use/`
+Subagents are specialized agents that can be invoked by NoeAgent for specific tasks. Located in `noesium/src/noesium/subagents/`.
 
-**Purpose:** Web automation agent for browser interaction, DOM manipulation, and code execution.
+### AskuraAgent
+
+**Location:** `noesium/src/noesium/subagents/askura/`
+
+**Purpose:** General-purpose dynamic conversation agent for human-in-the-loop interactions with adaptive communication styles and information extraction.
 
 **Key Features:**
-- Browser session management with CDP
-- DOM interaction and element manipulation
-- Code execution in browser context
-- Page navigation and scraping
+- Dynamic conversation flow with style adaptation
+- Information extraction through natural conversation
+- Reflection-based conversation quality control
+- Session state management and persistence
+- LangGraph stateful workflow
+
+**Components:**
+- `agent.py` - Main agent implementation
+- `conversation.py` - Conversation management logic
+- `extractor.py` - Information extraction
+- `reflection.py` - Quality reflection
+- `models.py` - State and configuration models
+- `prompts.py` - Prompt templates
 
 ---
 
 ### TacitusAgent
 
-**Location:** `noesium/agents/tacitus/`
+**Location:** `noesium/src/noesium/subagents/tacitus/`
 
-**Purpose:** Advanced autonomous research agent with iterative query generation, web search, reflection, and answer synthesis using LangGraph and structured LLM output.
+**Purpose:** Advanced research agent with iterative query generation, multi-engine web search, reflection, and answer synthesis.
 
 **Key Features:**
 - Multi-loop research workflow with reflection-based quality control
-- Structured LLM output using Instructor for precise query generation and evaluation
+- Structured LLM output using Instructor for precise query generation
 - Multi-engine web search support (Tavily, DuckDuckGo, etc.)
 - Automatic citation handling and source tracking
 - Configurable research depth and breadth parameters
@@ -226,7 +239,7 @@ START → task_planner → tool_executor → reflection → [conditional]
 
 **Components:**
 - `agent.py` - Main agent implementation with LangGraph workflow
-- `schemas.py` - Pydantic schemas for structured LLM output (SearchQueryList, Reflection)
+- `schemas.py` - Pydantic schemas (SearchQueryList, Reflection)
 - `prompts.py` - Prompt templates for query generation, reflection, and answer synthesis
 - `state.py` - State classes for research workflow management
 
@@ -236,44 +249,57 @@ START → generate_query → [web_research nodes] → reflection → [conditiona
     → (loop for more research if needed) OR finalize_answer → END
 ```
 
-**Research Loop:**
-1. **Query Generation**: Generate focused search queries based on user request
-2. **Web Research**: Execute parallel searches across multiple engines
-3. **Reflection**: Evaluate results for sufficiency and identify knowledge gaps
-4. **Iteration**: Generate follow-up queries if needed (up to max_research_loops)
-5. **Finalization**: Synthesize comprehensive answer with citations
+**Demo:** `examples/subagents/tacitus_demo.py`
 
-**Demo:** `examples/agents/tacitus_demo.py`
+---
+
+### BrowserUse
+
+**Location:** `noesium/src/noesium/subagents/bu/`
+
+**Purpose:** Web automation agent for browser interaction, DOM manipulation, and code execution.
+
+**Key Features:**
+- Browser session management with CDP
+- DOM interaction and element manipulation
+- Code execution in browser context
+- Page navigation and scraping
+- MCP integration support
+
+**Components:**
+- `agent/` - Agent implementation
+- `browser/` - Browser management
+- `dom/` - DOM interaction
+- `actor/` - Action execution
+- `controller/` - Flow control
+- `tools/` - Browser tools
+
+**Demo:** `examples/subagents/browser_use/`
 
 ---
 
 ## Toolkits
 
-All toolkits are located in `noesium/toolkits/` and managed through the Toolify system.
+All toolkits are located in `noesium/src/noesium/toolkits/` and managed through the Toolify system.
 
-### WizSearch Toolkit
+### Web Search Toolkit
 
-**Registration Name:** `wizsearch`
-**Location:** `noesium/toolkits/wizsearch_toolkit.py`
+**Registration Name:** `web_search`
+**Location:** `noesium/src/noesium/toolkits/web_search_toolkit.py`
 
 **Tools:**
-- `web_search` - Multi-engine concurrent search via WizSearch
-- `tavily_search` - Tavily search with AI-powered summaries
-- `google_ai_search` - Google AI search with Gemini models
-- `crawl_page` - Extract content from web pages via Crawl4AI
+- `web_search` - Multi-engine search integration
 
 **Features:**
-- Multi-engine concurrent search (Tavily, DuckDuckGo, Brave, Google AI, etc.)
-- Automatic result deduplication and round-robin merging
-- Configurable engines, timeouts, and result limits
-- Web page content crawling in markdown, HTML, or text format
+- Multi-engine search support
+- Configurable search parameters
 
 ---
 
 ### Jina Research Toolkit
 
 **Registration Name:** `jina_research`
-**Location:** `noesium/toolkits/jina_research_toolkit.py`
+**Location:** `noesium/src/noesium/toolkits/jina_research_toolkit.py`
 
 **Tools:**
 - `get_web_content` - Extract content from web pages via Jina Reader
@@ -349,13 +375,13 @@ All toolkits are located in `noesium/toolkits/` and managed through the Toolify 
 | Toolkit | Registration Name | Description |
 |---------|------------------|-------------|
 | ArXiv Toolkit | `arxiv` | ArXiv paper search and retrieval |
-| Aliyun Audio Toolkit | `audio_aliyun` | Aliyun audio processing (TTS, STT) |
 | Audio Toolkit | `audio` | General audio processing |
 | Document Toolkit | `document` | Document processing (PDF, Word, etc.) |
 | File Edit Toolkit | `file_edit` | File editing operations |
 | GitHub Toolkit | `github` | GitHub API operations |
 | Gmail Toolkit | `gmail` | Gmail email operations |
 | Image Toolkit | `image` | Image processing and generation |
+| MCP Toolkit | `mcp` | Model Context Protocol integration |
 | Serper Toolkit | `serper` | Google search via Serper API |
 | Tabular Data Toolkit | `tabular_data` | CSV/Excel data processing |
 | User Interaction Toolkit | `user_interaction` | User input/output operations |
@@ -534,19 +560,38 @@ config = ToolkitConfig(
 
 ```
 noesium/
-├── noesium/
-│   ├── agents/              # Agent implementations
-│   │   ├── noe/         # Research agent with planning
-│   │   └── browser_use/     # Browser automation
-│   ├── core/
-│   │   ├── agent/           # Base agent classes
-│   │   ├── toolify/         # Tool system
-│   │   ├── llm/             # LLM integration
-│   │   ├── memory/          # Memory system
-│   │   ├── vector_store/    # Vector storage
-│   │   ├── msgbus/          # Message bus
-│   ├── toolkits/            # 17+ built-in toolkits
-├── examples/                # Usage examples
-├── specs/                   # Design specifications
-└── tests/                   # Test suites
+├── noeagent/                    # NoeAgent package
+│   └── src/noeagent/
+│       ├── agent.py             # Main NoeAgent implementation
+│       ├── config.py            # Configuration
+│       ├── state.py             # State classes
+│       ├── planner.py           # Task planning
+│       ├── capabilities/        # Capability providers
+│       ├── graph/               # Graph building
+│       └── prompts/             # Prompt templates
+├── noesium/                     # Core framework package
+│   └── src/noesium/
+│       ├── core/
+│       │   ├── agent/           # Base agent classes
+│       │   ├── toolify/         # Tool system
+│       │   ├── llm/             # LLM integration
+│       │   ├── memory/          # Memory system
+│       │   ├── capability/      # Capability registry
+│       │   ├── event/           # Event system
+│       │   ├── msgbus/          # Message bus
+│       │   ├── vector_store/    # Vector storage
+│       │   └── tracing/         # Tracing utilities
+│       ├── subagents/           # Subagent implementations
+│       │   ├── askura/          # Conversation agent
+│       │   ├── tacitus/         # Research agent
+│       │   └── bu/              # Browser use agent
+│       └── toolkits/            # 18 built-in toolkits
+├── examples/                    # Usage examples
+│   ├── noeagent/               # NoeAgent examples
+│   └── subagents/              # Subagent examples
+├── docs/                        # Documentation
+│   ├── specs/                  # RFC specifications
+│   ├── impl/                   # Implementation guides
+│   └── worklogs/               # Progress logs
+└── tests/                       # Test suites
 ```

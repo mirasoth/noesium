@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from noesium.core.consts import (
     CONFIG_VERSION,
@@ -121,9 +121,7 @@ class ToolkitConfigEntry(BaseModel):
     timeout: Optional[int] = None
     shell: Optional[str] = None
     max_output_length: Optional[int] = None
-
-    class Config:
-        extra = "allow"  # Allow toolkit-specific fields
+    model_config = ConfigDict(extra="allow")  # Allow toolkit-specific fields
 
 
 class ToolsConfig(BaseModel):
@@ -346,9 +344,7 @@ class FrameworkConfig(BaseModel):
     tracing: TracingConfig = Field(default_factory=TracingConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     working_directory: Optional[str] = None
-
-    class Config:
-        extra = "allow"  # Allow extra fields for forward compatibility
+    model_config = ConfigDict(extra="allow")  # Allow extra fields for forward compatibility
 
 
 # =============================================================================
