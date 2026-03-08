@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "skills": {
+    "platonic-code-review": {
+      "source": "caesar0301/platonic-coding-skills",
+      "sourceType": "github",
+      "computedHash": "c1e5fd7bae35ab8a75eba24606166acd4cc84330a87f62836c2af15414d561e6"
+    },
+    "platonic-impl": {
+      "source": "caesar0301/platonic-coding-skills",
+      "sourceType": "github",
+      "computedHash": "7a297a3369565b9999c9df109350dc1e1fc21b7d1b88e3e01567fa30bddb51c0"
+    },
+    "platonic-init": {
+      "source": "caesar0301/platonic-coding-skills",
+      "sourceType": "github",
+      "computedHash": "d6c160ccdb57416855cc148fdca1887a1a436ec5c38de476b967442821afbe30"
+    },
+    "platonic-specs": {
+      "source": "caesar0301/platonic-coding-skills",
+      "sourceType": "github",
+      "computedHash": "822d6ac48f6aa3a7d6b296f1b0c0a1d31208a0ea03eb3f9ee2d830f94ed4d2e8"
+    },
+    "platonic-workflow": {
+      "source": "caesar0301/platonic-coding-skills",
+      "sourceType": "github",
+      "computedHash": "2820a466a3895acf9c5dfcb45c9c62212fd336122d7a92de0310ff1896686347"
+    }
+  }
+}
