@@ -20,7 +20,7 @@ from noeagent.autonomous.decision_schema import (
     Decision,
     DecisionAction,
 )
-from noeagent.autonomous.goal_engine.models import Goal
+from noeagent.autonomous.goal_engine import Goal
 from noeagent.autonomous.kernel.reasoning_chain import AutonomousReasoningChain
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ class AgentKernel:
         self._tool_desc_cache: str | None = None
         self._instructor_llm: Any = None
 
-        logger.info(f"AgentKernel initialized for autonomous mode (decoupled)")
+        logger.info("AgentKernel initialized for autonomous mode (decoupled)")
 
     def _get_instructor_llm(self) -> Any:
         """Get instructor-wrapped LLM for structured output.
@@ -306,7 +306,7 @@ class AgentKernel:
             return "No tools available."
 
         # Reuse existing tool description builder
-        from noeagent.interactive.graph.nodes import _build_tool_descriptions
+        from noeagent.graph.nodes import _build_tool_descriptions
 
         self._tool_desc_cache = _build_tool_descriptions(registry)
 

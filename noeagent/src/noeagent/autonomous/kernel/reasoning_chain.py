@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from langchain_core.prompts import ChatPromptTemplate
 
 if TYPE_CHECKING:
-    from noeagent.autonomous.goal_engine.models import Goal
+    from noeagent.autonomous.goal_engine import Goal
 
 logger = logging.getLogger(__name__)
 

@@ -1067,7 +1067,7 @@ def run_agent_tui(agent: "NoeAgent") -> None:
         Panel(
             "[bold]NoeAgent[/bold] -- Autonomous Research Assistant\n"
             f"Mode: [cyan]{agent.config.mode.value}[/cyan]  |  "
-            "Prefix: [bold magenta]2[/]=Browser [bold magenta]3[/]=Research [bold magenta]4[/]=Claude  |  "
+            "Prefix: [bold magenta]2[/]=Browser [bold magenta]3[/]=Research [bold magenta]4[/]=Coding  |  "
             "[bold cyan]/help[/bold cyan] [bold cyan]/exit[/bold cyan]"
             + (f"\nSession log: [dim]{session_logger.log_path}[/dim]" if session_logger else ""),
             border_style="bright_blue",

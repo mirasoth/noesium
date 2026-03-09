@@ -25,6 +25,7 @@ except ImportError:
     LANGCHAIN_AVAILABLE = False
 
 from noesium.core.agent import BaseGraphicAgent
+from noesium.core.exceptions import ContentPolicyError
 from noesium.core.llm import BaseLLMClient
 from noesium.core.utils.logging import get_logger
 from noesium.core.utils.typing import override
@@ -251,6 +252,19 @@ class TacitusAgent(BaseGraphicAgent):
             query_list = [{"query": q, "rationale": result.rationale} for q in result.query]
             return {"query_list": query_list}
 
+        except ContentPolicyError as e:
+            # Content policy violation during query generation
+            logger.error(f"Content policy violation during query generation: {e}")
+            # Return a fallback query based on the original topic
+            return {
+                "query_list": [
+                    {
+                        "query": research_topic[:100],
+                        "rationale": "Fallback query due to content policy restrictions",
+                    }
+                ],
+                "content_policy_error": str(e),
+            }
         except Exception as e:
             raise RuntimeError(f"Error in structured query generation: {e}")
 
@@ -305,11 +319,23 @@ class TacitusAgent(BaseGraphicAgent):
                 4. Maintains factual accuracy based on the provided content
                 """
 
-                search_summary = self.llm_client.completion(
-                    messages=[{"role": "user", "content": summary_prompt}],
-                    temperature=self.web_search_temperature,
-                    max_tokens=self.web_search_max_tokens,
-                )
+                try:
+                    search_summary = self.llm_client.completion(
+                        messages=[{"role": "user", "content": summary_prompt}],
+                        temperature=self.web_search_temperature,
+                        max_tokens=self.web_search_max_tokens,
+                    )
+                except ContentPolicyError as e:
+                    # Content filter triggered during summary generation
+                    # Return sources without LLM summary
+                    logger.warning(
+                        f"Content policy violation during summary generation for query '{search_query}': {e}"
+                    )
+                    search_summary = (
+                        f"⚠️ Content Policy Notice: The search results for '{search_query}' could not be "
+                        f"summarized due to content policy restrictions from {e.provider}.\n\n"
+                        f"However, {len(sources_gathered)} sources were found. Please refer to the sources below for information."
+                    )
             else:
                 search_summary = f"No relevant sources found for: {search_query}"
 
@@ -319,9 +345,27 @@ class TacitusAgent(BaseGraphicAgent):
                 search_summaries=[search_summary],
             )
 
+        except ContentPolicyError as e:
+            # Content policy violation during LLM call
+            logger.error(f"Content policy violation in web search: {e}")
+            # Return a graceful error message instead of raising
+            return ResearchState(
+                sources_gathered=[],
+                search_query=[search_query],
+                search_summaries=[
+                    f"⚠️ Content Policy Violation\n\n"
+                    f"Your research request was blocked by {e.provider}'s content safety system. "
+                    f"This can happen with sensitive topics that may violate usage policies.\n\n"
+                    f"Suggestions:\n"
+                    f"• Rephrase your query in more neutral terms\n"
+                    f"• Try using a different LLM provider (e.g., switch from Dashscope to OpenAI)\n"
+                    f"• Use alternative search methods\n\n"
+                    f"Technical details: {str(e)[:200]}"
+                ],
+            )
         except Exception as e:
-            logger.error(f"Error in Tavily web search: {e}")
-            raise RuntimeError(f"Tavily web search failed: {str(e)}")
+            logger.error(f"Error in web search: {e}")
+            raise RuntimeError(f"Web search failed: {str(e)}")
 
     def _reflection_node(self, state: ResearchState, config: RunnableConfig) -> ReflectionState:
         """Reflect on research results and identify gaps using instructor structured output."""
@@ -356,6 +400,17 @@ class TacitusAgent(BaseGraphicAgent):
                 number_of_ran_queries=len(state.get("search_query", [])),
             )
 
+        except ContentPolicyError as e:
+            # Content policy violation during reflection
+            logger.warning(f"Content policy violation during reflection: {e}")
+            # Mark as sufficient to proceed to finalization
+            return ReflectionState(
+                is_sufficient=True,
+                knowledge_gap="",
+                follow_up_queries=[],
+                research_loop_count=research_loop_count,
+                number_of_ran_queries=len(state.get("search_query", [])),
+            )
         except Exception as e:
             raise RuntimeError(f"Error in structured reflection: {e}")
 
@@ -385,12 +440,24 @@ class TacitusAgent(BaseGraphicAgent):
             summaries=summaries,
         )
 
-        # Generate final answer using LLM
-        final_answer = self.llm_client.completion(
-            messages=[{"role": "user", "content": formatted_prompt}],
-            temperature=self.answer_temperature,
-            max_tokens=self.answer_max_tokens,
-        )
+        try:
+            # Generate final answer using LLM
+            final_answer = self.llm_client.completion(
+                messages=[{"role": "user", "content": formatted_prompt}],
+                temperature=self.answer_temperature,
+                max_tokens=self.answer_max_tokens,
+            )
+        except ContentPolicyError as e:
+            # Content policy violation during final answer generation
+            logger.warning(f"Content policy violation during final answer generation: {e}")
+            # Return the summaries directly as the final answer
+            final_answer = (
+                f"⚠️ Content Policy Notice\n\n"
+                f"The final answer could not be generated due to content policy restrictions from {e.provider}.\n\n"
+                f"However, the following research summaries were collected:\n\n"
+                f"{summaries}\n\n"
+                f"Please refer to the sources for detailed information."
+            )
 
         return {
             "messages": [AIMessage(content=final_answer)],

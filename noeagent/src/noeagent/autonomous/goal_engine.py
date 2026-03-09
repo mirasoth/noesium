@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from noesium.core.event.envelope import AgentRef, TraceContext
 from noesium.core.event.store import EventStore
 
-from .events import GoalCompleted, GoalCreated, GoalFailed, GoalUpdated
+from .goal_events import GoalCompleted, GoalCreated, GoalFailed, GoalUpdated
 from .models import Goal, GoalStatus
 
 if TYPE_CHECKING:
@@ -108,13 +108,19 @@ class GoalEngine:
         description: str,
         priority: int = 50,
         parent_goal_id: str | None = None,
+        deadline: datetime | None = None,
+        blocked_by: list[str] | None = None,
+        max_retries: int = 3,
     ) -> Goal:
-        """Create a new goal.
+        """Create a new goal (RFC-1006).
 
         Args:
             description: Human-readable goal description
             priority: Goal priority (0-100, higher = more important)
             parent_goal_id: Optional parent goal for hierarchical goals
+            deadline: Optional deadline for goal completion (auto-fail if exceeded)
+            blocked_by: Optional list of goal IDs that must complete first
+            max_retries: Maximum retry attempts before permanent failure (default: 3)
 
         Returns:
             Created goal instance
@@ -124,6 +130,9 @@ class GoalEngine:
             priority=priority,
             parent_goal_id=parent_goal_id,
             status=GoalStatus.PENDING,
+            deadline=deadline,
+            blocked_by=blocked_by or [],
+            max_retries=max_retries,
         )
 
         # Persist to memory
@@ -152,16 +161,33 @@ class GoalEngine:
         return goal
 
     async def next_goal(self) -> Goal | None:
-        """Get next goal for Cognitive Loop execution.
+        """Get next goal for Cognitive Loop execution (RFC-1006).
 
-        Returns the highest priority goal that is PENDING or ACTIVE.
+        Returns the highest priority goal that is PENDING or ACTIVE and
+        has all dependencies satisfied.
         Uses deterministic scheduling: (priority DESC, created_at ASC).
 
         Returns:
             Next goal to execute, or None if no active goals
         """
-        # Filter for executable goals (PENDING or ACTIVE)
-        executable = [g for g in self._queue if g.status in (GoalStatus.PENDING, GoalStatus.ACTIVE)]
+        # Filter for executable goals (PENDING or ACTIVE, with dependencies satisfied)
+        executable = []
+        for g in self._queue:
+            if g.status not in (GoalStatus.PENDING, GoalStatus.ACTIVE):
+                continue
+
+            # Check dependencies (RFC-1006)
+            if g.blocked_by:
+                all_deps_complete = all(
+                    self._goals_by_id.get(dep_id) is not None
+                    and self._goals_by_id[dep_id].status == GoalStatus.COMPLETED
+                    for dep_id in g.blocked_by
+                )
+                if not all_deps_complete:
+                    logger.debug(f"Goal {g.id[:8]} blocked by incomplete dependencies")
+                    continue
+
+            executable.append(g)
 
         if not executable:
             logger.debug("No executable goals available")
@@ -195,6 +221,10 @@ class GoalEngine:
             raise ValueError(f"Goal {goal_id} not found")
 
         old_status = goal.status
+
+        # Convert string to enum if needed (model uses use_enum_values=True)
+        if isinstance(old_status, str):
+            old_status = GoalStatus(old_status)
 
         # Validate state transition (RFC-1006 Phase 3)
         valid_targets = VALID_TRANSITIONS.get(old_status, set())
@@ -235,7 +265,9 @@ class GoalEngine:
             )
         )
 
-        logger.info(f"Updated goal {goal_id[:8]}: {old_status.value} → {status.value}")
+        logger.info(
+            f"Updated goal {goal_id[:8]}: {old_status if isinstance(old_status, str) else old_status.value} → {status if isinstance(status, str) else status.value}"
+        )
         return goal
 
     async def complete_goal(self, goal_id: str) -> Goal:
@@ -259,16 +291,56 @@ class GoalEngine:
         logger.info(f"Completed goal {goal_id[:8]}: {goal.description}")
         return goal
 
-    async def fail_goal(self, goal_id: str, error: str = "") -> Goal:
-        """Mark goal as failed.
+    async def fail_goal(self, goal_id: str, error: str = "", allow_retry: bool = True) -> Goal:
+        """Mark goal as failed, with optional retry (RFC-1006).
+
+        If retry is allowed and goal has retries remaining, the goal will be
+        reset to PENDING status for another attempt. Otherwise, it will be
+        permanently marked as FAILED.
 
         Args:
             goal_id: Goal ID to fail
             error: Optional error message
+            allow_retry: Whether to allow retry if retries remain (default: True)
 
         Returns:
-            Failed goal instance
+            Goal instance (may be PENDING if retrying, FAILED otherwise)
         """
+        goal = self._goals_by_id.get(goal_id)
+        if not goal:
+            raise ValueError(f"Goal {goal_id} not found")
+
+        # Check if retry is allowed and possible (RFC-1006 retry policy)
+        if allow_retry and goal.retry_count < goal.max_retries:
+            goal.retry_count += 1
+            goal.status = GoalStatus.PENDING
+            goal.updated_at = datetime.now(tz=timezone.utc)
+
+            # Persist update
+            await self._storage.write(
+                key=f"goal:{goal.id}",
+                value=goal.model_dump(),
+                content_type="goal",
+                metadata={"priority": goal.priority, "status": goal.status},
+            )
+
+            logger.info(
+                f"Goal {goal_id[:8]} retry {goal.retry_count}/{goal.max_retries}: {goal.description}"
+                + (f" - {error}" if error else "")
+            )
+
+            # Emit retry event as GoalUpdated
+            await self._emit_event(
+                GoalUpdated(
+                    goal_id=goal_id,
+                    old_status="active",
+                    new_status="pending",
+                )
+            )
+
+            return goal
+
+        # No retry available, mark as permanently failed
         goal = await self.update_goal(goal_id, GoalStatus.FAILED)
 
         await self._emit_event(
@@ -310,3 +382,95 @@ class GoalEngine:
     async def initialize(self) -> None:
         """Initialize goal engine by loading existing goals from storage."""
         await self._load_from_storage()
+
+    async def check_timeouts(self) -> list[Goal]:
+        """Check for goals past their deadline and fail them (RFC-1006).
+
+        Scans all active goals and fails those that have exceeded their deadline.
+        Timeout failures do not trigger retry (allow_retry=False).
+
+        Returns:
+            List of goals that were auto-failed due to timeout
+        """
+        now = datetime.now(tz=timezone.utc)
+        failed_goals = []
+
+        for goal in list(self._queue):
+            if goal.deadline and goal.deadline < now and goal.status not in (GoalStatus.COMPLETED, GoalStatus.FAILED):
+                logger.warning(f"Goal {goal.id[:8]} deadline exceeded: {goal.deadline.isoformat()}")
+                await self.fail_goal(
+                    goal.id,
+                    error=f"Goal deadline exceeded: {goal.deadline.isoformat()}",
+                    allow_retry=False,  # Timeout failures don't retry
+                )
+                failed_goals.append(goal)
+
+        return failed_goals
+
+    async def add_dependency(self, goal_id: str, depends_on: str) -> Goal:
+        """Add a dependency to a goal (RFC-1006).
+
+        The goal will not be executed until the dependency goal is completed.
+
+        Args:
+            goal_id: Goal ID to add dependency to
+            depends_on: Goal ID that must complete first
+
+        Returns:
+            Updated goal instance
+
+        Raises:
+            ValueError: If goal not found
+        """
+        goal = self._goals_by_id.get(goal_id)
+        if not goal:
+            raise ValueError(f"Goal {goal_id} not found")
+
+        if depends_on not in goal.blocked_by:
+            goal.blocked_by.append(depends_on)
+            goal.updated_at = datetime.now(tz=timezone.utc)
+
+            # Persist update
+            await self._storage.write(
+                key=f"goal:{goal.id}",
+                value=goal.model_dump(),
+                content_type="goal",
+                metadata={"priority": goal.priority, "status": goal.status},
+            )
+
+            logger.info(f"Goal {goal_id[:8]} now depends on {depends_on[:8]}")
+
+        return goal
+
+    async def remove_dependency(self, goal_id: str, depends_on: str) -> Goal:
+        """Remove a dependency from a goal (RFC-1006).
+
+        Args:
+            goal_id: Goal ID to remove dependency from
+            depends_on: Goal ID to remove from dependencies
+
+        Returns:
+            Updated goal instance
+
+        Raises:
+            ValueError: If goal not found
+        """
+        goal = self._goals_by_id.get(goal_id)
+        if not goal:
+            raise ValueError(f"Goal {goal_id} not found")
+
+        if depends_on in goal.blocked_by:
+            goal.blocked_by.remove(depends_on)
+            goal.updated_at = datetime.now(tz=timezone.utc)
+
+            # Persist update
+            await self._storage.write(
+                key=f"goal:{goal.id}",
+                value=goal.model_dump(),
+                content_type="goal",
+                metadata={"priority": goal.priority, "status": goal.status},
+            )
+
+            logger.info(f"Removed dependency {depends_on[:8]} from goal {goal_id[:8]}")
+
+        return goal

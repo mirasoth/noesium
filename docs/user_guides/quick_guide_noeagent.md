@@ -57,6 +57,9 @@ NoeAgent is an autonomous research assistant built on the Noesium framework. It 
     - [Import Errors](#import-errors)
     - [Memory Provider Issues](#memory-provider-issues)
     - [LLM Provider Configuration](#llm-provider-configuration)
+    - [Content Policy Violations](#content-policy-violations)
+  - [CLI Reference](#cli-reference)
+  - [Next Steps](#next-steps)
 
 ## Quick Start
 
@@ -65,6 +68,12 @@ NoeAgent is an autonomous research assistant built on the Noesium framework. It 
 ```bash
 # Install dependencies
 uv run pip install langchain-core langgraph
+
+# From PyPI
+pip install noeagent
+
+# With all dependencies
+pip install noeagent[all]
 ```
 
 ### Library Mode
@@ -86,12 +95,16 @@ asyncio.run(main())
 ```bash
 # Run the interactive terminal UI
 python -m noeagent.tui
-```
 
-Or using the environment variable:
-
-```bash
+# Or using uv
 uv run python -m noeagent.tui
+
+# Start in specific mode
+noeagent --mode ask
+noeagent --mode agent
+
+# Specify model
+noeagent --model gpt-4o
 ```
 
 ## Modes of Operation
@@ -121,11 +134,6 @@ The `noeagent` module exports the following:
 - `ProgressEventType` - Enumeration of all progress event kinds
 - `ProgressCallback` - Push-style callback protocol for consumers
 - `SessionLogger` - JSONL session logger
-
-| Mode | Description |
-|------|-------------|
-| `library` | Programmatic API use (default) |
-| `tui` | Standalone interactive terminal UI |
 
 ## Library Mode
 
@@ -588,14 +596,14 @@ NoeAgent comes with pre-configured agent subagents for specialized tasks:
 - **browser_use**: Web automation agent for browser interaction and DOM manipulation
 - **tacitus**: Research agent with iterative query generation and web search
 
-These are enabled by default and can be customized via `config.builtin`:
+These are enabled by default and can be customized via `config.agent_subagents`:
 
 ```python
 from noeagent import NoeAgent, NoeConfig, AgentSubagentConfig
 
 config = NoeConfig(
     enable_subagents=True,
-    builtin=[
+    agent_subagents=[
         AgentSubagentConfig(
             name="browser_use",
             agent_type="browser_use",
@@ -624,7 +632,7 @@ Long-lived external CLI processes (e.g., Claude Code CLI) that run as persistent
 from noeagent import NoeAgent, NoeConfig, CliSubagentConfig
 
 config = NoeConfig(
-    external=[
+    cli_subagents=[
         CliSubagentConfig(
             name="claude-code",
             command="claude",
@@ -949,3 +957,54 @@ Make sure your LLM provider credentials are configured. The default provider is 
 export NOE_LLM_PROVIDER="openai"
 export OPENAI_API_KEY="your_key"
 ```
+
+### Content Policy Violations
+
+Some LLM providers (e.g., Dashscope/Alibaba Cloud) have strict content safety systems that may reject certain queries. When this happens:
+
+**Symptoms:**
+- Error messages containing `data_inspection_failed` or `inappropriate content`
+- Research tasks fail with content policy violations
+
+**Solutions:**
+1. **Rephrase your query** in more neutral terms
+2. **Switch providers** - use OpenAI or Anthropic for sensitive topics
+3. **Use subagents** - the built-in TacitusAgent handles these errors gracefully
+
+**Example error handling:**
+
+```python
+from noesium.core.exceptions import ContentPolicyError
+from noeagent import NoeAgent
+
+agent = NoeAgent()
+try:
+    result = await agent.arun("Research sensitive topic")
+except ContentPolicyError as e:
+    print(f"Blocked by {e.provider}: {e.message}")
+    # Try alternative approach or provider
+```
+
+**Built-in resilience:**
+- TacitusAgent continues research with available data when content is blocked
+- User-friendly error messages suggest alternative approaches
+- No crashes - workflows complete with partial results or informative messages
+
+## CLI Reference
+
+```bash
+noeagent                          # Start TUI
+noeagent --mode ask               # Ask mode
+noeagent --mode agent             # Agent mode
+noeagent --model gpt-4o           # Specify model
+noeagent --max-iterations 20      # Set limits
+noeagent config init openai       # Initialize config
+noeagent config show              # Show config
+```
+
+## Next Steps
+
+- **[Noesium Guide](quick_guide_noesium.md)**: Learn the framework
+- **[Voyager Guide](quick_guide_voyager.md)**: 24/7 companion app
+- **[Developer Guide](dev_guide.md)**: Detailed framework development
+- **[Examples](../../examples/)**: Usage examples

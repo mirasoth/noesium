@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
+from time import perf_counter
 from typing import TYPE_CHECKING, Any
 
 from noeagent.autonomous.decision_schema import (
@@ -20,15 +22,43 @@ from noeagent.autonomous.decision_schema import (
 )
 from noeagent.autonomous.goal_engine import Goal, GoalEngine, GoalStatus
 from noeagent.autonomous.memory import MemoryProjector
+from uuid_extensions import uuid7str
 
 if TYPE_CHECKING:
     from noeagent.autonomous.kernel.agent_kernel import AgentKernel
 
+    from noesium.core.agent.subagent import SubagentManager
     from noesium.core.capability.registry import CapabilityRegistry
     from noesium.core.memory.provider_manager import ProviderMemoryManager
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CognitiveLoopMetrics:
+    """Metrics for cognitive loop execution (RFC-1005)."""
+
+    total_ticks: int = 0
+    successful_ticks: int = 0
+    failed_ticks: int = 0
+    idle_ticks: int = 0
+    total_tick_duration_ms: float = 0.0
+    last_tick_duration_ms: float = 0.0
+
+    @property
+    def avg_tick_duration_ms(self) -> float:
+        """Average tick duration in milliseconds."""
+        return self.total_tick_duration_ms / max(1, self.total_ticks)
+
+    def reset(self) -> None:
+        """Reset all metrics to zero."""
+        self.total_ticks = 0
+        self.successful_ticks = 0
+        self.failed_ticks = 0
+        self.idle_ticks = 0
+        self.total_tick_duration_ms = 0.0
+        self.last_tick_duration_ms = 0.0
 
 
 class CognitiveLoop:
@@ -43,6 +73,12 @@ class CognitiveLoop:
 
     Each iteration is called a "tick" (typical duration: 5-30 seconds).
 
+    Features:
+    - Pause/resume capability for controlled execution
+    - Metrics collection for monitoring (tick duration, success/failure rates)
+    - Subagent invocation via SubagentManager
+    - Goal timeout checking before each tick
+
     Example:
         loop = CognitiveLoop(
             goal_engine=goal_engine,
@@ -50,6 +86,7 @@ class CognitiveLoop:
             agent_kernel=agent,
             capability_registry=registry,
             tick_interval=10.0,
+            subagent_manager=subagent_manager,
         )
         await loop.run()
     """
@@ -61,6 +98,7 @@ class CognitiveLoop:
         agent_kernel: AgentKernel,
         capability_registry: CapabilityRegistry,
         tick_interval: float = 5.0,
+        subagent_manager: SubagentManager | None = None,
     ):
         """Initialize Cognitive Loop.
 
@@ -70,6 +108,7 @@ class CognitiveLoop:
             agent_kernel: Agent kernel for reasoning (RFC-1005 §8)
             capability_registry: Capability registry for execution
             tick_interval: Seconds between ticks (default: 5.0)
+            subagent_manager: SubagentManager for subagent invocation (RFC-1005)
         """
         self.goal_engine = goal_engine
         self.memory = memory
@@ -79,20 +118,35 @@ class CognitiveLoop:
         self._running = False
         self._current_goal: Goal | None = None
 
+        # Subagent support (RFC-1005)
+        self._subagent_manager = subagent_manager
+        self._session_id = uuid7str()
+
+        # Pause/resume support (RFC-1005)
+        self._paused = False
+        self._pause_event = asyncio.Event()
+        self._pause_event.set()  # Not paused initially
+
+        # Metrics collection (RFC-1005)
+        self._metrics = CognitiveLoopMetrics()
+
         self.projector = MemoryProjector(memory)
 
         logger.info(f"CognitiveLoop initialized with tick_interval={tick_interval}s")
 
     async def run(self) -> None:
-        """Main cognitive loop: goal → context → decision → observation → memory.
+        """Main cognitive loop: goal -> context -> decision -> observation -> memory.
 
-        Runs continuously until stop() is called.
+        Runs continuously until stop() is called. Supports pause/resume.
         """
         self._running = True
-        logger.info("🧠 Cognitive loop started")
+        logger.info("Cognitive loop started")
 
         while self._running:
             try:
+                # Wait if paused (RFC-1005 pause/resume)
+                await self._pause_event.wait()
+
                 await self._tick()
                 await asyncio.sleep(self.tick_interval)
             except asyncio.CancelledError:
@@ -106,32 +160,59 @@ class CognitiveLoop:
         logger.info("Cognitive loop stopped")
 
     async def _tick(self) -> None:
-        """Single iteration of the cognitive loop."""
-        goal = await self.goal_engine.next_goal()
-        if not goal:
-            logger.debug("No active goals - idle tick")
-            return
-
-        self._current_goal = goal
-        logger.info(f"🎯 Processing goal: {goal.description} (priority={goal.priority})")
+        """Single iteration of the cognitive loop with metrics collection."""
+        start_time = perf_counter()
+        tick_success = False
 
         try:
-            context = await self.projector.project(goal)
+            # Check for timed-out goals first (RFC-1006 timeout support)
+            if hasattr(self.goal_engine, "check_timeouts"):
+                await self.goal_engine.check_timeouts()
 
-            decision = await self._reason(goal, context)
+            goal = await self.goal_engine.next_goal()
+            if not goal:
+                logger.debug("No active goals - idle tick")
+                self._metrics.idle_ticks += 1
+                tick_success = True
+                return
 
-            observation = await self._execute_decision(decision)
+            self._current_goal = goal
+            logger.info(f"Processing goal: {goal.description} (priority={goal.priority})")
 
-            await self._update_memory(goal, observation)
+            try:
+                context = await self.projector.project(goal)
 
-            await self._evaluate_goal_progress(goal, observation)
+                decision = await self._reason(goal, context)
+
+                observation = await self._execute_decision(decision)
+
+                await self._update_memory(goal, observation)
+
+                await self._evaluate_goal_progress(goal, observation)
+
+                tick_success = True
+
+            except Exception as e:
+                logger.error(f"Error processing goal {goal.id[:8]}: {e}", exc_info=True)
+                await self.goal_engine.fail_goal(goal.id, error=str(e))
+
+            finally:
+                self._current_goal = None
 
         except Exception as e:
-            logger.error(f"Error processing goal {goal.id[:8]}: {e}", exc_info=True)
-            await self.goal_engine.fail_goal(goal.id, error=str(e))
+            logger.error(f"Tick error: {e}", exc_info=True)
+            raise
 
         finally:
-            self._current_goal = None
+            # Update metrics (RFC-1005 metrics collection)
+            duration_ms = (perf_counter() - start_time) * 1000
+            self._metrics.total_ticks += 1
+            self._metrics.total_tick_duration_ms += duration_ms
+            self._metrics.last_tick_duration_ms = duration_ms
+            if tick_success:
+                self._metrics.successful_ticks += 1
+            else:
+                self._metrics.failed_ticks += 1
 
     async def _reason(self, goal: Goal, context: dict[str, Any]) -> Decision:
         """Agent kernel reasoning step.
@@ -186,7 +267,7 @@ class CognitiveLoop:
                 }
 
             elif decision.action == DecisionAction.SUBAGENT_CALL:
-                # Delegate to subagent
+                # Delegate to subagent via SubagentManager (RFC-1005)
                 if isinstance(decision, SubagentCallDecision):
                     subagent_type = decision.subagent_type
                     subagent_task = decision.subagent_task
@@ -194,14 +275,55 @@ class CognitiveLoop:
                     subagent_type = decision.subagent_type or "unknown"
                     subagent_task = decision.subagent_task or ""
 
-                # TODO: Implement subagent invocation
-                observation = {
-                    "action": "subagent_call",
-                    "subagent_type": subagent_type,
-                    "task": subagent_task,
-                    "result": "Subagent execution not implemented",
-                    "success": False,
-                }
+                # Check if SubagentManager is available
+                if self._subagent_manager is None:
+                    observation = {
+                        "action": "subagent_call",
+                        "subagent_type": subagent_type,
+                        "task": subagent_task,
+                        "result": "SubagentManager not available",
+                        "success": False,
+                    }
+                else:
+                    # Invoke subagent via SubagentManager
+                    from noesium.core.agent.subagent import (
+                        SubagentContext,
+                        SubagentEventType,
+                        SubagentInvocationRequest,
+                    )
+
+                    request = SubagentInvocationRequest(subagent_id=subagent_type, message=subagent_task)
+                    context = SubagentContext(
+                        session_id=self._session_id,
+                        parent_id="cognitive_loop",
+                        depth=0,
+                        max_depth=3,
+                    )
+
+                    result = ""
+                    try:
+                        async for event in self._subagent_manager.invoke_stream(subagent_type, request, context):
+                            if event.event_type == SubagentEventType.SUBAGENT_END:
+                                result = event.detail or event.summary or ""
+                            elif event.event_type == SubagentEventType.SUBAGENT_ERROR:
+                                result = f"Error: {event.error_message}"
+
+                        observation = {
+                            "action": "subagent_call",
+                            "subagent_type": subagent_type,
+                            "task": subagent_task,
+                            "result": result,
+                            "success": True,
+                        }
+                    except Exception as e:
+                        logger.error(f"Subagent invocation failed: {e}", exc_info=True)
+                        observation = {
+                            "action": "subagent_call",
+                            "subagent_type": subagent_type,
+                            "task": subagent_task,
+                            "result": f"Subagent error: {e}",
+                            "success": False,
+                        }
 
             elif decision.action == DecisionAction.MEMORY_UPDATE:
                 # Update memory with new information
@@ -344,7 +466,36 @@ class CognitiveLoop:
     def stop(self) -> None:
         """Stop the cognitive loop."""
         self._running = False
+        # Also resume if paused, so the loop can exit
+        self._pause_event.set()
         logger.info("Cognitive loop stop requested")
+
+    def pause(self) -> None:
+        """Pause the cognitive loop after current tick completes (RFC-1005)."""
+        self._paused = True
+        self._pause_event.clear()
+        logger.info("Cognitive loop paused")
+
+    def resume(self) -> None:
+        """Resume the paused cognitive loop (RFC-1005)."""
+        self._paused = False
+        self._pause_event.set()
+        logger.info("Cognitive loop resumed")
+
+    @property
+    def is_paused(self) -> bool:
+        """Check if the cognitive loop is paused."""
+        return self._paused
+
+    @property
+    def is_running(self) -> bool:
+        """Check if the cognitive loop is running."""
+        return self._running
+
+    @property
+    def metrics(self) -> CognitiveLoopMetrics:
+        """Get cognitive loop metrics (RFC-1005)."""
+        return self._metrics
 
     @property
     def current_goal(self) -> Goal | None:

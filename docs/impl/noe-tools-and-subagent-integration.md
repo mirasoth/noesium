@@ -78,7 +78,7 @@ async for event in agent.astream_progress("Summarize example.com", subagent_name
 
 ### 1.4 TUI
 
-Prefix the message with numbers: `2` = Browser, `3` = Research, `4` = Claude. Use space or comma for multiple (e.g. `2 3 message` or `2,3 message`). System slash commands (`/help`, `/exit`) are unchanged.
+Prefix the message with numbers: `2` = Browser, `3` = Research, `4` = Coding. Use space or comma for multiple (e.g. `2 3 message` or `2,3 message`). System slash commands (`/help`, `/exit`) are unchanged.
 
 ```
 noe|agent> 2 3 Latest AI developments

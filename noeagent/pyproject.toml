@@ -42,6 +42,9 @@ noeagent = "noeagent.__main__:main"
 all = [
     "noesium[all]",
 ]
+autonomous = [
+    "watchdog>=3.0.0",
+]
 dev = [
     "pytest>=8.2,<9",
     "pytest-cov>=4.0.0",
@@ -50,6 +53,7 @@ dev = [
     "isort>=5.12.0",
     "mypy>=1.10.0",
     "ruff>=0.8.0",
+    "watchdog>=3.0.0",
 ]
 
 [project.urls]

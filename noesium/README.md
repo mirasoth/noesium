@@ -335,8 +335,8 @@ make lint       # Run linters
 
 ## Documentation
 
-- **[Quick Guide](../docs/quick_guide_noesium.md)** - Get started quickly
-- **[Developer Guide](../docs/dev_guide.md)** - Framework development
+- **[Quick Guide](../docs/user_guides/quick_guide_noesium.md)** - Get started quickly
+- **[Developer Guide](../docs/user_guides/dev_guide.md)** - Framework development
 - **[Specifications](../docs/specs/)** - Technical RFCs
 - **[Examples](../examples/)** - Usage examples
 

@@ -273,10 +273,11 @@ noesium/
 │   └── workflows/
 │       └── ci.yml               # CI/CD pipeline
 ├── docs/
-│   ├── quick_guide_noesium.md   # Framework guide
-│   ├── quick_guide_noeagent.md  # NoeAgent guide
-│   ├── quick_guide_voyager.md   # Voyager guide
-│   ├── dev_guide.md             # Development guide
+│   ├── user_guides/             # User guides
+│   │   ├── quick_guide_noesium.md
+│   │   ├── quick_guide_noeagent.md
+│   │   ├── quick_guide_voyager.md
+│   │   └── dev_guide.md
 │   └── specs/                   # Specifications
 ├── examples/                     # Usage examples
 ├── noesium/                      # Framework package
@@ -320,11 +321,11 @@ export SERPER_API_KEY="..."            # Web search
 
 ## Documentation
 
-- **[Quick Start Guides](docs/)**:
-  - [Noesium Framework](docs/quick_guide_noesium.md)
-  - [NoeAgent](docs/quick_guide_noeagent.md)
-  - [Voyager](docs/quick_guide_voyager.md)
-- **[Development Guide](docs/dev_guide.md)** - Framework development
+- **[Quick Start Guides](docs/user_guides/)**:
+  - [Noesium Framework](docs/user_guides/quick_guide_noesium.md)
+  - [NoeAgent](docs/user_guides/quick_guide_noeagent.md)
+  - [Voyager](docs/user_guides/quick_guide_voyager.md)
+- **[Development Guide](docs/user_guides/dev_guide.md)** - Framework development
 - **[AGENTS.md](AGENTS.md)** - AI agent development guide
 - **[Specifications](docs/specs/)** - Technical specifications
 - **[Examples](examples/)** - Usage examples

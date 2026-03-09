@@ -27,14 +27,17 @@ Comprehensive guide for users and developers of the Noesium cognitive agentic fr
     - [Structured Output](#structured-output)
     - [Multi-Agent Coordination](#multi-agent-coordination)
     - [Durable Execution](#durable-execution)
+  - [Error Handling](#error-handling)
+    - [Exception Hierarchy](#exception-hierarchy)
+    - [Content Policy Errors](#content-policy-errors)
   - [Best Practices](#best-practices)
     - [Agent Design](#agent-design)
-    - [Error Handling](#error-handling)
     - [Performance](#performance)
   - [Troubleshooting](#troubleshooting)
     - [Common Issues](#common-issues)
     - [Debugging](#debugging)
     - [Support](#support)
+  - [Next Steps](#next-steps)
 
 ---
 
@@ -111,7 +114,7 @@ result = await agent.run("Navigate to example.com and extract content")
 
 #### TacitusAgent
 
-Advanced research agent with iterative refinement:
+Advanced research agent with iterative refinement and graceful error handling:
 
 ```python
 from noesium.subagents.tacitus.agent import TacitusAgent
@@ -119,6 +122,8 @@ from noesium.subagents.tacitus.agent import TacitusAgent
 agent = TacitusAgent(max_research_loops=3, number_of_initial_queries=2)
 result = await agent.research("Latest developments in renewable energy")
 ```
+
+The TacitusAgent handles content policy errors gracefully, providing informative messages instead of crashing when LLM providers reject content.
 
 ### Environment Configuration
 
@@ -286,6 +291,71 @@ Agents support crash recovery and resumable execution:
 
 ---
 
+## Error Handling
+
+### Exception Hierarchy
+
+Noesium provides a structured exception hierarchy for proper error handling:
+
+```
+NoesiumError (base)
+├── EventError
+│   ├── EventValidationError
+│   └── EventStoreError
+├── KernelError
+│   ├── NodeExecutionError
+│   └── CheckpointError
+├── ProjectionError
+│   └── ProjectionVersionError
+├── CapabilityError
+│   └── CapabilityNotFoundError
+├── MemoryError
+│   ├── ProviderNotFoundError
+│   ├── ProviderReadOnlyError
+│   └── RecallError
+├── ToolError
+│   ├── ToolNotFoundError
+│   ├── ToolExecutionError
+│   ├── ToolTimeoutError
+│   ├── ToolPermissionError
+│   └── SkillNotFoundError
+├── LLMError
+│   └── ContentPolicyError
+└── Noer
+    ├── PlanningError
+    ├── ModeError
+    └── IterationLimitError
+```
+
+### Content Policy Errors
+
+When an LLM provider rejects content due to policy violations, a `ContentPolicyError` is raised:
+
+```python
+from noesium.core.exceptions import ContentPolicyError
+from noesium.core.llm import get_llm_client
+
+client = get_llm_client(provider="openai")
+
+try:
+    response = client.completion([{"role": "user", "content": "..."}])
+except ContentPolicyError as e:
+    print(f"Content blocked by {e.provider}")
+    print(f"Original error: {e.original_error}")
+    # Handle gracefully - provide user feedback or alternative approach
+```
+
+**Key attributes:**
+- `provider`: The LLM provider that rejected the content (e.g., "Dashscope/Alibaba Cloud", "OpenAI")
+- `original_error`: The original exception from the provider
+
+**Built-in agents handle this gracefully:**
+- TacitusAgent returns informative messages instead of crashing
+- Research workflows continue with available data
+- Users receive actionable suggestions for resolving the issue
+
+---
+
 ## Best Practices
 
 ### Agent Design
@@ -294,12 +364,7 @@ Agents support crash recovery and resumable execution:
 - **Event-driven**: Use events for all state changes and coordination
 - **Immutable state**: Derive state from event projections, not direct mutation
 - **Capability declaration**: Subscribe to topics that match your agent's abilities
-
-### Error Handling
-
-- **Graceful degradation**: Handle missing dependencies gracefully
-- **Retry semantics**: Implement exponential backoff for transient failures
-- **Circuit breakers**: Prevent cascading failures in distributed systems
+- **Graceful error handling**: Catch and handle `ContentPolicyError` appropriately
 
 ### Performance
 
@@ -316,6 +381,12 @@ Agents support crash recovery and resumable execution:
 **LLM Provider Configuration**
 - Ensure the correct provider is set in `NOE_LLM_PROVIDER`
 - Verify API keys are properly configured as environment variables
+
+**Content Policy Violations**
+- Some LLM providers (e.g., Dashscope/Alibaba Cloud) have strict content policies
+- Rephrase queries in neutral terms if blocked
+- Consider switching to a different provider for sensitive topics
+- Built-in agents handle these errors gracefully with informative messages
 
 **Toolkit Activation**
 - Check that required dependencies are installed (`noesium[tools]`)
@@ -339,7 +410,14 @@ configure_logging(level="DEBUG")
 
 ### Support
 
-- **Documentation**: See [AGENTS.md](../AGENTS.md) for detailed documentation
+- **Documentation**: See [AGENTS.md](../../AGENTS.md) for detailed documentation
 - **Specifications**: Review RFCs in the [`specs/`](../specs/) directory
-- **Examples**: Run examples from the [`examples/`](../examples/) directory
+- **Examples**: Run examples from the [`examples/`](../../examples/) directory
 - **Issues**: Report problems at the [GitHub repository](https://github.com/mirasoth/noesium)
+
+## Next Steps
+
+- **[NoeAgent Guide](quick_guide_noeagent.md)**: Learn about NoeAgent
+- **[Voyager Guide](quick_guide_voyager.md)**: 24/7 companion app
+- **[Developer Guide](dev_guide.md)**: Detailed framework development
+- **[Examples](../../examples/)**: Real-world usage examples

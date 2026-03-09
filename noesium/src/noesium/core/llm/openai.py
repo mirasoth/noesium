@@ -35,6 +35,7 @@ except ImportError:
     OpenAI = None
     OPENAI_AVAILABLE = False
 
+from noesium.core.exceptions import ContentPolicyError
 from noesium.core.llm.base import BaseLLMClient
 from noesium.core.tracing import (
     configure_opik,
@@ -167,6 +168,26 @@ class LLMClient(BaseLLMClient):
             return True
         return False
 
+    def _get_content_filter_provider(self, e: Exception) -> str:
+        """Identify the LLM provider from the content filter error message."""
+        error_str = str(e).lower()
+        if "data_inspection_failed" in error_str:
+            return "Dashscope/Alibaba Cloud"
+        if "content_filter" in error_str:
+            return "OpenAI"
+        if "dashscope" in error_str:
+            return "Dashscope/Alibaba Cloud"
+        return "the LLM provider"
+
+    def _raise_content_policy_error(self, e: Exception) -> None:
+        """Raise a ContentPolicyError with provider information."""
+        provider = self._get_content_filter_provider(e)
+        raise ContentPolicyError(
+            message=str(e),
+            provider=provider,
+            original_error=e,
+        )
+
     def _extract_max_tokens_upper_limit(self, e: Exception, default: int = 65536) -> int:
         """Parse the upper bound from a max_tokens range error message, e.g. '[1, 65536]'."""
         match = re.search(r"\[(\d+),\s*(\d+)\]", str(e))
@@ -220,7 +241,7 @@ class LLMClient(BaseLLMClient):
             # Content filter errors are non-retryable
             if self._is_content_filter_error(e):
                 logger.error(f"Content policy violation (non-retryable): {e}")
-                raise
+                self._raise_content_policy_error(e)
             if self._is_max_tokens_range_error(e):
                 capped = self._extract_max_tokens_upper_limit(e)
                 logger.warning(f"max_tokens value out of range, capping to {capped} and retrying")
@@ -309,7 +330,7 @@ class LLMClient(BaseLLMClient):
                 # Content filter errors are non-retryable - skip the loop
                 if self._is_content_filter_error(e):
                     logger.error(f"Content policy violation in structured completion (non-retryable): {e}")
-                    raise
+                    self._raise_content_policy_error(e)
                 if self._is_max_tokens_range_error(e):
                     capped = self._extract_max_tokens_upper_limit(e)
                     logger.warning(f"max_tokens value out of range, capping to {capped} and retrying")

@@ -9,8 +9,10 @@ from typing import TYPE_CHECKING, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .event_system import AutonomousEvent
+
 if TYPE_CHECKING:
-    from .event_system import AutonomousEvent
+    pass
 
 
 class Trigger(BaseModel):
@@ -39,6 +41,7 @@ class Trigger(BaseModel):
         exclude=True,  # Exclude from serialization
     )
     goal_template: str = Field(
+        default="Process event",
         description="Goal description template. Use {field} to substitute from event.payload",
     )
     priority: int = Field(ge=0, le=100, default=50, description="Priority for created goals")

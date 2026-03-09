@@ -124,9 +124,9 @@ NoeAgent is built on the Noesium framework and leverages:
 
 ## Documentation
 
-- [User Guide](../docs/noeagent_guide.md) - Comprehensive usage documentation
+- [User Guide](../docs/user_guides/quick_guide_noeagent.md) - Comprehensive usage documentation
 - [Configuration Guide](../docs/toolkit_configuration_guide.md) - Detailed configuration options
-- [Developer Guide](../docs/dev_guide.md) - Framework development guide
+- [Developer Guide](../docs/user_guides/dev_guide.md) - Framework development guide
 
 ## Examples
 

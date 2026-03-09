@@ -19,6 +19,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# Try to import watchdog for native file system events (RFC-1007)
+try:
+    from watchdog.events import FileSystemEventHandler
+    from watchdog.observers import Observer
+
+    WATCHDOG_AVAILABLE = True
+except ImportError:
+    WATCHDOG_AVAILABLE = False
+    Observer = None
+    FileSystemEventHandler = object  # type: ignore
+
+
 class TimerEventSource:
     """Timer-based event source (RFC-1007 Section 7.1).
 
@@ -221,3 +233,164 @@ class WebhookEventSource:
         logger.info(f"Received webhook event {event.id[:8]}: {type} from {source}")
 
         return event
+
+
+class _WatchdogEventHandler(FileSystemEventHandler):
+    """Internal handler for watchdog events (RFC-1007)."""
+
+    def __init__(self, event_bus: EventBus):
+        """Initialize handler.
+
+        Args:
+            event_bus: Event bus to dispatch events to
+        """
+        super().__init__()
+        self.event_bus = event_bus
+
+    def _emit(self, action: str, path: str) -> None:
+        """Emit filesystem event to event bus."""
+        event = AutonomousEvent(
+            type="filesystem.change",
+            source="watchdog",
+            payload={"path": path, "action": action},
+        )
+        self.event_bus.dispatch(event)
+        logger.debug(f"Watchdog event: {action} {path}")
+
+    def on_created(self, event: Any) -> None:
+        """Handle file/directory creation."""
+        if not event.is_directory:
+            self._emit("create", event.src_path)
+
+    def on_deleted(self, event: Any) -> None:
+        """Handle file/directory deletion."""
+        if not event.is_directory:
+            self._emit("delete", event.src_path)
+
+    def on_modified(self, event: Any) -> None:
+        """Handle file/directory modification."""
+        if not event.is_directory:
+            self._emit("modify", event.src_path)
+
+    def on_moved(self, event: Any) -> None:
+        """Handle file/directory move/rename."""
+        if not event.is_directory:
+            self._emit("move", event.dest_path)
+
+
+class WatchdogFileSystemEventSource:
+    """Native file system watcher using watchdog library (RFC-1007 Section 7.2).
+
+    Uses native OS file system events (inotify on Linux, FSEvents on macOS,
+    ReadDirectoryChangesW on Windows) for efficient file monitoring.
+
+    Requires the watchdog package: pip install watchdog
+
+    Example:
+        watcher = WatchdogFileSystemEventSource(
+            event_bus=event_bus,
+            watch_path="/path/to/watch",
+            recursive=True,
+        )
+        await watcher.start()
+    """
+
+    def __init__(
+        self,
+        event_bus: EventBus,
+        watch_path: str,
+        recursive: bool = True,
+    ):
+        """Initialize watchdog event source.
+
+        Args:
+            event_bus: Event bus for emitting events
+            watch_path: Directory path to monitor
+            recursive: Whether to monitor subdirectories (default: True)
+
+        Raises:
+            ImportError: If watchdog package is not installed
+        """
+        if not WATCHDOG_AVAILABLE:
+            raise ImportError(
+                "watchdog package required for WatchdogFileSystemEventSource. " "Install with: pip install watchdog"
+            )
+
+        self.event_bus = event_bus
+        self.watch_path = Path(watch_path)
+        self.recursive = recursive
+        self._observer: Any = None
+        self._running = False
+
+    async def start(self) -> None:
+        """Start watching file system using native events."""
+        if not self.watch_path.exists():
+            logger.warning(f"Watch path does not exist: {self.watch_path}")
+            return
+
+        handler = _WatchdogEventHandler(self.event_bus)
+        self._observer = Observer()
+        self._observer.schedule(handler, str(self.watch_path), recursive=self.recursive)
+        self._observer.start()
+        self._running = True
+
+        logger.info(
+            f"WatchdogFileSystemEventSource started: watching {self.watch_path} " f"(recursive={self.recursive})"
+        )
+
+    def stop(self) -> None:
+        """Stop watching file system."""
+        self._running = False
+        if self._observer:
+            self._observer.stop()
+            self._observer.join(timeout=5)
+            self._observer = None
+
+        logger.info("WatchdogFileSystemEventSource stopped")
+
+    @property
+    def is_running(self) -> bool:
+        """Check if the watcher is running."""
+        return self._running
+
+
+def get_filesystem_event_source(
+    event_bus: EventBus,
+    watch_path: str,
+    prefer_watchdog: bool = True,
+    poll_interval: int = 5,
+    recursive: bool = True,
+) -> FileSystemEventSource | WatchdogFileSystemEventSource:
+    """Factory function to get the best available filesystem event source (RFC-1007).
+
+    Returns WatchdogFileSystemEventSource if watchdog is available and preferred,
+    otherwise falls back to polling-based FileSystemEventSource.
+
+    Args:
+        event_bus: Event bus for emitting events
+        watch_path: Directory path to monitor
+        prefer_watchdog: Prefer watchdog if available (default: True)
+        poll_interval: Polling interval for fallback (default: 5 seconds)
+        recursive: Monitor subdirectories (default: True)
+
+    Returns:
+        FileSystemEventSource or WatchdogFileSystemEventSource instance
+    """
+    if prefer_watchdog and WATCHDOG_AVAILABLE:
+        logger.info("Using watchdog-based file system monitoring")
+        return WatchdogFileSystemEventSource(
+            event_bus=event_bus,
+            watch_path=watch_path,
+            recursive=recursive,
+        )
+    else:
+        if prefer_watchdog:
+            logger.info(
+                "watchdog not available, falling back to polling-based monitoring. "
+                "Install watchdog for better performance: pip install watchdog"
+            )
+        return FileSystemEventSource(
+            event_bus=event_bus,
+            watch_path=watch_path,
+            poll_interval=poll_interval,
+        )

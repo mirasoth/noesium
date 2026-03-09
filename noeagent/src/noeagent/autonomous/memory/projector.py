@@ -6,7 +6,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from noeagent.autonomous.goal_engine.models import Goal
+    from noeagent.autonomous.goal_engine import Goal
 
     from noesium.core.memory.provider_manager import ProviderMemoryManager
 
