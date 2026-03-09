@@ -64,7 +64,7 @@ langchain = [
 agents = ["noesium[langchain]", "bubus>=1.5.6"]
 
 # Database & Vector Stores
-postgres = ["psycopg2-binary>=2.9.0", "psycopg2>=2.9.10"] # Use binary for easier install
+postgres = ["psycopg2-binary>=2.9.0"]
 weaviate = ["weaviate-client>=4,<5", "protobuf>=5,<6"]
 
 # Data Science Tools
