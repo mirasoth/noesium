@@ -83,7 +83,9 @@ class LLMClient(BaseLLMClient):
             **kwargs: Additional arguments
         """
         if not LITELLM_AVAILABLE:
-            raise ImportError("LiteLLM package is not installed. Install it with: pip install 'noesium[litellm]'")
+            raise ImportError(
+                "LiteLLM package is not installed. Install it with: pip install 'noesium[litellm]'"
+            )
 
         super().__init__(**kwargs)
         # Configure Opik tracing for observability only if enabled
@@ -105,14 +107,20 @@ class LLMClient(BaseLLMClient):
 
         # Model configurations
         self.chat_model = chat_model or os.getenv("LITELLM_CHAT_MODEL", "gpt-3.5-turbo")
-        self.vision_model = vision_model or os.getenv("LITELLM_VISION_MODEL", "gpt-4-vision-preview")
-        self.embed_model = embed_model or os.getenv("LITELLM_EMBED_MODEL", "text-embedding-ada-002")
+        self.vision_model = vision_model or os.getenv(
+            "LITELLM_VISION_MODEL", "gpt-4-vision-preview"
+        )
+        self.embed_model = embed_model or os.getenv(
+            "LITELLM_EMBED_MODEL", "text-embedding-ada-002"
+        )
 
         # Initialize instructor if requested
         self.instructor = None
         if instructor:
             if not INSTRUCTOR_AVAILABLE:
-                logger.warning("Instructor package not available, structured completion will not work")
+                logger.warning(
+                    "Instructor package not available, structured completion will not work"
+                )
             else:
                 try:
                     from openai import OpenAI
@@ -129,7 +137,9 @@ class LLMClient(BaseLLMClient):
                         mode=Mode.JSON,
                     )
                 except ImportError:
-                    logger.warning("OpenAI package not available, structured completion will not work")
+                    logger.warning(
+                        "OpenAI package not available, structured completion will not work"
+                    )
 
         # Configure LiteLLM settings
         litellm.drop_params = True  # Drop unsupported parameters
@@ -237,14 +247,22 @@ class LLMClient(BaseLLMClient):
 
                         usage = TokenUsage(**usage_data)
                         get_token_tracker().record_usage(usage)
-                        logger.debug(f"Token usage for completion: {usage.total_tokens} tokens")
+                        logger.debug(
+                            f"Token usage for completion: {usage.total_tokens} tokens"
+                        )
                     else:
                         # Fallback to estimation
-                        prompt_text = "\n".join([msg.get("content", "") for msg in messages])
+                        prompt_text = "\n".join(
+                            [msg.get("content", "") for msg in messages]
+                        )
                         completion_text = response.choices[0].message.content
-                        usage = estimate_token_usage(prompt_text, completion_text, self.chat_model, "completion")
+                        usage = estimate_token_usage(
+                            prompt_text, completion_text, self.chat_model, "completion"
+                        )
                         get_token_tracker().record_usage(usage)
-                        logger.debug(f"Estimated token usage for completion: {usage.total_tokens} tokens")
+                        logger.debug(
+                            f"Estimated token usage for completion: {usage.total_tokens} tokens"
+                        )
                 except Exception as e:
                     logger.debug(f"Could not track token usage: {e}")
 
@@ -285,7 +303,9 @@ class LLMClient(BaseLLMClient):
             Structured response as the specified model type
         """
         if not self.instructor:
-            raise ValueError("Instructor is not enabled. Initialize LLMClient with instructor=True")
+            raise ValueError(
+                "Instructor is not enabled. Initialize LLMClient with instructor=True"
+            )
 
         last_err = None
         for i in range(attempts):
@@ -302,7 +322,9 @@ class LLMClient(BaseLLMClient):
                 if structured_messages and structured_messages[-1]["role"] == "user":
                     structured_messages[-1]["content"] += f"\n\n{schema_prompt}"
                 else:
-                    structured_messages.append({"role": "user", "content": schema_prompt})
+                    structured_messages.append(
+                        {"role": "user", "content": schema_prompt}
+                    )
 
                 if self.debug:
                     logger.debug(f"Structured completion: {structured_messages}")
@@ -312,7 +334,11 @@ class LLMClient(BaseLLMClient):
                     messages=structured_messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    response_format=({"type": "json_object"} if "gpt" in self.chat_model.lower() else None),
+                    response_format=(
+                        {"type": "json_object"}
+                        if "gpt" in self.chat_model.lower()
+                        else None
+                    ),
                     **kwargs,
                 )
 
@@ -325,11 +351,17 @@ class LLMClient(BaseLLMClient):
 
                 # Estimate token usage for logging
                 try:
-                    prompt_text = "\n".join([msg.get("content", "") for msg in structured_messages])
+                    prompt_text = "\n".join(
+                        [msg.get("content", "") for msg in structured_messages]
+                    )
                     completion_text = response_text
-                    usage = estimate_token_usage(prompt_text, completion_text, self.chat_model, "structured")
+                    usage = estimate_token_usage(
+                        prompt_text, completion_text, self.chat_model, "structured"
+                    )
                     get_token_tracker().record_usage(usage)
-                    logger.debug(f"Estimated token usage for structured completion: {usage.total_tokens} tokens")
+                    logger.debug(
+                        f"Estimated token usage for structured completion: {usage.total_tokens} tokens"
+                    )
                 except Exception as e:
                     logger.debug(f"Could not estimate token usage: {e}")
 
@@ -338,7 +370,9 @@ class LLMClient(BaseLLMClient):
             except Exception as e:
                 # Content filter errors are non-retryable - skip the loop
                 if self._is_content_filter_error(e):
-                    logger.error(f"Content policy violation in structured completion (non-retryable): {e}")
+                    logger.error(
+                        f"Content policy violation in structured completion (non-retryable): {e}"
+                    )
                     self._raise_content_policy_error(e)
                 last_err = e
                 if i < attempts - 1:
@@ -394,7 +428,9 @@ class LLMClient(BaseLLMClient):
                         {"type": "text", "text": prompt},
                         {
                             "type": "image_url",
-                            "image_url": {"url": f"data:image/{image_format};base64,{image_base64}"},
+                            "image_url": {
+                                "url": f"data:image/{image_format};base64,{image_base64}"
+                            },
                         },
                     ],
                 }
@@ -414,9 +450,13 @@ class LLMClient(BaseLLMClient):
             # Estimate token usage for logging
             try:
                 completion_text = response.choices[0].message.content
-                usage = estimate_token_usage(prompt, completion_text, self.vision_model, "vision")
+                usage = estimate_token_usage(
+                    prompt, completion_text, self.vision_model, "vision"
+                )
                 get_token_tracker().record_usage(usage)
-                logger.debug(f"Estimated token usage for vision: {usage.total_tokens} tokens")
+                logger.debug(
+                    f"Estimated token usage for vision: {usage.total_tokens} tokens"
+                )
             except Exception as e:
                 logger.debug(f"Could not estimate token usage: {e}")
 
@@ -475,9 +515,13 @@ class LLMClient(BaseLLMClient):
             # Estimate token usage for logging
             try:
                 completion_text = response.choices[0].message.content
-                usage = estimate_token_usage(prompt, completion_text, self.vision_model, "vision")
+                usage = estimate_token_usage(
+                    prompt, completion_text, self.vision_model, "vision"
+                )
                 get_token_tracker().record_usage(usage)
-                logger.debug(f"Estimated token usage for vision: {usage.total_tokens} tokens")
+                logger.debug(
+                    f"Estimated token usage for vision: {usage.total_tokens} tokens"
+                )
             except Exception as e:
                 logger.debug(f"Could not estimate token usage: {e}")
 

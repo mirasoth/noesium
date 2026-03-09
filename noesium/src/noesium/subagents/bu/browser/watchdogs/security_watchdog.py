@@ -36,7 +36,9 @@ class SecurityWatchdog(BaseWatchdog):
         """Check if navigation URL is allowed before navigation starts."""
         # Security check BEFORE navigation
         if not self._is_url_allowed(event.url):
-            self.logger.warning(f"⛔️ Blocking navigation to disallowed URL: {event.url}")
+            self.logger.warning(
+                f"⛔️ Blocking navigation to disallowed URL: {event.url}"
+            )
             self.event_bus.dispatch(
                 BrowserErrorEvent(
                     error_type="NavigationBlocked",
@@ -51,7 +53,9 @@ class SecurityWatchdog(BaseWatchdog):
         """Check if navigated URL is allowed (catches redirects to blocked domains)."""
         # Check if the navigated URL is allowed (in case of redirects)
         if not self._is_url_allowed(event.url):
-            self.logger.warning(f"⛔️ Navigation to non-allowed URL detected: {event.url}")
+            self.logger.warning(
+                f"⛔️ Navigation to non-allowed URL detected: {event.url}"
+            )
 
             # Dispatch browser error
             self.event_bus.dispatch(
@@ -64,13 +68,19 @@ class SecurityWatchdog(BaseWatchdog):
             # Navigate to about:blank to keep session alive
             # Agent will see the error and can continue with other tasks
             try:
-                session = await self.browser_session.get_or_create_cdp_session(target_id=event.target_id)
+                session = await self.browser_session.get_or_create_cdp_session(
+                    target_id=event.target_id
+                )
                 await session.cdp_client.send.Page.navigate(
                     params={"url": "about:blank"}, session_id=session.session_id
                 )
-                self.logger.info(f"⛔️ Navigated to about:blank after blocked URL: {event.url}")
+                self.logger.info(
+                    f"⛔️ Navigated to about:blank after blocked URL: {event.url}"
+                )
             except Exception as e:
-                self.logger.error(f"⛔️ Failed to navigate to about:blank: {type(e).__name__} {e}")
+                self.logger.error(
+                    f"⛔️ Failed to navigate to about:blank: {type(e).__name__} {e}"
+                )
 
     async def on_TabCreatedEvent(self, event: TabCreatedEvent) -> None:
         """Check if new tab URL is allowed."""
@@ -89,9 +99,13 @@ class SecurityWatchdog(BaseWatchdog):
             # Try to close the offending tab
             try:
                 await self.browser_session._cdp_close_page(event.target_id)
-                self.logger.info(f"⛔️ Closed new tab with non-allowed URL: {event.url}")
+                self.logger.info(
+                    f"⛔️ Closed new tab with non-allowed URL: {event.url}"
+                )
             except Exception as e:
-                self.logger.error(f"⛔️ Failed to close new tab with non-allowed URL: {type(e).__name__} {e}")
+                self.logger.error(
+                    f"⛔️ Failed to close new tab with non-allowed URL: {type(e).__name__} {e}"
+                )
 
     def _is_root_domain(self, domain: str) -> bool:
         """Check if a domain is a root domain (no subdomain present).
@@ -228,7 +242,10 @@ class SecurityWatchdog(BaseWatchdog):
             if isinstance(prohibited_domains, set):
                 # Fast path: O(1) exact hostname match - check both www and non-www variants
                 host_variant, host_alt = self._get_domain_variants(host)
-                return host_variant not in prohibited_domains and host_alt not in prohibited_domains
+                return (
+                    host_variant not in prohibited_domains
+                    and host_alt not in prohibited_domains
+                )
             else:
                 # Slow path: O(n) pattern matching for lists
                 for pattern in prohibited_domains:
@@ -279,7 +296,10 @@ class SecurityWatchdog(BaseWatchdog):
                 if host.lower() == pattern.lower():
                     return True
                 # If pattern is a root domain, also check www subdomain
-                if self._is_root_domain(pattern) and host.lower() == f"www.{pattern.lower()}":
+                if (
+                    self._is_root_domain(pattern)
+                    and host.lower() == f"www.{pattern.lower()}"
+                ):
                     return True
 
         return False

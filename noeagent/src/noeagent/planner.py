@@ -125,7 +125,9 @@ class TaskPlanner:
         feedback: str,
         completed_results: list[str],
     ) -> TaskPlan:
-        original_steps = "\n".join(f"  {i + 1}. [{s.status}] {s.description}" for i, s in enumerate(plan.steps))
+        original_steps = "\n".join(
+            f"  {i + 1}. [{s.status}] {s.description}" for i, s in enumerate(plan.steps)
+        )
         pm = get_prompt_manager()
         prompt = pm.render(
             "revise_plan",
@@ -157,7 +159,11 @@ class TaskPlanner:
             end = text.rindex("}") + 1
             data = json.loads(text[start:end])
         except (ValueError, json.JSONDecodeError):
-            lines = [line.strip().lstrip("0123456789.-) ") for line in text.splitlines() if line.strip()]
+            lines = [
+                line.strip().lstrip("0123456789.-) ")
+                for line in text.splitlines()
+                if line.strip()
+            ]
             return [TaskStep(description=line) for line in lines if line]
         steps_raw = data.get("steps", [])
         result: list[TaskStep] = []

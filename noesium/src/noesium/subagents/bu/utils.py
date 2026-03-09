@@ -44,7 +44,11 @@ def _get_openai_bad_request_error() -> type | None:
             _openai_bad_request_error = BadRequestError
         except ImportError:
             _openai_bad_request_error = _IMPORT_NOT_FOUND
-    return _openai_bad_request_error if _openai_bad_request_error is not _IMPORT_NOT_FOUND else None
+    return (
+        _openai_bad_request_error
+        if _openai_bad_request_error is not _IMPORT_NOT_FOUND
+        else None
+    )
 
 
 def _get_groq_bad_request_error() -> type | None:
@@ -57,7 +61,11 @@ def _get_groq_bad_request_error() -> type | None:
             _groq_bad_request_error = BadRequestError
         except ImportError:
             _groq_bad_request_error = _IMPORT_NOT_FOUND
-    return _groq_bad_request_error if _groq_bad_request_error is not _IMPORT_NOT_FOUND else None
+    return (
+        _groq_bad_request_error
+        if _groq_bad_request_error is not _IMPORT_NOT_FOUND
+        else None
+    )
 
 
 # Global flag to prevent duplicate exit messages
@@ -142,7 +150,9 @@ class SignalHandler:
                         self.custom_exit_callback()
                     os._exit(0)
 
-                self.original_sigint_handler = signal.signal(signal.SIGINT, windows_handler)
+                self.original_sigint_handler = signal.signal(
+                    signal.SIGINT, windows_handler
+                )
             else:
                 # On Unix-like systems, use asyncio's signal handling for smoother experience
                 self.original_sigint_handler = self.loop.add_signal_handler(
@@ -211,7 +221,9 @@ class SignalHandler:
         print("\033[0m", end="", flush=True)  # Reset text attributes
 
         # Disable special input modes that may cause arrow keys to output control chars
-        print("\033[?1l", end="", flush=True, file=stderr)  # Reset cursor keys to normal mode
+        print(
+            "\033[?1l", end="", flush=True, file=stderr
+        )  # Reset cursor keys to normal mode
         print("\033[?1l", end="", flush=True)  # Reset cursor keys to normal mode
 
         # Disable bracketed paste mode
@@ -294,16 +306,26 @@ class SignalHandler:
             if task != current_task and not task.done():
                 task_name = task.get_name() if hasattr(task, "get_name") else str(task)
                 # Cancel tasks that match certain patterns
-                if any(pattern in task_name for pattern in self.interruptible_task_patterns):
+                if any(
+                    pattern in task_name for pattern in self.interruptible_task_patterns
+                ):
                     logger.debug(f"Cancelling task: {task_name}")
                     task.cancel()
                     # Add exception handler to silence "Task exception was never retrieved" warnings
-                    task.add_done_callback(lambda t: t.exception() if t.cancelled() else None)
+                    task.add_done_callback(
+                        lambda t: t.exception() if t.cancelled() else None
+                    )
 
         # Also cancel the current task if it's interruptible
         if current_task and not current_task.done():
-            task_name = current_task.get_name() if hasattr(current_task, "get_name") else str(current_task)
-            if any(pattern in task_name for pattern in self.interruptible_task_patterns):
+            task_name = (
+                current_task.get_name()
+                if hasattr(current_task, "get_name")
+                else str(current_task)
+            )
+            if any(
+                pattern in task_name for pattern in self.interruptible_task_patterns
+            ):
                 logger.debug(f"Cancelling current task: {task_name}")
                 current_task.cancel()
 
@@ -386,7 +408,9 @@ def time_execution_sync(
                     logger = getattr(kwargs["browser_session"], "logger")
                 else:
                     logger = logging.getLogger(__name__)
-                logger.debug(f'⏳ {additional_text.strip("-")}() took {execution_time:.2f}s')
+                logger.debug(
+                    f'⏳ {additional_text.strip("-")}() took {execution_time:.2f}s'
+                )
             return result
 
         return wrapper
@@ -396,7 +420,9 @@ def time_execution_sync(
 
 def time_execution_async(
     additional_text: str = "",
-) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
+) -> Callable[
+    [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
+]:
     def decorator(
         func: Callable[P, Coroutine[Any, Any, R]],
     ) -> Callable[P, Coroutine[Any, Any, R]]:
@@ -417,7 +443,9 @@ def time_execution_async(
                     logger = getattr(kwargs["browser_session"], "logger")
                 else:
                     logger = logging.getLogger(__name__)
-                logger.debug(f'⏳ {additional_text.strip("-")}() took {execution_time:.2f}s')
+                logger.debug(
+                    f'⏳ {additional_text.strip("-")}() took {execution_time:.2f}s'
+                )
             return result
 
         return wrapper
@@ -481,7 +509,9 @@ def is_new_tab_page(url: str) -> bool:
     )
 
 
-def match_url_with_domain_pattern(url: str, domain_pattern: str, log_warnings: bool = False) -> bool:
+def match_url_with_domain_pattern(
+    url: str, domain_pattern: str, log_warnings: bool = False
+) -> bool:
     """
     Check if a URL matches a domain pattern. SECURITY CRITICAL.
 
@@ -548,14 +578,18 @@ def match_url_with_domain_pattern(url: str, domain_pattern: str, log_warnings: b
             if pattern_domain.count("*.") > 1 or pattern_domain.count(".*") > 1:
                 if log_warnings:
                     logger = logging.getLogger(__name__)
-                    logger.error(f"⛔️ Multiple wildcards in pattern=[{domain_pattern}] are not supported")
+                    logger.error(
+                        f"⛔️ Multiple wildcards in pattern=[{domain_pattern}] are not supported"
+                    )
                 return False  # Don't match unsafe patterns
 
             # Check for wildcards in TLD part (example.*)
             if pattern_domain.endswith(".*"):
                 if log_warnings:
                     logger = logging.getLogger(__name__)
-                    logger.error(f"⛔️ Wildcard TLDs like in pattern=[{domain_pattern}] are not supported for security")
+                    logger.error(
+                        f"⛔️ Wildcard TLDs like in pattern=[{domain_pattern}] are not supported for security"
+                    )
                 return False  # Don't match unsafe patterns
 
             # Then check for embedded wildcards
@@ -563,7 +597,9 @@ def match_url_with_domain_pattern(url: str, domain_pattern: str, log_warnings: b
             if "*" in bare_domain:
                 if log_warnings:
                     logger = logging.getLogger(__name__)
-                    logger.error(f"⛔️ Only *.domain style patterns are supported, ignoring pattern=[{domain_pattern}]")
+                    logger.error(
+                        f"⛔️ Only *.domain style patterns are supported, ignoring pattern=[{domain_pattern}]"
+                    )
                 return False  # Don't match unsafe patterns
 
             # Special handling so that *.google.com also matches bare google.com
@@ -579,7 +615,9 @@ def match_url_with_domain_pattern(url: str, domain_pattern: str, log_warnings: b
         return False
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"⛔️ Error matching URL {url} with pattern {domain_pattern}: {type(e).__name__}: {e}")
+        logger.error(
+            f"⛔️ Error matching URL {url} with pattern {domain_pattern}: {type(e).__name__}: {e}"
+        )
         return False
 
 
@@ -727,7 +765,9 @@ def _log_pretty_path(path: str | Path | None) -> str:
         return f"<{type(path).__name__}>"
 
     # replace home dir and cwd with ~ and .
-    pretty_path = str(path).replace(str(Path.home()), "~").replace(str(Path.cwd().resolve()), ".")
+    pretty_path = (
+        str(path).replace(str(Path.home()), "~").replace(str(Path.cwd().resolve()), ".")
+    )
 
     # wrap in quotes if it contains spaces
     if pretty_path.strip() and " " in pretty_path:
@@ -802,7 +842,9 @@ def create_task_with_error_handling(
         except Exception as e:
             # Catch any other exception during exception handling (e.g., t.exception() itself failing)
             task_name = t.get_name() if hasattr(t, "get_name") else "unnamed"
-            log.error(f"Error handling exception in task [{task_name}]: {type(e).__name__}: {e}")
+            log.error(
+                f"Error handling exception in task [{task_name}]: {type(e).__name__}: {e}"
+            )
 
         # Re-raise outside the try-except block so it propagates to the event loop
         if exc_to_raise is not None:

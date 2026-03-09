@@ -56,7 +56,9 @@ class BashToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # Configuration
-        self.workspace_root = self.config.config.get("workspace_root", get_toolkit_tmp_dir(TOOLKIT_BASH, "workspace"))
+        self.workspace_root = self.config.config.get(
+            "workspace_root", get_toolkit_tmp_dir(TOOLKIT_BASH, "workspace")
+        )
         self.timeout = self.config.config.get("timeout", 60)
         self.max_output_length = self.config.config.get("max_output_length", 10000)
 
@@ -117,18 +119,26 @@ class BashToolkit(AsyncBaseToolkit):
         try:
             import pexpect
         except ImportError:
-            raise ImportError("pexpect is required for bash toolkit. Install with: pip install pexpect")
+            raise ImportError(
+                "pexpect is required for bash toolkit. Install with: pip install pexpect"
+            )
 
         try:
             # Start a new bash shell
-            self.child = pexpect.spawn("/bin/bash", encoding="utf-8", echo=False, timeout=self.timeout)
+            self.child = pexpect.spawn(
+                "/bin/bash", encoding="utf-8", echo=False, timeout=self.timeout
+            )
 
             # Set up a unique prompt for reliable command detection
-            self.custom_prompt = self.config.config.get("custom_prompt", "noesium-bash>> ")
+            self.custom_prompt = self.config.config.get(
+                "custom_prompt", "noesium-bash>> "
+            )
 
             # Configure shell for better interaction
             self.child.sendline("stty -onlcr")  # Disable automatic newline conversion
-            self.child.sendline("unset PROMPT_COMMAND")  # Remove any custom prompt command
+            self.child.sendline(
+                "unset PROMPT_COMMAND"
+            )  # Remove any custom prompt command
             self.child.sendline(f"PS1='{self.custom_prompt}'")  # Set our custom prompt
 
             # Wait for the prompt to appear
@@ -280,9 +290,14 @@ class BashToolkit(AsyncBaseToolkit):
 
             # Limit output length
             if len(result) > self.max_output_length:
-                result = result[: self.max_output_length] + f"\n... (output truncated, {len(result)} total characters)"
+                result = (
+                    result[: self.max_output_length]
+                    + f"\n... (output truncated, {len(result)} total characters)"
+                )
 
-            self.logger.info(f"Command executed successfully, output length: {len(result)}")
+            self.logger.info(
+                f"Command executed successfully, output length: {len(result)}"
+            )
 
             return result
 

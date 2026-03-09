@@ -50,7 +50,9 @@ class MemoryCore:
         self.processing_order = self.config_manager.get_processing_order()
 
         # Initialize file-based storage manager with context (shared by actions)
-        self.storage_manager = MemoryFileManager(memory_dir, agent_id=agent_id, user_id=user_id)
+        self.storage_manager = MemoryFileManager(
+            memory_dir, agent_id=agent_id, user_id=user_id
+        )
         # Initialize memory types from storage manager (includes cluster for this context)
         self.memory_types = self.storage_manager.memory_types
 
@@ -60,16 +62,22 @@ class MemoryCore:
             try:
                 self.embedding_client = create_embedding_client(llm_client)
                 self.embeddings_enabled = True
-                logger.info("Embeddings enabled for semantic retrieval using LLM client")
+                logger.info(
+                    "Embeddings enabled for semantic retrieval using LLM client"
+                )
             except Exception as e:
-                logger.warning(f"Failed to initialize embedding client with LLM client: {e}. Embeddings disabled.")
+                logger.warning(
+                    f"Failed to initialize embedding client with LLM client: {e}. Embeddings disabled."
+                )
                 self.embedding_client = None
                 self.embeddings_enabled = False
         else:
             self.embedding_client = None
             self.embeddings_enabled = False
             if enable_embeddings and not llm_client:
-                logger.warning("Embeddings requested but no LLM client provided. Embeddings disabled.")
+                logger.warning(
+                    "Embeddings requested but no LLM client provided. Embeddings disabled."
+                )
 
         # Create storage directories
         self.embeddings_dir = self.memory_dir / "embeddings"
@@ -198,7 +206,9 @@ class MemoryAgent:
                 logger.info("session date unavaiable, use system datetime")
                 session_date = datetime.now().strftime("%Y-%m-%d")
 
-            logger.info(f"🚀 Starting iterative conversation processing for {character_name}")
+            logger.info(
+                f"🚀 Starting iterative conversation processing for {character_name}"
+            )
 
             # Convert conversation to text for processing
             conversation_text = self._convert_conversation_to_text(conversation)
@@ -264,7 +274,10 @@ Start with step 1 and work through the process systematically. When you complete
                     # Call LLM with function calling enabled
                     response = self.memory_core.llm_client.chat_completion(
                         messages=messages,
-                        tools=[{"type": "function", "function": schema} for schema in function_schemas],
+                        tools=[
+                            {"type": "function", "function": schema}
+                            for schema in function_schemas
+                        ],
                         tool_choice="auto",
                         temperature=0.3,
                     )
@@ -282,7 +295,9 @@ Start with step 1 and work through the process systematically. When you complete
                     # Check if processing is complete
                     if response.content and "PROCESSING_COMPLETE" in response.content:
                         logger.info("✅ LLM indicated processing is complete")
-                        results["processing_log"].append(f"Iteration {iteration + 1}: Processing completed")
+                        results["processing_log"].append(
+                            f"Iteration {iteration + 1}: Processing completed"
+                        )
                         break
 
                     # Handle tool calls if present
@@ -299,17 +314,23 @@ Start with step 1 and work through the process systematically. When you complete
                             except json.JSONDecodeError as e:
                                 logger.error(f"Failed to parse function arguments: {e}")
                                 logger.error(f"Function name: {function_name}")
-                                logger.error(f"Arguments raw: {repr(tool_call.function.arguments)}")
+                                logger.error(
+                                    f"Arguments raw: {repr(tool_call.function.arguments)}"
+                                )
                                 continue
 
                             logger.info(f"🔧 Calling function: {function_name}")
 
                             # Execute the function call
                             time_start = time.time()
-                            function_result = self.call_function(function_name, arguments)
+                            function_result = self.call_function(
+                                function_name, arguments
+                            )
                             time_end = time.time()
 
-                            logger.info(f"    Function time used: {time_end - time_start:.2f} seconds")
+                            logger.info(
+                                f"    Function time used: {time_end - time_start:.2f} seconds"
+                            )
 
                             # Track function call
                             call_record = {
@@ -323,8 +344,12 @@ Start with step 1 and work through the process systematically. When you complete
                             # Add tool result to conversation
                             tool_message = {
                                 "role": "tool",
-                                "tool_call_id": getattr(tool_call, "id", f"call_{iteration}_{function_name}"),
-                                "content": json.dumps(function_result, ensure_ascii=False),
+                                "tool_call_id": getattr(
+                                    tool_call, "id", f"call_{iteration}_{function_name}"
+                                ),
+                                "content": json.dumps(
+                                    function_result, ensure_ascii=False
+                                ),
                             }
                             messages.append(tool_message)
 
@@ -340,19 +365,27 @@ Start with step 1 and work through the process systematically. When you complete
                         # No tool calls, add response and continue
                         messages.append(assistant_message)
                         if response.content:
-                            results["processing_log"].append(f"Iteration {iteration + 1}: {response.content[:100]}...")
+                            results["processing_log"].append(
+                                f"Iteration {iteration + 1}: {response.content[:100]}..."
+                            )
 
                 except Exception as e:
                     logger.error(f"Error in iteration {iteration + 1}: {e}")
-                    results["processing_log"].append(f"Iteration {iteration + 1}: Error - {str(e)}")
+                    results["processing_log"].append(
+                        f"Iteration {iteration + 1}: Error - {str(e)}"
+                    )
                     break
 
             # Finalize results
             if results["iterations"] >= max_iterations:
                 logger.warning(f"⚠️ Reached maximum iterations ({max_iterations})")
-                results["processing_log"].append(f"Reached maximum iterations ({max_iterations})")
+                results["processing_log"].append(
+                    f"Reached maximum iterations ({max_iterations})"
+                )
 
-            logger.info(f"🎉 Conversation processing completed after {results['iterations']} iterations")
+            logger.info(
+                f"🎉 Conversation processing completed after {results['iterations']} iterations"
+            )
             # logger.info(f"📁 Generated {len(results['files_generated'])} files")
             logger.info(f"🔧 Made {len(results['function_calls'])} function calls")
 
@@ -397,10 +430,14 @@ Start with step 1 and work through the process systematically. When you complete
                 schema = action.get_schema()
                 schemas.append(schema)
             except Exception as e:
-                logger.error(f"Failed to get schema for action {action.action_name}: {e}")
+                logger.error(
+                    f"Failed to get schema for action {action.action_name}: {e}"
+                )
         return schemas
 
-    def call_function(self, function_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    def call_function(
+        self, function_name: str, arguments: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Call a memory function with the provided arguments
 
@@ -441,7 +478,9 @@ Start with step 1 and work through the process systematically. When you complete
             traceback.print_exc()
             return error_result
 
-    def validate_function_call(self, function_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_function_call(
+        self, function_name: str, arguments: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Validate a function call before execution
 
@@ -565,7 +604,9 @@ Start with step 1 and work through the process systematically. When you complete
             "embedding_capabilities": {
                 "embeddings_enabled": self.memory_core.embeddings_enabled,
                 "embedding_client": (
-                    str(type(self.memory_core.embedding_client)) if self.memory_core.embedding_client else None
+                    str(type(self.memory_core.embedding_client))
+                    if self.memory_core.embedding_client
+                    else None
                 ),
                 "embeddings_directory": str(self.memory_core.embeddings_dir),
             },

@@ -108,7 +108,9 @@ async def list_files(repo_id: str, path: str = "") -> dict[str, list[dict[str, A
 
 
 @router.get("/{repo_id}/files/{file_path:path}")
-async def get_file_content(repo_id: str, file_path: str, revision: str = "HEAD") -> dict[str, str]:
+async def get_file_content(
+    repo_id: str, file_path: str, revision: str = "HEAD"
+) -> dict[str, str]:
     """Get file content."""
     if state_manager is None or git_client is None:
         raise HTTPException(500, "Server not initialized")
@@ -117,7 +119,9 @@ async def get_file_content(repo_id: str, file_path: str, revision: str = "HEAD")
         raise HTTPException(404, "Repository not found")
 
     try:
-        content = await git_client.get_file_content(Path(repo.local_path), file_path, revision)
+        content = await git_client.get_file_content(
+            Path(repo.local_path), file_path, revision
+        )
         return {"path": file_path, "content": content}
     except Exception as e:
         raise HTTPException(400, f"Failed to read file: {e}")

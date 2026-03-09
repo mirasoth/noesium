@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING, Any
 try:
     from langgraph.graph import END, START, StateGraph
 except ImportError:
-    raise ImportError("Noe requires langgraph. Install it with: uv run pip install langgraph")
+    raise ImportError(
+        "Noe requires langgraph. Install it with: uv run pip install langgraph"
+    )
 
 # Import state types at module level to ensure they're available in globals
 # when LangGraph's get_type_hints() resolves type annotations in nested functions

@@ -50,7 +50,9 @@ class VoyagerConfig(BaseModel):
             host=os.getenv("VOYAGER_HOST", "127.0.0.1"),
             port=int(os.getenv("VOYAGER_PORT", "8000")),
             debug=os.getenv("VOYAGER_DEBUG", "false").lower() == "true",
-            data_root=Path(os.getenv("VOYAGER_DATA_ROOT", str(Path.home() / ".voyager"))),
+            data_root=Path(
+                os.getenv("VOYAGER_DATA_ROOT", str(Path.home() / ".voyager"))
+            ),
             llm_provider=os.getenv("VOYAGER_LLM_PROVIDER", "openai"),
             llm_model=os.getenv("VOYAGER_LLM_MODEL"),
             max_iterations=int(os.getenv("VOYAGER_MAX_ITERATIONS", "25")),
@@ -59,10 +61,13 @@ class VoyagerConfig(BaseModel):
             task_timeout_seconds=int(os.getenv("VOYAGER_TASK_TIMEOUT_SECONDS", "600")),
             default_branch=os.getenv("VOYAGER_DEFAULT_BRANCH", "main"),
             auto_commit=os.getenv("VOYAGER_AUTO_COMMIT", "true").lower() == "true",
-            commit_message_prefix=os.getenv("VOYAGER_COMMIT_MESSAGE_PREFIX", "[Voyager] "),
+            commit_message_prefix=os.getenv(
+                "VOYAGER_COMMIT_MESSAGE_PREFIX", "[Voyager] "
+            ),
             theme=os.getenv("VOYAGER_THEME", "dark"),
             show_thinking=os.getenv("VOYAGER_SHOW_THINKING", "true").lower() == "true",
-            show_tool_details=os.getenv("VOYAGER_SHOW_TOOL_DETAILS", "true").lower() == "true",
+            show_tool_details=os.getenv("VOYAGER_SHOW_TOOL_DETAILS", "true").lower()
+            == "true",
         )
 
     @property

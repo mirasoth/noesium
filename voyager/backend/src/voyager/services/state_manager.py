@@ -92,7 +92,9 @@ class StateManager:
         async with aiofiles.open(path, "a") as f:
             await f.write(event.model_dump_json() + "\n")
 
-    async def get_events(self, task_id: str, limit: int = 100) -> list[ProgressEventData]:
+    async def get_events(
+        self, task_id: str, limit: int = 100
+    ) -> list[ProgressEventData]:
         """Read events from task's event log."""
         path = self.tasks_dir / f"{task_id}-events.jsonl"
         if not path.exists():
@@ -121,7 +123,9 @@ class StateManager:
         repos.append(repo)
 
         async with aiofiles.open(path, "w") as f:
-            await f.write(json.dumps([r.model_dump() for r in repos], indent=2, default=str))
+            await f.write(
+                json.dumps([r.model_dump() for r in repos], indent=2, default=str)
+            )
 
     async def get_repository(self, repo_id: str) -> Repository | None:
         """Get repository by ID."""
@@ -146,7 +150,9 @@ class StateManager:
 
         path = self.data_root / "repositories.json"
         async with aiofiles.open(path, "w") as f:
-            await f.write(json.dumps([r.model_dump() for r in filtered], indent=2, default=str))
+            await f.write(
+                json.dumps([r.model_dump() for r in filtered], indent=2, default=str)
+            )
         return True
 
     # --- Configuration ---

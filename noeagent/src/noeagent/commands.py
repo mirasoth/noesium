@@ -120,7 +120,9 @@ def get_subagent_display_name(technical_name: str) -> str:
     Returns:
         Display name (PascalCase) for the subagent
     """
-    return SUBAGENT_DISPLAY_NAMES.get(technical_name, technical_name.replace("_", " ").title().replace(" ", ""))
+    return SUBAGENT_DISPLAY_NAMES.get(
+        technical_name, technical_name.replace("_", " ").title().replace(" ", "")
+    )
 
 
 def get_subagent_technical_name(display_name: str) -> Optional[str]:
@@ -244,7 +246,9 @@ def inline_command_from_subagent(subagent_name: str, message: str) -> InlineComm
     message = message.strip()
     cmd_type = _SUBAGENT_NAME_TO_COMMAND_TYPE.get(subagent_name)
     if cmd_type is None:
-        raise ValueError(f"Unknown subagent '{subagent_name}'. Known: {list(_SUBAGENT_NAME_TO_COMMAND_TYPE.keys())}")
+        raise ValueError(
+            f"Unknown subagent '{subagent_name}'. Known: {list(_SUBAGENT_NAME_TO_COMMAND_TYPE.keys())}"
+        )
     return InlineCommand(
         command_type=cmd_type,
         subagent_name=subagent_name,

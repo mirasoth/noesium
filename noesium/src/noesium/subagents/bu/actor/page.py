@@ -129,7 +129,9 @@ class Page:
 
         # Enforce arrow function format
         if not (page_function.startswith("(") and "=>" in page_function):
-            raise ValueError(f"JavaScript code must start with (...args) => format. Got: {page_function[:50]}...")
+            raise ValueError(
+                f"JavaScript code must start with (...args) => format. Got: {page_function[:50]}..."
+            )
 
         # Build the expression - call the arrow function with provided args
         if args:
@@ -155,7 +157,9 @@ class Page:
         )
 
         if "exceptionDetails" in result:
-            raise RuntimeError(f'JavaScript evaluation failed: {result["exceptionDetails"]}')
+            raise RuntimeError(
+                f'JavaScript evaluation failed: {result["exceptionDetails"]}'
+            )
 
         value = result.get("result", {}).get("value")
 
@@ -169,7 +173,9 @@ class Page:
             import json
 
             try:
-                return json.dumps(value) if isinstance(value, (dict, list)) else str(value)
+                return (
+                    json.dumps(value) if isinstance(value, (dict, list)) else str(value)
+                )
             except (TypeError, ValueError):
                 return str(value)
 
@@ -182,7 +188,9 @@ class Page:
         # Only fix the most common and safe issues:
 
         # 1. Remove obvious Python string wrapper quotes if they exist
-        if (js_code.startswith('"') and js_code.endswith('"')) or (js_code.startswith("'") and js_code.endswith("'")):
+        if (js_code.startswith('"') and js_code.endswith('"')) or (
+            js_code.startswith("'") and js_code.endswith("'")
+        ):
             # Check if it's a wrapped string (not part of JS syntax)
             inner = js_code[1:-1]
             if inner.count('"') + inner.count("'") == 0 or "() =>" in inner:
@@ -221,7 +229,9 @@ class Page:
         if quality is not None and format.lower() == "jpeg":
             params["quality"] = quality
 
-        result = await self._client.send.Page.captureScreenshot(params, session_id=session_id)
+        result = await self._client.send.Page.captureScreenshot(
+            params, session_id=session_id
+        )
 
         return result["data"]
 
@@ -251,7 +261,9 @@ class Page:
                 }
                 if vk_code is not None:
                     params["windowsVirtualKeyCode"] = vk_code
-                await self._client.send.Input.dispatchKeyEvent(params, session_id=session_id)
+                await self._client.send.Input.dispatchKeyEvent(
+                    params, session_id=session_id
+                )
 
             # Press main key with modifiers bitmask
             main_code, main_vk_code = get_key_info(main_key)
@@ -263,7 +275,9 @@ class Page:
             }
             if main_vk_code is not None:
                 main_down_params["windowsVirtualKeyCode"] = main_vk_code
-            await self._client.send.Input.dispatchKeyEvent(main_down_params, session_id=session_id)
+            await self._client.send.Input.dispatchKeyEvent(
+                main_down_params, session_id=session_id
+            )
 
             main_up_params: "DispatchKeyEventParameters" = {
                 "type": "keyUp",
@@ -273,7 +287,9 @@ class Page:
             }
             if main_vk_code is not None:
                 main_up_params["windowsVirtualKeyCode"] = main_vk_code
-            await self._client.send.Input.dispatchKeyEvent(main_up_params, session_id=session_id)
+            await self._client.send.Input.dispatchKeyEvent(
+                main_up_params, session_id=session_id
+            )
 
             # Release modifier keys
             for mod in reversed(modifiers):
@@ -285,7 +301,9 @@ class Page:
                 }
                 if vk_code is not None:
                     release_params["windowsVirtualKeyCode"] = vk_code
-                await self._client.send.Input.dispatchKeyEvent(release_params, session_id=session_id)
+                await self._client.send.Input.dispatchKeyEvent(
+                    release_params, session_id=session_id
+                )
         else:
             # Simple key press
             code, vk_code = get_key_info(key)
@@ -296,7 +314,9 @@ class Page:
             }
             if vk_code is not None:
                 key_down_params["windowsVirtualKeyCode"] = vk_code
-            await self._client.send.Input.dispatchKeyEvent(key_down_params, session_id=session_id)
+            await self._client.send.Input.dispatchKeyEvent(
+                key_down_params, session_id=session_id
+            )
 
             key_up_params: "DispatchKeyEventParameters" = {
                 "type": "keyUp",
@@ -305,7 +325,9 @@ class Page:
             }
             if vk_code is not None:
                 key_up_params["windowsVirtualKeyCode"] = vk_code
-            await self._client.send.Input.dispatchKeyEvent(key_up_params, session_id=session_id)
+            await self._client.send.Input.dispatchKeyEvent(
+                key_up_params, session_id=session_id
+            )
 
     async def set_viewport_size(self, width: int, height: int) -> None:
         """Set the viewport size."""
@@ -356,7 +378,9 @@ class Page:
 
         try:
             # Get navigation history
-            history = await self._client.send.Page.getNavigationHistory(session_id=session_id)
+            history = await self._client.send.Page.getNavigationHistory(
+                session_id=session_id
+            )
             current_index = history["currentIndex"]
             entries = history["entries"]
 
@@ -367,7 +391,9 @@ class Page:
             # Navigate to the previous entry
             previous_entry_id = entries[current_index - 1]["id"]
             params: "NavigateToHistoryEntryParameters" = {"entryId": previous_entry_id}
-            await self._client.send.Page.navigateToHistoryEntry(params, session_id=session_id)
+            await self._client.send.Page.navigateToHistoryEntry(
+                params, session_id=session_id
+            )
 
         except Exception as e:
             raise RuntimeError(f"Failed to navigate back: {e}")
@@ -378,7 +404,9 @@ class Page:
 
         try:
             # Get navigation history
-            history = await self._client.send.Page.getNavigationHistory(session_id=session_id)
+            history = await self._client.send.Page.getNavigationHistory(
+                session_id=session_id
+            )
             current_index = history["currentIndex"]
             entries = history["entries"]
 
@@ -389,7 +417,9 @@ class Page:
             # Navigate to the next entry
             next_entry_id = entries[current_index + 1]["id"]
             params: "NavigateToHistoryEntryParameters" = {"entryId": next_entry_id}
-            await self._client.send.Page.navigateToHistoryEntry(params, session_id=session_id)
+            await self._client.send.Page.navigateToHistoryEntry(
+                params, session_id=session_id
+            )
 
         except Exception as e:
             raise RuntimeError(f"Failed to navigate forward: {e}")
@@ -408,7 +438,9 @@ class Page:
             "nodeId": document_node_id,
             "selector": selector,
         }
-        result = await self._client.send.DOM.querySelectorAll(query_params, session_id=session_id)
+        result = await self._client.send.DOM.querySelectorAll(
+            query_params, session_id=session_id
+        )
 
         elements = []
         from .element import Element as Element_
@@ -417,9 +449,13 @@ class Page:
         for node_id in result["nodeIds"]:
             # Get backend node ID
             describe_params: "DescribeNodeParameters" = {"nodeId": node_id}
-            node_result = await self._client.send.DOM.describeNode(describe_params, session_id=session_id)
+            node_result = await self._client.send.DOM.describeNode(
+                describe_params, session_id=session_id
+            )
             backend_node_id = node_result["node"]["backendNodeId"]
-            elements.append(Element_(self._browser_session, backend_node_id, session_id))
+            elements.append(
+                Element_(self._browser_session, backend_node_id, session_id)
+            )
 
         return elements
 
@@ -430,7 +466,9 @@ class Page:
         """Get the DOM service for this target."""
         return DomService(self._browser_session)
 
-    async def get_element_by_prompt(self, prompt: str, llm: "BaseChatModel | None" = None) -> "Element | None":
+    async def get_element_by_prompt(
+        self, prompt: str, llm: "BaseChatModel | None" = None
+    ) -> "Element | None":
         """Get an element by a prompt."""
         await self._ensure_session()
         llm = llm or self._llm
@@ -441,7 +479,9 @@ class Page:
         dom_service = self.dom_service
 
         # Lazy fetch all_frames inside get_dom_tree if needed (for cross-origin iframes)
-        enhanced_dom_tree, _ = await dom_service.get_dom_tree(target_id=self._target_id, all_frames=None)
+        enhanced_dom_tree, _ = await dom_service.get_dom_tree(
+            target_id=self._target_id, all_frames=None
+        )
 
         session_id = self._browser_session.id
         serialized_dom_state, _ = DOMTreeSerializer(
@@ -450,7 +490,8 @@ class Page:
 
         llm_representation = serialized_dom_state.llm_representation()
 
-        system_message = SystemMessage(content="""You are an AI created to find an element on a page by a prompt.
+        system_message = SystemMessage(
+            content="""You are an AI created to find an element on a page by a prompt.
 
 <browser_state>
 Interactive Elements: All interactive elements will be provided in format as [index]<type>text</type> where
@@ -472,7 +513,8 @@ Your task is to find an element index (if any) that matches the prompt (written 
 
 If non of the elements matches the, return None.
 
-Before you return the element index, reason about the state and elements for a sentence or two.""")
+Before you return the element index, reason about the state and elements for a sentence or two."""
+        )
 
         state_message = UserMessage(content=f"""
 			<browser_state>
@@ -498,16 +540,23 @@ Before you return the element index, reason about the state and elements for a s
 
         element_highlight_index = llm_response.completion.element_highlight_index
 
-        if element_highlight_index is None or element_highlight_index not in serialized_dom_state.selector_map:
+        if (
+            element_highlight_index is None
+            or element_highlight_index not in serialized_dom_state.selector_map
+        ):
             return None
 
         element = serialized_dom_state.selector_map[element_highlight_index]
 
         from .element import Element as Element_
 
-        return Element_(self._browser_session, element.backend_node_id, self._session_id)
+        return Element_(
+            self._browser_session, element.backend_node_id, self._session_id
+        )
 
-    async def must_get_element_by_prompt(self, prompt: str, llm: "BaseChatModel | None" = None) -> "Element":
+    async def must_get_element_by_prompt(
+        self, prompt: str, llm: "BaseChatModel | None" = None
+    ) -> "Element":
         """Get an element by a prompt.
 
         @dev LLM can still return None, this just raises an error if the element is not found.
@@ -592,7 +641,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
         except Exception as e:
             raise RuntimeError(str(e))
 
-    async def _extract_clean_markdown(self, extract_links: bool = False) -> tuple[str, dict]:
+    async def _extract_clean_markdown(
+        self, extract_links: bool = False
+    ) -> tuple[str, dict]:
         """Extract clean markdown from the current page using enhanced DOM tree.
 
         Uses the shared markdown extractor for consistency with tools/service.py.

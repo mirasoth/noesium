@@ -50,7 +50,11 @@ class TokenUsageTracker:
             self.usage_history.append(usage)
 
             # Log token usage in structured format for analysis with color
-            model_short = usage.model_name.split("/")[-1] if "/" in usage.model_name else usage.model_name
+            model_short = (
+                usage.model_name.split("/")[-1]
+                if "/" in usage.model_name
+                else usage.model_name
+            )
             token_log = f"TOKENS: {usage.total_tokens} | {usage.call_type} | {model_short} | P:{usage.prompt_tokens} C:{usage.completion_tokens}{'*' if usage.estimated else ''}"
             logger.info(color_text(token_log, "magenta"))
 

@@ -42,7 +42,9 @@ class MemoryLLMAdapter:
             logger.error(f"Error in simple_chat: {e}")
             raise
 
-    def chat_completion(self, messages: List[Dict[str, str]], tools=None, tool_choice=None, **kwargs) -> Any:
+    def chat_completion(
+        self, messages: List[Dict[str, str]], tools=None, tool_choice=None, **kwargs
+    ) -> Any:
         """
         Chat completion method for automated memory processing
 
@@ -65,7 +67,9 @@ class MemoryLLMAdapter:
                 def __init__(self, content, success=True):
                     self.success = success
                     self.content = content
-                    self.tool_calls = []  # No function calling in this simplified version
+                    self.tool_calls = (
+                        []
+                    )  # No function calling in this simplified version
                     self.error = None if success else "Mock error"
 
             return MockResponse(str(response_text))

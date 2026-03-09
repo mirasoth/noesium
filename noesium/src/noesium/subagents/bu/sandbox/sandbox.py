@@ -158,7 +158,9 @@ def _get_imports_used_in_function(func: Callable) -> str:
 
                 if imported_names:
                     # Create filtered import statement
-                    filtered_import = ast.ImportFrom(module=node.module, names=imported_names, level=node.level)
+                    filtered_import = ast.ImportFrom(
+                        module=node.module, names=imported_names, level=node.level
+                    )
                     needed_imports.append(ast.unparse(filtered_import))
 
         return "\n".join(needed_imports)
@@ -232,12 +234,28 @@ def sandbox(
     quiet: bool = False,
     headers: dict[str, str] | None = None,
     on_browser_created: (
-        Callable[[BrowserCreatedData], None] | Callable[[BrowserCreatedData], Coroutine[Any, Any, None]] | None
+        Callable[[BrowserCreatedData], None]
+        | Callable[[BrowserCreatedData], Coroutine[Any, Any, None]]
+        | None
     ) = None,
-    on_instance_ready: Callable[[], None] | Callable[[], Coroutine[Any, Any, None]] | None = None,
-    on_log: Callable[[LogData], None] | Callable[[LogData], Coroutine[Any, Any, None]] | None = None,
-    on_result: Callable[[ResultData], None] | Callable[[ResultData], Coroutine[Any, Any, None]] | None = None,
-    on_error: Callable[[ErrorData], None] | Callable[[ErrorData], Coroutine[Any, Any, None]] | None = None,
+    on_instance_ready: (
+        Callable[[], None] | Callable[[], Coroutine[Any, Any, None]] | None
+    ) = None,
+    on_log: (
+        Callable[[LogData], None]
+        | Callable[[LogData], Coroutine[Any, Any, None]]
+        | None
+    ) = None,
+    on_result: (
+        Callable[[ResultData], None]
+        | Callable[[ResultData], Coroutine[Any, Any, None]]
+        | None
+    ) = None,
+    on_error: (
+        Callable[[ErrorData], None]
+        | Callable[[ErrorData], Coroutine[Any, Any, None]]
+        | None
+    ) = None,
     **env_vars: str,
 ) -> Callable[
     [Callable[Concatenate["BrowserSession", P], Coroutine[Any, Any, T]]],
@@ -293,7 +311,9 @@ def sandbox(
         if browser_param.annotation != inspect.Parameter.empty:
             annotation_str = str(browser_param.annotation)
             if "Browser" not in annotation_str:
-                raise TypeError(f"{func.__name__}() browser parameter must be typed as Browser, got {annotation_str}")
+                raise TypeError(
+                    f"{func.__name__}() browser parameter must be typed as Browser, got {annotation_str}"
+                )
 
         @wraps(func)
         async def wrapper(*args, **kwargs) -> T:
@@ -311,7 +331,9 @@ def sandbox(
 
             # Always include Browser import since it's required for the function signature
             if needed_imports:
-                needed_imports = "from noesium.subagents.bu import Browser\n" + needed_imports
+                needed_imports = (
+                    "from noesium.subagents.bu import Browser\n" + needed_imports
+                )
             else:
                 needed_imports = "from noesium.subagents.bu import Browser"
 
@@ -319,16 +341,26 @@ def sandbox(
             pickled_params = base64.b64encode(cloudpickle.dumps(all_params)).decode()
 
             # 5. Determine which params are in the function signature vs closure/globals
-            func_param_names = {p.name for p in sig.parameters.values() if p.name != "browser"}
-            non_explicit_params = {k: v for k, v in all_params.items() if k not in func_param_names}
-            explicit_params = {k: v for k, v in all_params.items() if k in func_param_names}
+            func_param_names = {
+                p.name for p in sig.parameters.values() if p.name != "browser"
+            }
+            non_explicit_params = {
+                k: v for k, v in all_params.items() if k not in func_param_names
+            }
+            explicit_params = {
+                k: v for k, v in all_params.items() if k in func_param_names
+            }
 
             # Inject closure variables and globals as module-level vars
             var_injections = []
             for var_name in non_explicit_params.keys():
                 var_injections.append(f"{var_name} = _params['{var_name}']")
 
-            var_injection_code = "\n".join(var_injections) if var_injections else "# No closure variables or globals"
+            var_injection_code = (
+                "\n".join(var_injections)
+                if var_injections
+                else "# No closure variables or globals"
+            )
 
             # Build function call
             if explicit_params:
@@ -360,7 +392,9 @@ async def run(browser):
 """
 
             # 9. Send to server
-            payload: dict[str, Any] = {"code": base64.b64encode(execution_code.encode()).decode()}
+            payload: dict[str, Any] = {
+                "code": base64.b64encode(execution_code.encode()).decode()
+            }
 
             combined_env: dict[str, str] = env_vars.copy() if env_vars else {}
             combined_env["LOG_LEVEL"] = log_level.upper()
@@ -387,7 +421,9 @@ async def run(browser):
             execution_started = False
 
             async with httpx.AsyncClient(timeout=1800.0) as client:
-                async with client.stream("POST", url, json=payload, headers=request_headers) as response:
+                async with client.stream(
+                    "POST", url, json=payload, headers=request_headers
+                ) as response:
                     response.raise_for_status()
 
                     try:
@@ -404,12 +440,20 @@ async def run(browser):
 
                                     if on_browser_created:
                                         try:
-                                            await _call_callback(on_browser_created, event.data)
+                                            await _call_callback(
+                                                on_browser_created, event.data
+                                            )
                                         except Exception as e:
                                             if not quiet:
-                                                print(f"⚠️  Error in on_browser_created callback: {e}")
+                                                print(
+                                                    f"⚠️  Error in on_browser_created callback: {e}"
+                                                )
 
-                                    if not quiet and event.data.live_url and not live_url_shown:
+                                    if (
+                                        not quiet
+                                        and event.data.live_url
+                                        and not live_url_shown
+                                    ):
                                         width = get_terminal_width()
                                         print("\n" + "━" * width)
                                         print("👁️  LIVE BROWSER VIEW (Click to watch)")
@@ -427,7 +471,9 @@ async def run(browser):
                                             await _call_callback(on_log, event.data)
                                         except Exception as e:
                                             if not quiet:
-                                                print(f"⚠️  Error in on_log callback: {e}")
+                                                print(
+                                                    f"⚠️  Error in on_log callback: {e}"
+                                                )
 
                                     if level == "stdout":
                                         if not quiet:
@@ -456,9 +502,13 @@ async def run(browser):
                                             if "credit" in message.lower():
                                                 import re
 
-                                                match = re.search(r"\$[\d,]+\.?\d*", message)
+                                                match = re.search(
+                                                    r"\$[\d,]+\.?\d*", message
+                                                )
                                                 if match:
-                                                    print(f"💰 You have {match.group()} credits")
+                                                    print(
+                                                        f"💰 You have {match.group()} credits"
+                                                    )
                                             else:
                                                 print(f"ℹ️  {message}")
                                     else:
@@ -471,10 +521,14 @@ async def run(browser):
                                             await _call_callback(on_instance_ready)
                                         except Exception as e:
                                             if not quiet:
-                                                print(f"⚠️  Error in on_instance_ready callback: {e}")
+                                                print(
+                                                    f"⚠️  Error in on_instance_ready callback: {e}"
+                                                )
 
                                     if not quiet:
-                                        print("✅ Browser ready, starting execution...\n")
+                                        print(
+                                            "✅ Browser ready, starting execution...\n"
+                                        )
 
                                 elif event.type == SSEEventType.RESULT:
                                     assert isinstance(event.data, ResultData)
@@ -485,7 +539,9 @@ async def run(browser):
                                             await _call_callback(on_result, event.data)
                                         except Exception as e:
                                             if not quiet:
-                                                print(f"⚠️  Error in on_result callback: {e}")
+                                                print(
+                                                    f"⚠️  Error in on_result callback: {e}"
+                                                )
 
                                     if exec_response.success:
                                         execution_result = exec_response.result
@@ -494,8 +550,12 @@ async def run(browser):
                                             print("\n" + "─" * width)
                                             print()
                                     else:
-                                        error_msg = exec_response.error or "Unknown error"
-                                        raise SandboxError(f"Execution failed: {error_msg}")
+                                        error_msg = (
+                                            exec_response.error or "Unknown error"
+                                        )
+                                        raise SandboxError(
+                                            f"Execution failed: {error_msg}"
+                                        )
 
                                 elif event.type == SSEEventType.ERROR:
                                     assert isinstance(event.data, ErrorData)
@@ -505,9 +565,13 @@ async def run(browser):
                                             await _call_callback(on_error, event.data)
                                         except Exception as e:
                                             if not quiet:
-                                                print(f"⚠️  Error in on_error callback: {e}")
+                                                print(
+                                                    f"⚠️  Error in on_error callback: {e}"
+                                                )
 
-                                    raise SandboxError(f"Execution failed: {event.data.error}")
+                                    raise SandboxError(
+                                        f"Execution failed: {event.data.error}"
+                                    )
 
                             except (json.JSONDecodeError, ValueError):
                                 continue
@@ -527,7 +591,9 @@ async def run(browser):
             if execution_result is not _NO_RESULT:
                 return_annotation = func.__annotations__.get("return")
                 if return_annotation:
-                    parsed_result = _parse_with_type_annotation(execution_result, return_annotation)
+                    parsed_result = _parse_with_type_annotation(
+                        execution_result, return_annotation
+                    )
                     return parsed_result
                 return execution_result  # type: ignore[return-value]
 
@@ -561,7 +627,10 @@ def _parse_with_type_annotation(data: Any, annotation: Any) -> Any:
         args = get_args(annotation)
 
         # Handle Union types
-        if origin is Union or (hasattr(annotation, "__class__") and annotation.__class__.__name__ == "UnionType"):
+        if origin is Union or (
+            hasattr(annotation, "__class__")
+            and annotation.__class__.__name__ == "UnionType"
+        ):
             union_args = args or getattr(annotation, "__args__", [])
             for arg in union_args:
                 if arg is type(None) and data is None:
@@ -601,7 +670,9 @@ def _parse_with_type_annotation(data: Any, annotation: Any) -> Any:
                 return data
             if len(args) == 2:
                 return {
-                    _parse_with_type_annotation(k, args[0]): _parse_with_type_annotation(v, args[1])
+                    _parse_with_type_annotation(
+                        k, args[0]
+                    ): _parse_with_type_annotation(v, args[1])
                     for k, v in data.items()
                 }
             return data
@@ -618,7 +689,9 @@ def _parse_with_type_annotation(data: Any, annotation: Any) -> Any:
         # Handle Pydantic v2 - use model_construct to skip validation and recursively parse nested fields
         # Get the actual class (unwrap generic if needed)
         # For Pydantic generics, get_origin() returns None, so check __pydantic_generic_metadata__ first
-        pydantic_generic_meta = getattr(annotation, "__pydantic_generic_metadata__", None)
+        pydantic_generic_meta = getattr(
+            annotation, "__pydantic_generic_metadata__", None
+        )
         if pydantic_generic_meta and pydantic_generic_meta.get("origin"):
             actual_class = pydantic_generic_meta["origin"]
             generic_args = pydantic_generic_meta.get("args", ())
@@ -635,14 +708,18 @@ def _parse_with_type_annotation(data: Any, annotation: Any) -> Any:
                 for field_name, field_info in actual_class.model_fields.items():
                     if field_name in data:
                         field_annotation = field_info.annotation
-                        parsed_fields[field_name] = _parse_with_type_annotation(data[field_name], field_annotation)
+                        parsed_fields[field_name] = _parse_with_type_annotation(
+                            data[field_name], field_annotation
+                        )
                 result = actual_class.model_construct(**parsed_fields)
 
                 # Special handling for AgentHistoryList: extract and set _output_model_schema from generic type parameter
                 if actual_class.__name__ == "AgentHistoryList" and generic_args:
                     output_model_schema = generic_args[0]
                     # Only set if it's an actual model class, not a TypeVar
-                    if inspect.isclass(output_model_schema) and hasattr(output_model_schema, "model_validate_json"):
+                    if inspect.isclass(output_model_schema) and hasattr(
+                        output_model_schema, "model_validate_json"
+                    ):
                         result._output_model_schema = output_model_schema
 
                 return result
@@ -659,7 +736,9 @@ def _parse_with_type_annotation(data: Any, annotation: Any) -> Any:
                 for field_name, field_obj in annotation.__fields__.items():
                     if field_name in data:
                         field_annotation = field_obj.outer_type_
-                        parsed_fields[field_name] = _parse_with_type_annotation(data[field_name], field_annotation)
+                        parsed_fields[field_name] = _parse_with_type_annotation(
+                            data[field_name], field_annotation
+                        )
                 return annotation.construct(**parsed_fields)
             # Fallback if __fields__ not available
             return annotation.construct(**data)
@@ -672,7 +751,9 @@ def _parse_with_type_annotation(data: Any, annotation: Any) -> Any:
             parsed_fields = {}
             for field_name, field_type in field_types.items():
                 if field_name in data:
-                    parsed_fields[field_name] = _parse_with_type_annotation(data[field_name], field_type)
+                    parsed_fields[field_name] = _parse_with_type_annotation(
+                        data[field_name], field_type
+                    )
             return cast(type[Any], annotation)(**parsed_fields)
 
         # Handle regular classes

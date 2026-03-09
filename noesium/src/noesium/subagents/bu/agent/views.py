@@ -49,8 +49,12 @@ class MessageCompactionSettings(BaseModel):
 
     enabled: bool = True
     compact_every_n_steps: int = 15
-    trigger_char_count: int | None = None  # Min char floor; set via trigger_token_count if preferred
-    trigger_token_count: int | None = None  # Alternative to trigger_char_count (~4 chars/token)
+    trigger_char_count: int | None = (
+        None  # Min char floor; set via trigger_token_count if preferred
+    )
+    trigger_token_count: int | None = (
+        None  # Alternative to trigger_char_count (~4 chars/token)
+    )
     chars_per_token: float = 4.0
     keep_last_items: int = 6
     summary_max_chars: int = 6000
@@ -62,7 +66,9 @@ class MessageCompactionSettings(BaseModel):
         if self.trigger_char_count is not None and self.trigger_token_count is not None:
             raise ValueError("Set trigger_char_count or trigger_token_count, not both.")
         if self.trigger_token_count is not None:
-            self.trigger_char_count = int(self.trigger_token_count * self.chars_per_token)
+            self.trigger_char_count = int(
+                self.trigger_token_count * self.chars_per_token
+            )
         elif self.trigger_char_count is None:
             self.trigger_char_count = 40000  # ~10k tokens
         return self
@@ -88,24 +94,38 @@ class AgentSettings(BaseModel):
         False  # If enabled, disables evaluation_previous_goal and next_goal, and sets use_thinking = False
     )
     use_judge: bool = True
-    ground_truth: str | None = None  # Ground truth answer or criteria for judge validation
+    ground_truth: str | None = (
+        None  # Ground truth answer or criteria for judge validation
+    )
     max_history_items: int | None = None
     message_compaction: MessageCompactionSettings | None = None
     enable_planning: bool = True
-    planning_replan_on_stall: int = 3  # consecutive failures before replan nudge; 0 = disabled
-    planning_exploration_limit: int = 5  # steps without a plan before nudge; 0 = disabled
+    planning_replan_on_stall: int = (
+        3  # consecutive failures before replan nudge; 0 = disabled
+    )
+    planning_exploration_limit: int = (
+        5  # steps without a plan before nudge; 0 = disabled
+    )
 
     page_extraction_llm: BaseChatModel | None = None
     calculate_cost: bool = False
     include_tool_call_examples: bool = False
-    llm_timeout: int = 60  # Timeout in seconds for LLM calls (auto-detected: 30s for gemini, 90s for o3, 60s default)
+    llm_timeout: int = (
+        60  # Timeout in seconds for LLM calls (auto-detected: 30s for gemini, 90s for o3, 60s default)
+    )
     step_timeout: int = 180  # Timeout in seconds for each step
-    final_response_after_failure: bool = True  # If True, attempt one final recovery call after max_failures
+    final_response_after_failure: bool = (
+        True  # If True, attempt one final recovery call after max_failures
+    )
 
     # Loop detection settings
-    loop_detection_window: int = 20  # Rolling window size for action similarity tracking
+    loop_detection_window: int = (
+        20  # Rolling window size for action similarity tracking
+    )
     loop_detection_enabled: bool = True  # Whether to enable loop detection nudges
-    max_clickable_elements_length: int = 40000  # Max characters for clickable elements in prompt
+    max_clickable_elements_length: int = (
+        40000  # Max characters for clickable elements in prompt
+    )
 
 
 class PageFingerprint(BaseModel):
@@ -118,9 +138,15 @@ class PageFingerprint(BaseModel):
     text_hash: str  # First 16 chars of SHA-256 of the DOM text representation
 
     @staticmethod
-    def from_browser_state(url: str, dom_text: str, element_count: int) -> PageFingerprint:
-        text_hash = hashlib.sha256(dom_text.encode("utf-8", errors="replace")).hexdigest()[:16]
-        return PageFingerprint(url=url, element_count=element_count, text_hash=text_hash)
+    def from_browser_state(
+        url: str, dom_text: str, element_count: int
+    ) -> PageFingerprint:
+        text_hash = hashlib.sha256(
+            dom_text.encode("utf-8", errors="replace")
+        ).hexdigest()[:16]
+        return PageFingerprint(
+            url=url, element_count=element_count, text_hash=text_hash
+        )
 
 
 def _normalize_action_for_hash(action_name: str, params: dict[str, Any]) -> str:
@@ -189,7 +215,9 @@ class ActionLoopDetector(BaseModel):
     # Current repetition state
     max_repetition_count: int = 0  # Highest count of any single hash in the window
     most_repeated_hash: str | None = None
-    consecutive_stagnant_pages: int = 0  # How many consecutive steps had the same page fingerprint
+    consecutive_stagnant_pages: int = (
+        0  # How many consecutive steps had the same page fingerprint
+    )
 
     def record_action(self, action_name: str, params: dict[str, Any]) -> None:
         """Record an action and update repetition statistics."""
@@ -284,7 +312,9 @@ class AgentState(BaseModel):
     session_initialized: bool = False  # Track if session events have been dispatched
     follow_up_task: bool = False  # Track if the agent is a follow-up task
 
-    message_manager_state: MessageManagerState = Field(default_factory=MessageManagerState)
+    message_manager_state: MessageManagerState = Field(
+        default_factory=MessageManagerState
+    )
     file_system_state: FileSystemState | None = None
 
     # Loop detection state
@@ -304,7 +334,9 @@ class AgentStepInfo:
 class JudgementResult(BaseModel):
     """LLM judgement of agent trace"""
 
-    reasoning: str | None = Field(default=None, description="Explanation of the judgement")
+    reasoning: str | None = Field(
+        default=None, description="Explanation of the judgement"
+    )
     verdict: bool = Field(description="Whether the trace was successful or not")
     failure_reason: str | None = Field(
         default=None,
@@ -337,7 +369,9 @@ class ActionResult(BaseModel):
     attachments: list[str] | None = None  # Files to display in the done message
 
     # Images (base64 encoded) - separate from text content for efficient handling
-    images: list[dict[str, Any]] | None = None  # [{"name": "file.jpg", "data": "base64_string"}]
+    images: list[dict[str, Any]] | None = (
+        None  # [{"name": "file.jpg", "data": "base64_string"}]
+    )
 
     # Always include in long term memory
     long_term_memory: str | None = None  # Memory of this action
@@ -353,7 +387,9 @@ class ActionResult(BaseModel):
     metadata: dict | None = None
 
     # Deprecated
-    include_in_memory: bool = False  # whether to include in extracted_content inside long_term_memory
+    include_in_memory: bool = (
+        False  # whether to include in extracted_content inside long_term_memory
+    )
 
     @model_validator(mode="after")
     def validate_success_requires_done(self):
@@ -371,7 +407,9 @@ class RerunSummaryAction(BaseModel):
     """AI-generated summary for rerun completion"""
 
     summary: str = Field(description="Summary of what happened during the rerun")
-    success: bool = Field(description="Whether the rerun completed successfully based on visual inspection")
+    success: bool = Field(
+        description="Whether the rerun completed successfully based on visual inspection"
+    )
     completion_status: Literal["complete", "partial", "failed"] = Field(
         description="Status of rerun completion: complete (all steps succeeded), partial (some steps succeeded), failed (task did not complete)"
     )
@@ -433,7 +471,9 @@ class AgentOutput(BaseModel):
         """For backward compatibility - returns an AgentBrain with the flattened properties"""
         return AgentBrain(
             thinking=self.thinking,
-            evaluation_previous_goal=(self.evaluation_previous_goal if self.evaluation_previous_goal else ""),
+            evaluation_previous_goal=(
+                self.evaluation_previous_goal if self.evaluation_previous_goal else ""
+            ),
             memory=self.memory if self.memory else "",
             next_goal=self.next_goal if self.next_goal else "",
         )
@@ -591,9 +631,13 @@ class AgentHistory(BaseModel):
         filtered_data = {}
         for key, value in data.items():
             if isinstance(value, str):
-                filtered_data[key] = self._filter_sensitive_data_from_string(value, sensitive_data)
+                filtered_data[key] = self._filter_sensitive_data_from_string(
+                    value, sensitive_data
+                )
             elif isinstance(value, dict):
-                filtered_data[key] = self._filter_sensitive_data_from_dict(value, sensitive_data)
+                filtered_data[key] = self._filter_sensitive_data_from_dict(
+                    value, sensitive_data
+                )
             elif isinstance(value, list):
                 filtered_data[key] = [
                     (
@@ -611,18 +655,27 @@ class AgentHistory(BaseModel):
                 filtered_data[key] = value
         return filtered_data
 
-    def model_dump(self, sensitive_data: dict[str, str | dict[str, str]] | None = None, **kwargs) -> dict[str, Any]:
+    def model_dump(
+        self, sensitive_data: dict[str, str | dict[str, str]] | None = None, **kwargs
+    ) -> dict[str, Any]:
         """Custom serialization handling circular references and filtering sensitive data"""
 
         # Handle action serialization
         model_output_dump = None
         if self.model_output:
-            action_dump = [action.model_dump(exclude_none=True, mode="json") for action in self.model_output.action]
+            action_dump = [
+                action.model_dump(exclude_none=True, mode="json")
+                for action in self.model_output.action
+            ]
 
             # Filter sensitive data only from input action parameters if sensitive_data is provided
             if sensitive_data:
                 action_dump = [
-                    (self._filter_sensitive_data_from_dict(action, sensitive_data) if "input" in action else action)
+                    (
+                        self._filter_sensitive_data_from_dict(action, sensitive_data)
+                        if "input" in action
+                        else action
+                    )
                     for action in action_dump
                 ]
 
@@ -636,13 +689,17 @@ class AgentHistory(BaseModel):
             if self.model_output.thinking is not None:
                 model_output_dump["thinking"] = self.model_output.thinking
             if self.model_output.current_plan_item is not None:
-                model_output_dump["current_plan_item"] = self.model_output.current_plan_item
+                model_output_dump["current_plan_item"] = (
+                    self.model_output.current_plan_item
+                )
             if self.model_output.plan_update is not None:
                 model_output_dump["plan_update"] = self.model_output.plan_update
 
         # Handle result serialization - don't filter ActionResult data
         # as it should contain meaningful information for the agent
-        result_dump = [r.model_dump(exclude_none=True, mode="json") for r in self.result]
+        result_dump = [
+            r.model_dump(exclude_none=True, mode="json") for r in self.result
+        ]
 
         return {
             "model_output": model_output_dump,
@@ -741,7 +798,9 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
         }
 
     @classmethod
-    def load_from_dict(cls, data: dict[str, Any], output_model: type[AgentOutput]) -> AgentHistoryList:
+    def load_from_dict(
+        cls, data: dict[str, Any], output_model: type[AgentOutput]
+    ) -> AgentHistoryList:
         # loop through history and validate output_model actions to enrich with custom actions
         for h in data["history"]:
             if h["model_output"]:
@@ -756,7 +815,9 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
         return history
 
     @classmethod
-    def load_from_file(cls, filepath: str | Path, output_model: type[AgentOutput]) -> AgentHistoryList:
+    def load_from_file(
+        cls, filepath: str | Path, output_model: type[AgentOutput]
+    ) -> AgentHistoryList:
         """Load history from JSON file"""
         with open(filepath, encoding="utf-8") as f:
             data = json.load(f)
@@ -765,7 +826,11 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
     def last_action(self) -> None | dict:
         """Last action in history"""
         if self.history and self.history[-1].model_output:
-            return self.history[-1].model_output.action[-1].model_dump(exclude_none=True, mode="json")
+            return (
+                self.history[-1]
+                .model_output.action[-1]
+                .model_dump(exclude_none=True, mode="json")
+            )
         return None
 
     def errors(self) -> list[str | None]:
@@ -839,20 +904,39 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
         if n_last is None:
             if return_none_if_not_screenshot:
                 return [
-                    (h.state.screenshot_path if h.state.screenshot_path is not None else None) for h in self.history
+                    (
+                        h.state.screenshot_path
+                        if h.state.screenshot_path is not None
+                        else None
+                    )
+                    for h in self.history
                 ]
             else:
-                return [h.state.screenshot_path for h in self.history if h.state.screenshot_path is not None]
+                return [
+                    h.state.screenshot_path
+                    for h in self.history
+                    if h.state.screenshot_path is not None
+                ]
         else:
             if return_none_if_not_screenshot:
                 return [
-                    (h.state.screenshot_path if h.state.screenshot_path is not None else None)
+                    (
+                        h.state.screenshot_path
+                        if h.state.screenshot_path is not None
+                        else None
+                    )
                     for h in self.history[-n_last:]
                 ]
             else:
-                return [h.state.screenshot_path for h in self.history[-n_last:] if h.state.screenshot_path is not None]
+                return [
+                    h.state.screenshot_path
+                    for h in self.history[-n_last:]
+                    if h.state.screenshot_path is not None
+                ]
 
-    def screenshots(self, n_last: int | None = None, return_none_if_not_screenshot: bool = True) -> list[str | None]:
+    def screenshots(
+        self, n_last: int | None = None, return_none_if_not_screenshot: bool = True
+    ) -> list[str | None]:
         """Get all screenshots from history as base64 strings"""
         if n_last == 0:
             return []
@@ -896,8 +980,12 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
         for h in self.history:
             if h.model_output:
                 # Guard against None interacted_element before zipping
-                interacted_elements = h.state.interacted_element or [None] * len(h.model_output.action)
-                for action, interacted_element in zip(h.model_output.action, interacted_elements):
+                interacted_elements = h.state.interacted_element or [None] * len(
+                    h.model_output.action
+                )
+                for action, interacted_element in zip(
+                    h.model_output.action, interacted_elements
+                ):
                     output = action.model_dump(exclude_none=True, mode="json")
                     output["interacted_element"] = interacted_element
                     outputs.append(output)
@@ -911,13 +999,21 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
             step_actions = []
             if h.model_output:
                 # Guard against None interacted_element before zipping
-                interacted_elements = h.state.interacted_element or [None] * len(h.model_output.action)
+                interacted_elements = h.state.interacted_element or [None] * len(
+                    h.model_output.action
+                )
                 # Zip actions with interacted elements and results
-                for action, interacted_element, result in zip(h.model_output.action, interacted_elements, h.result):
+                for action, interacted_element, result in zip(
+                    h.model_output.action, interacted_elements, h.result
+                ):
                     action_output = action.model_dump(exclude_none=True, mode="json")
                     action_output["interacted_element"] = interacted_element
                     # Only keep long_term_memory from result
-                    action_output["result"] = result.long_term_memory if result and result.long_term_memory else None
+                    action_output["result"] = (
+                        result.long_term_memory
+                        if result and result.long_term_memory
+                        else None
+                    )
                     step_actions.append(action_output)
             step_outputs.append(step_actions)
 
@@ -934,7 +1030,9 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
         """Get all extracted content from history"""
         content = []
         for h in self.history:
-            content.extend([r.extracted_content for r in h.result if r.extracted_content])
+            content.extend(
+                [r.extracted_content for r in h.result if r.extracted_content]
+            )
         return content
 
     def model_actions_filtered(self, include: list[str] | None = None) -> list[dict]:
@@ -964,7 +1062,10 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
             # Get actions from model_output
             if h.model_output and h.model_output.action:
                 # Use model_dump with mode='json' to serialize enums properly
-                actions_list = [action.model_dump(exclude_none=True, mode="json") for action in h.model_output.action]
+                actions_list = [
+                    action.model_dump(exclude_none=True, mode="json")
+                    for action in h.model_output.action
+                ]
                 action_json = json.dumps(actions_list, indent=1)
                 step_text += f"Actions: {action_json}\n"
 
@@ -997,7 +1098,9 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
 
         return None
 
-    def get_structured_output(self, output_model: type[AgentStructuredOutput]) -> AgentStructuredOutput | None:
+    def get_structured_output(
+        self, output_model: type[AgentStructuredOutput]
+    ) -> AgentStructuredOutput | None:
         """Get the structured output from history, parsing with the provided schema.
 
         Use this method when accessing structured output from sandbox execution,
@@ -1035,7 +1138,10 @@ class AgentError:
 
         # Handle LLM response validation errors from llm_use
         error_str = str(error)
-        if "LLM response missing required fields" in error_str or "Expected format: AgentOutput" in error_str:
+        if (
+            "LLM response missing required fields" in error_str
+            or "Expected format: AgentOutput" in error_str
+        ):
             # Extract the main error message without the huge stacktrace
             lines = error_str.split("\n")
             main_error = lines[0] if lines else error_str

@@ -62,7 +62,9 @@ class MemoryFileManager:
         basic_map = self.config_manager.get_file_types_mapping()
         # Ensure a copy to avoid accidental external mutation
         self.memory_types["basic"] = dict(basic_map)
-        cluster_set = self._get_cluster_categories(self.agent_id, self.user_id, set(self.memory_types["basic"].keys()))
+        cluster_set = self._get_cluster_categories(
+            self.agent_id, self.user_id, set(self.memory_types["basic"].keys())
+        )
         self.memory_types["cluster"] = cluster_set
         # Do not touch cluster here; it's context dependent
 
@@ -108,12 +110,16 @@ class MemoryFileManager:
             str: File content or empty string if not found
         """
         try:
-            file_path = self._get_memory_file_path(self.agent_id, self.user_id, category)
+            file_path = self._get_memory_file_path(
+                self.agent_id, self.user_id, category
+            )
             if file_path.exists():
                 return file_path.read_text(encoding="utf-8")
             return ""
         except Exception as e:
-            logger.error(f"Error reading {category} for agent {self.agent_id}, user {self.user_id}: {e}")
+            logger.error(
+                f"Error reading {category} for agent {self.agent_id}, user {self.user_id}: {e}"
+            )
             return ""
 
     def write_memory_file(self, category: str, content: str) -> bool:
@@ -130,13 +136,19 @@ class MemoryFileManager:
             bool: True if successful, False otherwise
         """
         try:
-            file_path = self._get_memory_file_path(self.agent_id, self.user_id, category)
+            file_path = self._get_memory_file_path(
+                self.agent_id, self.user_id, category
+            )
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(content, encoding="utf-8")
-            logger.debug(f"Written {category} for agent {self.agent_id}, user {self.user_id}")
+            logger.debug(
+                f"Written {category} for agent {self.agent_id}, user {self.user_id}"
+            )
             return True
         except Exception as e:
-            logger.error(f"Error writing {category} for agent {self.agent_id}, user {self.user_id}: {e}")
+            logger.error(
+                f"Error writing {category} for agent {self.agent_id}, user {self.user_id}: {e}"
+            )
             return False
 
     def append_memory_file(self, category: str, content: str) -> bool:
@@ -160,7 +172,9 @@ class MemoryFileManager:
                 new_content = content
             return self.write_memory_file(category, new_content)
         except Exception as e:
-            logger.error(f"Error appending {category} for agent {self.agent_id}, user {self.user_id}: {e}")
+            logger.error(
+                f"Error appending {category} for agent {self.agent_id}, user {self.user_id}: {e}"
+            )
             return False
 
     def delete_memory_file(self, category: str) -> bool:
@@ -176,13 +190,19 @@ class MemoryFileManager:
             bool: True if successful, False otherwise
         """
         try:
-            file_path = self._get_memory_file_path(self.agent_id, self.user_id, category)
+            file_path = self._get_memory_file_path(
+                self.agent_id, self.user_id, category
+            )
             if file_path.exists():
                 file_path.unlink()
-                logger.debug(f"Deleted {category} for agent {self.agent_id}, user {self.user_id}")
+                logger.debug(
+                    f"Deleted {category} for agent {self.agent_id}, user {self.user_id}"
+                )
             return True
         except Exception as e:
-            logger.error(f"Error deleting {category} for agent {self.agent_id}, user {self.user_id}: {e}")
+            logger.error(
+                f"Error deleting {category} for agent {self.agent_id}, user {self.user_id}: {e}"
+            )
             return False
 
     def list_memory_files(
@@ -201,7 +221,9 @@ class MemoryFileManager:
             List[str]: List of category names
         """
         basic_categories = self._get_basic_categories()
-        cluster_categories = self._get_cluster_categories(self.agent_id, self.user_id, basic_categories).keys()
+        cluster_categories = self._get_cluster_categories(
+            self.agent_id, self.user_id, basic_categories
+        ).keys()
 
         if category_group == "basic":
             # Return all basic categories from config (not filtered by existence)
@@ -216,7 +238,9 @@ class MemoryFileManager:
         """Get basic categories from MarkdownConfigManager."""
         return set(self.config_manager.get_all_file_types())
 
-    def _get_cluster_categories(self, agent_id: str, user_id: str, basic_categories: Set[str]) -> Dict[str, str]:
+    def _get_cluster_categories(
+        self, agent_id: str, user_id: str, basic_categories: Set[str]
+    ) -> Dict[str, str]:
         """Scan existing files and derive cluster categories not in basic."""
         user_dir = self.memory_dir / agent_id / user_id
         if not user_dir.exists():
@@ -226,7 +250,9 @@ class MemoryFileManager:
             if item.is_file():
                 category_name = item.stem
                 if category_name not in basic_categories:
-                    cluster[category_name.replace("_", " ")] = f"{category_name}{self.DEFAULT_EXTENSION}"
+                    cluster[category_name.replace("_", " ")] = (
+                        f"{category_name}{self.DEFAULT_EXTENSION}"
+                    )
         return cluster
 
     def create_cluster_category(self, category: str) -> bool:
@@ -243,12 +269,16 @@ class MemoryFileManager:
         """
         try:
             _category = category.replace(" ", "_")
-            file_path = self._get_memory_file_path(self.agent_id, self.user_id, _category)
+            file_path = self._get_memory_file_path(
+                self.agent_id, self.user_id, _category
+            )
             file_path.parent.mkdir(parents=True, exist_ok=True)
             if not file_path.exists():
                 file_path.write_text("", encoding="utf-8")
             # Update in-memory cluster categories mapping
-            self.memory_types.setdefault("cluster", {})[category] = f"{_category}{self.DEFAULT_EXTENSION}"
+            self.memory_types.setdefault("cluster", {})[
+                category
+            ] = f"{_category}{self.DEFAULT_EXTENSION}"
             return True
         except Exception as e:
             logger.error(
@@ -267,7 +297,9 @@ class MemoryFileManager:
             Path: Full path to the character's embeddings directory
         """
         if not self.agent_id or not self.user_id:
-            raise ValueError("agent_id and user_id must be set to get embeddings directory")
+            raise ValueError(
+                "agent_id and user_id must be set to get embeddings directory"
+            )
 
         char_embeddings_dir = self.embeddings_dir / self.agent_id / self.user_id
         char_embeddings_dir.mkdir(parents=True, exist_ok=True)

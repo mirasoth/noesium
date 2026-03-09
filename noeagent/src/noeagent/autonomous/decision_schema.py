@@ -39,28 +39,48 @@ class Decision(BaseModel):
 
     action: DecisionAction = Field(description="Type of action to execute")
     goal_id: str = Field(description="Goal ID this decision relates to")
-    reasoning: str | None = Field(default=None, description="Reasoning behind this decision")
+    reasoning: str | None = Field(
+        default=None, description="Reasoning behind this decision"
+    )
 
     # Tool execution parameters
-    tool_id: str | None = Field(default=None, description="Tool capability ID to execute")
-    tool_input: dict[str, Any] = Field(default_factory=dict, description="Input parameters for tool")
+    tool_id: str | None = Field(
+        default=None, description="Tool capability ID to execute"
+    )
+    tool_input: dict[str, Any] = Field(
+        default_factory=dict, description="Input parameters for tool"
+    )
 
     # Subagent delegation parameters
-    subagent_type: str | None = Field(default=None, description="Type of subagent to invoke")
-    subagent_task: str | None = Field(default=None, description="Task description for subagent")
+    subagent_type: str | None = Field(
+        default=None, description="Type of subagent to invoke"
+    )
+    subagent_task: str | None = Field(
+        default=None, description="Task description for subagent"
+    )
 
     # Memory update parameters
     memory_key: str | None = Field(default=None, description="Memory key to update")
     memory_value: Any = Field(default=None, description="Value to store in memory")
-    memory_content_type: str = Field(default="fact", description="Content type for memory entry")
+    memory_content_type: str = Field(
+        default="fact", description="Content type for memory entry"
+    )
 
     # Goal update parameters
-    new_goal_status: str | None = Field(default=None, description="New status for goal update")
-    goal_error: str | None = Field(default=None, description="Error message if goal failed")
+    new_goal_status: str | None = Field(
+        default=None, description="New status for goal update"
+    )
+    goal_error: str | None = Field(
+        default=None, description="Error message if goal failed"
+    )
 
     # Context and metadata
-    context: dict[str, Any] = Field(default_factory=dict, description="Additional context")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Decision metadata")
+    context: dict[str, Any] = Field(
+        default_factory=dict, description="Additional context"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Decision metadata"
+    )
 
     model_config = ConfigDict(use_enum_values=True)
 

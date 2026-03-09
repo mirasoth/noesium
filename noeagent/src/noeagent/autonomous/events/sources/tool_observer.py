@@ -54,7 +54,9 @@ class ToolObserverEventSource(BaseEventSource):
 
         # Register execution observer if registry supports it
         if self.registry and hasattr(self.registry, "add_execution_observer"):
-            self._observer_id = self.registry.add_execution_observer(self._on_tool_execution)
+            self._observer_id = self.registry.add_execution_observer(
+                self._on_tool_execution
+            )
 
         self._subscribed = True
         self._running = True

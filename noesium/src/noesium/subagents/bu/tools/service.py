@@ -101,7 +101,9 @@ class Tools(Generic[Context]):
             param_model=SearchGoogleAction,
             terminates_sequence=True,
         )
-        async def search_google(params: SearchGoogleAction, browser_session: BrowserSession):
+        async def search_google(
+            params: SearchGoogleAction, browser_session: BrowserSession
+        ):
             search_url = f"https://www.google.com/search?q={params.query}&udm=14"
 
             # Check if there's already a tab open on Google or agent's about:blank
@@ -122,12 +124,17 @@ class Tools(Generic[Context]):
                         "https://google.com",
                     ):
                         # Found existing Google tab, navigate in it
-                        logger.debug(f"Found existing Google tab at index {i}: {tab.url}, reusing it")
+                        logger.debug(
+                            f"Found existing Google tab at index {i}: {tab.url}, reusing it"
+                        )
 
                         # Switch to this tab first if it's not the current one
                         from ..browser.events import SwitchTabEvent
 
-                        if browser_session.agent_focus and tab.target_id != browser_session.agent_focus.target_id:
+                        if (
+                            browser_session.agent_focus
+                            and tab.target_id != browser_session.agent_focus.target_id
+                        ):
                             try:
                                 switch_event = browser_session.event_bus.dispatch(
                                     SwitchTabEvent(target_id=tab.target_id)
@@ -135,7 +142,9 @@ class Tools(Generic[Context]):
                                 await switch_event
                                 await switch_event.event_result(raise_if_none=False)
                             except Exception as e:
-                                logger.warning(f"Failed to switch to existing Google tab: {e}, will use new tab")
+                                logger.warning(
+                                    f"Failed to switch to existing Google tab: {e}, will use new tab"
+                                )
                                 continue
 
                         use_new_tab = False
@@ -154,7 +163,11 @@ class Tools(Generic[Context]):
                             # Switch to this tab first
                             from ..browser.events import SwitchTabEvent
 
-                            if browser_session.agent_focus and tab.target_id != browser_session.agent_focus.target_id:
+                            if (
+                                browser_session.agent_focus
+                                and tab.target_id
+                                != browser_session.agent_focus.target_id
+                            ):
                                 try:
                                     switch_event = browser_session.event_bus.dispatch(
                                         SwitchTabEvent(target_id=tab.target_id)
@@ -162,7 +175,9 @@ class Tools(Generic[Context]):
                                     await switch_event
                                     await switch_event.event_result()
                                 except Exception as e:
-                                    logger.warning(f"Failed to switch to agent-owned tab: {e}, will use new tab")
+                                    logger.warning(
+                                        f"Failed to switch to agent-owned tab: {e}, will use new tab"
+                                    )
                                     continue
 
                             use_new_tab = False
@@ -186,7 +201,9 @@ class Tools(Generic[Context]):
                 return ActionResult(extracted_content=memory, long_term_memory=memory)
             except Exception as e:
                 logger.error(f"Failed to search Google: {e}")
-                return ActionResult(error=f'Failed to search Google for "{params.query}": {str(e)}')
+                return ActionResult(
+                    error=f'Failed to search Google for "{params.query}": {str(e)}'
+                )
 
         @self.registry.action(
             "",
@@ -196,7 +213,9 @@ class Tools(Generic[Context]):
         async def navigate(params: GoToUrlAction, browser_session: BrowserSession):
             try:
                 # Dispatch navigation event
-                event = browser_session.event_bus.dispatch(NavigateToUrlEvent(url=params.url, new_tab=params.new_tab))
+                event = browser_session.event_bus.dispatch(
+                    NavigateToUrlEvent(url=params.url, new_tab=params.new_tab)
+                )
                 await event
                 await event.event_result(raise_if_any=True, raise_if_none=False)
 
@@ -215,8 +234,13 @@ class Tools(Generic[Context]):
                 browser_session.logger.error(f"❌ Navigation failed: {error_msg}")
 
                 # Check if it's specifically a RuntimeError about CDP client
-                if isinstance(e, RuntimeError) and "CDP client not initialized" in error_msg:
-                    browser_session.logger.error("❌ Browser connection failed - CDP client not properly initialized")
+                if (
+                    isinstance(e, RuntimeError)
+                    and "CDP client not initialized" in error_msg
+                ):
+                    browser_session.logger.error(
+                        "❌ Browser connection failed - CDP client not properly initialized"
+                    )
                     return ActionResult(error=f"Browser connection error: {error_msg}")
                 # Check for network-related errors
                 elif any(
@@ -229,14 +253,20 @@ class Tools(Generic[Context]):
                         "net::",
                     ]
                 ):
-                    site_unavailable_msg = f"Navigation failed - site unavailable: {params.url}"
-                    browser_session.logger.warning(f"⚠️ {site_unavailable_msg} - {error_msg}")
+                    site_unavailable_msg = (
+                        f"Navigation failed - site unavailable: {params.url}"
+                    )
+                    browser_session.logger.warning(
+                        f"⚠️ {site_unavailable_msg} - {error_msg}"
+                    )
                     return ActionResult(error=site_unavailable_msg)
                 else:
                     # Return error in ActionResult instead of re-raising
                     return ActionResult(error=f"Navigation failed: {str(e)}")
 
-        @self.registry.action("Go back", param_model=NoParamsAction, terminates_sequence=True)
+        @self.registry.action(
+            "Go back", param_model=NoParamsAction, terminates_sequence=True
+        )
         async def go_back(_: NoParamsAction, browser_session: BrowserSession):
             try:
                 event = browser_session.event_bus.dispatch(GoBackEvent())
@@ -261,7 +291,9 @@ class Tools(Generic[Context]):
             # so I revert this.
             actual_seconds = min(max(seconds - 3, 0), 30)
             memory = f"Waited for {seconds} seconds"
-            logger.info(f"🕒 waited for {actual_seconds} seconds + 3 seconds for LLM call")
+            logger.info(
+                f"🕒 waited for {actual_seconds} seconds + 3 seconds for LLM call"
+            )
             await asyncio.sleep(actual_seconds)
             return ActionResult(extracted_content=memory, long_term_memory=memory)
 
@@ -271,7 +303,9 @@ class Tools(Generic[Context]):
             "Click element by index. Only indices from your browser_state are allowed. Never use an index that is not inside your current browser_state. Set while_holding_ctrl=True to open any resulting navigation in a new tab.",
             param_model=ClickElementAction,
         )
-        async def click_element_by_index(params: ClickElementAction, browser_session: BrowserSession):
+        async def click_element_by_index(
+            params: ClickElementAction, browser_session: BrowserSession
+        ):
             # Dispatch click event with node
             try:
                 assert (
@@ -281,21 +315,29 @@ class Tools(Generic[Context]):
                 # Look up the node from the selector map
                 node = await browser_session.get_element_by_index(params.index)
                 if node is None:
-                    raise ValueError(f"Element index {params.index} not found in browser state")
+                    raise ValueError(
+                        f"Element index {params.index} not found in browser state"
+                    )
 
                 event = browser_session.event_bus.dispatch(
-                    ClickElementEvent(node=node, while_holding_ctrl=params.while_holding_ctrl or False)
+                    ClickElementEvent(
+                        node=node, while_holding_ctrl=params.while_holding_ctrl or False
+                    )
                 )
                 await event
                 # Wait for handler to complete and get any exception or metadata
-                click_metadata = await event.event_result(raise_if_any=True, raise_if_none=False)
+                click_metadata = await event.event_result(
+                    raise_if_any=True, raise_if_none=False
+                )
                 memory = f"Clicked element with index {params.index}"
 
                 if params.while_holding_ctrl:
                     memory += " and opened in new tab"
 
                 # Check if a new tab was opened (from watchdog metadata)
-                elif isinstance(click_metadata, dict) and click_metadata.get("new_tab_opened"):
+                elif isinstance(click_metadata, dict) and click_metadata.get(
+                    "new_tab_opened"
+                ):
                     memory += " - which opened a new tab"
 
                 msg = f"🖱️ {memory}"
@@ -304,7 +346,9 @@ class Tools(Generic[Context]):
                 # Include click coordinates in metadata if available
                 return ActionResult(
                     long_term_memory=memory,
-                    metadata=(click_metadata if isinstance(click_metadata, dict) else None),
+                    metadata=(
+                        click_metadata if isinstance(click_metadata, dict) else None
+                    ),
                 )
             except BrowserError as e:
                 if "Cannot click on <select> elements." in str(e):
@@ -335,7 +379,9 @@ class Tools(Generic[Context]):
             # Look up the node from the selector map
             node = await browser_session.get_element_by_index(params.index)
             if node is None:
-                raise ValueError(f"Element index {params.index} not found in browser state")
+                raise ValueError(
+                    f"Element index {params.index} not found in browser state"
+                )
 
             # Dispatch type text event with node
             try:
@@ -347,7 +393,9 @@ class Tools(Generic[Context]):
                     )
                 )
                 await event
-                input_metadata = await event.event_result(raise_if_any=True, raise_if_none=False)
+                input_metadata = await event.event_result(
+                    raise_if_any=True, raise_if_none=False
+                )
                 msg = f"Input '{params.text}' into element {params.index}."
                 logger.debug(msg)
 
@@ -355,13 +403,17 @@ class Tools(Generic[Context]):
                 return ActionResult(
                     extracted_content=msg,
                     long_term_memory=f"Input '{params.text}' into element {params.index}.",
-                    metadata=(input_metadata if isinstance(input_metadata, dict) else None),
+                    metadata=(
+                        input_metadata if isinstance(input_metadata, dict) else None
+                    ),
                 )
             except BrowserError as e:
                 return handle_browser_error(e)
             except Exception as e:
                 # Log the full error for debugging
-                logger.error(f"Failed to dispatch TypeTextEvent: {type(e).__name__}: {e}")
+                logger.error(
+                    f"Failed to dispatch TypeTextEvent: {type(e).__name__}: {e}"
+                )
                 error_msg = f"Failed to input text into element {params.index}: {e}"
                 return ActionResult(error=error_msg)
 
@@ -389,7 +441,9 @@ class Tools(Generic[Context]):
                         if file_obj:
                             # File is managed by FileSystem, construct the full path
                             file_system_path = str(file_system.get_dir() / params.path)
-                            params = UploadFileAction(index=params.index, path=file_system_path)
+                            params = UploadFileAction(
+                                index=params.index, path=file_system_path
+                            )
                         else:
                             # If browser is remote, allow passing a remote-accessible absolute path
                             if not browser_session.is_local:
@@ -428,7 +482,9 @@ class Tools(Generic[Context]):
             ) -> EnhancedDOMTreeNode | None:
                 """Find the closest file input to the selected element."""
 
-                def find_file_input_in_descendants(n: EnhancedDOMTreeNode, depth: int) -> EnhancedDOMTreeNode | None:
+                def find_file_input_in_descendants(
+                    n: EnhancedDOMTreeNode, depth: int
+                ) -> EnhancedDOMTreeNode | None:
                     if depth < 0:
                         return None
                     if browser_session.is_file_input(n):
@@ -445,7 +501,9 @@ class Tools(Generic[Context]):
                     if browser_session.is_file_input(current):
                         return current
                     # Check all descendants of the current node
-                    result = find_file_input_in_descendants(current, max_descendant_depth)
+                    result = find_file_input_in_descendants(
+                        current, max_descendant_depth
+                    )
                     if result:
                         return result
                     # Check all siblings and their descendants
@@ -455,7 +513,9 @@ class Tools(Generic[Context]):
                                 continue
                             if browser_session.is_file_input(sibling):
                                 return sibling
-                            result = find_file_input_in_descendants(sibling, max_descendant_depth)
+                            result = find_file_input_in_descendants(
+                                sibling, max_descendant_depth
+                            )
                             if result:
                                 return result
                     current = current.parent_node
@@ -476,7 +536,9 @@ class Tools(Generic[Context]):
                 cdp_session = await browser_session.get_or_create_cdp_session()
                 try:
                     scroll_info = await cdp_session.cdp_client.send.Runtime.evaluate(
-                        params={"expression": "window.scrollY || window.pageYOffset || 0"},
+                        params={
+                            "expression": "window.scrollY || window.pageYOffset || 0"
+                        },
                         session_id=cdp_session.session_id,
                     )
                     current_scroll_y = scroll_info.get("result", {}).get("value", 0)
@@ -499,7 +561,9 @@ class Tools(Generic[Context]):
 
                 if closest_file_input:
                     file_input_node = closest_file_input
-                    logger.info(f"Found file input closest to scroll position (distance: {min_distance}px)")
+                    logger.info(
+                        f"Found file input closest to scroll position (distance: {min_distance}px)"
+                    )
                 else:
                     msg = "No file upload element found on the page"
                     logger.error(msg)
@@ -508,7 +572,9 @@ class Tools(Generic[Context]):
 
             # Dispatch upload file event with the file input node
             try:
-                event = browser_session.event_bus.dispatch(UploadFileEvent(node=file_input_node, file_path=params.path))
+                event = browser_session.event_bus.dispatch(
+                    UploadFileEvent(node=file_input_node, file_path=params.path)
+                )
                 await event
                 await event.event_result(raise_if_any=True, raise_if_none=False)
                 msg = f"Successfully uploaded file to index {params.index}"
@@ -523,16 +589,26 @@ class Tools(Generic[Context]):
 
         # Tab Management Actions
 
-        @self.registry.action("Switch tab", param_model=SwitchTabAction, terminates_sequence=True)
+        @self.registry.action(
+            "Switch tab", param_model=SwitchTabAction, terminates_sequence=True
+        )
         async def switch_tab(params: SwitchTabAction, browser_session: BrowserSession):
             # Dispatch switch tab event
             try:
-                target_id = await browser_session.get_target_id_from_tab_id(params.tab_id)
+                target_id = await browser_session.get_target_id_from_tab_id(
+                    params.tab_id
+                )
 
-                event = browser_session.event_bus.dispatch(SwitchTabEvent(target_id=target_id))
+                event = browser_session.event_bus.dispatch(
+                    SwitchTabEvent(target_id=target_id)
+                )
                 await event
-                new_target_id = await event.event_result(raise_if_any=True, raise_if_none=False)
-                assert new_target_id, "SwitchTabEvent did not return a TargetID for the new tab that was switched to"
+                new_target_id = await event.event_result(
+                    raise_if_any=True, raise_if_none=False
+                )
+                assert (
+                    new_target_id
+                ), "SwitchTabEvent did not return a TargetID for the new tab that was switched to"
                 memory = f"Switched to Tab with ID {new_target_id[-4:]}"
                 logger.info(f"🔄  {memory}")
                 return ActionResult(extracted_content=memory, long_term_memory=memory)
@@ -544,13 +620,17 @@ class Tools(Generic[Context]):
         async def close_tab(params: CloseTabAction, browser_session: BrowserSession):
             # Dispatch close tab event
             try:
-                target_id = await browser_session.get_target_id_from_tab_id(params.tab_id)
+                target_id = await browser_session.get_target_id_from_tab_id(
+                    params.tab_id
+                )
                 cdp_session = await browser_session.get_or_create_cdp_session()
                 target_info = await cdp_session.cdp_client.send.Target.getTargetInfo(
                     params={"targetId": target_id}, session_id=cdp_session.session_id
                 )
                 tab_url = target_info["targetInfo"]["url"]
-                event = browser_session.event_bus.dispatch(CloseTabEvent(target_id=target_id))
+                event = browser_session.event_bus.dispatch(
+                    CloseTabEvent(target_id=target_id)
+                )
                 await event
                 await event.event_result(raise_if_any=True, raise_if_none=False)
                 memory = f"Closed tab # {params.tab_id} ({_log_pretty_url(tab_url)})"
@@ -597,9 +677,13 @@ If this tool does not return the desired outcome, do not call it again, use scro
 
             # Extract clean markdown using the new method
             try:
-                content, content_stats = await self.extract_clean_markdown(browser_session, extract_links)
+                content, content_stats = await self.extract_clean_markdown(
+                    browser_session, extract_links
+                )
             except Exception as e:
-                raise RuntimeError(f"Could not extract clean markdown: {type(e).__name__}")
+                raise RuntimeError(
+                    f"Could not extract clean markdown: {type(e).__name__}"
+                )
 
             # Original content length for processing
             final_filtered_length = content_stats["final_filtered_chars"]
@@ -619,12 +703,16 @@ If this tool does not return the desired outcome, do not call it again, use scro
                 truncate_at = MAX_CHAR_LIMIT
 
                 # Look for paragraph break within last 500 chars of limit
-                paragraph_break = content.rfind("\n\n", MAX_CHAR_LIMIT - 500, MAX_CHAR_LIMIT)
+                paragraph_break = content.rfind(
+                    "\n\n", MAX_CHAR_LIMIT - 500, MAX_CHAR_LIMIT
+                )
                 if paragraph_break > 0:
                     truncate_at = paragraph_break
                 else:
                     # Look for sentence break within last 200 chars of limit
-                    sentence_break = content.rfind(".", MAX_CHAR_LIMIT - 200, MAX_CHAR_LIMIT)
+                    sentence_break = content.rfind(
+                        ".", MAX_CHAR_LIMIT - 200, MAX_CHAR_LIMIT
+                    )
                     if sentence_break > 0:
                         truncate_at = sentence_break + 1
 
@@ -690,7 +778,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
                     memory = extracted_content
                     include_extracted_content_only_once = False
                 else:
-                    save_result = await file_system.save_extracted_content(extracted_content)
+                    save_result = await file_system.save_extracted_content(
+                        extracted_content
+                    )
                     memory = f"Extracted content from {current_url} for query: {query}\nContent saved to file system: {save_result} and displayed in <read_state>."
                     include_extracted_content_only_once = True
 
@@ -718,8 +808,13 @@ You will be given a query and the markdown of a webpage that has been filtered t
                 # Look up the node from the selector map if index is provided
                 # Special case: index 0 means scroll the whole page (root/body element)
                 node = None
-                if params.frame_element_index is not None and params.frame_element_index != 0:
-                    node = await browser_session.get_element_by_index(params.frame_element_index)
+                if (
+                    params.frame_element_index is not None
+                    and params.frame_element_index != 0
+                ):
+                    node = await browser_session.get_element_by_index(
+                        params.frame_element_index
+                    )
                     if node is None:
                         # Element does not exist
                         msg = f"Element index {params.frame_element_index} not found in browser state"
@@ -742,18 +837,23 @@ You will be given a query and the markdown of a webpage that has been filtered t
                 # If index is 0 or None, we're scrolling the page
                 target = (
                     "the page"
-                    if params.frame_element_index is None or params.frame_element_index == 0
+                    if params.frame_element_index is None
+                    or params.frame_element_index == 0
                     else f"element {params.frame_element_index}"
                 )
 
                 if params.num_pages == 1.0:
                     long_term_memory = f"Scrolled {direction} {target} by one page"
                 else:
-                    long_term_memory = f"Scrolled {direction} {target} by {params.num_pages} pages"
+                    long_term_memory = (
+                        f"Scrolled {direction} {target} by {params.num_pages} pages"
+                    )
 
                 msg = f"🔍 {long_term_memory}"
                 logger.info(msg)
-                return ActionResult(extracted_content=msg, long_term_memory=long_term_memory)
+                return ActionResult(
+                    extracted_content=msg, long_term_memory=long_term_memory
+                )
             except Exception as e:
                 logger.error(f"Failed to dispatch ScrollEvent: {type(e).__name__}: {e}")
                 error_msg = "Failed to execute scroll action."
@@ -766,7 +866,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
         async def send_keys(params: SendKeysAction, browser_session: BrowserSession):
             # Dispatch send keys event
             try:
-                event = browser_session.event_bus.dispatch(SendKeysEvent(keys=params.keys))
+                event = browser_session.event_bus.dispatch(
+                    SendKeysEvent(keys=params.keys)
+                )
                 await event
                 await event.event_result(raise_if_any=True, raise_if_none=False)
                 memory = f"Sent keys: {params.keys}"
@@ -774,7 +876,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
                 logger.info(msg)
                 return ActionResult(extracted_content=memory, long_term_memory=memory)
             except Exception as e:
-                logger.error(f"Failed to dispatch SendKeysEvent: {type(e).__name__}: {e}")
+                logger.error(
+                    f"Failed to dispatch SendKeysEvent: {type(e).__name__}: {e}"
+                )
                 error_msg = f"Failed to send keys: {str(e)}"
                 return ActionResult(error=error_msg)
 
@@ -807,17 +911,25 @@ You will be given a query and the markdown of a webpage that has been filtered t
             "Get list of values for a dropdown input field. Only works on dropdown-style form elements (<select>, Semantic UI/aria-labeled select, etc.). Do not use this tool for none dropdown elements.",
             param_model=GetDropdownOptionsAction,
         )
-        async def get_dropdown_options(params: GetDropdownOptionsAction, browser_session: BrowserSession):
+        async def get_dropdown_options(
+            params: GetDropdownOptionsAction, browser_session: BrowserSession
+        ):
             """Get all options from a native dropdown or ARIA menu"""
             # Look up the node from the selector map
             node = await browser_session.get_element_by_index(params.index)
             if node is None:
-                raise ValueError(f"Element index {params.index} not found in browser state")
+                raise ValueError(
+                    f"Element index {params.index} not found in browser state"
+                )
 
             # Dispatch GetDropdownOptionsEvent to the event handler
 
-            event = browser_session.event_bus.dispatch(GetDropdownOptionsEvent(node=node))
-            dropdown_data = await event.event_result(timeout=3.0, raise_if_none=True, raise_if_any=True)
+            event = browser_session.event_bus.dispatch(
+                GetDropdownOptionsEvent(node=node)
+            )
+            dropdown_data = await event.event_result(
+                timeout=3.0, raise_if_none=True, raise_if_any=True
+            )
 
             if not dropdown_data:
                 raise ValueError("Failed to get dropdown options - no data returned")
@@ -833,17 +945,23 @@ You will be given a query and the markdown of a webpage that has been filtered t
             "Select dropdown option by exact text from any dropdown type (native <select>, ARIA menus, or custom dropdowns). Searches target element and children to find selectable options.",
             param_model=SelectDropdownOptionAction,
         )
-        async def select_dropdown_option(params: SelectDropdownOptionAction, browser_session: BrowserSession):
+        async def select_dropdown_option(
+            params: SelectDropdownOptionAction, browser_session: BrowserSession
+        ):
             """Select dropdown option by the text of the option you want to select"""
             # Look up the node from the selector map
             node = await browser_session.get_element_by_index(params.index)
             if node is None:
-                raise ValueError(f"Element index {params.index} not found in browser state")
+                raise ValueError(
+                    f"Element index {params.index} not found in browser state"
+                )
 
             # Dispatch SelectDropdownOptionEvent to the event handler
             from ..browser.events import SelectDropdownOptionEvent
 
-            event = browser_session.event_bus.dispatch(SelectDropdownOptionEvent(node=node, text=params.text))
+            event = browser_session.event_bus.dispatch(
+                SelectDropdownOptionEvent(node=node, text=params.text)
+            )
             selection_data = await event.event_result()
 
             if not selection_data:
@@ -861,7 +979,10 @@ You will be given a query and the markdown of a webpage that has been filtered t
             else:
                 # Handle structured error response
                 # TODO: raise BrowserError instead of returning ActionResult
-                if "short_term_memory" in selection_data and "long_term_memory" in selection_data:
+                if (
+                    "short_term_memory" in selection_data
+                    and "long_term_memory" in selection_data
+                ):
                     return ActionResult(
                         extracted_content=selection_data["short_term_memory"],
                         long_term_memory=selection_data["long_term_memory"],
@@ -869,7 +990,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
                     )
                 else:
                     # Fallback to regular error
-                    error_msg = selection_data.get("error", f"Failed to select option: {params.text}")
+                    error_msg = selection_data.get(
+                        "error", f"Failed to select option: {params.text}"
+                    )
                     return ActionResult(error=error_msg)
 
         # File System Actions
@@ -898,13 +1021,17 @@ You will be given a query and the markdown of a webpage that has been filtered t
         @self.registry.action(
             "Replace old_str with new_str in file_name. old_str must exactly match the string to replace in original text. Recommended tool to mark completed items in todo.md or change specific contents in a file."
         )
-        async def replace_file_str(file_name: str, old_str: str, new_str: str, file_system: FileSystem):
+        async def replace_file_str(
+            file_name: str, old_str: str, new_str: str, file_system: FileSystem
+        ):
             result = await file_system.replace_file_str(file_name, old_str, new_str)
             logger.info(f"💾 {result}")
             return ActionResult(extracted_content=result, long_term_memory=result)
 
         @self.registry.action("Read file_name from file system")
-        async def read_file(file_name: str, available_file_paths: list[str], file_system: FileSystem):
+        async def read_file(
+            file_name: str, available_file_paths: list[str], file_system: FileSystem
+        ):
             if available_file_paths and file_name in available_file_paths:
                 result = await file_system.read_file(file_name, external_file=True)
             else:
@@ -922,7 +1049,11 @@ You will be given a query and the markdown of a webpage that has been filtered t
                     else:
                         break
                 remaining_lines = len(lines) - lines_count
-                memory = f"{display}{remaining_lines} more lines..." if remaining_lines > 0 else display
+                memory = (
+                    f"{display}{remaining_lines} more lines..."
+                    if remaining_lines > 0
+                    else display
+                )
             else:
                 memory = result
             logger.info(f"💾 {memory}")
@@ -950,7 +1081,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
         # Get HTML content from current page
         cdp_session = await browser_session.get_or_create_cdp_session()
         try:
-            body_id = await cdp_session.cdp_client.send.DOM.getDocument(session_id=cdp_session.session_id)
+            body_id = await cdp_session.cdp_client.send.DOM.getDocument(
+                session_id=cdp_session.session_id
+            )
             page_html_result = await cdp_session.cdp_client.send.DOM.getOuterHTML(
                 params={"backendNodeId": body_id["root"]["backendNodeId"]},
                 session_id=cdp_session.session_id,
@@ -977,7 +1110,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
         initial_markdown_length = len(content)
 
         # Minimal cleanup - html2text already does most of the work
-        content = re.sub(r"%[0-9A-Fa-f]{2}", "", content)  # Remove any remaining URL encoding
+        content = re.sub(
+            r"%[0-9A-Fa-f]{2}", "", content
+        )  # Remove any remaining URL encoding
 
         # Apply light preprocessing to clean up excessive whitespace
         content, chars_filtered = self._preprocess_markdown_content(content)
@@ -995,7 +1130,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
 
         return content, stats
 
-    def _preprocess_markdown_content(self, content: str, max_newlines: int = 3) -> tuple[str, int]:
+    def _preprocess_markdown_content(
+        self, content: str, max_newlines: int = 3
+    ) -> tuple[str, int]:
         """
         Light preprocessing of html2text output - minimal cleanup since html2text is already clean.
 
@@ -1028,7 +1165,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
         chars_filtered = original_length - len(content)
         return content, chars_filtered
 
-    def _register_done_action(self, output_model: type[T] | None, display_files_in_done_text: bool = True):
+    def _register_done_action(
+        self, output_model: type[T] | None, display_files_in_done_text: bool = True
+    ):
         if output_model is not None:
             self.display_files_in_done_text = display_files_in_done_text
 
@@ -1063,7 +1202,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
 
                 len_text = len(params.text)
                 len_max_memory = 100
-                memory = f"Task completed: {params.success} - {params.text[:len_max_memory]}"
+                memory = (
+                    f"Task completed: {params.success} - {params.text[:len_max_memory]}"
+                )
                 if len_text > len_max_memory:
                     memory += f" - {len_text - len_max_memory} more characters"
 
@@ -1082,7 +1223,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
                             user_message += "\n\nAttachments:"
                             user_message += file_msg
                         else:
-                            logger.warning("Agent wanted to display files but none were found")
+                            logger.warning(
+                                "Agent wanted to display files but none were found"
+                            )
                     else:
                         for file_name in params.files_to_display:
                             if file_name == "todo.md":
@@ -1091,7 +1234,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
                             if file_content:
                                 attachments.append(file_name)
 
-                attachments = [str(file_system.get_dir() / file_name) for file_name in attachments]
+                attachments = [
+                    str(file_system.get_dir() / file_name) for file_name in attachments
+                ]
 
                 return ActionResult(
                     is_done=True,
@@ -1173,14 +1318,22 @@ You will be given a query and the markdown of a webpage that has been filtered t
                             available_file_paths=available_file_paths,
                         )
                     except BrowserError as e:
-                        logger.error(f"❌ Action {action_name} failed with BrowserError: {str(e)}")
+                        logger.error(
+                            f"❌ Action {action_name} failed with BrowserError: {str(e)}"
+                        )
                         result = handle_browser_error(e)
                     except TimeoutError as e:
-                        logger.error(f"❌ Action {action_name} failed with TimeoutError: {str(e)}")
-                        result = ActionResult(error=f"{action_name} was not executed due to timeout.")
+                        logger.error(
+                            f"❌ Action {action_name} failed with TimeoutError: {str(e)}"
+                        )
+                        result = ActionResult(
+                            error=f"{action_name} was not executed due to timeout."
+                        )
                     except Exception as e:
                         # Log the original exception with traceback for observability
-                        logger.error(f"Action '{action_name}' failed with error: {str(e)}")
+                        logger.error(
+                            f"Action '{action_name}' failed with error: {str(e)}"
+                        )
                         result = ActionResult(error=str(e))
 
                     if Laminar is not None:
@@ -1193,7 +1346,9 @@ You will be given a query and the markdown of a webpage that has been filtered t
                 elif result is None:
                     return ActionResult()
                 else:
-                    raise ValueError(f"Invalid action result type: {type(result)} of {result}")
+                    raise ValueError(
+                        f"Invalid action result type: {type(result)} of {result}"
+                    )
         return ActionResult()
 
 

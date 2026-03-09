@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from noesium.core.capability.providers import ToolCapabilityProvider
-from noesium.core.event.envelope import AgentRef
 from noesium.core.toolify.adapters.builtin_adapter import BuiltinAdapter
 from noesium.core.toolify.adapters.function_adapter import FunctionAdapter
 from noesium.core.toolify.atomic import ToolContext, ToolPermission
@@ -23,7 +22,6 @@ from noesium.core.toolify.registry import ToolkitRegistry
 
 if TYPE_CHECKING:
     from noesium.core.capability.registry import CapabilityRegistry
-    from noesium.core.event.store import EventStore
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +41,6 @@ _SESSION_DIR_OVERRIDES: dict[str, dict[str, str]] = {
 
 async def setup_tools(
     registry: "CapabilityRegistry",
-    event_store: "EventStore",
     agent_id: str,
     enabled_toolkits: list[str],
     permissions: list[str],
@@ -57,7 +54,6 @@ async def setup_tools(
 
     Args:
         registry: Capability registry to register tools
-        event_store: Event store for tool execution events
         agent_id: Agent identifier
         enabled_toolkits: List of toolkit names to load
         permissions: Granted tool permissions
@@ -70,12 +66,7 @@ async def setup_tools(
     Returns:
         Tuple of (tool_executor, tool_context)
     """
-    producer = AgentRef(agent_id=agent_id, agent_type="noe")
-
-    tool_executor = ToolExecutor(
-        event_store=event_store,
-        producer=producer,
-    )
+    tool_executor = ToolExecutor()
 
     tool_context = ToolContext(
         agent_id=agent_id,

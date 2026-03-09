@@ -102,7 +102,9 @@ class EventProcessor(BaseWatchdog[Any]):
         Args:
             event: Event to process
         """
-        logger.debug(f"Processing event {event.id[:8]}: {event.type} from {event.source}")
+        logger.debug(
+            f"Processing event {event.id[:8]}: {event.type} from {event.source}"
+        )
 
         for trigger in self.triggers:
             try:
@@ -114,7 +116,10 @@ class EventProcessor(BaseWatchdog[Any]):
                         priority=trigger.priority,
                     )
 
-                    logger.info(f"Trigger '{trigger.id}' fired: created goal {goal.id[:8]} " f"from event {event.type}")
+                    logger.info(
+                        f"Trigger '{trigger.id}' fired: created goal {goal.id[:8]} "
+                        f"from event {event.type}"
+                    )
             except Exception as e:
                 logger.error(
                     f"Error evaluating trigger '{trigger.id}' for event {event.id[:8]}: {e}",

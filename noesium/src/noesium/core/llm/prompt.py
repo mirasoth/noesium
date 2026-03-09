@@ -202,11 +202,15 @@ class PromptLoader:
             tags=metadata_dict.get("tags", []),
             required_variables=metadata_dict.get("required_variables", []),
             optional_variables=metadata_dict.get("optional_variables", {}),
-            template_engine=TemplateEngine(metadata_dict.get("template_engine", "jinja2")),
+            template_engine=TemplateEngine(
+                metadata_dict.get("template_engine", "jinja2")
+            ),
         )
 
         # Parse messages from markdown
-        messages = PromptLoader._parse_markdown_messages(markdown_content, metadata_dict)
+        messages = PromptLoader._parse_markdown_messages(
+            markdown_content, metadata_dict
+        )
 
         return PromptTemplate(
             metadata=metadata,
@@ -241,7 +245,9 @@ class PromptLoader:
         return PromptLoader._dict_to_prompt_template(data)
 
     @staticmethod
-    def from_string(content: str, name: str = "inline", role: str = "system", **metadata_kwargs) -> PromptTemplate:
+    def from_string(
+        content: str, name: str = "inline", role: str = "system", **metadata_kwargs
+    ) -> PromptTemplate:
         """Create prompt from string content"""
         metadata = PromptMetadata(name=name, **metadata_kwargs)
 
@@ -251,7 +257,9 @@ class PromptLoader:
         return PromptTemplate(metadata=metadata, messages=messages)
 
     @staticmethod
-    def _parse_markdown_messages(content: str, metadata: Dict[str, Any]) -> List[MessageTemplate]:
+    def _parse_markdown_messages(
+        content: str, metadata: Dict[str, Any]
+    ) -> List[MessageTemplate]:
         """Parse message blocks from markdown content"""
         messages = []
 
@@ -273,7 +281,9 @@ class PromptLoader:
                 # Start new message
                 role = match.group(1).lower()
                 title_content = match.group(2) or ""
-                current_message = MessageTemplate(role=role, content="", cache=metadata.get("cache", False))
+                current_message = MessageTemplate(
+                    role=role, content="", cache=metadata.get("cache", False)
+                )
                 current_content = [title_content] if title_content else []
             else:
                 if current_message:
@@ -303,7 +313,9 @@ class PromptLoader:
             tags=metadata_dict.get("tags", []),
             required_variables=metadata_dict.get("required_variables", []),
             optional_variables=metadata_dict.get("optional_variables", {}),
-            template_engine=TemplateEngine(metadata_dict.get("template_engine", "jinja2")),
+            template_engine=TemplateEngine(
+                metadata_dict.get("template_engine", "jinja2")
+            ),
         )
 
         messages_data = data.get("messages", [])
@@ -351,7 +363,9 @@ class PromptManager:
 
         if HAS_JINJA2:
             template_dir = str(self.template_dirs[0]) if self.template_dirs else None
-            self._processors[TemplateEngine.JINJA2] = Jinja2TemplateProcessor(template_dir)
+            self._processors[TemplateEngine.JINJA2] = Jinja2TemplateProcessor(
+                template_dir
+            )
 
         # Custom functions for templates
         self._custom_functions: Dict[str, Callable] = {}
@@ -408,7 +422,9 @@ class PromptManager:
             return template
 
         elif content:
-            return PromptLoader.from_string(content, name or "inline", **metadata_kwargs)
+            return PromptLoader.from_string(
+                content, name or "inline", **metadata_kwargs
+            )
 
         else:
             raise ValueError("Either file_path or content must be provided")
@@ -454,7 +470,9 @@ class PromptManager:
             # Check condition
             if msg_template.condition:
                 try:
-                    condition_result = eval(msg_template.condition, {"__builtins__": {}}, variables)
+                    condition_result = eval(
+                        msg_template.condition, {"__builtins__": {}}, variables
+                    )
                     if not condition_result:
                         continue
                 except Exception as e:
@@ -474,7 +492,9 @@ class PromptManager:
             elif msg_template.role == "user":
                 message = UserMessage(content=rendered_content, name=msg_template.name)
             elif msg_template.role == "assistant":
-                message = AssistantMessage(content=rendered_content, name=msg_template.name)
+                message = AssistantMessage(
+                    content=rendered_content, name=msg_template.name
+                )
             else:
                 raise ValueError(f"Unknown role: {msg_template.role}")
 
@@ -550,7 +570,9 @@ class PromptManager:
 # ============================================================================
 
 
-def create_simple_prompt(content: str, role: str = "system", **kwargs) -> List[BaseMessage]:
+def create_simple_prompt(
+    content: str, role: str = "system", **kwargs
+) -> List[BaseMessage]:
     """Quick way to create a simple prompt"""
     manager = PromptManager()
     template = PromptLoader.from_string(content, role=role)

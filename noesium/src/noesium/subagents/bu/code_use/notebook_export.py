@@ -110,7 +110,10 @@ print("Available functions: navigate, click, input, evaluate, search, extract, d
                     r"\.forEach\(",
                 ]
 
-                is_js = any(re.search(pattern, var_value, re.IGNORECASE) for pattern in js_patterns)
+                is_js = any(
+                    re.search(pattern, var_value, re.IGNORECASE)
+                    for pattern in js_patterns
+                )
 
                 if is_js:
                     # Create a code cell with the JavaScript variable
@@ -258,7 +261,10 @@ def session_to_python_script(agent: CodeAgent) -> str:
                     r"\.forEach\(",
                 ]
 
-                is_js = any(re.search(pattern, var_value, re.IGNORECASE) for pattern in js_patterns)
+                is_js = any(
+                    re.search(pattern, var_value, re.IGNORECASE)
+                    for pattern in js_patterns
+                )
 
                 if is_js:
                     lines.append(f"\t# JavaScript Code Block: {var_name}\n")

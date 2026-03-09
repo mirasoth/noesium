@@ -173,12 +173,18 @@ class HarRecordingWatchdog(BaseWatchdog):
         try:
             # Enable Network and Page domains for events
             cdp_session = await self.browser_session.get_or_create_cdp_session()
-            await cdp_session.cdp_client.send.Network.enable(session_id=cdp_session.session_id)
-            await cdp_session.cdp_client.send.Page.enable(session_id=cdp_session.session_id)
+            await cdp_session.cdp_client.send.Network.enable(
+                session_id=cdp_session.session_id
+            )
+            await cdp_session.cdp_client.send.Page.enable(
+                session_id=cdp_session.session_id
+            )
 
             # Query browser version for HAR log.browser
             try:
-                version_info = await self.browser_session.cdp_client.send.Browser.getVersion()
+                version_info = (
+                    await self.browser_session.cdp_client.send.Browser.getVersion()
+                )
                 self._browser_name = version_info.get("product") or "Chromium"
                 self._browser_version = version_info.get("jsVersion") or ""
             except Exception:
@@ -210,41 +216,77 @@ class HarRecordingWatchdog(BaseWatchdog):
             self.logger.warning(f"Failed to write HAR: {e}")
 
     # =============== CDP Event Handlers (sync) ==================
-    def _on_request_will_be_sent(self, params: RequestWillBeSentEvent, session_id: str | None) -> None:
+    def _on_request_will_be_sent(
+        self, params: RequestWillBeSentEvent, session_id: str | None
+    ) -> None:
         try:
-            req = params.get("request", {}) if hasattr(params, "get") else getattr(params, "request", {})
+            req = (
+                params.get("request", {})
+                if hasattr(params, "get")
+                else getattr(params, "request", {})
+            )
             url = req.get("url") if isinstance(req, dict) else getattr(req, "url", None)
             if not _is_https(url):
                 return  # HTTPS-only requirement (only HTTPS requests are recorded for now)
 
-            request_id = params.get("requestId") if hasattr(params, "get") else getattr(params, "requestId", None)
+            request_id = (
+                params.get("requestId")
+                if hasattr(params, "get")
+                else getattr(params, "requestId", None)
+            )
             if not request_id:
                 return
 
-            entry = self._entries.setdefault(request_id, _HarEntryBuilder(request_id=request_id))
+            entry = self._entries.setdefault(
+                request_id, _HarEntryBuilder(request_id=request_id)
+            )
             entry.url = url
-            entry.method = req.get("method") if isinstance(req, dict) else getattr(req, "method", None)
-            entry.post_data = req.get("postData") if isinstance(req, dict) else getattr(req, "postData", None)
+            entry.method = (
+                req.get("method")
+                if isinstance(req, dict)
+                else getattr(req, "method", None)
+            )
+            entry.post_data = (
+                req.get("postData")
+                if isinstance(req, dict)
+                else getattr(req, "postData", None)
+            )
 
             # Convert headers to plain dict, handling various formats
-            headers_raw = req.get("headers") if isinstance(req, dict) else getattr(req, "headers", None)
+            headers_raw = (
+                req.get("headers")
+                if isinstance(req, dict)
+                else getattr(req, "headers", None)
+            )
             if headers_raw is None:
                 entry.request_headers = {}
             elif isinstance(headers_raw, dict):
-                entry.request_headers = {k.lower(): str(v) for k, v in headers_raw.items()}
+                entry.request_headers = {
+                    k.lower(): str(v) for k, v in headers_raw.items()
+                }
             elif isinstance(headers_raw, list):
                 entry.request_headers = {
-                    h.get("name", "").lower(): str(h.get("value") or "") for h in headers_raw if isinstance(h, dict)
+                    h.get("name", "").lower(): str(h.get("value") or "")
+                    for h in headers_raw
+                    if isinstance(h, dict)
                 }
             else:
                 # Handle Headers type or other formats - convert to dict
                 try:
-                    headers_dict = dict(headers_raw) if hasattr(headers_raw, "__iter__") else {}
-                    entry.request_headers = {k.lower(): str(v) for k, v in headers_dict.items()}
+                    headers_dict = (
+                        dict(headers_raw) if hasattr(headers_raw, "__iter__") else {}
+                    )
+                    entry.request_headers = {
+                        k.lower(): str(v) for k, v in headers_dict.items()
+                    }
                 except Exception:
                     entry.request_headers = {}
 
-            entry.frame_id = params.get("frameId") if hasattr(params, "get") else getattr(params, "frameId", None)
+            entry.frame_id = (
+                params.get("frameId")
+                if hasattr(params, "get")
+                else getattr(params, "frameId", None)
+            )
             entry.document_url = (
                 params.get("documentURL")
                 if hasattr(params, "get")
@@ -252,13 +294,23 @@ class HarRecordingWatchdog(BaseWatchdog):
             )
 
             # Timing anchors
-            entry.ts_request = params.get("timestamp") if hasattr(params, "get") else getattr(params, "timestamp", None)
+            entry.ts_request = (
+                params.get("timestamp")
+                if hasattr(params, "get")
+                else getattr(params, "timestamp", None)
+            )
             entry.wall_time_request = (
-                params.get("wallTime") if hasattr(params, "get") else getattr(params, "wallTime", None)
+                params.get("wallTime")
+                if hasattr(params, "get")
+                else getattr(params, "wallTime", None)
             )
 
             # Track top-level navigations for page context
-            req_type = params.get("type") if hasattr(params, "get") else getattr(params, "type", None)
+            req_type = (
+                params.get("type")
+                if hasattr(params, "get")
+                else getattr(params, "type", None)
+            )
             is_same_doc = (
                 params.get("isSameDocument", False)
                 if hasattr(params, "get")
@@ -270,7 +322,9 @@ class HarRecordingWatchdog(BaseWatchdog):
                     if entry.frame_id not in self._top_level_pages:
                         self._top_level_pages[entry.frame_id] = {
                             "url": str(url),
-                            "title": str(url),  # Default to URL, will be updated from DOM
+                            "title": str(
+                                url
+                            ),  # Default to URL, will be updated from DOM
                             "startedDateTime": entry.wall_time_request,
                             "monotonic_start": entry.ts_request,  # Track monotonic start time for timing calculations
                             "onContentLoad": -1,
@@ -288,29 +342,52 @@ class HarRecordingWatchdog(BaseWatchdog):
         except Exception as e:
             self.logger.debug(f"requestWillBeSent handling error: {e}")
 
-    def _on_response_received(self, params: ResponseReceivedEvent, session_id: str | None) -> None:
+    def _on_response_received(
+        self, params: ResponseReceivedEvent, session_id: str | None
+    ) -> None:
         try:
-            request_id = params.get("requestId") if hasattr(params, "get") else getattr(params, "requestId", None)
+            request_id = (
+                params.get("requestId")
+                if hasattr(params, "get")
+                else getattr(params, "requestId", None)
+            )
             if not request_id or request_id not in self._entries:
                 return
-            response = params.get("response", {}) if hasattr(params, "get") else getattr(params, "response", {})
+            response = (
+                params.get("response", {})
+                if hasattr(params, "get")
+                else getattr(params, "response", {})
+            )
             entry = self._entries[request_id]
-            entry.status = response.get("status") if isinstance(response, dict) else getattr(response, "status", None)
+            entry.status = (
+                response.get("status")
+                if isinstance(response, dict)
+                else getattr(response, "status", None)
+            )
             entry.status_text = (
-                response.get("statusText") if isinstance(response, dict) else getattr(response, "statusText", None)
+                response.get("statusText")
+                if isinstance(response, dict)
+                else getattr(response, "statusText", None)
             )
 
             # Extract Content-Length for compression calculation (before converting headers)
-            headers_raw = response.get("headers") if isinstance(response, dict) else getattr(response, "headers", None)
+            headers_raw = (
+                response.get("headers")
+                if isinstance(response, dict)
+                else getattr(response, "headers", None)
+            )
             if headers_raw:
                 if isinstance(headers_raw, dict):
-                    cl_str = headers_raw.get("content-length") or headers_raw.get("Content-Length")
+                    cl_str = headers_raw.get("content-length") or headers_raw.get(
+                        "Content-Length"
+                    )
                 elif isinstance(headers_raw, list):
                     cl_header = next(
                         (
                             h
                             for h in headers_raw
-                            if isinstance(h, dict) and h.get("name", "").lower() == "content-length"
+                            if isinstance(h, dict)
+                            and h.get("name", "").lower() == "content-length"
                         ),
                         None,
                     )
@@ -327,28 +404,42 @@ class HarRecordingWatchdog(BaseWatchdog):
             if headers_raw is None:
                 entry.response_headers = {}
             elif isinstance(headers_raw, dict):
-                entry.response_headers = {k.lower(): str(v) for k, v in headers_raw.items()}
+                entry.response_headers = {
+                    k.lower(): str(v) for k, v in headers_raw.items()
+                }
             elif isinstance(headers_raw, list):
                 entry.response_headers = {
-                    h.get("name", "").lower(): str(h.get("value") or "") for h in headers_raw if isinstance(h, dict)
+                    h.get("name", "").lower(): str(h.get("value") or "")
+                    for h in headers_raw
+                    if isinstance(h, dict)
                 }
             else:
                 # Handle Headers type or other formats - convert to dict
                 try:
-                    headers_dict = dict(headers_raw) if hasattr(headers_raw, "__iter__") else {}
-                    entry.response_headers = {k.lower(): str(v) for k, v in headers_dict.items()}
+                    headers_dict = (
+                        dict(headers_raw) if hasattr(headers_raw, "__iter__") else {}
+                    )
+                    entry.response_headers = {
+                        k.lower(): str(v) for k, v in headers_dict.items()
+                    }
                 except Exception:
                     entry.response_headers = {}
 
             entry.mime_type = (
-                response.get("mimeType") if isinstance(response, dict) else getattr(response, "mimeType", None)
+                response.get("mimeType")
+                if isinstance(response, dict)
+                else getattr(response, "mimeType", None)
             )
             entry.ts_response = (
-                params.get("timestamp") if hasattr(params, "get") else getattr(params, "timestamp", None)
+                params.get("timestamp")
+                if hasattr(params, "get")
+                else getattr(params, "timestamp", None)
             )
 
             protocol_raw = (
-                response.get("protocol") if isinstance(response, dict) else getattr(response, "protocol", None)
+                response.get("protocol")
+                if isinstance(response, dict)
+                else getattr(response, "protocol", None)
             )
             if protocol_raw:
                 protocol_lower = str(protocol_raw).lower()
@@ -367,7 +458,9 @@ class HarRecordingWatchdog(BaseWatchdog):
                 else getattr(response, "remoteIPAddress", None)
             )
             server_port_raw = (
-                response.get("remotePort") if isinstance(response, dict) else getattr(response, "remotePort", None)
+                response.get("remotePort")
+                if isinstance(response, dict)
+                else getattr(response, "remotePort", None)
             )
             if server_port_raw is not None:
                 try:
@@ -389,12 +482,22 @@ class HarRecordingWatchdog(BaseWatchdog):
         except Exception as e:
             self.logger.debug(f"responseReceived handling error: {e}")
 
-    def _on_data_received(self, params: DataReceivedEvent, session_id: str | None) -> None:
+    def _on_data_received(
+        self, params: DataReceivedEvent, session_id: str | None
+    ) -> None:
         try:
-            request_id = params.get("requestId") if hasattr(params, "get") else getattr(params, "requestId", None)
+            request_id = (
+                params.get("requestId")
+                if hasattr(params, "get")
+                else getattr(params, "requestId", None)
+            )
             if not request_id or request_id not in self._entries:
                 return
-            data = params.get("data") if hasattr(params, "get") else getattr(params, "data", None)
+            data = (
+                params.get("data")
+                if hasattr(params, "get")
+                else getattr(params, "data", None)
+            )
             if isinstance(data, str):
                 try:
                     self._entries[request_id].encoded_data.extend(data.encode("latin1"))
@@ -403,9 +506,15 @@ class HarRecordingWatchdog(BaseWatchdog):
         except Exception as e:
             self.logger.debug(f"dataReceived handling error: {e}")
 
-    def _on_loading_finished(self, params: LoadingFinishedEvent, session_id: str | None) -> None:
+    def _on_loading_finished(
+        self, params: LoadingFinishedEvent, session_id: str | None
+    ) -> None:
         try:
-            request_id = params.get("requestId") if hasattr(params, "get") else getattr(params, "requestId", None)
+            request_id = (
+                params.get("requestId")
+                if hasattr(params, "get")
+                else getattr(params, "requestId", None)
+            )
             if not request_id or request_id not in self._entries:
                 return
             entry = self._entries[request_id]
@@ -451,21 +560,41 @@ class HarRecordingWatchdog(BaseWatchdog):
         except Exception as e:
             self.logger.debug(f"loadingFinished handling error: {e}")
 
-    def _on_loading_failed(self, params: LoadingFailedEvent, session_id: str | None) -> None:
+    def _on_loading_failed(
+        self, params: LoadingFailedEvent, session_id: str | None
+    ) -> None:
         try:
-            request_id = params.get("requestId") if hasattr(params, "get") else getattr(params, "requestId", None)
+            request_id = (
+                params.get("requestId")
+                if hasattr(params, "get")
+                else getattr(params, "requestId", None)
+            )
             if request_id and request_id in self._entries:
                 self._entries[request_id].failed = True
         except Exception as e:
             self.logger.debug(f"loadingFailed handling error: {e}")
 
     # ===================== HAR Writing ==========================
-    def _on_lifecycle_event(self, params: LifecycleEventEvent, session_id: str | None) -> None:
+    def _on_lifecycle_event(
+        self, params: LifecycleEventEvent, session_id: str | None
+    ) -> None:
         """Handle Page.lifecycleEvent for tracking page load timings."""
         try:
-            frame_id = params.get("frameId") if hasattr(params, "get") else getattr(params, "frameId", None)
-            name = params.get("name") if hasattr(params, "get") else getattr(params, "name", None)
-            timestamp = params.get("timestamp") if hasattr(params, "get") else getattr(params, "timestamp", None)
+            frame_id = (
+                params.get("frameId")
+                if hasattr(params, "get")
+                else getattr(params, "frameId", None)
+            )
+            name = (
+                params.get("name")
+                if hasattr(params, "get")
+                else getattr(params, "name", None)
+            )
+            timestamp = (
+                params.get("timestamp")
+                if hasattr(params, "get")
+                else getattr(params, "timestamp", None)
+            )
 
             if not frame_id or not name or frame_id not in self._top_level_pages:
                 return
@@ -490,14 +619,24 @@ class HarRecordingWatchdog(BaseWatchdog):
         except Exception as e:
             self.logger.debug(f"lifecycleEvent handling error: {e}")
 
-    def _on_frame_navigated(self, params: FrameNavigatedEvent, session_id: str | None) -> None:
+    def _on_frame_navigated(
+        self, params: FrameNavigatedEvent, session_id: str | None
+    ) -> None:
         """Handle Page.frameNavigated to update page title from DOM."""
         try:
-            frame = params.get("frame") if hasattr(params, "get") else getattr(params, "frame", None)
+            frame = (
+                params.get("frame")
+                if hasattr(params, "get")
+                else getattr(params, "frame", None)
+            )
             if not frame:
                 return
 
-            frame_id = frame.get("id") if isinstance(frame, dict) else getattr(frame, "id", None)
+            frame_id = (
+                frame.get("id")
+                if isinstance(frame, dict)
+                else getattr(frame, "id", None)
+            )
             title = (
                 frame.get("name") or frame.get("url")
                 if isinstance(frame, dict)
@@ -565,7 +704,11 @@ class HarRecordingWatchdog(BaseWatchdog):
                     content_obj["encoding"] = "base64"
                     content_obj["size"] = content_size
                     content_obj["compression"] = compression
-            elif self._content_mode == "attach" and content_size > 0 and sidecar_dir is not None:
+            elif (
+                self._content_mode == "attach"
+                and content_size > 0
+                and sidecar_dir is not None
+            ):
                 filename = _generate_har_filename(body_bytes, e.mime_type)
                 (sidecar_dir / filename).write_bytes(body_bytes)
                 content_obj["_file"] = filename
@@ -578,10 +721,20 @@ class HarRecordingWatchdog(BaseWatchdog):
                     content_obj["compression"] = compression
 
             started_date_time, total_time_ms, timings = self._compute_timings(e)
-            req_headers_list = [{"name": k, "value": str(v)} for k, v in (e.request_headers or {}).items()]
-            resp_headers_list = [{"name": k, "value": str(v)} for k, v in (e.response_headers or {}).items()]
-            request_headers_size = self._calc_headers_size(e.method or "GET", e.url or "", req_headers_list)
-            response_headers_size = self._calc_headers_size(None, None, resp_headers_list)
+            req_headers_list = [
+                {"name": k, "value": str(v)}
+                for k, v in (e.request_headers or {}).items()
+            ]
+            resp_headers_list = [
+                {"name": k, "value": str(v)}
+                for k, v in (e.response_headers or {}).items()
+            ]
+            request_headers_size = self._calc_headers_size(
+                e.method or "GET", e.url or "", req_headers_list
+            )
+            response_headers_size = self._calc_headers_size(
+                None, None, resp_headers_list
+            )
             request_body_size = self._calc_request_body_size(e)
             request_post_data = None
             if e.post_data and self._content_mode != "omit":
@@ -593,7 +746,9 @@ class HarRecordingWatchdog(BaseWatchdog):
                 elif self._content_mode == "attach" and sidecar_dir is not None:
                     post_data_bytes = e.post_data.encode("utf-8")
                     req_mime_type = e.request_headers.get("content-type", "text/plain")
-                    req_filename = _generate_har_filename(post_data_bytes, req_mime_type)
+                    req_filename = _generate_har_filename(
+                        post_data_bytes, req_mime_type
+                    )
                     (sidecar_dir / req_filename).write_bytes(post_data_bytes)
                     request_post_data = {
                         "mimeType": req_mime_type,
@@ -682,7 +837,9 @@ class HarRecordingWatchdog(BaseWatchdog):
                     {
                         "id": f"page@{pid}",  # Use Playwright format: "page@{frame_id}"
                         "title": page_info.get("title", page_info.get("url", "")),
-                        "startedDateTime": self._format_page_started_datetime(page_info.get("startedDateTime")),
+                        "startedDateTime": self._format_page_started_datetime(
+                            page_info.get("startedDateTime")
+                        ),
                         "pageTimings": (
                             (
                                 lambda _ocl, _ol: (
@@ -696,8 +853,16 @@ class HarRecordingWatchdog(BaseWatchdog):
                                     }
                                 )
                             )(
-                                (page_info.get("onContentLoad") if page_info.get("onContentLoad", -1) >= 0 else None),
-                                (page_info.get("onLoad") if page_info.get("onLoad", -1) >= 0 else None),
+                                (
+                                    page_info.get("onContentLoad")
+                                    if page_info.get("onContentLoad", -1) >= 0
+                                    else None
+                                ),
+                                (
+                                    page_info.get("onLoad")
+                                    if page_info.get("onLoad", -1) >= 0
+                                    else None
+                                ),
                             )
                         ),
                     }
@@ -719,7 +884,11 @@ class HarRecordingWatchdog(BaseWatchdog):
         try:
             from datetime import datetime, timezone
 
-            return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+            return (
+                datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
         except Exception:
             return ""
 
@@ -740,7 +909,9 @@ class HarRecordingWatchdog(BaseWatchdog):
         # minimal: include main document and same-origin subresources
         if e.frame_id and e.frame_id in self._top_level_pages:
             page_info = self._top_level_pages[e.frame_id]
-            page_url = page_info.get("url") if isinstance(page_info, dict) else page_info
+            page_url = (
+                page_info.get("url") if isinstance(page_info, dict) else page_info
+            )
             return _origin(e.url or "") == _origin(page_url or "")
         return False
 
@@ -753,7 +924,9 @@ class HarRecordingWatchdog(BaseWatchdog):
                 from datetime import datetime, timezone
 
                 started = (
-                    datetime.fromtimestamp(e.wall_time_request, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+                    datetime.fromtimestamp(e.wall_time_request, tz=timezone.utc)
+                    .isoformat()
+                    .replace("+00:00", "Z")
                 )
         except Exception:
             started = ""
@@ -791,7 +964,9 @@ class HarRecordingWatchdog(BaseWatchdog):
             },
         )
 
-    def _calc_headers_size(self, method: str | None, url: str | None, headers_list: list[dict]) -> int:
+    def _calc_headers_size(
+        self, method: str | None, url: str | None, headers_list: list[dict]
+    ) -> int:
         try:
             # Approximate per RFC: sum of header lines + CRLF; include request/status line only for request
             size = 0
@@ -799,7 +974,9 @@ class HarRecordingWatchdog(BaseWatchdog):
                 # Use HTTP/1.1 request line approximation
                 size += len(f"{method} {url} HTTP/1.1\r\n".encode("latin1"))
             for h in headers_list:
-                size += len(f'{h.get("name", "")}: {h.get("value", "")}\r\n'.encode("latin1"))
+                size += len(
+                    f'{h.get("name", "")}: {h.get("value", "")}\r\n'.encode("latin1")
+                )
             size += len(b"\r\n")
             return size
         except Exception:
@@ -810,7 +987,9 @@ class HarRecordingWatchdog(BaseWatchdog):
         try:
             cl = None
             if e.request_headers:
-                cl = e.request_headers.get("content-length") or e.request_headers.get("Content-Length")
+                cl = e.request_headers.get("content-length") or e.request_headers.get(
+                    "Content-Length"
+                )
             if cl is not None:
                 return int(cl)
             if e.post_data:

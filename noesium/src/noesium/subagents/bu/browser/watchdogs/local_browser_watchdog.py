@@ -44,11 +44,15 @@ class LocalBrowserWatchdog(BaseWatchdog):
     _original_user_data_dir: str | None = PrivateAttr(default=None)
 
     @observe_debug(ignore_input=True, ignore_output=True, name="browser_launch_event")
-    async def on_BrowserLaunchEvent(self, event: BrowserLaunchEvent) -> BrowserLaunchResult:
+    async def on_BrowserLaunchEvent(
+        self, event: BrowserLaunchEvent
+    ) -> BrowserLaunchResult:
         """Launch a local browser process."""
 
         try:
-            self.logger.debug("[LocalBrowserWatchdog] Received BrowserLaunchEvent, launching local browser...")
+            self.logger.debug(
+                "[LocalBrowserWatchdog] Received BrowserLaunchEvent, launching local browser..."
+            )
 
             # self.logger.debug('[LocalBrowserWatchdog] Calling _launch_browser...')
             process, cdp_url = await self._launch_browser()
@@ -78,7 +82,9 @@ class LocalBrowserWatchdog(BaseWatchdog):
 
         # Restore original user_data_dir if it was modified
         if self._original_user_data_dir is not None:
-            self.browser_session.browser_profile.user_data_dir = self._original_user_data_dir
+            self.browser_session.browser_profile.user_data_dir = (
+                self._original_user_data_dir
+            )
             self._original_user_data_dir = None
 
         self.logger.debug("[LocalBrowserWatchdog] Browser cleanup completed")
@@ -86,7 +92,9 @@ class LocalBrowserWatchdog(BaseWatchdog):
     async def on_BrowserStopEvent(self, event: BrowserStopEvent) -> None:
         """Listen for BrowserStopEvent and dispatch BrowserKillEvent without awaiting it."""
         if self.browser_session.is_local and self._subprocess:
-            self.logger.debug("[LocalBrowserWatchdog] BrowserStopEvent received, dispatching BrowserKillEvent")
+            self.logger.debug(
+                "[LocalBrowserWatchdog] BrowserStopEvent received, dispatching BrowserKillEvent"
+            )
             # Dispatch BrowserKillEvent without awaiting so it gets processed after all BrowserStopEvent handlers
             self.event_bus.dispatch(BrowserKillEvent())
 
@@ -101,7 +109,9 @@ class LocalBrowserWatchdog(BaseWatchdog):
         """
         # Keep track of original user_data_dir to restore if needed
         profile = self.browser_session.browser_profile
-        self._original_user_data_dir = str(profile.user_data_dir) if profile.user_data_dir else None
+        self._original_user_data_dir = (
+            str(profile.user_data_dir) if profile.user_data_dir else None
+        )
         self._temp_dirs_to_cleanup = []
 
         for attempt in range(max_retries):
@@ -141,7 +151,9 @@ class LocalBrowserWatchdog(BaseWatchdog):
                     f"[LocalBrowserWatchdog] 📦 Found local browser installed at executable_path= {browser_path}"
                 )
                 if not browser_path:
-                    raise RuntimeError("No local Chrome/Chromium install found, and failed to install with playwright")
+                    raise RuntimeError(
+                        "No local Chrome/Chromium install found, and failed to install with playwright"
+                    )
 
                 # Launch browser subprocess directly
                 self.logger.debug(
@@ -169,7 +181,9 @@ class LocalBrowserWatchdog(BaseWatchdog):
                 # Success! Clean up only the temp dirs we created but didn't use
                 currently_used_dir = str(profile.user_data_dir)
                 unused_temp_dirs = [
-                    tmp_dir for tmp_dir in self._temp_dirs_to_cleanup if str(tmp_dir) != currently_used_dir
+                    tmp_dir
+                    for tmp_dir in self._temp_dirs_to_cleanup
+                    if str(tmp_dir) != currently_used_dir
                 ]
 
                 for tmp_dir in unused_temp_dirs:
@@ -199,7 +213,9 @@ class LocalBrowserWatchdog(BaseWatchdog):
                         "already in use",
                     ]
                 ):
-                    self.logger.warning(f"Browser launch failed (attempt {attempt + 1}/{max_retries}): {e}")
+                    self.logger.warning(
+                        f"Browser launch failed (attempt {attempt + 1}/{max_retries}): {e}"
+                    )
 
                     if attempt < max_retries - 1:
                         # Create a temporary directory for next attempt
@@ -208,7 +224,9 @@ class LocalBrowserWatchdog(BaseWatchdog):
 
                         # Update profile to use temp directory
                         profile.user_data_dir = str(tmp_dir)
-                        self.logger.debug(f"Retrying with temporary user_data_dir: {tmp_dir}")
+                        self.logger.debug(
+                            f"Retrying with temporary user_data_dir: {tmp_dir}"
+                        )
 
                         # Small delay before retry
                         await asyncio.sleep(0.5)
@@ -362,14 +380,18 @@ class LocalBrowserWatchdog(BaseWatchdog):
 
         try:
             stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=60.0)
-            self.logger.debug(f"[LocalBrowserWatchdog] 📦 Playwright install output: {stdout}")
+            self.logger.debug(
+                f"[LocalBrowserWatchdog] 📦 Playwright install output: {stdout}"
+            )
             browser_path = self._find_installed_browser_path()
             if browser_path:
                 return browser_path
             self.logger.error(
                 f"[LocalBrowserWatchdog] ❌ Playwright local browser installation error: \n{stdout}\n{stderr}"
             )
-            raise RuntimeError("No local browser path found after: uvx playwright install chrome")
+            raise RuntimeError(
+                "No local browser path found after: uvx playwright install chrome"
+            )
         except TimeoutError:
             # Kill the subprocess if it times out
             process.kill()
@@ -403,7 +425,9 @@ class LocalBrowserWatchdog(BaseWatchdog):
         while asyncio.get_event_loop().time() - start_time < timeout:
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(f"http://127.0.0.1:{port}/json/version") as resp:
+                    async with session.get(
+                        f"http://127.0.0.1:{port}/json/version"
+                    ) as resp:
                         if resp.status == 200:
                             # Chrome is ready
                             return f"http://127.0.0.1:{port}/"

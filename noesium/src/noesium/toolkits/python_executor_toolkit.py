@@ -213,7 +213,9 @@ class PythonExecutorToolkit(AsyncBaseToolkit):
         self.default_timeout = self.config.config.get("default_timeout", 30)
         self.max_timeout = self.config.config.get("max_timeout", 300)  # 5 minutes max
 
-    async def execute_python_code(self, code: str, workdir: str = None, timeout: int = None) -> Dict[str, Any]:
+    async def execute_python_code(
+        self, code: str, workdir: str = None, timeout: int = None
+    ) -> Dict[str, Any]:
         """
         Execute Python code and return comprehensive results.
 
@@ -274,7 +276,9 @@ class PythonExecutorToolkit(AsyncBaseToolkit):
         timeout = min(timeout, self.max_timeout)
 
         self.logger.info(f"Executing Python code in {workdir} with {timeout}s timeout")
-        self.logger.debug(f"Code to execute:\n{code[:200]}{'...' if len(code) > 200 else ''}")
+        self.logger.debug(
+            f"Code to execute:\n{code[:200]}{'...' if len(code) > 200 else ''}"
+        )
 
         try:
             # Run code execution in thread pool to avoid blocking

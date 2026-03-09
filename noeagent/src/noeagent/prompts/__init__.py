@@ -40,10 +40,16 @@ class NoePromptManager:
         # Load from cache or package resources
         if name not in self._cache:
             try:
-                with importlib.resources.files("noeagent.prompts").joinpath(f"{name}.md").open("r") as f:
+                with (
+                    importlib.resources.files("noeagent.prompts")
+                    .joinpath(f"{name}.md")
+                    .open("r") as f
+                ):
                     self._cache[name] = f.read()
             except Exception as exc:
-                raise FileNotFoundError(f"Prompt '{name}' not found in noeagent.prompts package: {exc}") from exc
+                raise FileNotFoundError(
+                    f"Prompt '{name}' not found in noeagent.prompts package: {exc}"
+                ) from exc
 
         # Parse frontmatter and body so template_engine, required_variables, optional_variables apply
         template = PromptLoader.from_markdown_string(self._cache[name], name=name)
@@ -52,7 +58,9 @@ class NoePromptManager:
         except ValueError as exc:
             msg = str(exc)
             if "required" in msg.lower() or "missing" in msg.lower():
-                raise ValueError(f"Prompt '{name}' missing required variable(s): {msg}") from exc
+                raise ValueError(
+                    f"Prompt '{name}' missing required variable(s): {msg}"
+                ) from exc
             raise
         return messages[0].content if messages else ""
 

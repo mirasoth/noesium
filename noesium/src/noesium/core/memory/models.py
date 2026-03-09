@@ -37,11 +37,17 @@ class BaseMemoryItem(BaseModel):
         description="Timestamp when the memory was created",
     )
 
-    updated_at: Optional[datetime] = Field(default=None, description="Timestamp when the memory was last updated")
+    updated_at: Optional[datetime] = Field(
+        default=None, description="Timestamp when the memory was last updated"
+    )
 
-    version: int = Field(default=1, description="Version number for tracking memory updates", ge=1)
+    version: int = Field(
+        default=1, description="Version number for tracking memory updates", ge=1
+    )
 
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the memory item")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata for the memory item"
+    )
 
     tags: List[str] = Field(
         default_factory=list,
@@ -78,9 +84,13 @@ class MemoryItem(BaseMemoryItem):
         default="message", description="Type of memory item for categorization"
     )
 
-    user_id: Optional[str] = Field(default=None, description="ID of the user associated with this memory")
+    user_id: Optional[str] = Field(
+        default=None, description="ID of the user associated with this memory"
+    )
 
-    agent_id: Optional[str] = Field(default=None, description="ID of the agent associated with this memory")
+    agent_id: Optional[str] = Field(
+        default=None, description="ID of the agent associated with this memory"
+    )
 
     session_id: Optional[str] = Field(
         default=None,
@@ -112,15 +122,25 @@ class MemoryFilter(BaseModel):
 
     agent_id: Optional[str] = Field(default=None, description="Filter by agent ID")
 
-    session_id: Optional[str] = Field(default=None, description="Filter by session/conversation ID")
+    session_id: Optional[str] = Field(
+        default=None, description="Filter by session/conversation ID"
+    )
 
-    memory_type: Optional[str] = Field(default=None, description="Filter by memory type")
+    memory_type: Optional[str] = Field(
+        default=None, description="Filter by memory type"
+    )
 
-    tags: Optional[List[str]] = Field(default=None, description="Filter by tags (items must have all specified tags)")
+    tags: Optional[List[str]] = Field(
+        default=None, description="Filter by tags (items must have all specified tags)"
+    )
 
-    date_from: Optional[datetime] = Field(default=None, description="Filter items created after this date")
+    date_from: Optional[datetime] = Field(
+        default=None, description="Filter items created after this date"
+    )
 
-    date_to: Optional[datetime] = Field(default=None, description="Filter items created before this date")
+    date_to: Optional[datetime] = Field(
+        default=None, description="Filter items created before this date"
+    )
 
     min_importance: Optional[float] = Field(
         default=None,
@@ -129,7 +149,9 @@ class MemoryFilter(BaseModel):
         le=1.0,
     )
 
-    metadata_filters: Dict[str, Any] = Field(default_factory=dict, description="Filter by metadata key-value pairs")
+    metadata_filters: Dict[str, Any] = Field(
+        default_factory=dict, description="Filter by metadata key-value pairs"
+    )
 
 
 class SearchResult(BaseModel):
@@ -142,9 +164,13 @@ class SearchResult(BaseModel):
 
     memory_item: MemoryItem = Field(description="The retrieved memory item")
 
-    relevance_score: float = Field(description="Relevance score for the search query", ge=0.0, le=1.0)
+    relevance_score: float = Field(
+        description="Relevance score for the search query", ge=0.0, le=1.0
+    )
 
-    distance: Optional[float] = Field(default=None, description="Distance metric from vector search (if applicable)")
+    distance: Optional[float] = Field(
+        default=None, description="Distance metric from vector search (if applicable)"
+    )
 
     search_metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata about the search result"
@@ -160,14 +186,26 @@ class MemoryStats(BaseModel):
 
     total_items: int = Field(description="Total number of memory items")
 
-    items_by_type: Dict[str, int] = Field(default_factory=dict, description="Count of items by memory type")
+    items_by_type: Dict[str, int] = Field(
+        default_factory=dict, description="Count of items by memory type"
+    )
 
-    items_by_user: Dict[str, int] = Field(default_factory=dict, description="Count of items by user ID")
+    items_by_user: Dict[str, int] = Field(
+        default_factory=dict, description="Count of items by user ID"
+    )
 
-    oldest_item_date: Optional[datetime] = Field(default=None, description="Date of the oldest memory item")
+    oldest_item_date: Optional[datetime] = Field(
+        default=None, description="Date of the oldest memory item"
+    )
 
-    newest_item_date: Optional[datetime] = Field(default=None, description="Date of the newest memory item")
+    newest_item_date: Optional[datetime] = Field(
+        default=None, description="Date of the newest memory item"
+    )
 
-    average_importance: float = Field(default=0.0, description="Average importance score across all items")
+    average_importance: float = Field(
+        default=0.0, description="Average importance score across all items"
+    )
 
-    storage_size_bytes: Optional[int] = Field(default=None, description="Approximate storage size in bytes")
+    storage_size_bytes: Optional[int] = Field(
+        default=None, description="Approximate storage size in bytes"
+    )

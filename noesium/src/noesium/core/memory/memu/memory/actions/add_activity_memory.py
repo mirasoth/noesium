@@ -83,20 +83,30 @@ class AddActivityMemoryAction(BaseAction):
                 session_date = datetime.now().strftime("%Y-%m-%d")
 
             # Process raw content through LLM to ensure strict formatting
-            formatted_content = self._format_content_with_llm(character_name, content, session_date)
+            formatted_content = self._format_content_with_llm(
+                character_name, content, session_date
+            )
 
             if not formatted_content.strip():
-                return self._add_metadata({"success": False, "error": "LLM returned empty formatted content"})
+                return self._add_metadata(
+                    {"success": False, "error": "LLM returned empty formatted content"}
+                )
 
             # Add memory IDs with timestamp to the formatted content
-            memory_items, content_with_ids = self._add_memory_ids_with_timestamp(formatted_content, session_date)
+            memory_items, content_with_ids = self._add_memory_ids_with_timestamp(
+                formatted_content, session_date
+            )
 
             # Save first, then add embedding for just the new content
-            success = self._append_memory_content(character_name, "activity", content_with_ids)
+            success = self._append_memory_content(
+                character_name, "activity", content_with_ids
+            )
 
             # Save content with embeddings if enabled
             if success and generate_embeddings and self.embeddings_enabled:
-                self._add_memory_item_embedding(character_name, "activity", memory_items)
+                self._add_memory_item_embedding(
+                    character_name, "activity", memory_items
+                )
 
             if success:
                 return self._add_metadata(
@@ -111,12 +121,16 @@ class AddActivityMemoryAction(BaseAction):
                     }
                 )
             else:
-                return self._add_metadata({"success": False, "error": "Failed to save activity memory"})
+                return self._add_metadata(
+                    {"success": False, "error": "Failed to save activity memory"}
+                )
 
         except Exception as e:
             return self._handle_error(e)
 
-    def _format_content_with_llm(self, character_name: str, content: str, session_date: str) -> str:
+    def _format_content_with_llm(
+        self, character_name: str, content: str, session_date: str
+    ) -> str:
         """Use LLM to format content with meaningful activity grouping"""
 
         user_name = character_name
@@ -188,7 +202,9 @@ Transform the raw content into properly formatted activity memory items (ONE MEA
 
         return cleaned_content
 
-    def _add_memory_ids_with_timestamp(self, content: str, session_date: str) -> tuple[list[dict], str]:
+    def _add_memory_ids_with_timestamp(
+        self, content: str, session_date: str
+    ) -> tuple[list[dict], str]:
         """
         Add memory IDs with timestamp to content lines
         Format: [memory_id][mentioned at {session_date}] {content}
@@ -221,13 +237,17 @@ Transform the raw content into properly formatted activity memory items (ONE MEA
                         "links": "",
                     }
                 )
-                plain_memory_lines.append(f"[{memory_id}][mentioned at {session_date}] {line} []")
+                plain_memory_lines.append(
+                    f"[{memory_id}][mentioned at {session_date}] {line} []"
+                )
 
         plain_memory_text = "\n".join(plain_memory_lines)
 
         return processed_items, plain_memory_text
 
-    def _add_memory_item_embedding(self, character_name: str, category: str, new_items: list[dict]) -> Dict[str, Any]:
+    def _add_memory_item_embedding(
+        self, character_name: str, category: str, new_items: list[dict]
+    ) -> Dict[str, Any]:
         """Add embedding for new memory items"""
         try:
             if not self.embeddings_enabled or not new_items:
@@ -251,7 +271,9 @@ Transform the raw content into properly formatted activity memory items (ONE MEA
                 try:
                     embedding_vector = self.embedding_client.embed(item["content"])
 
-                    new_item_id = f"{character_name}_{category}_item_{len(existing_embeddings)}"
+                    new_item_id = (
+                        f"{character_name}_{category}_item_{len(existing_embeddings)}"
+                    )
 
                     new_embedding = {
                         "item_id": new_item_id,
@@ -273,7 +295,9 @@ Transform the raw content into properly formatted activity memory items (ONE MEA
                     existing_embeddings.append(new_embedding)
 
                 except Exception as e:
-                    logger.warning(f"Failed to generate embedding for memory item {item.get('memory_id')}: {repr(e)}")
+                    logger.warning(
+                        f"Failed to generate embedding for memory item {item.get('memory_id')}: {repr(e)}"
+                    )
                     continue
 
             # Save updated embeddings

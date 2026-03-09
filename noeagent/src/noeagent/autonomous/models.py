@@ -31,7 +31,9 @@ class Goal(BaseModel):
     - Retry policy with configurable max_retries
     """
 
-    id: str = Field(default_factory=uuid7str, description="Unique goal identifier (UUID7)")
+    id: str = Field(
+        default_factory=uuid7str, description="Unique goal identifier (UUID7)"
+    )
     description: str = Field(description="Human-readable goal description")
     priority: int = Field(
         ge=0,
@@ -39,7 +41,9 @@ class Goal(BaseModel):
         default=50,
         description="Goal priority (0-100, higher = more important)",
     )
-    status: GoalStatus = Field(default=GoalStatus.PENDING, description="Current goal lifecycle status")
+    status: GoalStatus = Field(
+        default=GoalStatus.PENDING, description="Current goal lifecycle status"
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc),
         description="Goal creation timestamp",
@@ -48,7 +52,9 @@ class Goal(BaseModel):
         default_factory=lambda: datetime.now(tz=timezone.utc),
         description="Last update timestamp",
     )
-    parent_goal_id: str | None = Field(default=None, description="Parent goal ID for hierarchical goals")
+    parent_goal_id: str | None = Field(
+        default=None, description="Parent goal ID for hierarchical goals"
+    )
 
     # Dependencies (RFC-1006)
     blocked_by: list[str] = Field(
@@ -64,6 +70,8 @@ class Goal(BaseModel):
 
     # Retry policy (RFC-1006)
     retry_count: int = Field(default=0, description="Number of retry attempts made")
-    max_retries: int = Field(default=3, description="Maximum retry attempts before permanent failure")
+    max_retries: int = Field(
+        default=3, description="Maximum retry attempts before permanent failure"
+    )
 
     model_config = ConfigDict(use_enum_values=True)

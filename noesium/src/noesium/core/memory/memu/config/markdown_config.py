@@ -22,7 +22,9 @@ class MarkdownFileConfig:
     description: str  # File description
     folder_path: str  # Folder path
     prompt_path: str  # Prompt file path
-    context: str = "rag"  # Context mode: "all" means put entire content in context, "rag" means use RAG search
+    context: str = (
+        "rag"  # Context mode: "all" means put entire content in context, "rag" means use RAG search
+    )
     rag_length: int = 50  # RAG length, -1 means all, other values mean number of lines
 
 
@@ -55,7 +57,9 @@ class MarkdownConfigManager:
             return
 
         try:
-            raw_config: Dict[str, Any] = yaml.safe_load(self.yaml_path.read_text(encoding="utf-8")) or {}
+            raw_config: Dict[str, Any] = (
+                yaml.safe_load(self.yaml_path.read_text(encoding="utf-8")) or {}
+            )
         except Exception as e:
             print(f"Warning: Failed to parse YAML configuration {self.yaml_path}: {e}")
             self._processing_order = []
@@ -181,17 +185,26 @@ def detect_file_type(filename: str, content: str = "") -> str:
     filename_lower = filename.lower()
 
     # Detect profile type
-    if any(keyword in filename_lower for keyword in ["profile", "personal_info", "bio", "resume"]):
+    if any(
+        keyword in filename_lower
+        for keyword in ["profile", "personal_info", "bio", "resume"]
+    ):
         if "profile" in file_types:
             return "profile"
 
     # Detect event type
-    if any(keyword in filename_lower for keyword in ["event", "events", "activity", "milestone"]):
+    if any(
+        keyword in filename_lower
+        for keyword in ["event", "events", "activity", "milestone"]
+    ):
         if "event" in file_types:
             return "event"
 
     # Detect activity type
-    if any(keyword in filename_lower for keyword in ["activity", "activities", "daily", "diary", "log"]):
+    if any(
+        keyword in filename_lower
+        for keyword in ["activity", "activities", "daily", "diary", "log"]
+    ):
         if "activity" in file_types:
             return "activity"
 
@@ -238,4 +251,7 @@ def get_simple_summary() -> Dict[str, Any]:
 def get_all_file_configs() -> Dict[str, MarkdownFileConfig]:
     """Get all file configurations"""
     manager = get_config_manager()
-    return {file_type: manager.get_file_config(file_type) for file_type in manager.get_all_file_types()}
+    return {
+        file_type: manager.get_file_config(file_type)
+        for file_type in manager.get_all_file_types()
+    }

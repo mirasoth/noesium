@@ -23,13 +23,19 @@ class AutonomousEvent(BaseModel):
     """
 
     id: str = Field(default_factory=uuid7str, description="Unique event identifier")
-    type: str = Field(description="Event type (e.g., 'timer', 'filesystem.change', 'github.issue.created')")
-    source: str = Field(description="Event origin (e.g., 'timer_service', 'github_webhook')")
+    type: str = Field(
+        description="Event type (e.g., 'timer', 'filesystem.change', 'github.issue.created')"
+    )
+    source: str = Field(
+        description="Event origin (e.g., 'timer_service', 'github_webhook')"
+    )
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc),
         description="Event timestamp",
     )
-    payload: dict[str, Any] = Field(default_factory=dict, description="Event-specific data")
+    payload: dict[str, Any] = Field(
+        default_factory=dict, description="Event-specific data"
+    )
 
     def to_envelope(self, producer: AgentRef) -> EventEnvelope:
         """Convert to RFC-1001 compliant envelope.

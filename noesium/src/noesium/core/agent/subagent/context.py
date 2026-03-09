@@ -54,7 +54,9 @@ class SubagentContext:
             RuntimeError: If max_depth would be exceeded.
         """
         if not self.can_spawn_child():
-            raise RuntimeError(f"Cannot spawn child subagent: max depth {self.max_depth} reached")
+            raise RuntimeError(
+                f"Cannot spawn child subagent: max depth {self.max_depth} reached"
+            )
 
         child_config = {**self.config}
         if config_overrides:

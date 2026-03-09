@@ -68,12 +68,16 @@ class GenerateMemorySuggestionsAction(BaseAction):
         """
         try:
             if not new_memory_items:
-                return self._add_metadata({"success": False, "error": "No memory items provided"})
+                return self._add_metadata(
+                    {"success": False, "error": "No memory items provided"}
+                )
 
             if available_categories is None:
                 available_categories = self._get_available_categories(character_name)
             if not available_categories:
-                return self._add_metadata({"success": False, "error": "No available categories found"})
+                return self._add_metadata(
+                    {"success": False, "error": "No available categories found"}
+                )
 
             # Convert memory items to text for analysis
             memory_items_text = "\n".join(
@@ -145,10 +149,14 @@ For each category, analyze the new memory items and suggest what specific inform
             response = self.llm_client.simple_chat(suggestions_prompt)
 
             if not response.strip():
-                return self._add_metadata({"success": False, "error": "LLM returned empty suggestions"})
+                return self._add_metadata(
+                    {"success": False, "error": "LLM returned empty suggestions"}
+                )
 
             # Parse text response
-            suggestions = self._parse_suggestions_from_text(response.strip(), available_categories, new_memory_items)
+            suggestions = self._parse_suggestions_from_text(
+                response.strip(), available_categories, new_memory_items
+            )
 
             return self._add_metadata(
                 {
@@ -165,7 +173,11 @@ For each category, analyze the new memory items and suggest what specific inform
 
     def _get_available_categories(self, character_name: str) -> list[str]:
         """Get available categories for a character"""
-        return [category for category in self.basic_memory_types.keys() if category != "activity"]
+        return [
+            category
+            for category in self.basic_memory_types.keys()
+            if category != "activity"
+        ]
 
     def _parse_suggestions_from_text(
         self,
@@ -184,7 +196,9 @@ For each category, analyze the new memory items and suggest what specific inform
                 line = line.strip()
 
                 if line.startswith("**Category:") and line.endswith("**"):
-                    category_name = line.replace("**Category:", "").replace("**", "").strip()
+                    category_name = (
+                        line.replace("**Category:", "").replace("**", "").strip()
+                    )
                     if category_name in available_categories:
                         current_category = category_name
                         suggestions[current_category] = ""

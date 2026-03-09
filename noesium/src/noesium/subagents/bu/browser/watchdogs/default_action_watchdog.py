@@ -76,9 +76,13 @@ class DefaultActionWatchdog(BaseWatchdog):
                 return  # ignore auto-downloads
             download_info["guid"] = info.get("guid", "")
             download_info["url"] = info.get("url", "")
-            download_info["suggested_filename"] = info.get("suggested_filename", "download")
+            download_info["suggested_filename"] = info.get(
+                "suggested_filename", "download"
+            )
             download_started.set()
-            self.logger.debug(f'[ClickWithDownload] Download started: {download_info["suggested_filename"]}')
+            self.logger.debug(
+                f'[ClickWithDownload] Download started: {download_info["suggested_filename"]}'
+            )
 
         def on_download_progress(info: dict) -> None:
             """Direct callback when download progress updates (called from CDP handler)."""
@@ -98,7 +102,11 @@ class DefaultActionWatchdog(BaseWatchdog):
             if info.get("auto_download"):
                 return  # ignore auto-downloads
             # Match by guid if available, otherwise accept any non-auto download
-            if download_info.get("guid") and info.get("guid") and info.get("guid") != download_info["guid"]:
+            if (
+                download_info.get("guid")
+                and info.get("guid")
+                and info.get("guid") != download_info["guid"]
+            ):
                 return  # different download
             download_info["path"] = info.get("path", "")
             download_info["file_name"] = info.get("file_name", "")
@@ -106,11 +114,15 @@ class DefaultActionWatchdog(BaseWatchdog):
             download_info["file_type"] = info.get("file_type")
             download_info["mime_type"] = info.get("mime_type")
             download_completed.set()
-            self.logger.debug(f'[ClickWithDownload] Download completed: {download_info["file_name"]}')
+            self.logger.debug(
+                f'[ClickWithDownload] Download completed: {download_info["file_name"]}'
+            )
 
         # Get the downloads watchdog and register direct callbacks
         downloads_watchdog = self.browser_session._downloads_watchdog
-        self.logger.debug(f"[ClickWithDownload] downloads_watchdog={downloads_watchdog is not None}")
+        self.logger.debug(
+            f"[ClickWithDownload] downloads_watchdog={downloads_watchdog is not None}"
+        )
         if downloads_watchdog:
             self.logger.debug("[ClickWithDownload] Registering download callbacks...")
             downloads_watchdog.register_download_callbacks(
@@ -126,19 +138,28 @@ class DefaultActionWatchdog(BaseWatchdog):
             click_metadata = await click_coro
 
             # Check for validation errors - return them immediately without waiting for downloads
-            if isinstance(click_metadata, dict) and "validation_error" in click_metadata:
+            if (
+                isinstance(click_metadata, dict)
+                and "validation_error" in click_metadata
+            ):
                 return click_metadata
 
             # Wait briefly to see if a download starts
             try:
-                await asyncio.wait_for(download_started.wait(), timeout=download_start_timeout)
+                await asyncio.wait_for(
+                    download_started.wait(), timeout=download_start_timeout
+                )
 
                 # Download started!
-                self.logger.info(f'📥 Download started: {download_info.get("suggested_filename", "unknown")}')
+                self.logger.info(
+                    f'📥 Download started: {download_info.get("suggested_filename", "unknown")}'
+                )
 
                 # Now wait for it to complete with longer timeout
                 try:
-                    await asyncio.wait_for(download_completed.wait(), timeout=download_complete_timeout)
+                    await asyncio.wait_for(
+                        download_completed.wait(), timeout=download_complete_timeout
+                    )
 
                     # Download completed successfully
                     msg = f'Downloaded file: {download_info["file_name"]} ({download_info["file_size"]} bytes) saved to {download_info["path"]}'
@@ -164,7 +185,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                     total = progress_info.get("total_bytes", 0)
                     state = progress_info.get("state", "unknown")
                     last_update = progress_info.get("last_update", 0.0)
-                    time_since_update = time.time() - last_update if last_update > 0 else float("inf")
+                    time_since_update = (
+                        time.time() - last_update if last_update > 0 else float("inf")
+                    )
 
                     # Check if download is still actively progressing (received update in last 5 seconds)
                     is_still_active = time_since_update < 5.0 and state == "inProgress"
@@ -173,9 +196,13 @@ class DefaultActionWatchdog(BaseWatchdog):
                         # Download is still progressing - suggest waiting
                         if total > 0:
                             percent = (received / total) * 100
-                            progress_str = f"{percent:.1f}% ({received:,}/{total:,} bytes)"
+                            progress_str = (
+                                f"{percent:.1f}% ({received:,}/{total:,} bytes)"
+                            )
                         else:
-                            progress_str = f"{received:,} bytes downloaded (total size unknown)"
+                            progress_str = (
+                                f"{received:,} bytes downloaded (total size unknown)"
+                            )
 
                         msg = (
                             f"Download timed out after {download_complete_timeout}s but is still in progress: "
@@ -233,14 +260,20 @@ class DefaultActionWatchdog(BaseWatchdog):
         Fallback: button text/value (for cases without onclick)
         """
         # Primary: Check onclick attribute for print-related functions (most reliable)
-        onclick = element_node.attributes.get("onclick", "").lower() if element_node.attributes else ""
+        onclick = (
+            element_node.attributes.get("onclick", "").lower()
+            if element_node.attributes
+            else ""
+        )
         if onclick and "print" in onclick:
             # Matches: window.print(), PrintElem(), print(), etc.
             return True
 
         return False
 
-    async def _handle_print_button_click(self, element_node: EnhancedDOMTreeNode) -> dict | None:
+    async def _handle_print_button_click(
+        self, element_node: EnhancedDOMTreeNode
+    ) -> dict | None:
         """Handle print button by directly generating PDF via CDP instead of opening dialog.
 
         Returns:
@@ -252,7 +285,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             from pathlib import Path
 
             # Get CDP session
-            cdp_session = await self.browser_session.get_or_create_cdp_session(focus=True)
+            cdp_session = await self.browser_session.get_or_create_cdp_session(
+                focus=True
+            )
 
             # Generate PDF using CDP Page.printToPDF
             result = await asyncio.wait_for(
@@ -282,7 +317,9 @@ class DefaultActionWatchdog(BaseWatchdog):
 
             # Generate filename from page title or URL
             try:
-                page_title = await asyncio.wait_for(self.browser_session.get_current_page_title(), timeout=2.0)
+                page_title = await asyncio.wait_for(
+                    self.browser_session.get_current_page_title(), timeout=2.0
+                )
                 # Sanitize title for filename
                 import re
 
@@ -311,7 +348,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                 await f.write(pdf_bytes)
 
             file_size = final_path.stat().st_size
-            self.logger.info(f"✅ Generated PDF via CDP: {final_path} ({file_size:,} bytes)")
+            self.logger.info(
+                f"✅ Generated PDF via CDP: {final_path} ({file_size:,} bytes)"
+            )
 
             # Dispatch FileDownloadedEvent
             from noesium.subagents.bu.browser.events import FileDownloadedEvent
@@ -335,7 +374,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             self.logger.warning("⏱️ PDF generation timed out")
             return None
         except Exception as e:
-            self.logger.warning(f"⚠️ Failed to generate PDF via CDP: {type(e).__name__}: {e}")
+            self.logger.warning(
+                f"⚠️ Failed to generate PDF via CDP: {type(e).__name__}: {e}"
+            )
             return None
 
     @observe_debug(ignore_input=True, ignore_output=True, name="click_element_event")
@@ -344,9 +385,7 @@ class DefaultActionWatchdog(BaseWatchdog):
         try:
             # Check if session is alive before attempting any operations
             if not self.browser_session.agent_focus_target_id:
-                error_msg = (
-                    "Cannot execute click: browser session is corrupted (target_id=None). Session may have crashed."
-                )
+                error_msg = "Cannot execute click: browser session is corrupted (target_id=None). Session may have crashed."
                 self.logger.error(f"{error_msg}")
                 raise BrowserError(error_msg)
 
@@ -372,7 +411,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                     self.logger.info(f"💾 {msg}")
                     return click_metadata
                 else:
-                    self.logger.warning("⚠️ PDF generation failed, falling back to regular click")
+                    self.logger.warning(
+                        "⚠️ PDF generation failed, falling back to regular click"
+                    )
 
             # Execute click with automatic download detection
             click_metadata = await self._execute_click_with_download_detection(
@@ -380,7 +421,10 @@ class DefaultActionWatchdog(BaseWatchdog):
             )
 
             # Check for validation errors
-            if isinstance(click_metadata, dict) and "validation_error" in click_metadata:
+            if (
+                isinstance(click_metadata, dict)
+                and "validation_error" in click_metadata
+            ):
                 self.logger.info(f'{click_metadata["validation_error"]}')
                 return click_metadata
 
@@ -400,17 +444,19 @@ class DefaultActionWatchdog(BaseWatchdog):
         try:
             # Check if session is alive before attempting any operations
             if not self.browser_session.agent_focus_target_id:
-                error_msg = (
-                    "Cannot execute click: browser session is corrupted (target_id=None). Session may have crashed."
-                )
+                error_msg = "Cannot execute click: browser session is corrupted (target_id=None). Session may have crashed."
                 self.logger.error(f"{error_msg}")
                 raise BrowserError(error_msg)
 
             # If force=True, skip safety checks and click directly (with download detection)
             if event.force:
-                self.logger.debug(f"Force clicking at coordinates ({event.coordinate_x}, {event.coordinate_y})")
+                self.logger.debug(
+                    f"Force clicking at coordinates ({event.coordinate_x}, {event.coordinate_y})"
+                )
                 return await self._execute_click_with_download_detection(
-                    self._click_on_coordinate(event.coordinate_x, event.coordinate_y, force=True)
+                    self._click_on_coordinate(
+                        event.coordinate_x, event.coordinate_y, force=True
+                    )
                 )
 
             # Get element at coordinates for safety checks
@@ -423,7 +469,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                     f"No element found at coordinates ({event.coordinate_x}, {event.coordinate_y}), proceeding with click anyway"
                 )
                 return await self._execute_click_with_download_detection(
-                    self._click_on_coordinate(event.coordinate_x, event.coordinate_y, force=False)
+                    self._click_on_coordinate(
+                        event.coordinate_x, event.coordinate_y, force=False
+                    )
                 )
 
             # Safety check: file input
@@ -451,11 +499,15 @@ class DefaultActionWatchdog(BaseWatchdog):
                     self.logger.info(f"💾 {msg}")
                     return click_metadata
                 else:
-                    self.logger.warning("⚠️ PDF generation failed, falling back to regular click")
+                    self.logger.warning(
+                        "⚠️ PDF generation failed, falling back to regular click"
+                    )
 
             # All safety checks passed, click at coordinates (with download detection)
             return await self._execute_click_with_download_detection(
-                self._click_on_coordinate(event.coordinate_x, event.coordinate_y, force=False)
+                self._click_on_coordinate(
+                    event.coordinate_x, event.coordinate_y, force=False
+                )
             )
 
         except Exception:
@@ -475,11 +527,17 @@ class DefaultActionWatchdog(BaseWatchdog):
                 # Log with sensitive data protection
                 if event.is_sensitive:
                     if event.sensitive_key_name:
-                        self.logger.info(f"⌨️ Typed <{event.sensitive_key_name}> to the page (current focus)")
+                        self.logger.info(
+                            f"⌨️ Typed <{event.sensitive_key_name}> to the page (current focus)"
+                        )
                     else:
-                        self.logger.info("⌨️ Typed <sensitive> to the page (current focus)")
+                        self.logger.info(
+                            "⌨️ Typed <sensitive> to the page (current focus)"
+                        )
                 else:
-                    self.logger.info(f'⌨️ Typed "{event.text}" to the page (current focus)')
+                    self.logger.info(
+                        f'⌨️ Typed "{event.text}" to the page (current focus)'
+                    )
                 return None  # No coordinates available for page typing
             else:
                 try:
@@ -497,9 +555,13 @@ class DefaultActionWatchdog(BaseWatchdog):
                                 f"⌨️ Typed <{event.sensitive_key_name}> into element with index {index_for_logging}"
                             )
                         else:
-                            self.logger.info(f"⌨️ Typed <sensitive> into element with index {index_for_logging}")
+                            self.logger.info(
+                                f"⌨️ Typed <sensitive> into element with index {index_for_logging}"
+                            )
                     else:
-                        self.logger.info(f'⌨️ Typed "{event.text}" into element with index {index_for_logging}')
+                        self.logger.info(
+                            f'⌨️ Typed "{event.text}" into element with index {index_for_logging}'
+                        )
                     self.logger.debug(f"Element xpath: {element_node.xpath}")
                     return input_metadata  # Return coordinates if available
                 except Exception as e:
@@ -508,18 +570,26 @@ class DefaultActionWatchdog(BaseWatchdog):
                         f"Failed to type to element {index_for_logging}: {e}. Falling back to page typing."
                     )
                     try:
-                        await asyncio.wait_for(self._click_element_node_impl(element_node), timeout=10.0)
+                        await asyncio.wait_for(
+                            self._click_element_node_impl(element_node), timeout=10.0
+                        )
                     except Exception:
                         pass
                     await self._type_to_page(event.text)
                     # Log with sensitive data protection
                     if event.is_sensitive:
                         if event.sensitive_key_name:
-                            self.logger.info(f"⌨️ Typed <{event.sensitive_key_name}> to the page as fallback")
+                            self.logger.info(
+                                f"⌨️ Typed <{event.sensitive_key_name}> to the page as fallback"
+                            )
                         else:
-                            self.logger.info("⌨️ Typed <sensitive> to the page as fallback")
+                            self.logger.info(
+                                "⌨️ Typed <sensitive> to the page as fallback"
+                            )
                     else:
-                        self.logger.info(f'⌨️ Typed "{event.text}" to the page as fallback')
+                        self.logger.info(
+                            f'⌨️ Typed "{event.text}" to the page as fallback'
+                        )
                     return None  # No coordinates available for fallback typing
 
             # Note: We don't clear cached state here - let multi_act handle DOM change detection
@@ -545,7 +615,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                 index_for_logging = element_node.backend_node_id or "unknown"
 
                 # Check if the element is an iframe
-                is_iframe = element_node.tag_name and element_node.tag_name.upper() == "IFRAME"
+                is_iframe = (
+                    element_node.tag_name and element_node.tag_name.upper() == "IFRAME"
+                )
 
                 # Try to scroll the element's container
                 success = await self._scroll_element_container(element_node, pixels)
@@ -580,7 +652,9 @@ class DefaultActionWatchdog(BaseWatchdog):
 
     # ========== Implementation Methods ==========
 
-    async def _check_element_occlusion(self, backend_node_id: int, x: float, y: float, cdp_session) -> bool:
+    async def _check_element_occlusion(
+        self, backend_node_id: int, x: float, y: float, cdp_session
+    ) -> bool:
         """Check if an element is occluded by other elements at the given coordinates.
 
         Args:
@@ -646,15 +720,22 @@ class DefaultActionWatchdog(BaseWatchdog):
                 session_id=session_id,
             )
 
-            if "result" not in target_info_result or "value" not in target_info_result["result"]:
-                self.logger.debug("Could not get target element info, assuming occluded")
+            if (
+                "result" not in target_info_result
+                or "value" not in target_info_result["result"]
+            ):
+                self.logger.debug(
+                    "Could not get target element info, assuming occluded"
+                )
                 return True
 
             target_data = target_info_result["result"]["value"]
             is_clickable = target_data.get("isClickable", False)
 
             if is_clickable:
-                self.logger.debug("Element is clickable (target, contained, or semantically related)")
+                self.logger.debug(
+                    "Element is clickable (target, contained, or semantically related)"
+                )
                 return False
             else:
                 target_info = target_data.get("targetInfo", {})
@@ -682,7 +763,11 @@ class DefaultActionWatchdog(BaseWatchdog):
         try:
             # Check if element is a file input or select dropdown - these should not be clicked
             tag_name = element_node.tag_name.lower() if element_node.tag_name else ""
-            element_type = element_node.attributes.get("type", "").lower() if element_node.attributes else ""
+            element_type = (
+                element_node.attributes.get("type", "").lower()
+                if element_node.attributes
+                else ""
+            )
 
             if tag_name == "select":
                 msg = f"Cannot click on <select> elements. Use dropdown_options(index={element_node.backend_node_id}) action instead."
@@ -704,7 +789,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             backend_node_id = element_node.backend_node_id
 
             # Get viewport dimensions for visibility checks
-            layout_metrics = await cdp_session.cdp_client.send.Page.getLayoutMetrics(session_id=session_id)
+            layout_metrics = await cdp_session.cdp_client.send.Page.getLayoutMetrics(
+                session_id=session_id
+            )
             viewport_width = layout_metrics["layoutViewport"]["clientWidth"]
             viewport_height = layout_metrics["layoutViewport"]["clientHeight"]
 
@@ -714,12 +801,16 @@ class DefaultActionWatchdog(BaseWatchdog):
                     params={"backendNodeId": backend_node_id}, session_id=session_id
                 )
                 await asyncio.sleep(0.05)  # Wait for scroll to complete
-                self.logger.debug("Scrolled element into view before getting coordinates")
+                self.logger.debug(
+                    "Scrolled element into view before getting coordinates"
+                )
             except Exception as e:
                 self.logger.debug(f"Failed to scroll element into view: {e}")
 
             # Get element coordinates using the unified method AFTER scrolling
-            element_rect = await self.browser_session.get_element_coordinates(backend_node_id, cdp_session)
+            element_rect = await self.browser_session.get_element_coordinates(
+                backend_node_id, cdp_session
+            )
 
             # Convert rect to quads format if we got coordinates
             quads = []
@@ -749,7 +840,9 @@ class DefaultActionWatchdog(BaseWatchdog):
 
             # If we still don't have quads, fall back to JS click
             if not quads:
-                self.logger.warning("Could not get element geometry from any method, falling back to JavaScript click")
+                self.logger.warning(
+                    "Could not get element geometry from any method, falling back to JavaScript click"
+                )
                 try:
                     result = await cdp_session.cdp_client.send.DOM.resolveNode(
                         params={"backendNodeId": backend_node_id},
@@ -792,7 +885,12 @@ class DefaultActionWatchdog(BaseWatchdog):
                 min_y, max_y = min(ys), max(ys)
 
                 # Check if quad intersects with viewport
-                if max_x < 0 or max_y < 0 or min_x > viewport_width or min_y > viewport_height:
+                if (
+                    max_x < 0
+                    or max_y < 0
+                    or min_x > viewport_width
+                    or min_y > viewport_height
+                ):
                     continue  # Quad is completely outside viewport
 
                 # Calculate visible area (intersection with viewport)
@@ -823,10 +921,14 @@ class DefaultActionWatchdog(BaseWatchdog):
             center_y = max(0, min(viewport_height - 1, center_y))
 
             # Check for occlusion before attempting CDP click
-            is_occluded = await self._check_element_occlusion(backend_node_id, center_x, center_y, cdp_session)
+            is_occluded = await self._check_element_occlusion(
+                backend_node_id, center_x, center_y, cdp_session
+            )
 
             if is_occluded:
-                self.logger.debug("🚫 Element is occluded, falling back to JavaScript click")
+                self.logger.debug(
+                    "🚫 Element is occluded, falling back to JavaScript click"
+                )
                 try:
                     result = await cdp_session.cdp_client.send.DOM.resolveNode(
                         params={"backendNodeId": backend_node_id},
@@ -852,7 +954,9 @@ class DefaultActionWatchdog(BaseWatchdog):
 
             # Perform the click using CDP (element is not occluded)
             try:
-                self.logger.debug(f"👆 Dragging mouse over element before clicking x: {center_x}px y: {center_y}px ...")
+                self.logger.debug(
+                    f"👆 Dragging mouse over element before clicking x: {center_x}px y: {center_y}px ..."
+                )
                 # Move mouse to element
                 await cdp_session.cdp_client.send.Input.dispatchMouseEvent(
                     params={
@@ -882,7 +986,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                     )
                     await asyncio.sleep(0.08)
                 except TimeoutError:
-                    self.logger.debug("⏱️ Mouse down timed out (likely due to dialog), continuing...")
+                    self.logger.debug(
+                        "⏱️ Mouse down timed out (likely due to dialog), continuing..."
+                    )
                     # Don't sleep if we timed out
 
                 # Mouse up
@@ -901,7 +1007,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                         timeout=5.0,  # 5 second timeout for mouseReleased
                     )
                 except TimeoutError:
-                    self.logger.debug("⏱️ Mouse up timed out (possibly due to lag or dialog popup), continuing...")
+                    self.logger.debug(
+                        "⏱️ Mouse up timed out (possibly due to lag or dialog popup), continuing..."
+                    )
 
                 self.logger.debug("🖱️ Clicked successfully using x,y coordinates")
 
@@ -945,13 +1053,19 @@ class DefaultActionWatchdog(BaseWatchdog):
                         timeout=3.0,
                     )
                     await asyncio.wait_for(
-                        cdp_session.cdp_client.send.Runtime.runIfWaitingForDebugger(session_id=cdp_session.session_id),
+                        cdp_session.cdp_client.send.Runtime.runIfWaitingForDebugger(
+                            session_id=cdp_session.session_id
+                        ),
                         timeout=2.0,
                     )
                 except TimeoutError:
-                    self.logger.debug("⏱️ Refocus after click timed out (page may be blocked by dialog). Continuing...")
+                    self.logger.debug(
+                        "⏱️ Refocus after click timed out (page may be blocked by dialog). Continuing..."
+                    )
                 except Exception as e:
-                    self.logger.debug(f"⚠️ Refocus error (non-critical): {type(e).__name__}: {e}")
+                    self.logger.debug(
+                        f"⚠️ Refocus error (non-critical): {type(e).__name__}: {e}"
+                    )
 
         except URLNotAllowedError as e:
             raise e
@@ -976,7 +1090,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                 long_term_memory=error_detail,
             )
 
-    async def _click_on_coordinate(self, coordinate_x: int, coordinate_y: int, force: bool = False) -> dict | None:
+    async def _click_on_coordinate(
+        self, coordinate_x: int, coordinate_y: int, force: bool = False
+    ) -> dict | None:
         """
         Click directly at coordinates using CDP Input.dispatchMouseEvent.
 
@@ -1024,7 +1140,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                 )
                 await asyncio.sleep(0.05)
             except TimeoutError:
-                self.logger.debug("⏱️ Mouse down timed out (likely due to dialog), continuing...")
+                self.logger.debug(
+                    "⏱️ Mouse down timed out (likely due to dialog), continuing..."
+                )
 
             # Mouse up
             try:
@@ -1042,9 +1160,13 @@ class DefaultActionWatchdog(BaseWatchdog):
                     timeout=5.0,
                 )
             except TimeoutError:
-                self.logger.debug("⏱️ Mouse up timed out (possibly due to lag or dialog popup), continuing...")
+                self.logger.debug(
+                    "⏱️ Mouse up timed out (possibly due to lag or dialog popup), continuing..."
+                )
 
-            self.logger.debug(f"🖱️ Clicked successfully at ({coordinate_x}, {coordinate_y})")
+            self.logger.debug(
+                f"🖱️ Clicked successfully at ({coordinate_x}, {coordinate_y})"
+            )
 
             # Return coordinates as metadata
             return {"click_x": coordinate_x, "click_y": coordinate_y}
@@ -1065,7 +1187,9 @@ class DefaultActionWatchdog(BaseWatchdog):
         """
         try:
             # Get CDP client and session
-            cdp_session = await self.browser_session.get_or_create_cdp_session(target_id=None, focus=True)
+            cdp_session = await self.browser_session.get_or_create_cdp_session(
+                target_id=None, focus=True
+            )
 
             # Type the text character by character to the focused element
             for char in text:
@@ -1317,13 +1441,19 @@ class DefaultActionWatchdog(BaseWatchdog):
             if clear_info.get("cleared"):
                 final_text = clear_info.get("finalText", "")
                 if not final_text or not final_text.strip():
-                    self.logger.debug(f'✅ Text field cleared successfully using {clear_info.get("method")}')
+                    self.logger.debug(
+                        f'✅ Text field cleared successfully using {clear_info.get("method")}'
+                    )
                     return True
                 else:
-                    self.logger.debug(f'⚠️ JavaScript clear partially failed, field still contains: "{final_text}"')
+                    self.logger.debug(
+                        f'⚠️ JavaScript clear partially failed, field still contains: "{final_text}"'
+                    )
                     return False
             else:
-                self.logger.debug(f'❌ JavaScript clear failed: {clear_info.get("error", "Unknown error")}')
+                self.logger.debug(
+                    f'❌ JavaScript clear failed: {clear_info.get("error", "Unknown error")}'
+                )
                 return False
 
         except Exception as e:
@@ -1403,7 +1533,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             select_all_modifier = 4 if is_macos else 2  # Meta=4 (Cmd), Ctrl=2
             modifier_name = "Cmd" if is_macos else "Ctrl"
 
-            self.logger.debug(f"🧹 Last resort: Clearing using {modifier_name}+A + Backspace")
+            self.logger.debug(
+                f"🧹 Last resort: Clearing using {modifier_name}+A + Backspace"
+            )
 
             # Select all text (Ctrl/Cmd+A)
             await cdp_session.cdp_client.send.Input.dispatchKeyEvent(
@@ -1469,15 +1601,23 @@ class DefaultActionWatchdog(BaseWatchdog):
             return True
 
         except Exception as e:
-            self.logger.debug(f"❌ CDP DOM.focus threw exception: {type(e).__name__}: {e}")
+            self.logger.debug(
+                f"❌ CDP DOM.focus threw exception: {type(e).__name__}: {e}"
+            )
 
         # Strategy 2: Try click to focus if CDP failed
-        if input_coordinates and "input_x" in input_coordinates and "input_y" in input_coordinates:
+        if (
+            input_coordinates
+            and "input_x" in input_coordinates
+            and "input_y" in input_coordinates
+        ):
             try:
                 click_x = input_coordinates["input_x"]
                 click_y = input_coordinates["input_y"]
 
-                self.logger.debug(f"🎯 Attempting click-to-focus at ({click_x:.1f}, {click_y:.1f})")
+                self.logger.debug(
+                    f"🎯 Attempting click-to-focus at ({click_x:.1f}, {click_y:.1f})"
+                )
 
                 # Click to focus
                 await cdp_session.cdp_client.send.Input.dispatchMouseEvent(
@@ -1511,7 +1651,9 @@ class DefaultActionWatchdog(BaseWatchdog):
         self.logger.debug("Focus strategies failed, will attempt typing anyway")
         return False
 
-    def _requires_direct_value_assignment(self, element_node: EnhancedDOMTreeNode) -> bool:
+    def _requires_direct_value_assignment(
+        self, element_node: EnhancedDOMTreeNode
+    ) -> bool:
         """
         Check if an element requires direct value assignment instead of character-by-character typing.
 
@@ -1572,7 +1714,8 @@ class DefaultActionWatchdog(BaseWatchdog):
 
                 # Check for data attributes indicating datepickers
                 if any(
-                    attr in element_node.attributes for attr in ["data-datepicker", "data-date-format", "data-provide"]
+                    attr in element_node.attributes
+                    for attr in ["data-datepicker", "data-date-format", "data-provide"]
                 ):
                     return True
 
@@ -1707,7 +1850,10 @@ class DefaultActionWatchdog(BaseWatchdog):
                 # Node detached errors are common with shadow DOM and dynamic content
                 # The element can still be interacted with even if scrolling fails
                 error_str = str(e)
-                if "Node is detached from document" in error_str or "detached from document" in error_str:
+                if (
+                    "Node is detached from document" in error_str
+                    or "detached from document" in error_str
+                ):
                     self.logger.debug(
                         f"Element node temporarily detached during scroll (common with shadow DOM), continuing: {element_node}"
                     )
@@ -1727,20 +1873,28 @@ class DefaultActionWatchdog(BaseWatchdog):
             object_id = result["object"]["objectId"]
 
             # Get current coordinates using unified method
-            coords = await self.browser_session.get_element_coordinates(backend_node_id, cdp_session)
+            coords = await self.browser_session.get_element_coordinates(
+                backend_node_id, cdp_session
+            )
             if coords:
                 center_x = coords.x + coords.width / 2
                 center_y = coords.y + coords.height / 2
 
                 # Check for occlusion before using coordinates for focus
-                is_occluded = await self._check_element_occlusion(backend_node_id, center_x, center_y, cdp_session)
+                is_occluded = await self._check_element_occlusion(
+                    backend_node_id, center_x, center_y, cdp_session
+                )
 
                 if is_occluded:
-                    self.logger.debug("🚫 Input element is occluded, skipping coordinate-based focus")
+                    self.logger.debug(
+                        "🚫 Input element is occluded, skipping coordinate-based focus"
+                    )
                     input_coordinates = None  # Force fallback to CDP-only focus
                 else:
                     input_coordinates = {"input_x": center_x, "input_y": center_y}
-                    self.logger.debug(f"Using unified coordinates: x={center_x:.1f}, y={center_y:.1f}")
+                    self.logger.debug(
+                        f"Using unified coordinates: x={center_x:.1f}, y={center_y:.1f}"
+                    )
             else:
                 input_coordinates = None
                 self.logger.debug("No coordinates found for element")
@@ -1758,23 +1912,31 @@ class DefaultActionWatchdog(BaseWatchdog):
             )
 
             # Step 2: Check if this element requires direct value assignment (date/time inputs)
-            requires_direct_assignment = self._requires_direct_value_assignment(element_node)
+            requires_direct_assignment = self._requires_direct_value_assignment(
+                element_node
+            )
 
             if requires_direct_assignment:
                 # Date/time inputs: use direct value assignment instead of typing
                 self.logger.debug(
                     f'🎯 Element type={element_node.attributes.get("type")} requires direct value assignment, setting value directly'
                 )
-                await self._set_value_directly(element_node, text, object_id, cdp_session)
+                await self._set_value_directly(
+                    element_node, text, object_id, cdp_session
+                )
 
                 # Return input coordinates for metadata
                 return input_coordinates
 
             # Step 3: Clear existing text if requested (only for regular inputs that support typing)
             if clear:
-                cleared_successfully = await self._clear_text_field(object_id=object_id, cdp_session=cdp_session)
+                cleared_successfully = await self._clear_text_field(
+                    object_id=object_id, cdp_session=cdp_session
+                )
                 if not cleared_successfully:
-                    self.logger.warning("⚠️ Text field clearing failed, typing may append to existing text")
+                    self.logger.warning(
+                        "⚠️ Text field clearing failed, typing may append to existing text"
+                    )
 
             # Step 4: Type the text character by character using proper human-like key events
             # This emulates exactly how a human would type, which modern websites expect
@@ -1788,7 +1950,8 @@ class DefaultActionWatchdog(BaseWatchdog):
             # Detect contenteditable elements (may have leaf-start bug where first char is dropped)
             _attrs = element_node.attributes or {}
             _is_contenteditable = _attrs.get("contenteditable") in ("true", "") or (
-                _attrs.get("role") == "textbox" and element_node.tag_name not in ("input", "textarea")
+                _attrs.get("role") == "textbox"
+                and element_node.tag_name not in ("input", "textarea")
             )
 
             # For contenteditable: after typing first char, check if dropped and retype if needed
@@ -1885,9 +2048,13 @@ class DefaultActionWatchdog(BaseWatchdog):
                     )
                     content = check_result.get("result", {}).get("value", "")
                     if _first_char not in content:
-                        self.logger.debug(f'🎯 First char "{_first_char}" was dropped (leaf-start bug), retyping')
+                        self.logger.debug(
+                            f'🎯 First char "{_first_char}" was dropped (leaf-start bug), retyping'
+                        )
                         # Retype the first character - cursor now past leaf-start
-                        modifiers, vk_code, base_key = self._get_char_modifiers_and_vk(_first_char)
+                        modifiers, vk_code, base_key = self._get_char_modifiers_and_vk(
+                            _first_char
+                        )
                         key_code = self._get_key_code_for_char(base_key)
                         await cdp_session.cdp_client.send.Input.dispatchKeyEvent(
                             params={
@@ -1925,7 +2092,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             # Step 4: Trigger framework-aware DOM events after typing completion
             # Modern JavaScript frameworks (React, Vue, Angular) rely on these events
             # to update their internal state and trigger re-renders
-            await self._trigger_framework_events(object_id=object_id, cdp_session=cdp_session)
+            await self._trigger_framework_events(
+                object_id=object_id, cdp_session=cdp_session
+            )
 
             # Step 5: Read back actual value for verification (skip for sensitive data)
             if not is_sensitive:
@@ -1950,7 +2119,12 @@ class DefaultActionWatchdog(BaseWatchdog):
             # Step 6: Auto-retry on concatenation mismatch (only when clear was requested)
             # If we asked to clear but the readback value contains the typed text as a substring
             # yet is longer, the field had pre-existing text that wasn't cleared. Set directly.
-            if clear and not is_sensitive and input_coordinates and "actual_value" in input_coordinates:
+            if (
+                clear
+                and not is_sensitive
+                and input_coordinates
+                and "actual_value" in input_coordinates
+            ):
                 actual_value = input_coordinates["actual_value"]
                 if (
                     isinstance(actual_value, str)
@@ -1998,7 +2172,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                             if retry_value == text:
                                 self.logger.info("✅ Auto-retry fixed concatenation")
                             else:
-                                self.logger.warning(f'⚠️ Auto-retry value still differs: "{retry_value}"')
+                                self.logger.warning(
+                                    f'⚠️ Auto-retry value still differs: "{retry_value}"'
+                                )
                     except Exception as e:
                         self.logger.debug(f"Auto-retry failed (non-critical): {e}")
 
@@ -2007,7 +2183,9 @@ class DefaultActionWatchdog(BaseWatchdog):
 
         except Exception as e:
             self.logger.error(f"Failed to input text via CDP: {type(e).__name__}: {e}")
-            raise BrowserError(f"Failed to input text into element: {repr(element_node)}")
+            raise BrowserError(
+                f"Failed to input text into element: {repr(element_node)}"
+            )
 
     async def _trigger_framework_events(self, object_id: str, cdp_session) -> None:
         """
@@ -2120,7 +2298,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                 self.logger.warning("⚠️ Failed to trigger framework events")
 
         except Exception as e:
-            self.logger.warning(f"⚠️ Failed to trigger framework events: {type(e).__name__}: {e}")
+            self.logger.warning(
+                f"⚠️ Failed to trigger framework events: {type(e).__name__}: {e}"
+            )
             # Don't raise - framework events are a best-effort enhancement
 
     async def _scroll_with_cdp_gesture(self, pixels: int) -> bool:
@@ -2141,10 +2321,14 @@ class DefaultActionWatchdog(BaseWatchdog):
 
             # Get viewport dimensions from cached value if available
             if self.browser_session._original_viewport_size:
-                viewport_width, viewport_height = self.browser_session._original_viewport_size
+                viewport_width, viewport_height = (
+                    self.browser_session._original_viewport_size
+                )
             else:
                 # Fallback: query layout metrics
-                layout_metrics = await cdp_client.send.Page.getLayoutMetrics(session_id=session_id)
+                layout_metrics = await cdp_client.send.Page.getLayoutMetrics(
+                    session_id=session_id
+                )
                 viewport_width = layout_metrics["layoutViewport"]["clientWidth"]
                 viewport_height = layout_metrics["layoutViewport"]["clientHeight"]
 
@@ -2173,7 +2357,9 @@ class DefaultActionWatchdog(BaseWatchdog):
 
         except Exception as e:
             # Not critical - JavaScript fallback will handle scrolling
-            self.logger.debug(f"CDP gesture scroll failed ({type(e).__name__}: {e}), falling back to JS")
+            self.logger.debug(
+                f"CDP gesture scroll failed ({type(e).__name__}: {e}), falling back to JS"
+            )
             return False
 
     async def _scroll_element_container(self, element_node, pixels: int) -> bool:
@@ -2229,7 +2415,11 @@ class DefaultActionWatchdog(BaseWatchdog):
                         session_id=cdp_session.session_id,
                     )
 
-                    if scroll_result and "result" in scroll_result and "value" in scroll_result["result"]:
+                    if (
+                        scroll_result
+                        and "result" in scroll_result
+                        and "value" in scroll_result["result"]
+                    ):
                         result_value = scroll_result["result"]["value"]
                         if result_value.get("success"):
                             self.logger.debug(
@@ -2237,7 +2427,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                             )
                             return True
                         else:
-                            self.logger.debug(f'Failed to scroll iframe: {result_value.get("error", "Unknown error")}')
+                            self.logger.debug(
+                                f'Failed to scroll iframe: {result_value.get("error", "Unknown error")}'
+                            )
 
             # For non-iframe elements, use the standard mouse wheel approach
             # Get element bounds to know where to scroll
@@ -2249,8 +2441,12 @@ class DefaultActionWatchdog(BaseWatchdog):
             content_quad = box_model["model"]["content"]
 
             # Calculate center point
-            center_x = (content_quad[0] + content_quad[2] + content_quad[4] + content_quad[6]) / 4
-            center_y = (content_quad[1] + content_quad[3] + content_quad[5] + content_quad[7]) / 4
+            center_x = (
+                content_quad[0] + content_quad[2] + content_quad[4] + content_quad[6]
+            ) / 4
+            center_y = (
+                content_quad[1] + content_quad[3] + content_quad[5] + content_quad[7]
+            ) / 4
 
             # Dispatch mouse wheel event at element location
             await cdp_session.cdp_client.send.Input.dispatchMouseEvent(
@@ -2269,7 +2465,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             self.logger.debug(f"Failed to scroll element container via CDP: {e}")
             return False
 
-    async def _get_session_id_for_element(self, element_node: EnhancedDOMTreeNode) -> str | None:
+    async def _get_session_id_for_element(
+        self, element_node: EnhancedDOMTreeNode
+    ) -> str | None:
         """Get the appropriate CDP session ID for an element based on its frame."""
         if element_node.frame_id:
             # Element is in an iframe, need to get session for that frame
@@ -2278,15 +2476,25 @@ class DefaultActionWatchdog(BaseWatchdog):
 
                 # Find the target for this frame
                 for target_id, target in all_targets.items():
-                    if target.target_type == "iframe" and element_node.frame_id in str(target_id):
+                    if target.target_type == "iframe" and element_node.frame_id in str(
+                        target_id
+                    ):
                         # Create temporary session for iframe target without switching focus
-                        temp_session = await self.browser_session.get_or_create_cdp_session(target_id, focus=False)
+                        temp_session = (
+                            await self.browser_session.get_or_create_cdp_session(
+                                target_id, focus=False
+                            )
+                        )
                         return temp_session.session_id
 
                 # If frame not found in targets, use main target session
-                self.logger.debug(f"Frame {element_node.frame_id} not found in targets, using main session")
+                self.logger.debug(
+                    f"Frame {element_node.frame_id} not found in targets, using main session"
+                )
             except Exception as e:
-                self.logger.debug(f"Error getting frame session: {e}, using main session")
+                self.logger.debug(
+                    f"Error getting frame session: {e}, using main session"
+                )
 
         # Use main target session - get_or_create_cdp_session validates focus automatically
         cdp_session = await self.browser_session.get_or_create_cdp_session()
@@ -2299,7 +2507,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             # Get CDP client and session
 
             # Get navigation history
-            history = await cdp_session.cdp_client.send.Page.getNavigationHistory(session_id=cdp_session.session_id)
+            history = await cdp_session.cdp_client.send.Page.getNavigationHistory(
+                session_id=cdp_session.session_id
+            )
             current_index = history["currentIndex"]
             entries = history["entries"]
 
@@ -2318,7 +2528,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             await asyncio.sleep(0.5)
             # Navigation is handled by BrowserSession via events
 
-            self.logger.info(f'🔙 Navigated back to {entries[current_index - 1]["url"]}')
+            self.logger.info(
+                f'🔙 Navigated back to {entries[current_index - 1]["url"]}'
+            )
         except Exception:
             raise
 
@@ -2327,7 +2539,9 @@ class DefaultActionWatchdog(BaseWatchdog):
         cdp_session = await self.browser_session.get_or_create_cdp_session()
         try:
             # Get navigation history
-            history = await cdp_session.cdp_client.send.Page.getNavigationHistory(session_id=cdp_session.session_id)
+            history = await cdp_session.cdp_client.send.Page.getNavigationHistory(
+                session_id=cdp_session.session_id
+            )
             current_index = history["currentIndex"]
             entries = history["entries"]
 
@@ -2346,7 +2560,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             await asyncio.sleep(0.5)
             # Navigation is handled by BrowserSession via events
 
-            self.logger.info(f'🔜 Navigated forward to {entries[current_index + 1]["url"]}')
+            self.logger.info(
+                f'🔜 Navigated forward to {entries[current_index + 1]["url"]}'
+            )
         except Exception:
             raise
 
@@ -2355,7 +2571,9 @@ class DefaultActionWatchdog(BaseWatchdog):
         cdp_session = await self.browser_session.get_or_create_cdp_session()
         try:
             # Reload the target
-            await cdp_session.cdp_client.send.Page.reload(session_id=cdp_session.session_id)
+            await cdp_session.cdp_client.send.Page.reload(
+                session_id=cdp_session.session_id
+            )
 
             # Wait for reload
             await asyncio.sleep(1.0)
@@ -2375,7 +2593,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             # Cap wait time at maximum
             actual_seconds = min(max(event.seconds, 0), event.max_seconds)
             if actual_seconds != event.seconds:
-                self.logger.info(f"🕒 Waiting for {actual_seconds} seconds (capped from {event.seconds}s)")
+                self.logger.info(
+                    f"🕒 Waiting for {actual_seconds} seconds (capped from {event.seconds}s)"
+                )
             else:
                 self.logger.info(f"🕒 Waiting for {actual_seconds} seconds")
 
@@ -2383,7 +2603,9 @@ class DefaultActionWatchdog(BaseWatchdog):
         except Exception:
             raise
 
-    async def _dispatch_key_event(self, cdp_session, event_type: str, key: str, modifiers: int = 0) -> None:
+    async def _dispatch_key_event(
+        self, cdp_session, event_type: str, key: str, modifiers: int = 0
+    ) -> None:
         """Helper to dispatch a keyboard event with proper key codes."""
         code, vk_code = get_key_info(key)
         params: DispatchKeyEventParameters = {
@@ -2395,7 +2617,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             params["modifiers"] = modifiers
         if vk_code is not None:
             params["windowsVirtualKeyCode"] = vk_code
-        await cdp_session.cdp_client.send.Input.dispatchKeyEvent(params=params, session_id=cdp_session.session_id)
+        await cdp_session.cdp_client.send.Input.dispatchKeyEvent(
+            params=params, session_id=cdp_session.session_id
+        )
 
     async def on_SendKeysEvent(self, event: SendKeysEvent) -> None:
         """Handle send keys request with CDP."""
@@ -2462,9 +2686,13 @@ class DefaultActionWatchdog(BaseWatchdog):
                     await self._dispatch_key_event(cdp_session, "keyDown", mod)
 
                 # Press main key with modifiers bitmask
-                await self._dispatch_key_event(cdp_session, "keyDown", main_key, modifier_value)
+                await self._dispatch_key_event(
+                    cdp_session, "keyDown", main_key, modifier_value
+                )
 
-                await self._dispatch_key_event(cdp_session, "keyUp", main_key, modifier_value)
+                await self._dispatch_key_event(
+                    cdp_session, "keyUp", main_key, modifier_value
+                )
 
                 # Release modifier keys
                 for mod in reversed(modifiers):
@@ -2505,7 +2733,9 @@ class DefaultActionWatchdog(BaseWatchdog):
 
                 # If it's a special key, use original logic
                 if normalized_keys in special_keys:
-                    await self._dispatch_key_event(cdp_session, "keyDown", normalized_keys)
+                    await self._dispatch_key_event(
+                        cdp_session, "keyDown", normalized_keys
+                    )
                     # For Enter key, also dispatch a char event to trigger keypress listeners
                     if normalized_keys == "Enter":
                         await cdp_session.cdp_client.send.Input.dispatchKeyEvent(
@@ -2516,7 +2746,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                             },
                             session_id=cdp_session.session_id,
                         )
-                    await self._dispatch_key_event(cdp_session, "keyUp", normalized_keys)
+                    await self._dispatch_key_event(
+                        cdp_session, "keyUp", normalized_keys
+                    )
                 else:
                     # It's text (single character or string) - send each character as text input
                     # This is crucial for text to appear in focused input fields
@@ -2553,7 +2785,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                             continue
 
                         # Get proper modifiers and key info for the character
-                        modifiers, vk_code, base_key = self._get_char_modifiers_and_vk(char)
+                        modifiers, vk_code, base_key = self._get_char_modifiers_and_vk(
+                            char
+                        )
                         key_code = self._get_key_code_for_char(base_key)
 
                         # Send keyDown
@@ -2611,7 +2845,9 @@ class DefaultActionWatchdog(BaseWatchdog):
 
             # Check if it's a file input
             if not self.browser_session.is_file_input(element_node):
-                msg = f"Upload failed - element {index_for_logging} is not a file input."
+                msg = (
+                    f"Upload failed - element {index_for_logging} is not a file input."
+                )
                 raise BrowserError(message=msg, long_term_memory=msg)
 
             # Get CDP client and session
@@ -2624,7 +2860,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                 if file_size == 0:
                     msg = f"Upload failed - file {event.file_path} is empty (0 bytes)."
                     raise BrowserError(message=msg, long_term_memory=msg)
-                self.logger.debug(f"📎 File {event.file_path} validated ({file_size} bytes)")
+                self.logger.debug(
+                    f"📎 File {event.file_path} validated ({file_size} bytes)"
+                )
 
             # Set file(s) to upload
             backend_node_id = element_node.backend_node_id
@@ -2636,7 +2874,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                 session_id=session_id,
             )
 
-            self.logger.info(f"📎 Uploaded file {event.file_path} to element {index_for_logging}")
+            self.logger.info(
+                f"📎 Uploaded file {event.file_path} to element {index_for_logging}"
+            )
         except Exception:
             raise
 
@@ -2654,7 +2894,9 @@ class DefaultActionWatchdog(BaseWatchdog):
         await cdp_client.send.DOM.enable(session_id=session_id)
 
         # Get document
-        doc = await cdp_client.send.DOM.getDocument(params={"depth": -1}, session_id=session_id)
+        doc = await cdp_client.send.DOM.getDocument(
+            params={"depth": -1}, session_id=session_id
+        )
         doc["root"]["nodeId"]
 
         # Search for text using XPath
@@ -2668,7 +2910,9 @@ class DefaultActionWatchdog(BaseWatchdog):
         for query in search_queries:
             try:
                 # Perform search
-                search_result = await cdp_client.send.DOM.performSearch(params={"query": query}, session_id=session_id)
+                search_result = await cdp_client.send.DOM.performSearch(
+                    params={"query": query}, session_id=session_id
+                )
                 search_id = search_result["searchId"]
                 result_count = search_result["resultCount"]
 
@@ -2692,7 +2936,9 @@ class DefaultActionWatchdog(BaseWatchdog):
                         break
 
                 # Clean up search
-                await cdp_client.send.DOM.discardSearchResults(params={"searchId": search_id}, session_id=session_id)
+                await cdp_client.send.DOM.discardSearchResults(
+                    params={"searchId": search_id}, session_id=session_id
+                )
             except Exception as e:
                 self.logger.debug(f"Search query failed: {query}, error: {e}")
                 continue
@@ -2726,15 +2972,21 @@ class DefaultActionWatchdog(BaseWatchdog):
                 return None
             else:
                 self.logger.warning(f'⚠️ Text not found: "{event.text}"')
-                raise BrowserError(f'Text not found: "{event.text}"', details={"text": event.text})
+                raise BrowserError(
+                    f'Text not found: "{event.text}"', details={"text": event.text}
+                )
 
         # If we got here and found is True, return None (success)
         if found:
             return None
         else:
-            raise BrowserError(f'Text not found: "{event.text}"', details={"text": event.text})
+            raise BrowserError(
+                f'Text not found: "{event.text}"', details={"text": event.text}
+            )
 
-    async def on_GetDropdownOptionsEvent(self, event: GetDropdownOptionsEvent) -> dict[str, str]:
+    async def on_GetDropdownOptionsEvent(
+        self, event: GetDropdownOptionsEvent
+    ) -> dict[str, str]:
         """Handle get dropdown options request with CDP."""
         try:
             # Use the provided node
@@ -2958,10 +3210,13 @@ class DefaultActionWatchdog(BaseWatchdog):
             source_info = dropdown_data.get("source", "unknown")
 
             if source_info == "target":
-                msg = f"Found {dropdown_type} dropdown ({element_info}):\n" + "\n".join(formatted_options)
-            else:
-                msg = f"Found {dropdown_type} dropdown in {source_info} ({element_info}):\n" + "\n".join(
+                msg = f"Found {dropdown_type} dropdown ({element_info}):\n" + "\n".join(
                     formatted_options
+                )
+            else:
+                msg = (
+                    f"Found {dropdown_type} dropdown in {source_info} ({element_info}):\n"
+                    + "\n".join(formatted_options)
                 )
             msg += f"\n\nUse the exact text or value string (without quotes) in select_dropdown(index={index_for_logging}, text=...)"
 
@@ -2981,7 +3236,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             # Return the dropdown data as a dict with structured memory
             return {
                 "type": dropdown_type,
-                "options": json.dumps(dropdown_data["options"]),  # Convert list to JSON string for dict[str, str] type
+                "options": json.dumps(
+                    dropdown_data["options"]
+                ),  # Convert list to JSON string for dict[str, str] type
                 "element_info": element_info,
                 "source": source_info,
                 "formatted_options": "\n".join(formatted_options),
@@ -3171,7 +3428,9 @@ class DefaultActionWatchdog(BaseWatchdog):
 
         # Handle errors
         if dropdown_data.get("error"):
-            raise BrowserError(message=dropdown_data["error"], long_term_memory=dropdown_data["error"])
+            raise BrowserError(
+                message=dropdown_data["error"], long_term_memory=dropdown_data["error"]
+            )
 
         if not dropdown_data.get("options"):
             msg = f"No options found in ARIA combobox at index {index_for_logging} (listbox: {aria_controls_id})"
@@ -3187,13 +3446,17 @@ class DefaultActionWatchdog(BaseWatchdog):
         for opt in dropdown_data["options"]:
             encoded_text = json.dumps(opt["text"])
             status = " (selected)" if opt.get("selected") else ""
-            formatted_options.append(f'{opt["index"]}: text={encoded_text}, value={json.dumps(opt["value"])}{status}')
+            formatted_options.append(
+                f'{opt["index"]}: text={encoded_text}, value={json.dumps(opt["value"])}{status}'
+            )
 
         dropdown_type = dropdown_data.get("type", "aria-combobox")
         element_info = f'Index: {index_for_logging}, Type: {dropdown_type}, ID: {dropdown_data.get("id", "none")}, Name: {dropdown_data.get("name", "none")}'
         source_info = f"aria-controls → {aria_controls_id}"
 
-        msg = f"Found {dropdown_type} dropdown ({element_info}):\n" + "\n".join(formatted_options)
+        msg = f"Found {dropdown_type} dropdown ({element_info}):\n" + "\n".join(
+            formatted_options
+        )
         msg += f"\n\nUse the exact text or value string (without quotes) in select_dropdown(index={index_for_logging}, text=...)"
 
         self.logger.info(
@@ -3212,7 +3475,9 @@ class DefaultActionWatchdog(BaseWatchdog):
             "backend_node_id": str(index_for_logging),
         }
 
-    async def on_SelectDropdownOptionEvent(self, event: SelectDropdownOptionEvent) -> dict[str, str]:
+    async def on_SelectDropdownOptionEvent(
+        self, event: SelectDropdownOptionEvent
+    ) -> dict[str, str]:
         """Handle select dropdown option request with CDP."""
         try:
             # Use the provided node
@@ -3487,7 +3752,10 @@ class DefaultActionWatchdog(BaseWatchdog):
                     available_options = selection_result.get("availableOptions", [])
                     all_empty = available_options and all(
                         (
-                            (not opt.get("text", "").strip() and not opt.get("value", "").strip())
+                            (
+                                not opt.get("text", "").strip()
+                                and not opt.get("value", "").strip()
+                            )
                             if isinstance(opt, dict)
                             else not str(opt).strip()
                         )
@@ -3512,20 +3780,26 @@ class DefaultActionWatchdog(BaseWatchdog):
 
                         await asyncio.sleep(1.0)
 
-                        retry_result = await cdp_session.cdp_client.send.Runtime.callFunctionOn(
-                            params={
-                                "functionDeclaration": selection_script,
-                                "arguments": [{"value": target_text}],
-                                "objectId": object_id,
-                                "returnByValue": True,
-                            },
-                            session_id=cdp_session.session_id,
+                        retry_result = (
+                            await cdp_session.cdp_client.send.Runtime.callFunctionOn(
+                                params={
+                                    "functionDeclaration": selection_script,
+                                    "arguments": [{"value": target_text}],
+                                    "objectId": object_id,
+                                    "returnByValue": True,
+                                },
+                                session_id=cdp_session.session_id,
+                            )
                         )
-                        selection_result = retry_result.get("result", {}).get("value", {})
+                        selection_result = retry_result.get("result", {}).get(
+                            "value", {}
+                        )
 
                 # Check if selection was reverted by framework - try clicking as fallback
                 if selection_result.get("selectionReverted"):
-                    self.logger.info("⚠️ Selection was reverted by page framework, trying click fallback...")
+                    self.logger.info(
+                        "⚠️ Selection was reverted by page framework, trying click fallback..."
+                    )
                     target_option = selection_result.get("targetOption", {})
                     option_index = target_option.get("index", 0)
 
@@ -3583,19 +3857,23 @@ class DefaultActionWatchdog(BaseWatchdog):
 					}
 					"""
 
-                    fallback_result = await cdp_session.cdp_client.send.Runtime.callFunctionOn(
-                        params={
-                            "functionDeclaration": click_fallback_script,
-                            "arguments": [{"value": option_index}],
-                            "objectId": object_id,
-                            "returnByValue": True,
-                        },
-                        session_id=cdp_session.session_id,
+                    fallback_result = (
+                        await cdp_session.cdp_client.send.Runtime.callFunctionOn(
+                            params={
+                                "functionDeclaration": click_fallback_script,
+                                "arguments": [{"value": option_index}],
+                                "objectId": object_id,
+                                "returnByValue": True,
+                            },
+                            session_id=cdp_session.session_id,
+                        )
                     )
 
                     fallback_data = fallback_result.get("result", {}).get("value", {})
                     if fallback_data.get("success"):
-                        msg = fallback_data.get("message", f"Selected option via click: {target_text}")
+                        msg = fallback_data.get(
+                            "message", f"Selected option via click: {target_text}"
+                        )
                         self.logger.info(f"✅ {msg}")
                         return {
                             "success": "true",
@@ -3604,11 +3882,15 @@ class DefaultActionWatchdog(BaseWatchdog):
                             "backend_node_id": str(index_for_logging),
                         }
                     else:
-                        self.logger.warning(f'⚠️ Click fallback also failed: {fallback_data.get("error", "unknown")}')
+                        self.logger.warning(
+                            f'⚠️ Click fallback also failed: {fallback_data.get("error", "unknown")}'
+                        )
                         # Continue to error handling below
 
                 if selection_result.get("success"):
-                    msg = selection_result.get("message", f"Selected option: {target_text}")
+                    msg = selection_result.get(
+                        "message", f"Selected option: {target_text}"
+                    )
                     self.logger.debug(f"{msg}")
 
                     # Return the result as a dict
@@ -3619,10 +3901,14 @@ class DefaultActionWatchdog(BaseWatchdog):
                         "backend_node_id": str(index_for_logging),
                     }
                 else:
-                    error_msg = selection_result.get("error", f"Failed to select option: {target_text}")
+                    error_msg = selection_result.get(
+                        "error", f"Failed to select option: {target_text}"
+                    )
                     available_options = selection_result.get("availableOptions", [])
                     self.logger.error(f"❌ {error_msg}")
-                    self.logger.debug(f"Available options from JavaScript: {available_options}")
+                    self.logger.debug(
+                        f"Available options from JavaScript: {available_options}"
+                    )
 
                     # If we have available options, return structured error data
                     if available_options:
@@ -3640,7 +3926,10 @@ class DefaultActionWatchdog(BaseWatchdog):
                                 short_term_options.append(f"- {opt}")
 
                         if short_term_options:
-                            short_term_memory = "Available dropdown options  are:\n" + "\n".join(short_term_options)
+                            short_term_memory = (
+                                "Available dropdown options  are:\n"
+                                + "\n".join(short_term_options)
+                            )
                             long_term_memory = f"Couldn't select the dropdown option as '{target_text}' is not one of the available options."
 
                             # Return error result with structured memory instead of raising exception

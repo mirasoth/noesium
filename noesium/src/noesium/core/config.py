@@ -61,7 +61,9 @@ class LLMConfig(BaseModel):
         providers: Provider-specific configurations
     """
 
-    provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
+    provider: str = Field(
+        default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai")
+    )
     providers: Dict[str, LLMProviderConfig] = Field(default_factory=dict)
 
 
@@ -148,7 +150,9 @@ class ToolsConfig(BaseModel):
     )
     toolkit_configs: Dict[str, ToolkitConfigEntry] = Field(default_factory=dict)
     mcp_servers: List[MCPServerConfig] = Field(default_factory=list)
-    permissions: List[str] = Field(default_factory=lambda: ["fs:read", "fs:write", "net:outbound", "shell:execute"])
+    permissions: List[str] = Field(
+        default_factory=lambda: ["fs:read", "fs:write", "net:outbound", "shell:execute"]
+    )
 
 
 class AgentSubagentConfig(BaseModel):
@@ -238,7 +242,9 @@ class EventSourcedMemoryConfig(BaseModel):
         db_path: Path to SQLite database file
     """
 
-    db_path: str = Field(default_factory=lambda: str(NOESIUM_HOME / "data" / "events.db"))
+    db_path: str = Field(
+        default_factory=lambda: str(NOESIUM_HOME / "data" / "events.db")
+    )
 
 
 class MemoryConfig(BaseModel):
@@ -253,12 +259,16 @@ class MemoryConfig(BaseModel):
         event_sourced: Event-sourced memory config
     """
 
-    providers: List[str] = Field(default_factory=lambda: ["working", "event_sourced", "memu"])
+    providers: List[str] = Field(
+        default_factory=lambda: ["working", "event_sourced", "memu"]
+    )
     persist: bool = True
     session_logging: bool = True
     session_log_dir: str = Field(default_factory=lambda: str(NOESIUM_HOME / "sessions"))
     memu: MemuMemoryConfig = Field(default_factory=MemuMemoryConfig)
-    event_sourced: EventSourcedMemoryConfig = Field(default_factory=EventSourcedMemoryConfig)
+    event_sourced: EventSourcedMemoryConfig = Field(
+        default_factory=EventSourcedMemoryConfig
+    )
 
 
 class OpikTracingConfig(BaseModel):
@@ -290,7 +300,10 @@ class TracingConfig(BaseModel):
         opik: OPIK-specific config
     """
 
-    enabled: bool = Field(default_factory=lambda: os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true")
+    enabled: bool = Field(
+        default_factory=lambda: os.getenv("NOESIUM_OPIK_TRACING", "false").lower()
+        == "true"
+    )
     provider: str = "opik"
     opik: OpikTracingConfig = Field(default_factory=OpikTracingConfig)
 
@@ -310,7 +323,9 @@ class LoggingConfig(BaseModel):
     """
 
     level: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
-    file_level: Optional[str] = Field(default_factory=lambda: os.getenv("NOESIUM_FILE_LOG_LEVEL"))
+    file_level: Optional[str] = Field(
+        default_factory=lambda: os.getenv("NOESIUM_FILE_LOG_LEVEL")
+    )
     rotation: str = "10 MB"
     retention: str = "7 days"
 
@@ -344,7 +359,9 @@ class FrameworkConfig(BaseModel):
     tracing: TracingConfig = Field(default_factory=TracingConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     working_directory: Optional[str] = None
-    model_config = ConfigDict(extra="allow")  # Allow extra fields for forward compatibility
+    model_config = ConfigDict(
+        extra="allow"
+    )  # Allow extra fields for forward compatibility
 
 
 # =============================================================================

@@ -32,7 +32,9 @@ class ToolExecutor:
     ) -> None:
         self._event_store = event_store
         self._bridge = bridge
-        self._producer = producer or AgentRef(agent_id="system", agent_type="tool_executor")
+        self._producer = producer or AgentRef(
+            agent_id="system", agent_type="tool_executor"
+        )
 
     async def run(
         self,
@@ -75,7 +77,9 @@ class ToolExecutor:
                 timeout_ms=tool.timeout_ms,
             )
             await self._emit(timeout_event, context.trace)
-            raise ToolTimeoutError(f"Tool {tool.name} timed out after {tool.timeout_ms}ms")
+            raise ToolTimeoutError(
+                f"Tool {tool.name} timed out after {tool.timeout_ms}ms"
+            )
 
         except ToolTimeoutError:
             raise
@@ -95,7 +99,8 @@ class ToolExecutor:
         missing = set(tool.permissions) - set(context.granted_permissions)
         if missing:
             raise ToolPermissionError(
-                f"Tool {tool.name} requires permissions {missing} " f"not granted to agent {context.agent_id}"
+                f"Tool {tool.name} requires permissions {missing} "
+                f"not granted to agent {context.agent_id}"
             )
 
     async def _emit(self, event: DomainEvent, trace: TraceContext) -> None:

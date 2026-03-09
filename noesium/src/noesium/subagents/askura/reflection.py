@@ -20,7 +20,9 @@ logger = get_logger(__name__)
 
 
 class Reflection:
-    def __init__(self, config: AskuraConfig, llm_client: Optional[BaseLLMClient] = None):
+    def __init__(
+        self, config: AskuraConfig, llm_client: Optional[BaseLLMClient] = None
+    ):
         self.config = config
         self.llm = llm_client
 
@@ -41,7 +43,9 @@ class Reflection:
             try:
                 # Pydantic v2: check required fields on the model
                 required_fields = [
-                    name for name, field in slot.extraction_model.model_fields.items() if field.is_required
+                    name
+                    for name, field in slot.extraction_model.model_fields.items()
+                    if field.is_required
                 ]
                 for field_name in required_fields:
                     if value.get(field_name) in (None, "", [], {}):
@@ -51,7 +55,9 @@ class Reflection:
                 return True
         return True
 
-    def evaluate_knowledge_gap(self, state: AskuraState, recent_messages: List[str] = None) -> KnowledgeGapAnalysis:
+    def evaluate_knowledge_gap(
+        self, state: AskuraState, recent_messages: List[str] = None
+    ) -> KnowledgeGapAnalysis:
         """Evaluate knowledge gaps using LLM analysis combining all upstream information."""
         if not self.llm:
             # Fallback when no LLM available
@@ -72,14 +78,18 @@ class Reflection:
             # Format extracted information for prompt
             extracted_info_text = ""
             if state.extracted_info:
-                extracted_info_text = "\n".join([f"- {slot}: {info}" for slot, info in state.extracted_info.items()])
+                extracted_info_text = "\n".join(
+                    [f"- {slot}: {info}" for slot, info in state.extracted_info.items()]
+                )
             else:
                 extracted_info_text = "No information extracted yet"
 
             # Format missing information for prompt
             missing_info_text = ""
             if state.missing_info:
-                missing_info_text = "\n".join([f"- {slot}: {desc}" for slot, desc in state.missing_info.items()])
+                missing_info_text = "\n".join(
+                    [f"- {slot}: {desc}" for slot, desc in state.missing_info.items()]
+                )
             else:
                 missing_info_text = "All required information collected"
 
@@ -93,7 +103,9 @@ class Reflection:
             # Format recent messages
             recent_messages_text = ""
             if recent_messages:
-                recent_messages_text = "\n".join([f"User: {msg}" for msg in recent_messages])
+                recent_messages_text = "\n".join(
+                    [f"User: {msg}" for msg in recent_messages]
+                )
             else:
                 recent_messages_text = "No recent messages"
 
@@ -123,7 +135,9 @@ class Reflection:
             return analysis
 
         except Exception as e:
-            logger.warning(f"LLM-based knowledge gap analysis failed: {e}, falling back to basic analysis")
+            logger.warning(
+                f"LLM-based knowledge gap analysis failed: {e}, falling back to basic analysis"
+            )
             # Fallback to basic analysis
             missing_slots = [s.name for s in self.missing_slots(state)]
             return KnowledgeGapAnalysis(
@@ -159,7 +173,11 @@ class Reflection:
             allowed.extend(["redirect_conversation", "reply_smalltalk"])
 
             # Get structured prompt for unified next action determination - preserve readability
-            recent_messages_text = "\n".join([f"User: {msg}" for msg in recent_messages]) if recent_messages else ""
+            recent_messages_text = (
+                "\n".join([f"User: {msg}" for msg in recent_messages])
+                if recent_messages
+                else ""
+            )
 
             system_prompt, user_prompt = get_conversation_analysis_prompts(
                 "determine_next_action",
@@ -186,9 +204,13 @@ class Reflection:
             return result
 
         except Exception as e:
-            logger.warning(f"Unified next action determination failed: {e}, falling back to heuristics")
+            logger.warning(
+                f"Unified next action determination failed: {e}, falling back to heuristics"
+            )
             # Fallback to heuristic approach
-            next_action = self._get_heuristic_next_action(context, list(state.missing_info.keys()))
+            next_action = self._get_heuristic_next_action(
+                context, list(state.missing_info.keys())
+            )
             return NextActionPlan(
                 intent_type="task",
                 next_action=next_action or "summarize",
@@ -197,7 +219,9 @@ class Reflection:
                 is_smalltalk=False,
             )
 
-    def _get_heuristic_next_action(self, context: ConversationContext, missing_info: List[str]) -> Optional[str]:
+    def _get_heuristic_next_action(
+        self, context: ConversationContext, missing_info: List[str]
+    ) -> Optional[str]:
         """Get next action using heuristic approach as fallback."""
 
         if not missing_info:
@@ -235,6 +259,9 @@ class Reflection:
         easy_questions = []
         for slot in self.config.information_slots:
             # Consider questions about preferences and interests as "easy"
-            if any(word in slot.name.lower() for word in ["interest", "preference", "like", "favorite"]):
+            if any(
+                word in slot.name.lower()
+                for word in ["interest", "preference", "like", "favorite"]
+            ):
                 easy_questions.append(f"ask_{slot.name}")
         return easy_questions

@@ -92,7 +92,9 @@ class ContentPartImageParam(BaseModel):
 class ImageURL(BaseModel):
     url: str
     detail: Literal["auto", "low", "high"] = "auto"
-    media_type: Literal["image/jpeg", "image/png", "image/gif", "image/webp"] = "image/png"
+    media_type: Literal["image/jpeg", "image/png", "image/gif", "image/webp"] = (
+        "image/png"
+    )
 
 
 class _MessageBase(BaseModel):
@@ -155,7 +157,9 @@ class BaseChatModel:
             llm_client: noesium LLM client to adapt
         """
         self.llm_client = llm_client
-        self._verified_api_keys = True  # Assume the noesium client is properly configured
+        self._verified_api_keys = (
+            True  # Assume the noesium client is properly configured
+        )
 
     @property
     def provider(self) -> str:
@@ -175,7 +179,9 @@ class BaseChatModel:
     @property
     def model_name(self) -> str:
         """Return the model name for legacy support."""
-        return getattr(self.llm_client, "chat_model", getattr(self.llm_client, "model", "unknown"))
+        return getattr(
+            self.llm_client, "chat_model", getattr(self.llm_client, "model", "unknown")
+        )
 
     async def ainvoke(
         self, messages: list[BaseMessage], output_format: type[T] | None = None
@@ -256,7 +262,9 @@ class BaseChatModel:
                     msg.pop("has_images", None)
 
                 # Recalculate without images
-                total_chars = sum(len(str(msg.get("content", ""))) for msg in noesium_messages)
+                total_chars = sum(
+                    len(str(msg.get("content", ""))) for msg in noesium_messages
+                )
 
                 # If still too large, truncate text
                 if total_chars > MAX_REQUEST_SIZE:
@@ -283,12 +291,18 @@ class BaseChatModel:
             if output_format is not None:
                 # Use structured completion for structured output
                 try:
-                    if inspect.iscoroutinefunction(self.llm_client.structured_completion):
-                        structured_response = await self.llm_client.structured_completion(
-                            noesium_messages, output_format
+                    if inspect.iscoroutinefunction(
+                        self.llm_client.structured_completion
+                    ):
+                        structured_response = (
+                            await self.llm_client.structured_completion(
+                                noesium_messages, output_format
+                            )
                         )
                     else:
-                        structured_response = self.llm_client.structured_completion(noesium_messages, output_format)
+                        structured_response = self.llm_client.structured_completion(
+                            noesium_messages, output_format
+                        )
                     return ChatInvokeCompletion(completion=structured_response)
                 except Exception as e:
                     logger.error(f"Error in structured completion: {e}")

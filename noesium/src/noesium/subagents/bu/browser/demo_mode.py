@@ -820,7 +820,9 @@ class DemoMode:
 
         # Replace placeholder with actual session ID
         session_id = self.session.id
-        script_with_session_id = self._script_source.replace("__BROWSER_USE_SESSION_ID_PLACEHOLDER__", session_id)
+        script_with_session_id = self._script_source.replace(
+            "__BROWSER_USE_SESSION_ID_PLACEHOLDER__", session_id
+        )
         self.logger.debug(f"Injecting session ID {session_id} into demo panel script")
         return script_with_session_id
 
@@ -835,14 +837,18 @@ class DemoMode:
             script = self._load_script()
 
             if self._script_identifier is None:
-                self._script_identifier = await self.session._cdp_add_init_script(script)
+                self._script_identifier = await self.session._cdp_add_init_script(
+                    script
+                )
                 self.logger.debug("Added auto-injection script for demo overlay")
 
             await self._inject_into_open_pages(script)
             self._panel_ready = True
             self.logger.debug("Demo overlay injected successfully")
 
-    async def send_log(self, message: str, level: str = "info", metadata: dict[str, Any] | None = None) -> None:
+    async def send_log(
+        self, message: str, level: str = "info", metadata: dict[str, Any] | None = None
+    ) -> None:
         """Send a log entry to the in-browser panel."""
         if not message or not self.session.browser_profile.demo_mode:
             return
@@ -871,7 +877,9 @@ class DemoMode:
         script = self._build_event_expression(json.dumps(payload, ensure_ascii=False))
 
         try:
-            session = await self.session.get_or_create_cdp_session(target_id=None, focus=False)
+            session = await self.session.get_or_create_cdp_session(
+                target_id=None, focus=False
+            )
         except Exception as exc:
             self.logger.debug(f"Cannot acquire CDP session for demo log: {exc}")
             return
@@ -913,10 +921,14 @@ class DemoMode:
             try:
                 await self._inject_into_target(target_id, script)
             except Exception as exc:
-                self.logger.debug(f"Failed to inject demo overlay into {target_id}: {exc}")
+                self.logger.debug(
+                    f"Failed to inject demo overlay into {target_id}: {exc}"
+                )
 
     async def _inject_into_target(self, target_id: str, script: str) -> None:
-        session = await self.session.get_or_create_cdp_session(target_id=target_id, focus=False)
+        session = await self.session.get_or_create_cdp_session(
+            target_id=target_id, focus=False
+        )
         await session.cdp_client.send.Runtime.evaluate(
             params={"expression": script, "awaitPromise": False},
             session_id=session.session_id,

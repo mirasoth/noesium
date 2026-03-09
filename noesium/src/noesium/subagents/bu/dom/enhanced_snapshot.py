@@ -50,7 +50,9 @@ def _parse_rare_boolean_data(rare_data: RareBooleanData, index: int) -> bool | N
     return index in rare_data["index"]
 
 
-def _parse_computed_styles(strings: list[str], style_indices: list[int]) -> dict[str, str]:
+def _parse_computed_styles(
+    strings: list[str], style_indices: list[int]
+) -> dict[str, str]:
     """Parse computed styles from layout tree using string indices."""
     styles = {}
     for i, style_index in enumerate(style_indices):
@@ -85,7 +87,9 @@ def build_snapshot_lookup(
         for backend_node_id, snapshot_index in backend_node_to_snapshot_index.items():
             is_clickable = None
             if "isClickable" in nodes:
-                is_clickable = _parse_rare_boolean_data(nodes["isClickable"], snapshot_index)
+                is_clickable = _parse_rare_boolean_data(
+                    nodes["isClickable"], snapshot_index
+                )
 
             # Find corresponding layout node
             cursor_style = None
@@ -98,7 +102,9 @@ def build_snapshot_lookup(
             scroll_rects = None
             stacking_contexts = None
             for layout_idx, node_index in enumerate(layout.get("nodeIndex", [])):
-                if node_index == snapshot_index and layout_idx < len(layout.get("bounds", [])):
+                if node_index == snapshot_index and layout_idx < len(
+                    layout.get("bounds", [])
+                ):
                     # Parse bounding box
                     bounds = layout["bounds"][layout_idx]
                     if len(bounds) >= 4:
@@ -155,7 +161,9 @@ def build_snapshot_lookup(
 
                     # Extract stacking contexts if available
                     if layout_idx < len(layout.get("stackingContexts", [])):
-                        stacking_contexts = layout.get("stackingContexts", {}).get("index", [])[layout_idx]
+                        stacking_contexts = layout.get("stackingContexts", {}).get(
+                            "index", []
+                        )[layout_idx]
 
                     break
 

@@ -84,23 +84,33 @@ class RunTheoryOfMindAction(BaseAction):
         """
         try:
             if not conversation_text.strip():
-                return self._add_metadata({"success": False, "error": "Empty conversation text provided"})
+                return self._add_metadata(
+                    {"success": False, "error": "Empty conversation text provided"}
+                )
 
             if not activity_items:
-                return self._add_metadata({"success": False, "error": "No memory items provided"})
+                return self._add_metadata(
+                    {"success": False, "error": "No memory items provided"}
+                )
 
             if not session_date:
                 session_date = datetime.now().strftime("%Y-%m-%d")
 
             # Call LLM to run theory of mind
-            response = self._extract_theory_of_mind_with_llm(character_name, conversation_text, activity_items)
+            response = self._extract_theory_of_mind_with_llm(
+                character_name, conversation_text, activity_items
+            )
 
             if not response.strip():
-                return self._add_metadata({"success": False, "error": "LLM returned empty response"})
+                return self._add_metadata(
+                    {"success": False, "error": "LLM returned empty response"}
+                )
 
             # Parse text response
-            reasoning_process, theory_of_mind_items = self._parse_theory_of_mind_from_text(
-                character_name, response.strip(), session_date
+            reasoning_process, theory_of_mind_items = (
+                self._parse_theory_of_mind_from_text(
+                    character_name, response.strip(), session_date
+                )
             )
 
             if not theory_of_mind_items:
@@ -195,7 +205,9 @@ BAD: "Harry Potter series are probably important to {user_name}'s childhood, bec
         response = self.llm_client.simple_chat(theory_of_mind_prompt)
         return response
 
-    def _parse_theory_of_mind_from_text(self, character_name: str, response_text: str, session_date: str) -> tuple:
+    def _parse_theory_of_mind_from_text(
+        self, character_name: str, response_text: str, session_date: str
+    ) -> tuple:
         """Parse theory of mind items from text format response"""
 
         reasoning_process = ""

@@ -33,7 +33,9 @@ class RegisteredAction(BaseModel):
         s += "{" + str(self.name) + ": "
         s += str(
             {
-                k: {sub_k: sub_v for sub_k, sub_v in v.items() if sub_k not in skip_keys}
+                k: {
+                    sub_k: sub_v for sub_k, sub_v in v.items() if sub_k not in skip_keys
+                }
                 for k, v in self.param_model.model_json_schema()["properties"].items()
             }
         )
@@ -115,7 +117,11 @@ class ActionRegistry(BaseModel):
         """
         if page_url is None:
             # For system prompt (no URL provided), include only actions with no filters
-            return "\n".join(action.prompt_description() for action in self.actions.values() if action.domains is None)
+            return "\n".join(
+                action.prompt_description()
+                for action in self.actions.values()
+                if action.domains is None
+            )
 
         # only include filtered actions for the current page URL
         filtered_actions = []
@@ -152,7 +158,9 @@ class SpecialActionParameters(BaseModel):
     cdp_client: Any | None = None  # CDPClient type from cdp_use
 
     # extra injected config if the action asks for these arg names
-    page_extraction_llm: Any | None = None  # BaseChatModel | None (using Any for Pydantic compatibility)
+    page_extraction_llm: Any | None = (
+        None  # BaseChatModel | None (using Any for Pydantic compatibility)
+    )
     file_system: FileSystem | None = None
     available_file_paths: list[str] | None = None
     has_sensitive_data: bool = False

@@ -42,9 +42,13 @@ class JinaResearchToolkit(AsyncBaseToolkit):
 
         jina_api_key = self.config.config.get("JINA_API_KEY")
         if not jina_api_key:
-            self.logger.warning("JINA_API_KEY not found in config - web content extraction may fail")
+            self.logger.warning(
+                "JINA_API_KEY not found in config - web content extraction may fail"
+            )
 
-        self.jina_headers = {"Authorization": f"Bearer {jina_api_key}"} if jina_api_key else {}
+        self.jina_headers = (
+            {"Authorization": f"Bearer {jina_api_key}"} if jina_api_key else {}
+        )
         self.summary_token_limit = self.config.config.get("summary_token_limit", 1000)
 
     async def get_web_content(self, url: str) -> str:
@@ -145,7 +149,9 @@ Please provide a clear, concise answer based on the content above. If the conten
             self.logger.error(f"LLM question answering failed: {e}")
             return f"Could not generate answer: {str(e)}"
 
-    async def _extract_related_links(self, url: str, content: str, question: str) -> str:
+    async def _extract_related_links(
+        self, url: str, content: str, question: str
+    ) -> str:
         prompt = f"""From the following web content, extract any relevant links that might be related to this question: "{question}"
 
 Original URL: {url}

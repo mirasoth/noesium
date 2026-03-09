@@ -248,7 +248,9 @@ async def evaluate(code: str, browser_session: BrowserSession) -> Any:
         raise
     except Exception as e:
         # Wrap other exceptions in EvaluateError
-        raise EvaluateError(f"Failed to execute JavaScript: {type(e).__name__}: {e}") from e
+        raise EvaluateError(
+            f"Failed to execute JavaScript: {type(e).__name__}: {e}"
+        ) from e
 
 
 def create_namespace(
@@ -337,7 +339,9 @@ def create_namespace(
         # Handle both positional and keyword argument styles
         if code is None:
             # Check if code was passed as keyword arg
-            code = kwargs.get("code", kwargs.get("js_code", kwargs.get("expression", "")))
+            code = kwargs.get(
+                "code", kwargs.get("js_code", kwargs.get("expression", ""))
+            )
         # Extract variables if passed as kwarg
         if variables is None:
             variables = kwargs.get("variables")
@@ -360,14 +364,19 @@ def create_namespace(
                 # Check if already wrapped in IIFE (including arrow function IIFEs)
                 is_wrapped = (
                     (stripped.startswith("(function()") and "})()" in stripped[-10:])
-                    or (stripped.startswith("(async function()") and "})()" in stripped[-10:])
+                    or (
+                        stripped.startswith("(async function()")
+                        and "})()" in stripped[-10:]
+                    )
                     or (stripped.startswith("(() =>") and ")()" in stripped[-10:])
                     or (stripped.startswith("(async () =>") and ")()" in stripped[-10:])
                 )
                 if is_wrapped:
                     # Already wrapped, inject params at the start
                     # Try to match regular function IIFE
-                    match = re.match(r"(\((?:async\s+)?function\s*\(\s*\)\s*\{)", stripped)
+                    match = re.match(
+                        r"(\((?:async\s+)?function\s*\(\s*\)\s*\{)", stripped
+                    )
                     if match:
                         prefix = match.group(1)
                         rest = stripped[len(prefix) :]
@@ -375,7 +384,9 @@ def create_namespace(
                     else:
                         # Try to match arrow function IIFE
                         # Patterns: (() => expr)() or (() => { ... })() or (async () => ...)()
-                        arrow_match = re.match(r"(\((?:async\s+)?\(\s*\)\s*=>\s*\{)", stripped)
+                        arrow_match = re.match(
+                            r"(\((?:async\s+)?\(\s*\)\s*=>\s*\{)", stripped
+                        )
                         if arrow_match:
                             # Arrow function with block body: (() => { ... })()
                             prefix = arrow_match.group(1)
@@ -396,7 +407,10 @@ def create_namespace(
             # Check for regular function IIFEs, async function IIFEs, and arrow function IIFEs
             is_wrapped = (
                 (stripped.startswith("(function()") and "})()" in stripped[-10:])
-                or (stripped.startswith("(async function()") and "})()" in stripped[-10:])
+                or (
+                    stripped.startswith("(async function()")
+                    and "})()" in stripped[-10:]
+                )
                 or (stripped.startswith("(() =>") and ")()" in stripped[-10:])
                 or (stripped.startswith("(async () =>") and ")()" in stripped[-10:])
             )
@@ -412,7 +426,11 @@ def create_namespace(
                 result_preview = f"list of dicts - len={len(result)}, example 1:\n"
                 sample_result = result[0]
                 for key, value in list(sample_result.items())[:10]:
-                    value_str = str(value)[:10] if not isinstance(value, (int, float, bool, type(None))) else str(value)
+                    value_str = (
+                        str(value)[:10]
+                        if not isinstance(value, (int, float, bool, type(None)))
+                        else str(value)
+                    )
                     result_preview += f"  {key}: {value_str}...\n"
                 if len(sample_result) > 10:
                     result_preview += f"  ... {len(sample_result) - 10} more keys"
@@ -427,7 +445,11 @@ def create_namespace(
             elif isinstance(result, dict):
                 result_preview = f"type=dict, len={len(result)}, sample keys:\n"
                 for key, value in list(result.items())[:10]:
-                    value_str = str(value)[:10] if not isinstance(value, (int, float, bool, type(None))) else str(value)
+                    value_str = (
+                        str(value)[:10]
+                        if not isinstance(value, (int, float, bool, type(None)))
+                        else str(value)
+                    )
                     result_preview += f"  {key}: {value_str}...\n"
                 if len(result) > 10:
                     result_preview += f"  ... {len(result) - 10} more keys"
@@ -439,7 +461,9 @@ def create_namespace(
             return result
         except Exception as e:
             # Track errors for pattern detection
-            namespace["_evaluate_failures"].append({"error": str(e), "type": "exception"})
+            namespace["_evaluate_failures"].append(
+                {"error": str(e), "type": "exception"}
+            )
             raise
 
     namespace["evaluate"] = evaluate_wrapper
@@ -509,7 +533,9 @@ def create_namespace(
                 f'    To access: document.querySelector("{shadow_hosts[0].split("#")[0]}").shadowRoot.querySelector("{selector}")'
             )
         if in_iframe:
-            logger.info(f"Element [{index}] is inside an iframe. Regular querySelector won't work.")
+            logger.info(
+                f"Element [{index}] is inside an iframe. Regular querySelector won't work."
+            )
 
         if selector:
             return selector
@@ -556,7 +582,11 @@ def create_namespace(
                     else:
                         # Check if there are multiple Python blocks in this response
                         all_blocks = namespace.get("_all_code_blocks", {})
-                        python_blocks = [k for k in sorted(all_blocks.keys()) if k.startswith("python_")]
+                        python_blocks = [
+                            k
+                            for k in sorted(all_blocks.keys())
+                            if k.startswith("python_")
+                        ]
 
                         if len(python_blocks) > 1:
                             msg = (
@@ -570,8 +600,15 @@ def create_namespace(
                         current_code = namespace.get("_current_cell_code")
                         if current_code and isinstance(current_code, str):
                             # Count non-empty, non-comment lines
-                            lines = [line.strip() for line in current_code.strip().split("\n")]
-                            code_lines = [line for line in lines if line and not line.startswith("#")]
+                            lines = [
+                                line.strip()
+                                for line in current_code.strip().split("\n")
+                            ]
+                            code_lines = [
+                                line
+                                for line in lines
+                                if line and not line.startswith("#")
+                            ]
 
                             # Check if the line above await done() contains an if block
                             done_line_index = -1
@@ -585,7 +622,9 @@ def create_namespace(
                             has_elif_above = False
                             if done_line_index > 0:
                                 line_above = code_lines[done_line_index - 1]
-                                has_if_above = line_above.strip().startswith("if ") and line_above.strip().endswith(":")
+                                has_if_above = line_above.strip().startswith(
+                                    "if "
+                                ) and line_above.strip().endswith(":")
                                 has_else_above = line_above.strip().startswith("else:")
                                 has_elif_above = line_above.strip().startswith("elif ")
                             if has_if_above or has_else_above or has_elif_above:
@@ -613,7 +652,11 @@ def create_namespace(
                 # not wrapped in ActionResult
                 if hasattr(result, "extracted_content"):
                     # Special handling for done action - mark task as complete
-                    if act_name == "done" and hasattr(result, "is_done") and result.is_done:
+                    if (
+                        act_name == "done"
+                        and hasattr(result, "is_done")
+                        and result.is_done
+                    ):
                         namespace["_task_done"] = True
                         # Store the extracted content as the final result
                         if result.extracted_content:
@@ -638,7 +681,9 @@ def create_namespace(
         namespace_action_name = "input_text" if action_name == "input" else action_name
 
         # Add the wrapper to the namespace
-        namespace[namespace_action_name] = make_action_wrapper(action_name, param_model, action_function)
+        namespace[namespace_action_name] = make_action_wrapper(
+            action_name, param_model, action_function
+        )
 
     return namespace
 

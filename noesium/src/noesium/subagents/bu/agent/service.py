@@ -138,7 +138,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         # Cloud Callbacks
         register_new_step_callback: (
             Callable[["BrowserStateSummary", "AgentOutput", int], None]  # Sync callback
-            | Callable[["BrowserStateSummary", "AgentOutput", int], Awaitable[None]]  # Async callback
+            | Callable[
+                ["BrowserStateSummary", "AgentOutput", int], Awaitable[None]
+            ]  # Async callback
             | None
         ) = None,
         register_done_callback: (
@@ -146,7 +148,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             | Callable[["AgentHistoryList"], None]  # Sync Callback
             | None
         ) = None,
-        register_external_agent_status_raise_error_callback: Callable[[], Awaitable[bool]] | None = None,
+        register_external_agent_status_raise_error_callback: (
+            Callable[[], Awaitable[bool]] | None
+        ) = None,
         register_should_stop_callback: Callable[[], Awaitable[bool]] | None = None,
         # Agent settings
         output_model_schema: type[AgentStructuredOutput] | None = None,
@@ -197,13 +201,20 @@ class Agent(Generic[Context, AgentStructuredOutput]):
     ):
         # Validate llm_screenshot_size
         if llm_screenshot_size is not None:
-            if not isinstance(llm_screenshot_size, tuple) or len(llm_screenshot_size) != 2:
-                raise ValueError("llm_screenshot_size must be a tuple of (width, height)")
+            if (
+                not isinstance(llm_screenshot_size, tuple)
+                or len(llm_screenshot_size) != 2
+            ):
+                raise ValueError(
+                    "llm_screenshot_size must be a tuple of (width, height)"
+                )
             width, height = llm_screenshot_size
             if not isinstance(width, int) or not isinstance(height, int):
                 raise ValueError("llm_screenshot_size dimensions must be integers")
             if width < 100 or height < 100:
-                raise ValueError("llm_screenshot_size dimensions must be at least 100 pixels")
+                raise ValueError(
+                    "llm_screenshot_size dimensions must be at least 100 pixels"
+                )
             self.logger.info(f"🖼️  LLM screenshot resizing enabled: {width}x{height}")
         if llm is None:
             default_llm_name = CONFIG.DEFAULT_LLM
@@ -231,7 +242,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             model_name = getattr(llm, "model", "")
             if isinstance(model_name, str) and model_name.startswith("claude-sonnet"):
                 llm_screenshot_size = (1400, 850)
-                logger.info("🖼️  Auto-configured LLM screenshot size for Claude Sonnet: 1400x850")
+                logger.info(
+                    "🖼️  Auto-configured LLM screenshot size for Claude Sonnet: 1400x850"
+                )
 
         if page_extraction_llm is None:
             page_extraction_llm = llm
@@ -252,7 +265,12 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     return 75
                 elif "groq" in model_name:
                     return 30
-                elif "o3" in model_name or "claude" in model_name or "sonnet" in model_name or "deepseek" in model_name:
+                elif (
+                    "o3" in model_name
+                    or "claude" in model_name
+                    or "sonnet" in model_name
+                    or "deepseek" in model_name
+                ):
                     return 90
                 else:
                     return 75  # Default timeout
@@ -282,16 +300,23 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             and demo_mode is not None
             and browser_session.browser_profile.demo_mode != demo_mode
         ):
-            browser_session.browser_profile = browser_session.browser_profile.model_copy(
-                update={"demo_mode": demo_mode}
+            browser_session.browser_profile = (
+                browser_session.browser_profile.model_copy(
+                    update={"demo_mode": demo_mode}
+                )
             )
 
         self.browser_session = browser_session or BrowserSession(
             browser_profile=browser_profile,
-            id=uuid7str()[:-4] + self.id[-4:],  # re-use the same 4-char suffix so they show up together in logs
+            id=uuid7str()[:-4]
+            + self.id[
+                -4:
+            ],  # re-use the same 4-char suffix so they show up together in logs
         )
 
-        self._demo_mode_enabled: bool = bool(self.browser_profile.demo_mode) if self.browser_session else False
+        self._demo_mode_enabled: bool = (
+            bool(self.browser_profile.demo_mode) if self.browser_session else False
+        )
         if self._demo_mode_enabled and getattr(self.browser_profile, "headless", False):
             self.logger.warning(
                 "Demo mode is enabled but the browser is headless=True; set headless=False to view the in-browser panel."
@@ -412,8 +437,13 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         self.token_cost_service.register_llm(llm)
         self.token_cost_service.register_llm(page_extraction_llm)
         self.token_cost_service.register_llm(judge_llm)
-        if self.settings.message_compaction and self.settings.message_compaction.compaction_llm:
-            self.token_cost_service.register_llm(self.settings.message_compaction.compaction_llm)
+        if (
+            self.settings.message_compaction
+            and self.settings.message_compaction.compaction_llm
+        ):
+            self.token_cost_service.register_llm(
+                self.settings.message_compaction.compaction_llm
+            )
 
         # Initialize state
         self.state = injected_agent_state or AgentState()
@@ -442,15 +472,23 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         initial_url = None
 
         # only load url if no initial actions are provided
-        if self.directly_open_url and not self.state.follow_up_task and not initial_actions:
+        if (
+            self.directly_open_url
+            and not self.state.follow_up_task
+            and not initial_actions
+        ):
             initial_url = self._extract_start_url(self.task)
             if initial_url:
-                self.logger.info(f"🔗 Found URL in task: {initial_url}, adding as initial action...")
+                self.logger.info(
+                    f"🔗 Found URL in task: {initial_url}, adding as initial action..."
+                )
                 initial_actions = [{"navigate": {"url": initial_url, "new_tab": False}}]
 
         self.initial_url = initial_url
 
-        self.initial_actions = self._convert_initial_actions(initial_actions) if initial_actions else None
+        self.initial_actions = (
+            self._convert_initial_actions(initial_actions) if initial_actions else None
+        )
         # Verify we can connect to the model
         self._verify_and_setup_llm()
 
@@ -481,7 +519,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         self.browser_session.llm_screenshot_size = llm_screenshot_size
 
         # Check if LLM is Anthropic (from noesium adapter)
-        is_anthropic = "claude" in self.llm.model.lower() or "anthropic" in self.llm.model.lower()
+        is_anthropic = (
+            "claude" in self.llm.model.lower() or "anthropic" in self.llm.model.lower()
+        )
 
         # Check if model is a browser-use fine-tuned model (uses simplified prompts)
         is_browser_use_model = "browser-use/" in self.llm.model.lower()
@@ -515,7 +555,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         if self.sensitive_data:
             # Check if sensitive_data has domain-specific credentials
-            has_domain_specific_credentials = any(isinstance(v, dict) for v in self.sensitive_data.values())
+            has_domain_specific_credentials = any(
+                isinstance(v, dict) for v in self.sensitive_data.values()
+            )
 
             # If no allowed_domains are configured, show a security warning
             if not self.browser_profile.allowed_domains:
@@ -528,7 +570,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             # If we're using domain-specific credentials, validate domain patterns
             elif has_domain_specific_credentials:
                 # For domain-specific format, ensure all domain patterns are included in allowed_domains
-                domain_patterns = [k for k, v in self.sensitive_data.items() if isinstance(v, dict)]
+                domain_patterns = [
+                    k for k, v in self.sensitive_data.items() if isinstance(v, dict)
+                ]
 
                 # Validate each domain pattern against allowed_domains
                 for domain_pattern in domain_patterns:
@@ -541,9 +585,15 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
                         # Need to create example URLs to compare the patterns
                         # Extract the domain parts, ignoring scheme
-                        pattern_domain = domain_pattern.split("://")[-1] if "://" in domain_pattern else domain_pattern
+                        pattern_domain = (
+                            domain_pattern.split("://")[-1]
+                            if "://" in domain_pattern
+                            else domain_pattern
+                        )
                         allowed_domain_part = (
-                            allowed_domain.split("://")[-1] if "://" in allowed_domain else allowed_domain
+                            allowed_domain.split("://")[-1]
+                            if "://" in allowed_domain
+                            else allowed_domain
                         )
 
                         # Check if pattern is covered by an allowed domain
@@ -552,7 +602,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                             allowed_domain_part.startswith("*.")
                             and (
                                 pattern_domain == allowed_domain_part[2:]
-                                or pattern_domain.endswith("." + allowed_domain_part[2:])
+                                or pattern_domain.endswith(
+                                    "." + allowed_domain_part[2:]
+                                )
                             )
                         ):
                             is_allowed = True
@@ -568,7 +620,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         self.register_new_step_callback = register_new_step_callback
         self.register_done_callback = register_done_callback
         self.register_should_stop_callback = register_should_stop_callback
-        self.register_external_agent_status_raise_error_callback = register_external_agent_status_raise_error_callback
+        self.register_external_agent_status_raise_error_callback = (
+            register_external_agent_status_raise_error_callback
+        )
 
         # Event bus with WAL persistence
         # Default to ~/.config/browseruse/events/{agent_session_id}.jsonl
@@ -576,12 +630,18 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         self.eventbus = EventBus(name=f"Agent_{str(self.id)[-4:]}")
 
         if self.settings.save_conversation_path:
-            self.settings.save_conversation_path = Path(self.settings.save_conversation_path).expanduser().resolve()
-            self.logger.info(f"💬 Saving conversation to {_log_pretty_path(self.settings.save_conversation_path)}")
+            self.settings.save_conversation_path = (
+                Path(self.settings.save_conversation_path).expanduser().resolve()
+            )
+            self.logger.info(
+                f"💬 Saving conversation to {_log_pretty_path(self.settings.save_conversation_path)}"
+            )
 
         # Initialize download tracking
         assert self.browser_session is not None, "BrowserSession is not set up"
-        self.has_downloads_path = self.browser_session.browser_profile.downloads_path is not None
+        self.has_downloads_path = (
+            self.browser_session.browser_profile.downloads_path is not None
+        )
         if self.has_downloads_path:
             self._last_known_downloads: list[str] = []
             self.logger.debug("📁 Initialized download tracking for agent")
@@ -590,7 +650,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         self._external_pause_event = asyncio.Event()
         self._external_pause_event.set()
 
-    def _enhance_task_with_schema(self, task: str, output_model_schema: type[AgentStructuredOutput] | None) -> str:
+    def _enhance_task_with_schema(
+        self, task: str, output_model_schema: type[AgentStructuredOutput] | None
+    ) -> str:
         """Enhance task description with output schema information if provided."""
         if output_model_schema is None:
             return task
@@ -612,16 +674,23 @@ class Agent(Generic[Context, AgentStructuredOutput]):
     def logger(self) -> logging.Logger:
         """Get instance-specific logger with task ID in the name"""
         # logger may be called in __init__ so we don't assume self.* attributes have been initialized
-        _task_id = task_id[-4:] if (task_id := getattr(self, "task_id", None)) else "----"
+        _task_id = (
+            task_id[-4:] if (task_id := getattr(self, "task_id", None)) else "----"
+        )
         _browser_session_id = (
-            browser_session.id[-4:] if (browser_session := getattr(self, "browser_session", None)) else "----"
+            browser_session.id[-4:]
+            if (browser_session := getattr(self, "browser_session", None))
+            else "----"
         )
         _current_target_id = (
             browser_session.agent_focus_target_id[-2:]
-            if (browser_session := getattr(self, "browser_session", None)) and browser_session.agent_focus_target_id
+            if (browser_session := getattr(self, "browser_session", None))
+            and browser_session.agent_focus_target_id
             else "--"
         )
-        return logging.getLogger(f"browser_use.Agent🅰 {_task_id} ⇢ 🅑 {_browser_session_id} 🅣 {_current_target_id}")
+        return logging.getLogger(
+            f"browser_use.Agent🅰 {_task_id} ⇢ 🅑 {_browser_session_id} 🅣 {_current_target_id}"
+        )
 
     @property
     def browser_profile(self) -> BrowserProfile:
@@ -654,7 +723,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     self.logger.debug(f"📁 {context}: Updated available files")
         except Exception as e:
             error_context = f" {context}" if context else ""
-            self.logger.debug(f"📁 Failed to check for downloads{error_context}: {type(e).__name__}: {e}")
+            self.logger.debug(
+                f"📁 Failed to check for downloads{error_context}: {type(e).__name__}: {e}"
+            )
 
     def _update_available_file_paths(self, downloads: list[str]) -> None:
         """Update available_file_paths with downloaded files."""
@@ -673,7 +744,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             for file_path in new_files:
                 self.logger.info(f"📄 New file available: {file_path}")
         else:
-            self.logger.debug(f"📁 No new downloads detected (tracking {len(current_files)} files)")
+            self.logger.debug(
+                f"📁 No new downloads detected (tracking {len(current_files)} files)"
+            )
 
     def _set_file_system(self, file_system_path: str | None = None) -> None:
         # Check for conflicting parameters
@@ -690,7 +763,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 self.file_system = FileSystem.from_state(self.state.file_system_state)
                 # The parent directory of base_dir is the original file_system_path
                 self.file_system_path = str(self.file_system.base_dir)
-                self.logger.debug(f"💾 File system restored from state to: {self.file_system_path}")
+                self.logger.debug(
+                    f"💾 File system restored from state to: {self.file_system_path}"
+                )
                 return
             except Exception as e:
                 self.logger.error(f"💾 Failed to restore file system from state: {e}")
@@ -720,7 +795,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             from noesium.subagents.bu.screenshots.service import ScreenshotService
 
             self.screenshot_service = ScreenshotService(self.agent_directory)
-            self.logger.debug(f"📸 Screenshot service initialized in: {self.agent_directory}/screenshots")
+            self.logger.debug(
+                f"📸 Screenshot service initialized in: {self.agent_directory}/screenshots"
+            )
         except Exception as e:
             self.logger.error(f"📸 Failed to initialize screenshot service: {e}.")
             raise e
@@ -733,7 +810,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             self.logger.error("💾 File system is not set up. Cannot save state.")
             raise ValueError("File system is not set up. Cannot save state.")
 
-    def _set_browser_use_version_and_source(self, source_override: str | None = None) -> None:
+    def _set_browser_use_version_and_source(
+        self, source_override: str | None = None
+    ) -> None:
         """Get the version from pyproject.toml and determine the source of the browser-use package"""
         # Use the helper function for version detection
         version = get_browser_use_version()
@@ -762,20 +841,32 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         self.ActionModel = self.tools.registry.create_action_model()
         # Create output model with the dynamic actions
         if self.settings.flash_mode:
-            self.AgentOutput = AgentOutput.type_with_custom_actions_flash_mode(self.ActionModel)
+            self.AgentOutput = AgentOutput.type_with_custom_actions_flash_mode(
+                self.ActionModel
+            )
         elif self.settings.use_thinking:
             self.AgentOutput = AgentOutput.type_with_custom_actions(self.ActionModel)
         else:
-            self.AgentOutput = AgentOutput.type_with_custom_actions_no_thinking(self.ActionModel)
+            self.AgentOutput = AgentOutput.type_with_custom_actions_no_thinking(
+                self.ActionModel
+            )
 
         # used to force the done action when max_steps is reached
-        self.DoneActionModel = self.tools.registry.create_action_model(include_actions=["done"])
+        self.DoneActionModel = self.tools.registry.create_action_model(
+            include_actions=["done"]
+        )
         if self.settings.flash_mode:
-            self.DoneAgentOutput = AgentOutput.type_with_custom_actions_flash_mode(self.DoneActionModel)
+            self.DoneAgentOutput = AgentOutput.type_with_custom_actions_flash_mode(
+                self.DoneActionModel
+            )
         elif self.settings.use_thinking:
-            self.DoneAgentOutput = AgentOutput.type_with_custom_actions(self.DoneActionModel)
+            self.DoneAgentOutput = AgentOutput.type_with_custom_actions(
+                self.DoneActionModel
+            )
         else:
-            self.DoneAgentOutput = AgentOutput.type_with_custom_actions_no_thinking(self.DoneActionModel)
+            self.DoneAgentOutput = AgentOutput.type_with_custom_actions_no_thinking(
+                self.DoneActionModel
+            )
 
     def add_new_task(self, new_task: str) -> None:
         """Add a new task to the agent, keeping the same task_id as tasks are continuous"""
@@ -841,7 +932,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         finally:
             await self._finalize(browser_state_summary)
 
-    async def _prepare_context(self, step_info: AgentStepInfo | None = None) -> BrowserStateSummary:
+    async def _prepare_context(
+        self, step_info: AgentStepInfo | None = None
+    ) -> BrowserStateSummary:
         """Prepare the context for the step: browser state, action models, page actions"""
         # step_start_time is now set in step() method
 
@@ -855,12 +948,16 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             include_recent_events=self.include_recent_events,
         )
         if browser_state_summary.screenshot:
-            self.logger.debug(f"📸 Got browser state WITH screenshot, length: {len(browser_state_summary.screenshot)}")
+            self.logger.debug(
+                f"📸 Got browser state WITH screenshot, length: {len(browser_state_summary.screenshot)}"
+            )
         else:
             self.logger.debug("📸 Got browser state WITHOUT screenshot")
 
         # Check for new downloads after getting browser state (catches PDF auto-downloads and previous step downloads)
-        await self._check_and_update_downloads(f"Step {self.state.n_steps}: after getting browser state")
+        await self._check_and_update_downloads(
+            f"Step {self.state.n_steps}: after getting browser state"
+        )
 
         self._log_step_context(browser_state_summary)
         await self._check_stop_or_pause()
@@ -870,10 +967,14 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         await self._update_action_models_for_page(browser_state_summary.url)
 
         # Get page-specific filtered actions
-        page_filtered_actions = self.tools.registry.get_prompt_description(browser_state_summary.url)
+        page_filtered_actions = self.tools.registry.get_prompt_description(
+            browser_state_summary.url
+        )
 
         # Page-specific actions will be included directly in the browser_state message
-        self.logger.debug(f"💬 Step {self.state.n_steps}: Creating state messages for context...")
+        self.logger.debug(
+            f"💬 Step {self.state.n_steps}: Creating state messages for context..."
+        )
 
         # Get unavailable skills info if skills service is enabled
         # Skills disabled in noesium
@@ -900,7 +1001,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             result=self.state.last_result,
             step_info=step_info,
             use_vision=self.settings.use_vision,
-            page_filtered_actions=(page_filtered_actions if page_filtered_actions else None),
+            page_filtered_actions=(
+                page_filtered_actions if page_filtered_actions else None
+            ),
             sensitive_data=self.sensitive_data,
             available_file_paths=self.available_file_paths,  # Always pass current available_file_paths
             # unavailable_skills_info=unavailable_skills_info,  # Not supported in current MessageManager
@@ -917,13 +1020,17 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         await self._force_done_after_failure()
         return browser_state_summary
 
-    async def _maybe_compact_messages(self, step_info: AgentStepInfo | None = None) -> None:
+    async def _maybe_compact_messages(
+        self, step_info: AgentStepInfo | None = None
+    ) -> None:
         """Optionally compact message history to keep prompts small."""
         settings = self.settings.message_compaction
         if not settings or not settings.enabled:
             return
 
-        compaction_llm = settings.compaction_llm or self.settings.page_extraction_llm or self.llm
+        compaction_llm = (
+            settings.compaction_llm or self.settings.page_extraction_llm or self.llm
+        )
         await self._message_manager.maybe_compact_messages(
             llm=compaction_llm,
             settings=settings,
@@ -931,7 +1038,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         )
 
     @observe_debug(ignore_input=True, name="get_next_action")
-    async def _get_next_action(self, browser_state_summary: BrowserStateSummary) -> None:
+    async def _get_next_action(
+        self, browser_state_summary: BrowserStateSummary
+    ) -> None:
         """Execute LLM interaction with retry logic and handle callbacks"""
         input_messages = self._message_manager.get_messages()
         self.logger.debug(
@@ -992,9 +1101,15 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         # check for action errors - only count single-action steps toward consecutive failures;
         # multi-action steps with errors are handled by loop detection and replan nudges instead
-        if self.state.last_result and len(self.state.last_result) == 1 and self.state.last_result[-1].error:
+        if (
+            self.state.last_result
+            and len(self.state.last_result) == 1
+            and self.state.last_result[-1].error
+        ):
             self.state.consecutive_failures += 1
-            self.logger.debug(f"🔄 Step {self.state.n_steps}: Consecutive failures: {self.state.consecutive_failures}")
+            self.logger.debug(
+                f"🔄 Step {self.state.n_steps}: Consecutive failures: {self.state.consecutive_failures}"
+            )
             return
 
         if self.state.consecutive_failures > 0:
@@ -1004,7 +1119,11 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             )
 
         # Log completion results
-        if self.state.last_result and len(self.state.last_result) > 0 and self.state.last_result[-1].is_done:
+        if (
+            self.state.last_result
+            and len(self.state.last_result) > 0
+            and self.state.last_result[-1].is_done
+        ):
             success = self.state.last_result[-1].success
             if success:
                 # Green color for success
@@ -1019,14 +1138,18 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             if self.state.last_result[-1].attachments:
                 total_attachments = len(self.state.last_result[-1].attachments)
                 for i, file_path in enumerate(self.state.last_result[-1].attachments):
-                    self.logger.info(f'👉 Attachment {i + 1 if total_attachments > 1 else ""}: {file_path}')
+                    self.logger.info(
+                        f'👉 Attachment {i + 1 if total_attachments > 1 else ""}: {file_path}'
+                    )
 
     async def _handle_step_error(self, error: Exception) -> None:
         """Handle all types of errors that can occur during a step"""
 
         # Handle InterruptedError specially
         if isinstance(error, InterruptedError):
-            error_msg = "The agent was interrupted mid-step" + (f" - {str(error)}" if str(error) else "")
+            error_msg = "The agent was interrupted mid-step" + (
+                f" - {str(error)}" if str(error) else ""
+            )
             # NOTE: This is not an error, it's a normal part of the execution when the user interrupts the agent
             self.logger.warning(f"{error_msg}")
             return
@@ -1041,7 +1164,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         # Handle all other exceptions
         include_trace = self.logger.isEnabledFor(logging.DEBUG)
         error_msg = AgentError.format_error(error, include_trace=include_trace)
-        max_total_failures = self.settings.max_failures + int(self.settings.final_response_after_failure)
+        max_total_failures = self.settings.max_failures + int(
+            self.settings.final_response_after_failure
+        )
         prefix = f"❌ Result failed {self.state.consecutive_failures + 1}/{max_total_failures} times: "
         self.state.consecutive_failures += 1
 
@@ -1056,7 +1181,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         else:
             self.logger.log(log_level, f"{prefix}{error_msg}")
 
-        await self._demo_mode_log(f"Step error: {error_msg}", "error", {"step": self.state.n_steps})
+        await self._demo_mode_log(
+            f"Step error: {error_msg}", "error", {"step": self.state.n_steps}
+        )
         self.state.last_result = [ActionResult(error=error_msg)]
         return None
 
@@ -1079,7 +1206,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         )
         return is_connection_error and self.browser_session._cdp_client_root is None
 
-    async def _finalize(self, browser_state_summary: BrowserStateSummary | None) -> None:
+    async def _finalize(
+        self, browser_state_summary: BrowserStateSummary | None
+    ) -> None:
         """Finalize the step with history, logging, and events"""
         step_end_time = time.time()
         if not self.state.last_result:
@@ -1111,9 +1240,13 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             )
 
         # Log step completion summary
-        summary_message = self._log_step_completion_summary(self.step_start_time, self.state.last_result)
+        summary_message = self._log_step_completion_summary(
+            self.step_start_time, self.state.last_result
+        )
         if summary_message:
-            await self._demo_mode_log(summary_message, "info", {"step": self.state.n_steps})
+            await self._demo_mode_log(
+                summary_message, "info", {"step": self.state.n_steps}
+            )
 
         # Save file system state after step completion
         self.save_file_system_state()
@@ -1124,7 +1257,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             actions_data = []
             if self.state.last_model_output.action:
                 for action in self.state.last_model_output.action:
-                    action_dict = action.model_dump() if hasattr(action, "model_dump") else {}
+                    action_dict = (
+                        action.model_dump() if hasattr(action, "model_dump") else {}
+                    )
                     actions_data.append(action_dict)
 
             # Cloud events disabled in noesium - skip CreateAgentStepEvent dispatch
@@ -1139,7 +1274,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         # If model provided a new plan via plan_update, replace the current plan
         if model_output.plan_update is not None:
-            self.state.plan = [PlanItem(text=step_text) for step_text in model_output.plan_update]
+            self.state.plan = [
+                PlanItem(text=step_text) for step_text in model_output.plan_update
+            ]
             self.state.current_plan_item_index = 0
             self.state.plan_generation_step = self.state.n_steps
             if self.state.plan:
@@ -1195,7 +1332,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 "Your current plan may need revision. "
                 "Output a new `plan_update` with revised steps to recover."
             )
-            self.logger.info(f"📋 Replan nudge injected after {self.state.consecutive_failures} consecutive failures")
+            self.logger.info(
+                f"📋 Replan nudge injected after {self.state.consecutive_failures} consecutive failures"
+            )
             self._message_manager._add_context_message(UserMessage(content=msg))
 
     def _inject_exploration_nudge(self) -> None:
@@ -1211,7 +1350,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 "If the task is complex, output a `plan_update` with clear todo items now. "
                 "If the task is already done or nearly done, call `done` instead."
             )
-            self.logger.info(f"📋 Exploration nudge injected after {self.state.n_steps} steps without a plan")
+            self.logger.info(
+                f"📋 Exploration nudge injected after {self.state.n_steps} steps without a plan"
+            )
             self._message_manager._add_context_message(UserMessage(content=msg))
 
     def _inject_loop_detection_nudge(self) -> None:
@@ -1245,12 +1386,18 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 params = {}
             self.state.loop_detector.record_action(action_name, params)
 
-    def _update_loop_detector_page_state(self, browser_state_summary: BrowserStateSummary) -> None:
+    def _update_loop_detector_page_state(
+        self, browser_state_summary: BrowserStateSummary
+    ) -> None:
         """Record the current page state for stagnation detection."""
         if not self.settings.loop_detection_enabled:
             return
         url = browser_state_summary.url or ""
-        element_count = len(browser_state_summary.dom_state.selector_map) if browser_state_summary.dom_state else 0
+        element_count = (
+            len(browser_state_summary.dom_state.selector_map)
+            if browser_state_summary.dom_state
+            else 0
+        )
         # Use the DOM text representation for fingerprinting
         dom_text = ""
         if browser_state_summary.dom_state:
@@ -1260,7 +1407,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 dom_text = ""
         self.state.loop_detector.record_page_state(url, dom_text, element_count)
 
-    async def _inject_budget_warning(self, step_info: AgentStepInfo | None = None) -> None:
+    async def _inject_budget_warning(
+        self, step_info: AgentStepInfo | None = None
+    ) -> None:
         """Inject a prominent budget warning when the agent has used >= 75% of its step budget.
 
         This gives the LLM advance notice to wrap up, save partial results, and call done
@@ -1283,10 +1432,14 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 f"(2) call done with what you have. "
                 f"Partial results are far more valuable than exhausting all steps with nothing saved."
             )
-            self.logger.info(f"Step budget warning: {steps_used}/{step_info.max_steps} ({pct}%)")
+            self.logger.info(
+                f"Step budget warning: {steps_used}/{step_info.max_steps} ({pct}%)"
+            )
             self._message_manager._add_context_message(UserMessage(content=msg))
 
-    async def _force_done_after_last_step(self, step_info: AgentStepInfo | None = None) -> None:
+    async def _force_done_after_last_step(
+        self, step_info: AgentStepInfo | None = None
+    ) -> None:
         """Handle special processing for the last step"""
         if step_info and step_info.is_last_step():
             # Add last step warning if needed
@@ -1300,7 +1453,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
     async def _force_done_after_failure(self) -> None:
         """Force done after failure"""
         # Create recovery message
-        if self.state.consecutive_failures >= self.settings.max_failures and self.settings.final_response_after_failure:
+        if (
+            self.state.consecutive_failures >= self.settings.max_failures
+            and self.settings.final_response_after_failure
+        ):
             msg = f"You failed {self.settings.max_failures} times. Therefore we terminate the agent."
             msg += '\nYour only tool available is the "done" tool. No other tool is available. All other tools which you see in history or examples are not available.'
             msg += '\nIf the task is not yet fully finished as requested by the user, set success in "done" to false! E.g. if not all steps are fully completed. Else success to true.'
@@ -1376,16 +1532,22 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 # Otherwise, show full judge result
                 verdict_color = "\033[32m" if judgement.verdict else "\033[31m"
                 verdict_text = "✅ PASS" if judgement.verdict else "❌ FAIL"
-                judge_log += f"⚖️  {verdict_color}Judge Verdict: {verdict_text}\033[0m\n"
+                judge_log += (
+                    f"⚖️  {verdict_color}Judge Verdict: {verdict_text}\033[0m\n"
+                )
                 if judgement.failure_reason:
                     judge_log += f"   Failure Reason: {judgement.failure_reason}\n"
                 if judgement.reached_captcha:
-                    judge_log += "   🤖 Captcha Detected: Agent encountered captcha challenges\n"
+                    judge_log += (
+                        "   🤖 Captcha Detected: Agent encountered captcha challenges\n"
+                    )
                     judge_log += "   👉 🥷 Use Browser Use Cloud for the most stealth browser infra: https://docs.browser-use.com/customize/browser/remote\n"
                 judge_log += f"   {judgement.reasoning}\n"
                 self.logger.info(judge_log)
 
-    async def _get_model_output_with_retry(self, input_messages: list[BaseMessage]) -> AgentOutput:
+    async def _get_model_output_with_retry(
+        self, input_messages: list[BaseMessage]
+    ) -> AgentOutput:
         """Get model output with retry logic for empty actions"""
         model_output = await self.get_model_output(input_messages)
         self.logger.debug(
@@ -1406,8 +1568,12 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             retry_messages = input_messages + [clarification_message]
             model_output = await self.get_model_output(retry_messages)
 
-            if not model_output.action or all(action.model_dump() == {} for action in model_output.action):
-                self.logger.warning("Model still returned empty after retry. Inserting safe noop action.")
+            if not model_output.action or all(
+                action.model_dump() == {} for action in model_output.action
+            ):
+                self.logger.warning(
+                    "Model still returned empty after retry. Inserting safe noop action."
+                )
                 action_instance = self.ActionModel()
                 setattr(
                     action_instance,
@@ -1481,7 +1647,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             )
             self.logger.debug(f"📸 Screenshot stored at: {screenshot_path}")
         else:
-            self.logger.debug(f"📸 No screenshot in browser_state_summary for step {self.state.n_steps}")
+            self.logger.debug(
+                f"📸 No screenshot in browser_state_summary for step {self.state.n_steps}"
+            )
 
         state_history = BrowserStateHistory(
             url=browser_state_summary.url,
@@ -1581,14 +1749,18 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             if isinstance(message, (UserMessage, AssistantMessage)):
                 if isinstance(message.content, str):
                     # Simple string content
-                    message.content, replaced_urls = self._replace_urls_in_text(message.content)
+                    message.content, replaced_urls = self._replace_urls_in_text(
+                        message.content
+                    )
                     urls_replaced.update(replaced_urls)
 
                 elif isinstance(message.content, list):
                     # List of content parts
                     for part in message.content:
                         if isinstance(part, ContentPartTextParam):
-                            part.text, replaced_urls = self._replace_urls_in_text(part.text)
+                            part.text, replaced_urls = self._replace_urls_in_text(
+                                part.text
+                            )
                             urls_replaced.update(replaced_urls)
 
         return urls_replaced
@@ -1601,48 +1773,70 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         for field_name, field_value in model.__dict__.items():
             if isinstance(field_value, str):
                 # Replace shortened URLs with original URLs in string
-                processed_string = Agent._replace_shortened_urls_in_string(field_value, url_replacements)
+                processed_string = Agent._replace_shortened_urls_in_string(
+                    field_value, url_replacements
+                )
                 setattr(model, field_name, processed_string)
             elif isinstance(field_value, BaseModel):
                 # Recursively process nested Pydantic models
-                Agent._recursive_process_all_strings_inside_pydantic_model(field_value, url_replacements)
+                Agent._recursive_process_all_strings_inside_pydantic_model(
+                    field_value, url_replacements
+                )
             elif isinstance(field_value, dict):
                 # Process dictionary values in place
                 Agent._recursive_process_dict(field_value, url_replacements)
             elif isinstance(field_value, (list, tuple)):
-                processed_value = Agent._recursive_process_list_or_tuple(field_value, url_replacements)
+                processed_value = Agent._recursive_process_list_or_tuple(
+                    field_value, url_replacements
+                )
                 setattr(model, field_name, processed_value)
 
     @staticmethod
-    def _recursive_process_dict(dictionary: dict, url_replacements: dict[str, str]) -> None:
+    def _recursive_process_dict(
+        dictionary: dict, url_replacements: dict[str, str]
+    ) -> None:
         """Helper method to process dictionaries."""
         for k, v in dictionary.items():
             if isinstance(v, str):
-                dictionary[k] = Agent._replace_shortened_urls_in_string(v, url_replacements)
+                dictionary[k] = Agent._replace_shortened_urls_in_string(
+                    v, url_replacements
+                )
             elif isinstance(v, BaseModel):
-                Agent._recursive_process_all_strings_inside_pydantic_model(v, url_replacements)
+                Agent._recursive_process_all_strings_inside_pydantic_model(
+                    v, url_replacements
+                )
             elif isinstance(v, dict):
                 Agent._recursive_process_dict(v, url_replacements)
             elif isinstance(v, (list, tuple)):
-                dictionary[k] = Agent._recursive_process_list_or_tuple(v, url_replacements)
+                dictionary[k] = Agent._recursive_process_list_or_tuple(
+                    v, url_replacements
+                )
 
     @staticmethod
-    def _recursive_process_list_or_tuple(container: list | tuple, url_replacements: dict[str, str]) -> list | tuple:
+    def _recursive_process_list_or_tuple(
+        container: list | tuple, url_replacements: dict[str, str]
+    ) -> list | tuple:
         """Helper method to process lists and tuples."""
         if isinstance(container, tuple):
             # For tuples, create a new tuple with processed items
             processed_items = []
             for item in container:
                 if isinstance(item, str):
-                    processed_items.append(Agent._replace_shortened_urls_in_string(item, url_replacements))
+                    processed_items.append(
+                        Agent._replace_shortened_urls_in_string(item, url_replacements)
+                    )
                 elif isinstance(item, BaseModel):
-                    Agent._recursive_process_all_strings_inside_pydantic_model(item, url_replacements)
+                    Agent._recursive_process_all_strings_inside_pydantic_model(
+                        item, url_replacements
+                    )
                     processed_items.append(item)
                 elif isinstance(item, dict):
                     Agent._recursive_process_dict(item, url_replacements)
                     processed_items.append(item)
                 elif isinstance(item, (list, tuple)):
-                    processed_items.append(Agent._recursive_process_list_or_tuple(item, url_replacements))
+                    processed_items.append(
+                        Agent._recursive_process_list_or_tuple(item, url_replacements)
+                    )
                 else:
                     processed_items.append(item)
             return tuple(processed_items)
@@ -1650,17 +1844,25 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             # For lists, modify in place
             for i, item in enumerate(container):
                 if isinstance(item, str):
-                    container[i] = Agent._replace_shortened_urls_in_string(item, url_replacements)
+                    container[i] = Agent._replace_shortened_urls_in_string(
+                        item, url_replacements
+                    )
                 elif isinstance(item, BaseModel):
-                    Agent._recursive_process_all_strings_inside_pydantic_model(item, url_replacements)
+                    Agent._recursive_process_all_strings_inside_pydantic_model(
+                        item, url_replacements
+                    )
                 elif isinstance(item, dict):
                     Agent._recursive_process_dict(item, url_replacements)
                 elif isinstance(item, (list, tuple)):
-                    container[i] = Agent._recursive_process_list_or_tuple(item, url_replacements)
+                    container[i] = Agent._recursive_process_list_or_tuple(
+                        item, url_replacements
+                    )
             return container
 
     @staticmethod
-    def _replace_shortened_urls_in_string(text: str, url_replacements: dict[str, str]) -> str:
+    def _replace_shortened_urls_in_string(
+        text: str, url_replacements: dict[str, str]
+    ) -> str:
         """Replace all shortened URLs in a string with their original URLs."""
         result = text
         for shortened_url, original_url in url_replacements.items():
@@ -1674,11 +1876,15 @@ class Agent(Generic[Context, AgentStructuredOutput]):
     async def get_model_output(self, input_messages: list[BaseMessage]) -> AgentOutput:
         """Get next action from LLM based on current state"""
 
-        urls_replaced = self._process_messsages_and_replace_long_urls_shorter_ones(input_messages)
+        urls_replaced = self._process_messsages_and_replace_long_urls_shorter_ones(
+            input_messages
+        )
 
         # Build kwargs for ainvoke
         # Note: ChatBrowserUse will automatically generate action descriptions from output_format schema
-        kwargs: dict = {"output_format": self.AgentOutput}  # session_id not supported in noesium adapter
+        kwargs: dict = {
+            "output_format": self.AgentOutput
+        }  # session_id not supported in noesium adapter
 
         try:
             response = await self.llm.ainvoke(input_messages, **kwargs)
@@ -1686,13 +1892,18 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
             # Replace any shortened URLs in the LLM response back to original URLs
             if urls_replaced:
-                self._recursive_process_all_strings_inside_pydantic_model(parsed, urls_replaced)
+                self._recursive_process_all_strings_inside_pydantic_model(
+                    parsed, urls_replaced
+                )
 
             # cut the number of actions to max_actions_per_step if needed
             if len(parsed.action) > self.settings.max_actions_per_step:
                 parsed.action = parsed.action[: self.settings.max_actions_per_step]
 
-            if not (hasattr(self.state, "paused") and (self.state.paused or self.state.stopped)):
+            if not (
+                hasattr(self.state, "paused")
+                and (self.state.paused or self.state.stopped)
+            ):
                 log_response(parsed, self.tools.registry.registry, self.logger)
                 await self._broadcast_model_state(parsed)
 
@@ -1709,7 +1920,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             # Retry with the fallback LLM
             return await self.get_model_output(input_messages)
 
-    def _try_switch_to_fallback_llm(self, error: ModelRateLimitError | ModelProviderError) -> bool:
+    def _try_switch_to_fallback_llm(
+        self, error: ModelRateLimitError | ModelProviderError
+    ) -> bool:
         """
         Attempt to switch to a fallback LLM after a rate limit or provider error.
 
@@ -1730,7 +1943,8 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         # 500, 502, 503, 504: Server errors
         retryable_status_codes = {401, 402, 429, 500, 502, 503, 504}
         is_retryable = isinstance(error, ModelRateLimitError) or (
-            hasattr(error, "status_code") and error.status_code in retryable_status_codes
+            hasattr(error, "status_code")
+            and error.status_code in retryable_status_codes
         )
 
         if not is_retryable:
@@ -1754,9 +1968,15 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         return True
 
-    def _log_fallback_switch(self, error: ModelRateLimitError | ModelProviderError, fallback: BaseChatModel) -> None:
+    def _log_fallback_switch(
+        self, error: ModelRateLimitError | ModelProviderError, fallback: BaseChatModel
+    ) -> None:
         """Log when switching to a fallback LLM."""
-        original_model = self._original_llm.model if hasattr(self._original_llm, "model") else "unknown"
+        original_model = (
+            self._original_llm.model
+            if hasattr(self._original_llm, "model")
+            else "unknown"
+        )
         fallback_model = fallback.model if hasattr(fallback, "model") else "unknown"
         error_type = type(error).__name__
         status_code = getattr(error, "status_code", "N/A")
@@ -1771,7 +1991,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         # Blue color for task
         self.logger.info(f"\033[34m🎯 Task: {self.task}\033[0m")
 
-        self.logger.debug(f"🤖 Browser-Use Library Version {self.version} ({self.source})")
+        self.logger.debug(
+            f"🤖 Browser-Use Library Version {self.version} ({self.source})"
+        )
 
         # Version check disabled in noesium
         # Check for latest version and log upgrade message if needed
@@ -1793,10 +2015,16 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         """Log step context information"""
         url = browser_state_summary.url if browser_state_summary else ""
         url_short = url[:50] + "..." if len(url) > 50 else url
-        interactive_count = len(browser_state_summary.dom_state.selector_map) if browser_state_summary else 0
+        interactive_count = (
+            len(browser_state_summary.dom_state.selector_map)
+            if browser_state_summary
+            else 0
+        )
         self.logger.info("\n")
         self.logger.info(f"📍 Step {self.state.n_steps}:")
-        self.logger.debug(f"Evaluating page with {interactive_count} interactive elements on: {url_short}")
+        self.logger.debug(
+            f"Evaluating page with {interactive_count} interactive elements on: {url_short}"
+        )
 
     def _log_next_action_summary(self, parsed: "AgentOutput") -> None:
         """Log a comprehensive summary of the next action(s)"""
@@ -1826,7 +2054,11 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     elif key == "success":
                         param_summary.append(f"success={value}")
                     elif isinstance(value, (str, int, bool)):
-                        val_str = str(value)[:30] + "..." if len(str(value)) > 30 else str(value)
+                        val_str = (
+                            str(value)[:30] + "..."
+                            if len(str(value)) > 30
+                            else str(value)
+                        )
                         param_summary.append(f"{key}={val_str}")
 
             param_str = f'({", ".join(param_summary)})' if param_summary else ""
@@ -1836,7 +2068,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         # Previously truncated long entries; keep full text for better context in demo panel
         return message.strip()
 
-    async def _demo_mode_log(self, message: str, level: str = "info", metadata: dict[str, Any] | None = None) -> None:
+    async def _demo_mode_log(
+        self, message: str, level: str = "info", metadata: dict[str, Any] | None = None
+    ) -> None:
         if not self._demo_mode_enabled or not message or self.browser_session is None:
             return
         try:
@@ -1861,7 +2095,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         if state.evaluation_previous_goal:
             eval_text = state.evaluation_previous_goal
             level = (
-                "success" if "success" in eval_text.lower() else "warning" if "failure" in eval_text.lower() else "info"
+                "success"
+                if "success" in eval_text.lower()
+                else "warning" if "failure" in eval_text.lower() else "info"
             )
             await self._demo_mode_log(eval_text, level, step_meta)
 
@@ -1869,9 +2105,13 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             await self._demo_mode_log(f"Memory: {state.memory}", "info", step_meta)
 
         if state.next_goal:
-            await self._demo_mode_log(f"Next goal: {state.next_goal}", "info", step_meta)
+            await self._demo_mode_log(
+                f"Next goal: {state.next_goal}", "info", step_meta
+            )
 
-    def _log_step_completion_summary(self, step_start_time: float, result: list[ActionResult]) -> str | None:
+    def _log_step_completion_summary(
+        self, step_start_time: float, result: list[ActionResult]
+    ) -> str | None:
         """Log step completion summary with action count, timing, and success/failure stats"""
         if not result:
             return None
@@ -1915,21 +2155,31 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 "bot detection",
                 "access denied",
             ]
-            has_captcha_issue = any(keyword in final_result_str for keyword in captcha_keywords)
+            has_captcha_issue = any(
+                keyword in final_result_str for keyword in captcha_keywords
+            )
 
             if has_captcha_issue:
                 # Suggest use_cloud=True for captcha/cloudflare issues
                 task_preview = self.task[:10] if len(self.task) > 10 else self.task
                 self.logger.info("")
-                self.logger.info("Failed because of CAPTCHA? For better browser stealth, try:")
-                self.logger.info(f'   agent = Agent(task="{task_preview}...", browser=Browser(use_cloud=True))')
+                self.logger.info(
+                    "Failed because of CAPTCHA? For better browser stealth, try:"
+                )
+                self.logger.info(
+                    f'   agent = Agent(task="{task_preview}...", browser=Browser(use_cloud=True))'
+                )
 
             # General failure message
             self.logger.info("")
             self.logger.info("Did the Agent not work as expected? Let us fix this!")
-            self.logger.info("   Open a short issue on GitHub: https://github.com/browser-use/browser-use/issues")
+            self.logger.info(
+                "   Open a short issue on GitHub: https://github.com/browser-use/browser-use/issues"
+            )
 
-    def _log_agent_event(self, max_steps: int, agent_run_error: str | None = None) -> None:
+    def _log_agent_event(
+        self, max_steps: int, agent_run_error: str | None = None
+    ) -> None:
         """Sent the agent event for this run to telemetry"""
 
         self.token_cost_service.get_usage_tokens_for_model(self.llm.model)
@@ -1962,7 +2212,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         # Telemetry disabled in noesium - skip telemetry.capture()
 
-    async def take_step(self, step_info: AgentStepInfo | None = None) -> tuple[bool, bool]:
+    async def take_step(
+        self, step_info: AgentStepInfo | None = None
+    ) -> tuple[bool, bool]:
         """Take a step
 
         Returns:
@@ -2003,7 +2255,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         import re
 
         # Remove email addresses from task before looking for URLs
-        task_without_emails = re.sub(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "", task)
+        task_without_emails = re.sub(
+            r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "", task
+        )
 
         # Look for common URL patterns
         patterns = [
@@ -2096,7 +2350,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             matches = re.finditer(pattern, task_without_emails)
             for match in matches:
                 url = match.group(0)
-                original_position = match.start()  # Store original position before URL modification
+                original_position = (
+                    match.start()
+                )  # Store original position before URL modification
 
                 # Remove trailing punctuation that's not part of URLs
                 url = re.sub(r"[.,;:!?()\[\]]+$", "", url)
@@ -2110,7 +2366,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                         break
 
                 if should_exclude:
-                    self.logger.debug(f"Excluding URL with file extension from auto-navigation: {url}")
+                    self.logger.debug(
+                        f"Excluding URL with file extension from auto-navigation: {url}"
+                    )
                     continue
 
                 # If in the 20 characters before the url position is a word in excluded_words skip to avoid "Never go to this url"
@@ -2131,7 +2389,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         unique_urls = list(set(found_urls))
         # If multiple URLs found, skip directly_open_urling
         if len(unique_urls) > 1:
-            self.logger.debug(f"Multiple URLs found ({len(found_urls)}), skipping directly_open_url to avoid ambiguity")
+            self.logger.debug(
+                f"Multiple URLs found ({len(found_urls)}), skipping directly_open_url to avoid ambiguity"
+            )
             return None
 
         # If exactly one URL found, return it
@@ -2173,7 +2433,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             self.logger.debug(f"✅ Completed step {step + 1}/{max_steps}")
         except TimeoutError:
             # Handle step timeout gracefully
-            error_msg = f"Step {step + 1} timed out after {self.settings.step_timeout} seconds"
+            error_msg = (
+                f"Step {step + 1} timed out after {self.settings.step_timeout} seconds"
+            )
             self.logger.error(f"⏰ {error_msg}")
             await self._demo_mode_log(error_msg, "error", {"step": step + 1})
             self.state.consecutive_failures += 1
@@ -2218,7 +2480,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         # Define the custom exit callback function for second CTRL+C
         def on_force_exit_log_telemetry():
-            self._log_agent_event(max_steps=max_steps, agent_run_error="SIGINT: Cancelled by user")
+            self._log_agent_event(
+                max_steps=max_steps, agent_run_error="SIGINT: Cancelled by user"
+            )
 
         signal_handler = SignalHandler(
             loop=loop,
@@ -2238,7 +2502,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
             # Initialize timing for session and task
             self._session_start_time = time.time()
-            self._task_start_time = self._session_start_time  # Initialize task start time
+            self._task_start_time = (
+                self._session_start_time
+            )  # Initialize task start time
 
             # Cloud events disabled in noesium - skip CreateAgentSessionEvent and CreateAgentTaskEvent dispatch
 
@@ -2247,7 +2513,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             # Start browser session and attach watchdogs
             await self.browser_session.start()
             if self._demo_mode_enabled:
-                await self._demo_mode_log(f"Started task: {self.task}", "info", {"tag": "task"})
+                await self._demo_mode_log(
+                    f"Started task: {self.task}", "info", {"tag": "task"}
+                )
                 await self._demo_mode_log(
                     "Demo mode active - follow the side panel for live thoughts and actions.",
                     "info",
@@ -2268,19 +2536,27 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 f"🔄 Starting main execution loop with max {max_steps} steps (currently at step {self.state.n_steps})..."
             )
             while self.state.n_steps <= max_steps:
-                current_step = self.state.n_steps - 1  # Convert to 0-indexed for step_info
+                current_step = (
+                    self.state.n_steps - 1
+                )  # Convert to 0-indexed for step_info
 
                 # Use the consolidated pause state management
                 if self.state.paused:
-                    self.logger.debug(f"⏸️ Step {self.state.n_steps}: Agent paused, waiting to resume...")
+                    self.logger.debug(
+                        f"⏸️ Step {self.state.n_steps}: Agent paused, waiting to resume..."
+                    )
                     await self._external_pause_event.wait()
                     signal_handler.reset()
 
                 # Check if we should stop due to too many failures, if final_response_after_failure is True, we try one last time
-                if (self.state.consecutive_failures) >= self.settings.max_failures + int(
+                if (
+                    self.state.consecutive_failures
+                ) >= self.settings.max_failures + int(
                     self.settings.final_response_after_failure
                 ):
-                    self.logger.error(f"❌ Stopping due to {self.settings.max_failures} consecutive failures")
+                    self.logger.error(
+                        f"❌ Stopping due to {self.settings.max_failures} consecutive failures"
+                    )
                     agent_run_error = f"Stopped due to {self.settings.max_failures} consecutive failures"
                     break
 
@@ -2291,12 +2567,16 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     break
 
                 step_info = AgentStepInfo(step_number=current_step, max_steps=max_steps)
-                is_done = await self._execute_step(current_step, max_steps, step_info, on_step_start, on_step_end)
+                is_done = await self._execute_step(
+                    current_step, max_steps, step_info, on_step_start, on_step_end
+                )
 
                 if is_done:
                     # Agent has marked the task as done
                     if self._demo_mode_enabled and self.history.history:
-                        final_result_text = self.history.final_result() or "Task completed"
+                        final_result_text = (
+                            self.history.final_result() or "Task completed"
+                        )
                         await self._demo_mode_log(
                             f"Final Result: {final_result_text}",
                             "success",
@@ -2311,7 +2591,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 self.history.add_item(
                     AgentHistory(
                         model_output=None,
-                        result=[ActionResult(error=agent_run_error, include_in_memory=True)],
+                        result=[
+                            ActionResult(error=agent_run_error, include_in_memory=True)
+                        ],
                         state=BrowserStateHistory(
                             url="",
                             title="",
@@ -2328,14 +2610,19 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             self.history.usage = await self.token_cost_service.get_usage_summary()
 
             # set the model output schema and call it on the fly
-            if self.history._output_model_schema is None and self.output_model_schema is not None:
+            if (
+                self.history._output_model_schema is None
+                and self.output_model_schema is not None
+            ):
                 self.history._output_model_schema = self.output_model_schema
 
             return self.history
 
         except KeyboardInterrupt:
             # Already handled by our signal handler, but catch any direct KeyboardInterrupt as well
-            self.logger.debug("Got KeyboardInterrupt during execution, returning current history")
+            self.logger.debug(
+                "Got KeyboardInterrupt during execution, returning current history"
+            )
             agent_run_error = "KeyboardInterrupt"
 
             self.history.usage = await self.token_cost_service.get_usage_summary()
@@ -2348,10 +2635,16 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             raise e
 
         finally:
-            if should_delay_close and self._demo_mode_enabled and agent_run_error is None:
+            if (
+                should_delay_close
+                and self._demo_mode_enabled
+                and agent_run_error is None
+            ):
                 await asyncio.sleep(30)
             if agent_run_error:
-                await self._demo_mode_log(f"Agent stopped: {agent_run_error}", "error", {"tag": "run"})
+                await self._demo_mode_log(
+                    f"Agent stopped: {agent_run_error}", "error", {"tag": "run"}
+                )
             # Log token usage summary
             await self.token_cost_service.log_usage_summary()
 
@@ -2385,7 +2678,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 # Lazy import gif module to avoid heavy startup cost
                 from noesium.subagents.bu.agent.gif import create_history_gif
 
-                create_history_gif(task=self.task, history=self.history, output_path=output_path)
+                create_history_gif(
+                    task=self.task, history=self.history, output_path=output_path
+                )
 
                 # Cloud events disabled in noesium - skip CreateAgentOutputFileEvent dispatch
 
@@ -2394,7 +2689,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
             # Stop the event bus gracefully, waiting for all events to be processed
             # Configurable via TIMEOUT_AgentEventBusStop env var (default: 3.0s)
-            await self.eventbus.stop(clear=True, timeout=_get_timeout("TIMEOUT_AgentEventBusStop", 3.0))
+            await self.eventbus.stop(
+                clear=True, timeout=_get_timeout("TIMEOUT_AgentEventBusStop", 3.0)
+            )
 
             await self.close()
 
@@ -2416,9 +2713,12 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         try:
             if (
                 self.browser_session._cached_browser_state_summary is not None
-                and self.browser_session._cached_browser_state_summary.dom_state is not None
+                and self.browser_session._cached_browser_state_summary.dom_state
+                is not None
             ):
-                cached_selector_map = dict(self.browser_session._cached_browser_state_summary.dom_state.selector_map)
+                cached_selector_map = dict(
+                    self.browser_session._cached_browser_state_summary.dom_state.selector_map
+                )
                 {e.parent_branch_hash() for e in cached_selector_map.values()}
             else:
                 cached_selector_map = {}
@@ -2434,15 +2734,15 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             if i > 0:
                 # ONLY ALLOW TO CALL `done` IF IT IS A SINGLE ACTION
                 if action_data.get("done") is not None:
-                    msg = (
-                        f"Done action is allowed only as a single action - stopped after action {i} / {total_actions}."
-                    )
+                    msg = f"Done action is allowed only as a single action - stopped after action {i} / {total_actions}."
                     self.logger.debug(msg)
                     break
 
             # wait between actions (only after first action)
             if i > 0:
-                self.logger.debug(f"Waiting {self.browser_profile.wait_between_actions} seconds between actions")
+                self.logger.debug(
+                    f"Waiting {self.browser_profile.wait_between_actions} seconds between actions"
+                )
                 await asyncio.sleep(self.browser_profile.wait_between_actions)
 
             try:
@@ -2477,7 +2777,11 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                         {"action": action_name, "step": self.state.n_steps},
                     )
                 elif result.is_done:
-                    completion_text = result.long_term_memory or result.extracted_content or "Task marked as done."
+                    completion_text = (
+                        result.long_term_memory
+                        or result.extracted_content
+                        or "Task marked as done."
+                    )
                     level = "success" if result.success is not False else "warning"
                     await self._demo_mode_log(
                         completion_text,
@@ -2493,7 +2797,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 # --- Page-change guards (only when more actions remain) ---
 
                 # Layer 1: Static flag — action metadata declares it changes the page
-                registered_action = self.tools.registry.registry.actions.get(action_name)
+                registered_action = self.tools.registry.registry.actions.get(
+                    action_name
+                )
                 if registered_action and registered_action.terminates_sequence:
                     self.logger.info(
                         f'Action "{action_name}" terminates sequence — skipping {total_actions - i - 1} remaining action(s)'
@@ -2504,7 +2810,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 post_action_url = await self.browser_session.get_current_page_url()
                 post_action_focus = self.browser_session.agent_focus_target_id
 
-                if post_action_url != pre_action_url or post_action_focus != pre_action_focus:
+                if (
+                    post_action_url != pre_action_url
+                    or post_action_focus != pre_action_focus
+                ):
                     self.logger.info(
                         f'Page changed after "{action_name}" — skipping {total_actions - i - 1} remaining action(s)'
                     )
@@ -2512,7 +2821,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
             except Exception as e:
                 # Handle any exceptions during action execution
-                self.logger.error(f"❌ Executing action {i + 1} failed -> {type(e).__name__}: {e}")
+                self.logger.error(
+                    f"❌ Executing action {i + 1} failed -> {type(e).__name__}: {e}"
+                )
                 await self._demo_mode_log(
                     f'Action "{action_name}" raised {type(e).__name__}: {e}',
                     "error",
@@ -2522,7 +2833,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         return results
 
-    async def _log_action(self, action, action_name: str, action_num: int, total_actions: int) -> None:
+    async def _log_action(
+        self, action, action_name: str, action_num: int, total_actions: int
+    ) -> None:
         """Log the action before execution with colored formatting"""
         # Color definitions
         blue = "\033[34m"  # Action name
@@ -2531,7 +2844,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         # Format action number and name
         if total_actions > 1:
-            action_header = f"▶️  [{action_num}/{total_actions}] {blue}{action_name}{reset}:"
+            action_header = (
+                f"▶️  [{action_num}/{total_actions}] {blue}{action_name}{reset}:"
+            )
             plain_header = f"▶️  [{action_num}/{total_actions}] {action_name}:"
         else:
             action_header = f"▶️   {blue}{action_name}{reset}:"
@@ -2581,7 +2896,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         # self._task_duration = self._task_end_time - self._task_start_time TODO: this is not working when using take_step
         if self.history.is_successful():
             self.logger.info("✅ Task completed successfully")
-            await self._demo_mode_log("Task completed successfully", "success", {"tag": "task"})
+            await self._demo_mode_log(
+                "Task completed successfully", "success", {"tag": "task"}
+            )
 
     async def _generate_rerun_summary(
         self,
@@ -2627,7 +2944,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 summary_llm = self.llm
                 self.logger.debug("Using agent LLM for rerun summary")
             else:
-                self.logger.debug(f"Using provided LLM for rerun summary: {summary_llm.model}")
+                self.logger.debug(
+                    f"Using provided LLM for rerun summary: {summary_llm.model}"
+                )
 
             # Build message with prompt and optional screenshot
             from noesium.subagents.bu.adapters.llm_adapter import BaseMessage
@@ -2636,7 +2955,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             messages: list[BaseMessage] = [message]  # type: ignore[list-item]
 
             # Try calling with structured output first
-            self.logger.debug(f"Calling LLM for rerun summary with {len(messages)} message(s)")
+            self.logger.debug(
+                f"Calling LLM for rerun summary with {len(messages)} message(s)"
+            )
             try:
                 kwargs: dict = {"output_format": RerunSummaryAction}
                 response = await summary_llm.ainvoke(messages, **kwargs)
@@ -2646,7 +2967,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             except Exception as structured_error:
                 # If structured output fails (e.g., Browser-Use LLM doesn't support it for this type),
                 # fall back to text response without parsing
-                self.logger.debug(f"Structured output failed: {structured_error}, falling back to text response")
+                self.logger.debug(
+                    f"Structured output failed: {structured_error}, falling back to text response"
+                )
 
                 response = await summary_llm.ainvoke(messages, None)
                 response_text = response.completion
@@ -2654,15 +2977,23 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
                 # Use the text response directly as the summary
                 summary = RerunSummaryAction(
-                    summary=(response_text if isinstance(response_text, str) else str(response_text)),
+                    summary=(
+                        response_text
+                        if isinstance(response_text, str)
+                        else str(response_text)
+                    ),
                     success=error_count == 0,
                     completion_status=(
-                        "complete" if error_count == 0 else ("partial" if success_count > 0 else "failed")
+                        "complete"
+                        if error_count == 0
+                        else ("partial" if success_count > 0 else "failed")
                     ),
                 )
 
             self.logger.info(f"📊 Rerun Summary: {summary.summary}")
-            self.logger.info(f"📊 Status: {summary.completion_status} (success={summary.success})")
+            self.logger.info(
+                f"📊 Status: {summary.completion_status} (success={summary.success})"
+            )
 
             return ActionResult(
                 is_done=True,
@@ -2672,7 +3003,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             )
 
         except Exception as e:
-            self.logger.warning(f"Failed to generate AI summary: {e.__class__.__name__}: {e}")
+            self.logger.warning(
+                f"Failed to generate AI summary: {e.__class__.__name__}: {e}"
+            )
             self.logger.debug("Full error traceback:", exc_info=True)
             # Fallback to simple summary
             return ActionResult(
@@ -2724,7 +3057,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 browser_session=self.browser_session, extract_links=extract_links
             )
         except Exception as e:
-            return ActionResult(error=f"Could not extract clean markdown: {type(e).__name__}: {e}")
+            return ActionResult(
+                error=f"Could not extract clean markdown: {type(e).__name__}: {e}"
+            )
 
         # Get screenshot if requested
         screenshot_b64 = None
@@ -2771,9 +3106,7 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             )
 
             current_url = await self.browser_session.get_current_page_url()
-            extracted_content = (
-                f"<url>\n{current_url}\n</url>\n<query>\n{query}\n</query>\n<result>\n{response.completion}\n</result>"
-            )
+            extracted_content = f"<url>\n{current_url}\n</url>\n<query>\n{query}\n</query>\n<result>\n{response.completion}\n</result>"
 
             # Simple memory handling
             MAX_MEMORY_LENGTH = 1000
@@ -2781,8 +3114,12 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 memory = extracted_content
                 include_extracted_content_only_once = False
             else:
-                file_name = await self.file_system.save_extracted_content(extracted_content)
-                memory = f"Query: {query}\nContent in {file_name} and once in <read_state>."
+                file_name = await self.file_system.save_extracted_content(
+                    extracted_content
+                )
+                memory = (
+                    f"Query: {query}\nContent in {file_name} and once in <read_state>."
+                )
                 include_extracted_content_only_once = True
 
             self.logger.info(f"🤖 AI Step: {memory}")
@@ -2792,7 +3129,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 long_term_memory=memory,
             )
         except Exception as e:
-            self.logger.warning(f"Failed to execute AI step: {e.__class__.__name__}: {e}")
+            self.logger.warning(
+                f"Failed to execute AI step: {e.__class__.__name__}: {e}"
+            )
             self.logger.debug("Full error traceback:", exc_info=True)
             return ActionResult(error=f"AI step failed: {e}")
 
@@ -2841,14 +3180,25 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         try:
             for i, history_item in enumerate(history.history):
-                goal = history_item.model_output.current_state.next_goal if history_item.model_output else ""
-                step_num = history_item.metadata.step_number if history_item.metadata else i
+                goal = (
+                    history_item.model_output.current_state.next_goal
+                    if history_item.model_output
+                    else ""
+                )
+                step_num = (
+                    history_item.metadata.step_number if history_item.metadata else i
+                )
                 step_name = "Initial actions" if step_num == 0 else f"Step {step_num}"
 
                 # Determine step delay
-                if history_item.metadata and history_item.metadata.step_interval is not None:
+                if (
+                    history_item.metadata
+                    and history_item.metadata.step_interval is not None
+                ):
                     # Cap the saved interval to max_step_interval (saved interval includes LLM time)
-                    step_delay = min(history_item.metadata.step_interval, max_step_interval)
+                    step_delay = min(
+                        history_item.metadata.step_interval, max_step_interval
+                    )
                     # Format delay nicely - show ms for values < 1s, otherwise show seconds
                     if step_delay < 1.0:
                         delay_str = f"{step_delay * 1000:.0f}ms"
@@ -2866,7 +3216,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                         delay_str = f"{step_delay:.1f}s"
                     delay_source = f"using default delay={delay_str}"
 
-                self.logger.info(f"Replaying {step_name} ({i + 1}/{len(history.history)}) [{delay_source}]: {goal}")
+                self.logger.info(
+                    f"Replaying {step_name} ({i + 1}/{len(history.history)}) [{delay_source}]: {goal}"
+                )
 
                 if (
                     not history_item.model_output
@@ -2878,7 +3230,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     continue
 
                 # Check if the original step had errors - skip if skip_failures is enabled
-                original_had_error = any(r.error for r in history_item.result if r.error)
+                original_had_error = any(
+                    r.error for r in history_item.result if r.error
+                )
                 if original_had_error and skip_failures:
                     error_msgs = [r.error for r in history_item.result if r.error]
                     self.logger.warning(
@@ -2894,7 +3248,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 # Check if this step is a redundant retry of the previous step
                 # This handles cases where original run needed to click same element multiple times
                 # due to slow page response, but during replay the first click already worked
-                if self._is_redundant_retry_step(history_item, previous_item, previous_step_succeeded):
+                if self._is_redundant_retry_step(
+                    history_item, previous_item, previous_step_succeeded
+                ):
                     self.logger.info(
                         f"{step_name}: Skipping redundant retry (previous step already succeeded with same element)"
                     )
@@ -2935,20 +3291,28 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                             and self._is_menu_opener_step(previous_item)
                         ):
                             # Check if current step targets a menu item element
-                            curr_elements = history_item.state.interacted_element if history_item.state else []
+                            curr_elements = (
+                                history_item.state.interacted_element
+                                if history_item.state
+                                else []
+                            )
                             curr_elem = curr_elements[0] if curr_elements else None
                             if self._is_menu_item_element(curr_elem):
                                 self.logger.info(
                                     "🔄 Dropdown may have closed. Attempting to re-open by re-executing previous step..."
                                 )
-                                reopened = await self._reexecute_menu_opener(previous_item, ai_step_llm)
+                                reopened = await self._reexecute_menu_opener(
+                                    previous_item, ai_step_llm
+                                )
                                 if reopened:
                                     menu_reopened = True
                                     # Don't increment retry_count for the menu reopen attempt
                                     # Retry immediately with minimal delay
                                     retry_count -= 1
                                     step_delay = 0.5  # Use short delay after reopening
-                                    self.logger.info("🔄 Dropdown re-opened, retrying element match...")
+                                    self.logger.info(
+                                        "🔄 Dropdown re-opened, retrying element match..."
+                                    )
                                     continue
 
                         if retry_count == max_retries:
@@ -2976,7 +3340,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
             # Generate AI summary of rerun completion
             self.logger.info("🤖 Generating AI summary of rerun completion...")
-            summary_result = await self._generate_rerun_summary(self.task, results, summary_llm)
+            summary_result = await self._generate_rerun_summary(
+                self.task, results, summary_llm
+            )
             results.append(summary_result)
 
             return results
@@ -2987,7 +3353,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
     async def _execute_initial_actions(self) -> None:
         # Execute initial actions if provided
         if self.initial_actions and not self.state.follow_up_task:
-            self.logger.debug(f"⚡ Executing {len(self.initial_actions)} initial actions...")
+            self.logger.debug(
+                f"⚡ Executing {len(self.initial_actions)} initial actions..."
+            )
             result = await self.multi_act(self.initial_actions)
             # update result 1 to mention that its was automatically loaded
             if result and self.initial_url and result[0].long_term_memory:
@@ -3025,7 +3393,8 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 url=self.initial_url or "",
                 title="Initial Actions",
                 tabs=[],
-                interacted_element=[None] * len(self.initial_actions),  # No DOM elements needed
+                interacted_element=[None]
+                * len(self.initial_actions),  # No DOM elements needed
                 screenshot_path=None,
             )
 
@@ -3065,7 +3434,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         last_count = 0
 
         while (time.time() - start_time) < timeout:
-            state = await self.browser_session.get_browser_state_summary(include_screenshot=False)
+            state = await self.browser_session.get_browser_state_summary(
+                include_screenshot=False
+            )
             if state and state.dom_state.selector_map:
                 current_count = len(state.dom_state.selector_map)
                 if current_count >= min_elements:
@@ -3082,8 +3453,12 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             await asyncio.sleep(poll_interval)
 
         # Return last state even if we didn't reach min_elements
-        self.logger.warning(f"⚠️ Timeout waiting for {min_elements} elements, proceeding with {last_count} elements")
-        return await self.browser_session.get_browser_state_summary(include_screenshot=False)
+        self.logger.warning(
+            f"⚠️ Timeout waiting for {min_elements} elements, proceeding with {last_count} elements"
+        )
+        return await self.browser_session.get_browser_state_summary(
+            include_screenshot=False
+        )
 
     def _count_expected_elements_from_history(self, history_item: AgentHistory) -> int:
         """Estimate the minimum number of elements expected based on history.
@@ -3157,13 +3532,21 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             if needs_element_matching:
                 min_elements = self._count_expected_elements_from_history(history_item)
                 if min_elements > 0:
-                    state = await self._wait_for_minimum_elements(min_elements, timeout=15.0, poll_interval=1.0)
+                    state = await self._wait_for_minimum_elements(
+                        min_elements, timeout=15.0, poll_interval=1.0
+                    )
                 else:
-                    state = await self.browser_session.get_browser_state_summary(include_screenshot=False)
+                    state = await self.browser_session.get_browser_state_summary(
+                        include_screenshot=False
+                    )
             else:
-                state = await self.browser_session.get_browser_state_summary(include_screenshot=False)
+                state = await self.browser_session.get_browser_state_summary(
+                    include_screenshot=False
+                )
         else:
-            state = await self.browser_session.get_browser_state_summary(include_screenshot=False)
+            state = await self.browser_session.get_browser_state_summary(
+                include_screenshot=False
+            )
         if not state or not history_item.model_output:
             raise ValueError("Invalid state or model output")
 
@@ -3188,7 +3571,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 query = extract_params.get("query", "")
                 extract_links = extract_params.get("extract_links", False)
 
-                self.logger.info(f"🤖 Using AI step for extract action: {query[:50]}...")
+                self.logger.info(
+                    f"🤖 Using AI step for extract action: {query[:50]}..."
+                )
                 ai_result = await self._execute_ai_step(
                     query=query,
                     include_screenshot=False,  # Match original extract behavior
@@ -3211,7 +3596,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     selector_count = len(selector_map)
 
                     # Find elements with same node_name for diagnostics
-                    hist_node = historical_elem.node_name.lower() if historical_elem else ""
+                    hist_node = (
+                        historical_elem.node_name.lower() if historical_elem else ""
+                    )
                     similar_elements = []
                     if historical_elem and historical_elem.attributes:
                         historical_elem.attributes.get("aria-label", "")
@@ -3227,7 +3614,11 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     if similar_elements:
                         diagnostic = f"\n  Available <{hist_node.upper()}> with aria-label: {similar_elements}"
                     elif hist_node:
-                        same_node_count = sum(1 for e in selector_map.values() if e.node_name.lower() == hist_node)
+                        same_node_count = sum(
+                            1
+                            for e in selector_map.values()
+                            if e.node_name.lower() == hist_node
+                        )
                         diagnostic = f"\n  Found {same_node_count} <{hist_node.upper()}> elements (none with matching identifiers)"
 
                     raise ValueError(
@@ -3299,7 +3690,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 break
 
         if highlight_index is None:
-            self.logger.debug(f"EXACT hash match failed (checked {len(selector_map)} elements)")
+            self.logger.debug(
+                f"EXACT hash match failed (checked {len(selector_map)} elements)"
+            )
 
         # Level 2: STABLE hash match (dynamic classes filtered)
         # Use stored stable_hash (computed at save time from EnhancedDOMTreeNode - single source of truth)
@@ -3308,7 +3701,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 if elem.compute_stable_hash() == historical_element.stable_hash:
                     highlight_index = idx
                     match_level = MatchLevel.STABLE
-                    self.logger.info("Element matched at STABLE level (dynamic classes filtered)")
+                    self.logger.info(
+                        "Element matched at STABLE level (dynamic classes filtered)"
+                    )
                     break
             if highlight_index is None:
                 self.logger.debug("STABLE hash match failed")
@@ -3321,10 +3716,14 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 if elem.xpath == historical_element.x_path:
                     highlight_index = idx
                     match_level = MatchLevel.XPATH
-                    self.logger.info(f"Element matched at XPATH level: {historical_element.x_path}")
+                    self.logger.info(
+                        f"Element matched at XPATH level: {historical_element.x_path}"
+                    )
                     break
             if highlight_index is None:
-                self.logger.debug(f"XPATH match failed for: {historical_element.x_path[-60:]}")
+                self.logger.debug(
+                    f"XPATH match failed for: {historical_element.x_path[-60:]}"
+                )
 
         # Level 4: ax_name (accessible name) match - robust for dynamic SPAs with menus
         # This uses the accessible name from the accessibility tree which is stable
@@ -3338,14 +3737,18 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 if elem.node_name.lower() == hist_name and elem_ax_name == hist_ax_name:
                     highlight_index = idx
                     match_level = MatchLevel.AX_NAME
-                    self.logger.info(f'Element matched at AX_NAME level: "{hist_ax_name}"')
+                    self.logger.info(
+                        f'Element matched at AX_NAME level: "{hist_ax_name}"'
+                    )
                     break
             if highlight_index is None:
                 # Log available ax_names for debugging
                 same_type_ax_names = [
                     (idx, elem.ax_node.name if elem.ax_node else None)
                     for idx, elem in selector_map.items()
-                    if elem.node_name.lower() == hist_name and elem.ax_node and elem.ax_node.name
+                    if elem.node_name.lower() == hist_name
+                    and elem.ax_node
+                    and elem.ax_node.name
                 ]
                 self.logger.debug(
                     f'AX_NAME match failed for <{hist_name.upper()}> ax_name="{hist_ax_name}". '
@@ -3369,18 +3772,26 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                         ):
                             highlight_index = idx
                             match_level = MatchLevel.ATTRIBUTE
-                            self.logger.info(f"Element matched via {attr_key} attribute: {hist_attrs[attr_key]}")
+                            self.logger.info(
+                                f"Element matched via {attr_key} attribute: {hist_attrs[attr_key]}"
+                            )
                             break
                     if highlight_index is not None:
                         break
 
             if highlight_index is None:
-                tried_attrs = [k for k in ["name", "id", "aria-label"] if k in hist_attrs and hist_attrs[k]]
+                tried_attrs = [
+                    k
+                    for k in ["name", "id", "aria-label"]
+                    if k in hist_attrs and hist_attrs[k]
+                ]
                 # Log what was tried and what's available on the page for debugging
                 same_node_elements = [
                     (
                         idx,
-                        elem.attributes.get("aria-label") or elem.attributes.get("id") or elem.attributes.get("name"),
+                        elem.attributes.get("aria-label")
+                        or elem.attributes.get("id")
+                        or elem.attributes.get("name"),
                     )
                     for idx, elem in selector_map.items()
                     if elem.node_name.lower() == hist_name and elem.attributes
@@ -3399,7 +3810,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         if old_index != highlight_index:
             action.set_index(highlight_index)
             level_name = match_level.name if match_level else "UNKNOWN"
-            self.logger.info(f"Element index updated {old_index} → {highlight_index} (matched at {level_name} level)")
+            self.logger.info(
+                f"Element index updated {old_index} → {highlight_index} (matched at {level_name} level)"
+            )
 
         return action
 
@@ -3423,7 +3836,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         # Add xpath (truncated)
         if elem.x_path:
-            xpath_short = elem.x_path if len(elem.x_path) <= 60 else f"...{elem.x_path[-57:]}"
+            xpath_short = (
+                elem.x_path if len(elem.x_path) <= 60 else f"...{elem.x_path[-57:]}"
+            )
             parts.append(f'xpath="{xpath_short}"')
 
         return " ".join(parts)
@@ -3476,8 +3891,12 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             return False
 
         # Check if same action type
-        curr_actions = current_item.model_output.action if current_item.model_output else []
-        prev_actions = previous_item.model_output.action if previous_item.model_output else []
+        curr_actions = (
+            current_item.model_output.action if current_item.model_output else []
+        )
+        prev_actions = (
+            previous_item.model_output.action if previous_item.model_output else []
+        )
 
         if not curr_actions or not prev_actions:
             return False
@@ -3511,10 +3930,18 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         Returns True if the step appears to open a dropdown/submenu.
         """
-        if not history_item or not history_item.state or not history_item.state.interacted_element:
+        if (
+            not history_item
+            or not history_item.state
+            or not history_item.state.interacted_element
+        ):
             return False
 
-        elem = history_item.state.interacted_element[0] if history_item.state.interacted_element else None
+        elem = (
+            history_item.state.interacted_element[0]
+            if history_item.state.interacted_element
+            else None
+        )
         if not elem:
             return False
 
@@ -3578,7 +4005,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         if elem.ax_name and elem.ax_name not in ("", None):
             # Common menu container classes
             elem_class = attrs.get("class", "").lower()
-            if any(x in elem_class for x in ["dropdown", "popup", "menu", "submenu", "action"]):
+            if any(
+                x in elem_class
+                for x in ["dropdown", "popup", "menu", "submenu", "action"]
+            ):
                 return True
 
         return False
@@ -3597,9 +4027,13 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         Returns True if re-execution succeeded, False otherwise.
         """
         try:
-            self.logger.info("🔄 Re-opening dropdown/menu by re-executing previous step...")
+            self.logger.info(
+                "🔄 Re-opening dropdown/menu by re-executing previous step..."
+            )
             # Use a minimal delay - we want to quickly re-open the menu
-            await self._execute_history_step(opener_item, delay=0.5, ai_step_llm=ai_step_llm, wait_for_elements=False)
+            await self._execute_history_step(
+                opener_item, delay=0.5, ai_step_llm=ai_step_llm, wait_for_elements=False
+            )
             # Small delay to let the menu render
             await asyncio.sleep(0.3)
             return True
@@ -3669,7 +4103,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         # Task stopped
 
-    def _convert_initial_actions(self, actions: list[dict[str, dict[str, Any]]]) -> list[ActionModel]:
+    def _convert_initial_actions(
+        self, actions: list[dict[str, dict[str, Any]]]
+    ) -> list[ActionModel]:
         """Convert dictionary-based actions to ActionModel instances"""
         converted_actions = []
         action_model = self.ActionModel
@@ -3698,7 +4134,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         """
 
         # Skip verification if already done
-        if getattr(self.llm, "_verified_api_keys", None) is True or CONFIG.SKIP_LLM_API_KEY_VERIFICATION:
+        if (
+            getattr(self.llm, "_verified_api_keys", None) is True
+            or CONFIG.SKIP_LLM_API_KEY_VERIFICATION
+        ):
             setattr(self.llm, "_verified_api_keys", True)
             return True
 
@@ -3719,7 +4158,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     # keep_alive=True sessions shouldn't keep the event loop alive after agent.run()
                     await self.browser_session.event_bus.stop(
                         clear=False,
-                        timeout=_get_timeout("TIMEOUT_BrowserSessionEventBusStopOnAgentClose", 1.0),
+                        timeout=_get_timeout(
+                            "TIMEOUT_BrowserSessionEventBusStopOnAgentClose", 1.0
+                        ),
                     )
                     try:
                         self.browser_session.event_bus.event_queue = None
@@ -3738,7 +4179,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             import threading
 
             threads = threading.enumerate()
-            self.logger.debug(f"🧵 Remaining threads ({len(threads)}): {[t.name for t in threads]}")
+            self.logger.debug(
+                f"🧵 Remaining threads ({len(threads)}): {[t.name for t in threads]}"
+            )
 
             # Get all asyncio tasks
             tasks = asyncio.all_tasks(asyncio.get_event_loop())
@@ -3758,20 +4201,32 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         self.ActionModel = self.tools.registry.create_action_model(page_url=page_url)
         # Update output model with the new actions
         if self.settings.flash_mode:
-            self.AgentOutput = AgentOutput.type_with_custom_actions_flash_mode(self.ActionModel)
+            self.AgentOutput = AgentOutput.type_with_custom_actions_flash_mode(
+                self.ActionModel
+            )
         elif self.settings.use_thinking:
             self.AgentOutput = AgentOutput.type_with_custom_actions(self.ActionModel)
         else:
-            self.AgentOutput = AgentOutput.type_with_custom_actions_no_thinking(self.ActionModel)
+            self.AgentOutput = AgentOutput.type_with_custom_actions_no_thinking(
+                self.ActionModel
+            )
 
         # Update done action model too
-        self.DoneActionModel = self.tools.registry.create_action_model(include_actions=["done"], page_url=page_url)
+        self.DoneActionModel = self.tools.registry.create_action_model(
+            include_actions=["done"], page_url=page_url
+        )
         if self.settings.flash_mode:
-            self.DoneAgentOutput = AgentOutput.type_with_custom_actions_flash_mode(self.DoneActionModel)
+            self.DoneAgentOutput = AgentOutput.type_with_custom_actions_flash_mode(
+                self.DoneActionModel
+            )
         elif self.settings.use_thinking:
-            self.DoneAgentOutput = AgentOutput.type_with_custom_actions(self.DoneActionModel)
+            self.DoneAgentOutput = AgentOutput.type_with_custom_actions(
+                self.DoneActionModel
+            )
         else:
-            self.DoneAgentOutput = AgentOutput.type_with_custom_actions_no_thinking(self.DoneActionModel)
+            self.DoneAgentOutput = AgentOutput.type_with_custom_actions_no_thinking(
+                self.DoneActionModel
+            )
 
     async def authenticate_cloud_sync(self, show_instructions: bool = True) -> bool:
         """
@@ -3832,7 +4287,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 old_value = detected_vars[var_name].original_value
                 value_replacements[old_value] = new_value
             else:
-                self.logger.warning(f'Variable "{var_name}" not found in history, skipping substitution')
+                self.logger.warning(
+                    f'Variable "{var_name}" not found in history, skipping substitution'
+                )
 
         if not value_replacements:
             self.logger.info("No variables to substitute")
@@ -3859,7 +4316,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     action_dict = vars(action) if hasattr(action, "__dict__") else {}
 
                 # Substitute in all string fields
-                substitution_count += self._substitute_in_dict(action_dict, value_replacements)
+                substitution_count += self._substitute_in_dict(
+                    action_dict, value_replacements
+                )
 
                 # Update the action with modified values
                 if hasattr(action, "model_dump"):

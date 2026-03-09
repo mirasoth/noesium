@@ -55,10 +55,14 @@ class GitHubToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # Get GitHub token from config or environment
-        self.github_token = self.config.config.get("GITHUB_TOKEN") or os.getenv("GITHUB_TOKEN")
+        self.github_token = self.config.config.get("GITHUB_TOKEN") or os.getenv(
+            "GITHUB_TOKEN"
+        )
 
         if not self.github_token:
-            self.logger.warning("GITHUB_TOKEN not found - API rate limits will be restricted")
+            self.logger.warning(
+                "GITHUB_TOKEN not found - API rate limits will be restricted"
+            )
 
         # API configuration
         self.api_base_url = "https://api.github.com"
@@ -102,7 +106,9 @@ class GitHubToolkit(AsyncBaseToolkit):
             self.logger.error(f"Failed to parse GitHub URL: {e}")
             return None
 
-    async def _make_api_request(self, endpoint: str, params: Optional[Dict] = None) -> Dict:
+    async def _make_api_request(
+        self, endpoint: str, params: Optional[Dict] = None
+    ) -> Dict:
         """
         Make an authenticated request to the GitHub API.
 
@@ -117,14 +123,20 @@ class GitHubToolkit(AsyncBaseToolkit):
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=self.headers, params=params) as response:
+                async with session.get(
+                    url, headers=self.headers, params=params
+                ) as response:
                     if response.status == 404:
                         return {"error": "Repository not found or not accessible"}
                     elif response.status == 403:
-                        return {"error": "API rate limit exceeded or insufficient permissions"}
+                        return {
+                            "error": "API rate limit exceeded or insufficient permissions"
+                        }
                     elif response.status != 200:
                         error_text = await response.text()
-                        return {"error": f"API request failed: {response.status} - {error_text}"}
+                        return {
+                            "error": f"API request failed: {response.status} - {error_text}"
+                        }
 
                     return await response.json()
 
@@ -193,7 +205,8 @@ class GitHubToolkit(AsyncBaseToolkit):
                 "name": repo_data["name"],
                 "owner": repo_data["owner"]["login"],
                 "full_name": repo_data["full_name"],
-                "description": repo_data.get("description") or "No description provided",
+                "description": repo_data.get("description")
+                or "No description provided",
                 "language": repo_data.get("language") or "Not specified",
                 "stars": repo_data["stargazers_count"],
                 "forks": repo_data["forks_count"],
@@ -219,7 +232,9 @@ class GitHubToolkit(AsyncBaseToolkit):
                 "has_downloads": repo_data["has_downloads"],
             }
 
-            self.logger.info(f"Retrieved info for {info['full_name']} ({info['stars']} stars)")
+            self.logger.info(
+                f"Retrieved info for {info['full_name']} ({info['stars']} stars)"
+            )
             return info
 
         except KeyError as e:
@@ -339,7 +354,9 @@ class GitHubToolkit(AsyncBaseToolkit):
         except (KeyError, TypeError) as e:
             return {"error": f"Failed to parse releases: {str(e)}"}
 
-    async def search_repositories(self, query: str, sort: str = "stars", limit: int = 10) -> Dict:
+    async def search_repositories(
+        self, query: str, sort: str = "stars", limit: int = 10
+    ) -> Dict:
         """
         Search for GitHub repositories.
 

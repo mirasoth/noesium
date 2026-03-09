@@ -63,7 +63,11 @@ class ToolConverter:
         return mcp_types.Tool(
             name=langchain_tool.name,
             description=langchain_tool.description,
-            inputSchema=(langchain_tool.args_schema.model_json_schema() if langchain_tool.args_schema else {}),
+            inputSchema=(
+                langchain_tool.args_schema.model_json_schema()
+                if langchain_tool.args_schema
+                else {}
+            ),
         )
 
     @staticmethod
@@ -117,7 +121,9 @@ class BaseToolkit(abc.ABC):
             config = ToolkitConfig()
 
         self.config = config
-        self.logger = get_logger(f"{self.__class__.__module__}.{self.__class__.__name__}")
+        self.logger = get_logger(
+            f"{self.__class__.__module__}.{self.__class__.__name__}"
+        )
         self._tools_cache: Optional[Dict[str, Callable]] = None
         self._llm_client: Optional[BaseLLMClient] = None
 
@@ -168,7 +174,10 @@ class BaseToolkit(abc.ABC):
             List of LangChain BaseTool instances
         """
         tools_map = self.get_filtered_tools_map()
-        return [ToolConverter.function_to_langchain(func, name) for name, func in tools_map.items()]
+        return [
+            ToolConverter.function_to_langchain(func, name)
+            for name, func in tools_map.items()
+        ]
 
     def get_mcp_tools(self) -> List["mcp_types.Tool"]:
         """
@@ -302,7 +311,10 @@ class AsyncBaseToolkit(BaseToolkit):
             List of LangChain BaseTool instances
         """
         tools_map = await self.get_filtered_tools_map()
-        return [ToolConverter.function_to_langchain(func, name) for name, func in tools_map.items()]
+        return [
+            ToolConverter.function_to_langchain(func, name)
+            for name, func in tools_map.items()
+        ]
 
     async def get_mcp_tools(self) -> List["mcp_types.Tool"]:
         """

@@ -282,7 +282,9 @@ class BaseMemoryStore(ABC):
     # ==========================================
 
     @abstractmethod
-    async def get_stats(self, filters: Optional[MemoryFilter] = None, **kwargs) -> MemoryStats:
+    async def get_stats(
+        self, filters: Optional[MemoryFilter] = None, **kwargs
+    ) -> MemoryStats:
         """
         Get statistics about the memory store.
 
@@ -356,7 +358,9 @@ class BaseMemoryStore(ABC):
         # Default implementation using get_all with pagination
         offset = 0
         while True:
-            chunk = await self.get_all(filters=filters, limit=chunk_size, offset=offset, **kwargs)
+            chunk = await self.get_all(
+                filters=filters, limit=chunk_size, offset=offset, **kwargs
+            )
             if not chunk:
                 break
             yield chunk
@@ -449,7 +453,9 @@ class BaseMemoryManager(ABC):
         """
 
     @abstractmethod
-    async def summarize_conversation_history(self, conversation_id: str, max_length: int = 500, **kwargs) -> str:
+    async def summarize_conversation_history(
+        self, conversation_id: str, max_length: int = 500, **kwargs
+    ) -> str:
         """
         Generate a summary of conversation history.
 

@@ -101,7 +101,9 @@ def get_llm_client(
     # Handle backward compatibility: enable instructor if either parameter is True
     # If instructor is explicitly provided (True/False), use it OR structured_output
     # If instructor is None, use structured_output
-    enable_instructor = (instructor if instructor is not None else False) or structured_output
+    enable_instructor = (
+        instructor if instructor is not None else False
+    ) or structured_output
 
     # Remove 'instructor' from kwargs to avoid duplicate argument errors
     kwargs.pop("instructor", None)
@@ -128,7 +130,9 @@ def get_llm_client(
         )
     elif provider == "ollama":
         if not OLLAMA_AVAILABLE:
-            raise ValueError("ollama provider is not available. Please install the required dependencies.")
+            raise ValueError(
+                "ollama provider is not available. Please install the required dependencies."
+            )
         return OllamaLLMClient(
             base_url=base_url,
             api_key=api_key,
@@ -140,7 +144,9 @@ def get_llm_client(
         )
     elif provider == "llamacpp":
         if not LLAMACPP_AVAILABLE:
-            raise ValueError("llamacpp provider is not available. Please install the required dependencies.")
+            raise ValueError(
+                "llamacpp provider is not available. Please install the required dependencies."
+            )
         return LlamaCppLLMClient(
             instructor=enable_instructor,
             chat_model=chat_model,

@@ -30,4 +30,8 @@ class Summarizer:
         for slot in self.config.information_slots:
             if information_slots.get(slot.name):
                 summary_parts.append(f"{slot.name}: {information_slots[slot.name]}")
-        return "Summary: " + " | ".join(summary_parts) if summary_parts else "Conversation completed."
+        return (
+            "Summary: " + " | ".join(summary_parts)
+            if summary_parts
+            else "Conversation completed."
+        )

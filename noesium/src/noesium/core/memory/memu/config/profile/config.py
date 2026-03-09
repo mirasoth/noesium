@@ -23,7 +23,9 @@ class ProfileConfig:
     config_file: str = "config.py"
 
     # RAG configuration
-    context: str = "all"  # "all" means put entire content in context, "rag" means use RAG search only
+    context: str = (
+        "all"  # "all" means put entire content in context, "rag" means use RAG search only
+    )
     rag_length: int = -1  # RAG length, -1 means all, other values mean number of lines
 
 

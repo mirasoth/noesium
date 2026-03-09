@@ -31,8 +31,12 @@ def _get_enable_default_extensions_default() -> bool:
     return True
 
 
-CHROME_DEBUG_PORT = 9242  # use a non-default port to avoid conflicts with other tools / devs using 9222
-DOMAIN_OPTIMIZATION_THRESHOLD = 100  # Convert domain lists to sets for O(1) lookup when >= this size
+CHROME_DEBUG_PORT = (
+    9242  # use a non-default port to avoid conflicts with other tools / devs using 9222
+)
+DOMAIN_OPTIMIZATION_THRESHOLD = (
+    100  # Convert domain lists to sets for O(1) lookup when >= this size
+)
 CHROME_DISABLED_COMPONENTS = [
     # Playwright defaults: https://github.com/microsoft/playwright/blob/41008eeddd020e2dee1c540f7c0cdfa337e99637/packages/playwright-core/src/server/chromium/chromiumSwitches.ts#L76
     # AcceptCHFrame,AutoExpandDetailsElement,AvoidUnnecessaryBeforeUnloadCheckSync,CertificateTransparencyComponentUpdater,DeferRendererTasksAfterInput,DestroyProfileOnBrowserClose,DialMediaRouteProvider,ExtensionManifestV2Disabled,GlobalMediaControls,HttpsUpgrades,ImprovedCookieControls,LazyFrameLoading,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate
@@ -211,7 +215,9 @@ def get_display_size() -> ViewportSize | None:
         from AppKit import NSScreen  # type: ignore[import]
 
         screen = NSScreen.mainScreen().frame()
-        size = ViewportSize(width=int(screen.size.width), height=int(screen.size.height))
+        size = ViewportSize(
+            width=int(screen.size.width), height=int(screen.size.height)
+        )
         logger.debug(f"Display size: {size}")
         return size
     except Exception:
@@ -264,7 +270,9 @@ def validate_float_range(value: float, min_val: float, max_val: float) -> float:
 def validate_cli_arg(arg: str) -> str:
     """Validate that arg is a valid CLI argument."""
     if not arg.startswith("--"):
-        raise ValueError(f'Invalid CLI argument: {arg} (should start with --, e.g. --some-key="some value here")')
+        raise ValueError(
+            f'Invalid CLI argument: {arg} (should start with --, e.g. --some-key="some value here")'
+        )
     return arg
 
 
@@ -301,7 +309,9 @@ BROWSERUSE_DEFAULT_CHANNEL = BrowserChannel.CHROMIUM
 # ===== Type definitions with validators =====
 
 UrlStr = Annotated[str, AfterValidator(validate_url)]
-NonNegativeFloat = Annotated[float, AfterValidator(lambda x: validate_float_range(x, 0, float("inf")))]
+NonNegativeFloat = Annotated[
+    float, AfterValidator(lambda x: validate_float_range(x, 0, float("inf")))
+]
 CliArgStr = Annotated[str, AfterValidator(validate_cli_arg)]
 
 
@@ -423,7 +433,9 @@ class BrowserLaunchArgs(BaseModel):
         ],
         description="List of default CLI args to stop playwright from applying (see https://github.com/microsoft/playwright/blob/41008eeddd020e2dee1c540f7c0cdfa337e99637/packages/playwright-core/src/server/chromium/chromiumSwitches.ts)",
     )
-    channel: BrowserChannel | None = None  # https://playwright.dev/docs/browsers#chromium-headless-shell
+    channel: BrowserChannel | None = (
+        None  # https://playwright.dev/docs/browsers#chromium-headless-shell
+    )
     chromium_sandbox: bool = Field(
         default=not CONFIG.IN_DOCKER,
         description="Whether to enable Chromium sandboxing (recommended unless inside Docker).",
@@ -486,7 +498,10 @@ class BrowserLaunchArgs(BaseModel):
     @staticmethod
     def args_as_list(args: dict[str, str]) -> list[str]:
         """Return the extra launch CLI args as a list of strings."""
-        return [f'--{key.lstrip("-")}={value}' if value else f'--{key.lstrip("-")}' for key, value in args.items()]
+        return [
+            f'--{key.lstrip("-")}={value}' if value else f'--{key.lstrip("-")}'
+            for key, value in args.items()
+        ]
 
 
 # ===== API-specific Models =====
@@ -539,7 +554,9 @@ class BrowserLaunchPersistentContextArgs(BrowserLaunchArgs, BrowserContextArgs):
     https://playwright.dev/python/docs/api/class-browsertype#browser-type-launch-persistent-context
     """
 
-    model_config = ConfigDict(extra="ignore", validate_assignment=False, revalidate_instances="always")
+    model_config = ConfigDict(
+        extra="ignore", validate_assignment=False, revalidate_instances="always"
+    )
 
     # Required parameter specific to launch_persistent_context, but can be None to use incognito temp dir
     user_data_dir: str | Path | None = None
@@ -605,8 +622,12 @@ class BrowserProfile(
     # BrowserLaunchPersistentContextArgs, BrowserLaunchArgs, BrowserNewContextArgs, BrowserConnectArgs
 
     # Session/connection configuration
-    cdp_url: str | None = Field(default=None, description="CDP URL for connecting to existing browser instance")
-    is_local: bool = Field(default=False, description="Whether this is a local browser instance")
+    cdp_url: str | None = Field(
+        default=None, description="CDP URL for connecting to existing browser instance"
+    )
+    is_local: bool = Field(
+        default=False, description="Whether this is a local browser instance"
+    )
     use_cloud: bool = Field(
         default=False,
         description="Use browser-use cloud browser service instead of local browser (disabled in noesium)",
@@ -623,8 +644,12 @@ class BrowserProfile(
     # )
 
     # custom options we provide that aren't native playwright kwargs
-    disable_security: bool = Field(default=False, description="Disable browser security features.")
-    deterministic_rendering: bool = Field(default=False, description="Enable deterministic rendering flags.")
+    disable_security: bool = Field(
+        default=False, description="Disable browser security features."
+    )
+    deterministic_rendering: bool = Field(
+        default=False, description="Enable deterministic rendering flags."
+    )
     allowed_domains: list[str] | set[str] | None = Field(
         default=None,
         description='List of allowed domains for navigation e.g. ["*.google.com", "https://example.com", "chrome-extension://*"]. Lists with 100+ items are auto-optimized to sets (no pattern matching).',
@@ -637,7 +662,9 @@ class BrowserProfile(
         default=False,
         description="Block navigation to URLs containing IP addresses (both IPv4 and IPv6). When True, blocks all IP-based URLs including localhost and private networks.",
     )
-    keep_alive: bool | None = Field(default=None, description="Keep browser alive after agent run.")
+    keep_alive: bool | None = Field(
+        default=None, description="Keep browser alive after agent run."
+    )
 
     # --- Proxy settings ---
     # New consolidated proxy config (typed)
@@ -695,12 +722,18 @@ class BrowserProfile(
     minimum_wait_page_load_time: float = Field(
         default=0.25, description="Minimum time to wait before capturing page state."
     )
-    wait_for_network_idle_page_load_time: float = Field(default=0.5, description="Time to wait for network idle.")
+    wait_for_network_idle_page_load_time: float = Field(
+        default=0.5, description="Time to wait for network idle."
+    )
 
-    wait_between_actions: float = Field(default=0.1, description="Time to wait between actions.")
+    wait_between_actions: float = Field(
+        default=0.1, description="Time to wait between actions."
+    )
 
     # --- UI/viewport/DOM ---
-    highlight_elements: bool = Field(default=True, description="Highlight interactive elements on the page.")
+    highlight_elements: bool = Field(
+        default=True, description="Highlight interactive elements on the page."
+    )
     dom_highlight_elements: bool = Field(
         default=False,
         description="Highlight interactive elements in the DOM (only for debugging purposes).",
@@ -726,7 +759,9 @@ class BrowserProfile(
         description="Automatically download PDFs when navigating to PDF viewer pages.",
     )
 
-    profile_directory: str = "Default"  # e.g. 'Profile 1', 'Profile 2', 'Custom Profile', etc.
+    profile_directory: str = (
+        "Default"  # e.g. 'Profile 1', 'Profile 2', 'Custom Profile', etc.
+    )
 
     # these can be found in BrowserLaunchArgs, BrowserLaunchPersistentContextArgs, BrowserNewContextArgs, BrowserConnectArgs:
     # save_recording_path: alias of record_video_dir
@@ -744,7 +779,9 @@ class BrowserProfile(
         default=None,
         description="Video frame size. If not set, it will use the viewport size.",
     )
-    record_video_framerate: int = Field(default=30, description="The framerate to use for the video recording.")
+    record_video_framerate: int = Field(
+        default=30, description="The framerate to use for the video recording."
+    )
 
     # TODO: finish implementing extension support in extensions.py
     # extension_ids_to_preinstall: list[str] = Field(
@@ -756,7 +793,11 @@ class BrowserProfile(
     # )
 
     def __repr__(self) -> str:
-        short_dir = _log_pretty_path(self.user_data_dir) if self.user_data_dir else "<incognito>"
+        short_dir = (
+            _log_pretty_path(self.user_data_dir)
+            if self.user_data_dir
+            else "<incognito>"
+        )
         return f"BrowserProfile(user_data_dir= {short_dir}, headless={self.headless})"
 
     def __str__(self) -> str:
@@ -764,7 +805,9 @@ class BrowserProfile(
 
     @field_validator("allowed_domains", "prohibited_domains", mode="after")
     @classmethod
-    def optimize_large_domain_lists(cls, v: list[str] | set[str] | None) -> list[str] | set[str] | None:
+    def optimize_large_domain_lists(
+        cls, v: list[str] | set[str] | None
+    ) -> list[str] | set[str] | None:
         """Convert large domain lists (>=100 items) to sets for O(1) lookup performance."""
         if v is None or isinstance(v, set):
             return v
@@ -797,7 +840,9 @@ class BrowserProfile(
     def warn_storage_state_user_data_dir_conflict(self) -> Self:
         """Warn when both storage_state and user_data_dir are set, as this can cause conflicts."""
         has_storage_state = self.storage_state is not None
-        has_user_data_dir = (self.user_data_dir is not None) and ("tmp" not in str(self.user_data_dir).lower())
+        has_user_data_dir = (self.user_data_dir is not None) and (
+            "tmp" not in str(self.user_data_dir).lower()
+        )
 
         if has_storage_state and has_user_data_dir:
             logger.warning(
@@ -819,7 +864,10 @@ class BrowserProfile(
             BROWSERUSE_DEFAULT_CHANNEL,
             None,
         )
-        if self.user_data_dir == CONFIG.BROWSER_USE_DEFAULT_USER_DATA_DIR and is_not_using_default_chromium:
+        if (
+            self.user_data_dir == CONFIG.BROWSER_USE_DEFAULT_USER_DATA_DIR
+            and is_not_using_default_chromium
+        ):
             alternate_name = (
                 Path(self.executable_path).name.lower().replace(" ", "-")
                 if self.executable_path
@@ -828,7 +876,10 @@ class BrowserProfile(
             logger.warning(
                 f"⚠️ {self} Changing user_data_dir= {_log_pretty_path(self.user_data_dir)} ➡️ .../default-{alternate_name} to avoid {alternate_name.upper()} corruping default profile created by {BROWSERUSE_DEFAULT_CHANNEL.name}"
             )
-            self.user_data_dir = CONFIG.BROWSER_USE_DEFAULT_USER_DATA_DIR.parent / f"default-{alternate_name}"
+            self.user_data_dir = (
+                CONFIG.BROWSER_USE_DEFAULT_USER_DATA_DIR.parent
+                / f"default-{alternate_name}"
+            )
         return self
 
     @model_validator(mode="after")
@@ -844,7 +895,9 @@ class BrowserProfile(
     def validate_proxy_settings(self) -> Self:
         """Ensure proxy configuration is consistent."""
         if self.proxy and (self.proxy.bypass and not self.proxy.server):
-            logger.warning("BrowserProfile.proxy.bypass provided but proxy has no server; bypass will be ignored.")
+            logger.warning(
+                "BrowserProfile.proxy.bypass provided but proxy has no server; bypass will be ignored."
+            )
         return self
 
     @model_validator(mode="after")
@@ -901,12 +954,16 @@ class BrowserProfile(
             local_state_dst = Path(temp_dir) / "Local State"
             if local_state_src.exists():
                 shutil.copy(local_state_src, local_state_dst)
-            logger.info(f"Copied profile ({self.profile_directory}) and Local State to temp directory: {temp_dir}")
+            logger.info(
+                f"Copied profile ({self.profile_directory}) and Local State to temp directory: {temp_dir}"
+            )
 
         else:
             Path(temp_dir).mkdir(parents=True, exist_ok=True)
             path_temp_profile.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Created new profile ({self.profile_directory}) in temp directory: {temp_dir}")
+            logger.info(
+                f"Created new profile ({self.profile_directory}) in temp directory: {temp_dir}"
+            )
 
         self.user_data_dir = temp_dir
 
@@ -920,7 +977,9 @@ class BrowserProfile(
         elif not self.ignore_default_args:
             default_args = CHROME_DEFAULT_ARGS
 
-        assert self.user_data_dir is not None, "user_data_dir must be set to a non-default path"
+        assert (
+            self.user_data_dir is not None
+        ), "user_data_dir must be set to a non-default path"
 
         # Capture args before conversion for logging
         pre_conversion_args = [
@@ -928,17 +987,29 @@ class BrowserProfile(
             *self.args,
             f"--user-data-dir={self.user_data_dir}",
             f"--profile-directory={self.profile_directory}",
-            *(CHROME_DOCKER_ARGS if (CONFIG.IN_DOCKER or not self.chromium_sandbox) else []),
+            *(
+                CHROME_DOCKER_ARGS
+                if (CONFIG.IN_DOCKER or not self.chromium_sandbox)
+                else []
+            ),
             *(CHROME_HEADLESS_ARGS if self.headless else []),
             *(CHROME_DISABLE_SECURITY_ARGS if self.disable_security else []),
-            *(CHROME_DETERMINISTIC_RENDERING_ARGS if self.deterministic_rendering else []),
             *(
-                [f'--window-size={self.window_size["width"]},{self.window_size["height"]}']
+                CHROME_DETERMINISTIC_RENDERING_ARGS
+                if self.deterministic_rendering
+                else []
+            ),
+            *(
+                [
+                    f'--window-size={self.window_size["width"]},{self.window_size["height"]}'
+                ]
                 if self.window_size
                 else (["--start-maximized"] if not self.headless else [])
             ),
             *(
-                [f'--window-position={self.window_position["width"]},{self.window_position["height"]}']
+                [
+                    f'--window-position={self.window_position["width"]},{self.window_position["height"]}'
+                ]
                 if self.window_position
                 else []
             ),
@@ -983,10 +1054,14 @@ class BrowserProfile(
                     seen.add(feature)
 
             # Add merged disable-features back
-            non_disable_features_args.append(f'--disable-features={",".join(unique_features)}')
+            non_disable_features_args.append(
+                f'--disable-features={",".join(unique_features)}'
+            )
 
         # convert to dict and back to dedupe and merge other duplicate args
-        final_args_list = BrowserLaunchArgs.args_as_list(BrowserLaunchArgs.args_as_dict(non_disable_features_args))
+        final_args_list = BrowserLaunchArgs.args_as_list(
+            BrowserLaunchArgs.args_as_dict(non_disable_features_args)
+        )
 
         return final_args_list
 
@@ -1094,7 +1169,9 @@ class BrowserProfile(
         # Apply minimal patch to cookie extension with configurable whitelist
         for i, path in enumerate(extension_paths):
             if loaded_extension_names[i] == "I still don't care about cookies":
-                self._apply_minimal_extension_patch(Path(path), self.cookie_whitelist_domains)
+                self._apply_minimal_extension_patch(
+                    Path(path), self.cookie_whitelist_domains
+                )
 
         if extension_paths:
             logger.debug(
@@ -1105,7 +1182,9 @@ class BrowserProfile(
 
         return extension_paths
 
-    def _apply_minimal_extension_patch(self, ext_dir: Path, whitelist_domains: list[str]) -> None:
+    def _apply_minimal_extension_patch(
+        self, ext_dir: Path, whitelist_domains: list[str]
+    ) -> None:
         """Minimal patch: pre-populate chrome.storage.local with configurable domain whitelist."""
         try:
             bg_path = ext_dir / "data" / "background.js"
@@ -1116,7 +1195,9 @@ class BrowserProfile(
                 content = f.read()
 
             # Create the whitelisted domains object for JavaScript with proper indentation
-            whitelist_entries = [f'        "{domain}": true' for domain in whitelist_domains]
+            whitelist_entries = [
+                f'        "{domain}": true' for domain in whitelist_domains
+            ]
             whitelist_js = "{\n" + ",\n".join(whitelist_entries) + "\n      }"
 
             # Find the initialize() function and inject storage setup before updateSettings()
@@ -1162,9 +1243,13 @@ async function initialize(checkInitialized, magic) {{
                     f.write(content)
 
                 domain_list = ", ".join(whitelist_domains)
-                logger.info(f"[BrowserProfile] ✅ Cookie extension: {domain_list} pre-populated in storage")
+                logger.info(
+                    f"[BrowserProfile] ✅ Cookie extension: {domain_list} pre-populated in storage"
+                )
             else:
-                logger.debug("[BrowserProfile] Initialize function not found for patching")
+                logger.debug(
+                    "[BrowserProfile] Initialize function not found for patching"
+                )
 
         except Exception as e:
             logger.debug(f"[BrowserProfile] Could not patch extension storage: {e}")
@@ -1243,7 +1328,9 @@ async function initialize(checkInitialized, magic) {{
 
         display_size = get_display_size()
         has_screen_available = bool(display_size)
-        self.screen = self.screen or display_size or ViewportSize(width=1920, height=1080)
+        self.screen = (
+            self.screen or display_size or ViewportSize(width=1920, height=1080)
+        )
 
         # if no headless preference specified, prefer headful if there is a display available
         if self.headless is None:
@@ -1267,7 +1354,9 @@ async function initialize(checkInitialized, magic) {{
                 self.no_viewport = False
             else:
                 # Default headful: content fits to window (no viewport)
-                self.no_viewport = True if self.no_viewport is None else self.no_viewport
+                self.no_viewport = (
+                    True if self.no_viewport is None else self.no_viewport
+                )
 
         # Handle special requirements (device_scale_factor forces viewport mode)
         if self.device_scale_factor and self.no_viewport is None:

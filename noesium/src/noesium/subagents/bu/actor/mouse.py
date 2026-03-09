@@ -26,7 +26,9 @@ class Mouse:
         self._session_id = session_id
         self._target_id = target_id
 
-    async def click(self, x: int, y: int, button: "MouseButton" = "left", click_count: int = 1) -> None:
+    async def click(
+        self, x: int, y: int, button: "MouseButton" = "left", click_count: int = 1
+    ) -> None:
         """Click at the specified coordinates."""
         # Mouse press
         press_params: "DispatchMouseEventParameters" = {
@@ -88,7 +90,9 @@ class Mouse:
         _ = steps  # Acknowledge parameter for future use
 
         params: "DispatchMouseEventParameters" = {"type": "mouseMoved", "x": x, "y": y}
-        await self._client.send.Input.dispatchMouseEvent(params, session_id=self._session_id)
+        await self._client.send.Input.dispatchMouseEvent(
+            params, session_id=self._session_id
+        )
 
     async def scroll(
         self,
@@ -104,7 +108,9 @@ class Mouse:
         # Method 1: Try mouse wheel event (most reliable)
         try:
             # Get viewport dimensions
-            layout_metrics = await self._client.send.Page.getLayoutMetrics(session_id=self._session_id)
+            layout_metrics = await self._client.send.Page.getLayoutMetrics(
+                session_id=self._session_id
+            )
             viewport_width = layout_metrics["layoutViewport"]["clientWidth"]
             viewport_height = layout_metrics["layoutViewport"]["clientHeight"]
 

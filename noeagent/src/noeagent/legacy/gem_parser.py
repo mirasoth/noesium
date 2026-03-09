@@ -55,12 +55,18 @@ class GemParserResult(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    models: Dict[str, type] = Field(description="Dictionary mapping model names to Pydantic model classes")
-    target_model: Optional[type] = Field(default=None, description="Target model class if output_model was specified")
+    models: Dict[str, type] = Field(
+        description="Dictionary mapping model names to Pydantic model classes"
+    )
+    target_model: Optional[type] = Field(
+        default=None, description="Target model class if output_model was specified"
+    )
     target_model_name: Optional[str] = Field(
         default=None, description="Target model name if output_model was specified"
     )
-    instruction: Optional[str] = Field(default=None, description="Instruction string if specified in YAML")
+    instruction: Optional[str] = Field(
+        default=None, description="Instruction string if specified in YAML"
+    )
 
 
 class GemParserError(Exception):
@@ -228,7 +234,9 @@ class GemParser:
             data_models = data["output_models"]
             models_key = "output_models"
         else:
-            raise GemParserError("YAML must contain either 'data_models' or 'output_models' key")
+            raise GemParserError(
+                "YAML must contain either 'data_models' or 'output_models' key"
+            )
 
         if not isinstance(data_models, list):
             raise GemParserError(f"'{models_key}' must be a list")
@@ -238,7 +246,9 @@ class GemParser:
         if output_model_name:
             model_names = {model_def["name"] for model_def in data_models}
             if output_model_name not in model_names:
-                raise GemParserError(f"Specified output_model '{output_model_name}' not found in data_models")
+                raise GemParserError(
+                    f"Specified output_model '{output_model_name}' not found in data_models"
+                )
 
         # Parse instruction field if present
         instruction = data.get("instruction")
@@ -295,7 +305,9 @@ class GemParser:
             # Timeout protection - prevent infinite loops in production
             if time.time() - start_time > max_rebuild_time:
                 remaining_models = ", ".join(failed_models)
-                logger.error(f"Model rebuild timeout after {max_rebuild_time}s. Remaining: {remaining_models}")
+                logger.error(
+                    f"Model rebuild timeout after {max_rebuild_time}s. Remaining: {remaining_models}"
+                )
                 raise GemParserError(
                     f"Model rebuild timeout after {max_rebuild_time}s. "
                     f"Remaining unresolved models: {remaining_models}. "
@@ -343,7 +355,9 @@ class GemParser:
                         # Restore original attributes
                         for dep_name in self.dynamic_models.keys():
                             if dep_name in original_attrs:
-                                setattr(model_module, dep_name, original_attrs[dep_name])
+                                setattr(
+                                    model_module, dep_name, original_attrs[dep_name]
+                                )
                             elif hasattr(model_module, dep_name):
                                 delattr(model_module, dep_name)
 
@@ -378,7 +392,9 @@ class GemParser:
                         original_attrs = {}
                         for dep_name, dep_class in self.dynamic_models.items():
                             if hasattr(model_module, dep_name):
-                                original_attrs[dep_name] = getattr(model_module, dep_name)
+                                original_attrs[dep_name] = getattr(
+                                    model_module, dep_name
+                                )
                             setattr(model_module, dep_name, dep_class)
 
                         try:
@@ -390,14 +406,18 @@ class GemParser:
                             # Restore original attributes
                             for dep_name in self.dynamic_models.keys():
                                 if dep_name in original_attrs:
-                                    setattr(model_module, dep_name, original_attrs[dep_name])
+                                    setattr(
+                                        model_module, dep_name, original_attrs[dep_name]
+                                    )
                                 elif hasattr(model_module, dep_name):
                                     delattr(model_module, dep_name)
                     except Exception as e:
                         last_error = e
                         # Store the final error before giving up on this model
                         rebuild_errors[model_name] = str(last_error)
-                        failed_models.discard(model_name)  # Remove to prevent infinite loop
+                        failed_models.discard(
+                            model_name
+                        )  # Remove to prevent infinite loop
 
                 # After force rebuild attempt, exit the main loop
                 break
@@ -448,7 +468,9 @@ class GemParser:
                         # Restore original attributes
                         for dep_name in self.dynamic_models.keys():
                             if dep_name in original_attrs:
-                                setattr(model_module, dep_name, original_attrs[dep_name])
+                                setattr(
+                                    model_module, dep_name, original_attrs[dep_name]
+                                )
                             elif hasattr(model_module, dep_name):
                                 delattr(model_module, dep_name)
                 except Exception:
@@ -530,7 +552,10 @@ class GemParser:
         # Also check if the type itself is a custom model (not wrapped in brackets)
         if (
             type_str not in self.type_map
-            and not any(wrapper in type_str for wrapper in ["List[", "Dict[", "Optional[", "Union["])
+            and not any(
+                wrapper in type_str
+                for wrapper in ["List[", "Dict[", "Optional[", "Union["]
+            )
             and type_str not in ["str", "int", "float", "bool", "Any"]
         ):
             dependencies.add(type_str)
@@ -551,7 +576,9 @@ class GemParser:
             rec_stack.add(node)
 
             for neighbor in self._dependency_graph.get(node, set()):
-                if neighbor in self._dependency_graph:  # Only check neighbors that are actual models
+                if (
+                    neighbor in self._dependency_graph
+                ):  # Only check neighbors that are actual models
                     if neighbor not in visited:
                         if has_cycle(neighbor):
                             return True
@@ -564,7 +591,9 @@ class GemParser:
         for node in self._dependency_graph:
             if node not in visited:
                 if has_cycle(node):
-                    raise CircularReferenceError(f"Circular reference detected involving model '{node}'")
+                    raise CircularReferenceError(
+                        f"Circular reference detected involving model '{node}'"
+                    )
 
     def _create_model_with_fields(self, model_def: Dict[str, Any]) -> None:
         """Create a model with proper fields using Pydantic's create_model.
@@ -616,7 +645,10 @@ class GemParser:
                         return False
                     # Check arguments recursively
                     if hasattr(field_type, "__args__"):
-                        return any(needs_arbitrary_types_check(arg) for arg in field_type.__args__)
+                        return any(
+                            needs_arbitrary_types_check(arg)
+                            for arg in field_type.__args__
+                        )
                     return False
 
                 # Basic Python types don't need arbitrary types (except bytearray)
@@ -647,13 +679,16 @@ class GemParser:
                 return True
 
             needs_arbitrary_types = any(
-                needs_arbitrary_types_check(field_type) for field_type, _ in field_definitions.values()
+                needs_arbitrary_types_check(field_type)
+                for field_type, _ in field_definitions.values()
             )
 
             if needs_arbitrary_types:
                 # Create model with arbitrary types allowed
                 model_config = ConfigDict(arbitrary_types_allowed=True)
-                new_model = create_model(model_name, __config__=model_config, **field_definitions)
+                new_model = create_model(
+                    model_name, __config__=model_config, **field_definitions
+                )
             else:
                 new_model = create_model(model_name, **field_definitions)
 
@@ -723,17 +758,25 @@ class GemParser:
                 return List[args[0]] if len(args) == 1 else List[Union[tuple(args)]]
             elif base_type == Dict:
                 if len(args) != 2:
-                    raise TypeMappingError(f"Dict requires exactly 2 type arguments, got {len(args)}")
+                    raise TypeMappingError(
+                        f"Dict requires exactly 2 type arguments, got {len(args)}"
+                    )
                 return Dict[args[0], args[1]]
             elif base_type == Set:
                 return Set[args[0]] if len(args) == 1 else Set[Union[tuple(args)]]
             elif base_type == FrozenSet:
-                return FrozenSet[args[0]] if len(args) == 1 else FrozenSet[Union[tuple(args)]]
+                return (
+                    FrozenSet[args[0]]
+                    if len(args) == 1
+                    else FrozenSet[Union[tuple(args)]]
+                )
             elif base_type == Tuple:
                 return Tuple[tuple(args)] if args else Tuple[()]
             elif base_type == Optional:
                 if len(args) != 1:
-                    raise TypeMappingError(f"Optional requires exactly 1 type argument, got {len(args)}")
+                    raise TypeMappingError(
+                        f"Optional requires exactly 1 type argument, got {len(args)}"
+                    )
                 return Optional[args[0]]
             elif base_type == Union:
                 return Union[tuple(args)] if len(args) > 1 else args[0]
@@ -744,13 +787,23 @@ class GemParser:
                 Collection,
                 Container,
             ]:
-                return base_type[args[0]] if len(args) == 1 else base_type[Union[tuple(args)]]
+                return (
+                    base_type[args[0]]
+                    if len(args) == 1
+                    else base_type[Union[tuple(args)]]
+                )
             elif base_type in [Mapping, MutableMapping]:
                 if len(args) != 2:
-                    raise TypeMappingError(f"{base_type_str} requires exactly 2 type arguments, got {len(args)}")
+                    raise TypeMappingError(
+                        f"{base_type_str} requires exactly 2 type arguments, got {len(args)}"
+                    )
                 return base_type[args[0], args[1]]
             elif base_type == MutableSet:
-                return MutableSet[args[0]] if len(args) == 1 else MutableSet[Union[tuple(args)]]
+                return (
+                    MutableSet[args[0]]
+                    if len(args) == 1
+                    else MutableSet[Union[tuple(args)]]
+                )
             elif base_type == Callable:
                 # Callable[[arg_types], return_type] or Callable[..., return_type]
                 if len(args) == 2:
@@ -771,7 +824,9 @@ class GemParser:
                 # For other generic types, try to apply the arguments
                 return base_type[tuple(args)] if args else base_type
         except (TypeError, ValueError) as e:
-            raise TypeMappingError(f"Invalid generic type construction for {type_str}: {e}")
+            raise TypeMappingError(
+                f"Invalid generic type construction for {type_str}: {e}"
+            )
 
     def _parse_type_arguments(self, args_str: str) -> List[Union[type, str]]:
         """Parse type arguments from a string like 'str, int' or 'Dict[str, int], bool'.
@@ -825,7 +880,9 @@ class GemParser:
         return args
 
 
-def parse_yaml_models(yaml_content: str, custom_types: Optional[Dict[str, type]] = None) -> GemParserResult:
+def parse_yaml_models(
+    yaml_content: str, custom_types: Optional[Dict[str, type]] = None
+) -> GemParserResult:
     """Convenience function to parse YAML models.
 
     Args:
@@ -854,7 +911,9 @@ def parse_yaml_models(yaml_content: str, custom_types: Optional[Dict[str, type]]
     )
 
 
-def parse_yaml_file(file_path: Union[str, Path], custom_types: Optional[Dict[str, type]] = None) -> GemParserResult:
+def parse_yaml_file(
+    file_path: Union[str, Path], custom_types: Optional[Dict[str, type]] = None
+) -> GemParserResult:
     """Convenience function to parse YAML models from file.
 
     Args:

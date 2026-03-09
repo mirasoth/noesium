@@ -75,16 +75,21 @@ class SerperToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # Get API key from config or environment
-        self.api_key = self.config.config.get("SERPER_API_KEY") or os.getenv("SERPER_API_KEY")
+        self.api_key = self.config.config.get("SERPER_API_KEY") or os.getenv(
+            "SERPER_API_KEY"
+        )
 
         if not self.api_key:
             raise ValueError(
-                "SERPER_API_KEY is required for SerperToolkit. " "Set it in config or environment variables."
+                "SERPER_API_KEY is required for SerperToolkit. "
+                "Set it in config or environment variables."
             )
 
         # Configuration
         self.base_url = "https://google.serper.dev"
-        self.default_location = self.config.config.get("default_location", "United States")
+        self.default_location = self.config.config.get(
+            "default_location", "United States"
+        )
         self.default_gl = self.config.config.get("default_gl", "us")
         self.default_hl = self.config.config.get("default_hl", "en")
         self.timeout = self.config.config.get("timeout", 30)
@@ -94,7 +99,9 @@ class SerperToolkit(AsyncBaseToolkit):
 
         self.logger.info("Serper toolkit initialized with Google search capabilities")
 
-    async def _make_search_request(self, endpoint: str, payload: Dict) -> Dict[str, Any]:
+    async def _make_search_request(
+        self, endpoint: str, payload: Dict
+    ) -> Dict[str, Any]:
         """
         Make a request to the Serper API.
 

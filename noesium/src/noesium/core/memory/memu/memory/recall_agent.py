@@ -50,7 +50,9 @@ class RecallAgent:
         self.memory_types = self.config_manager.get_file_types_mapping()
 
         # Initialize file-based storage manager
-        self.storage_manager = MemoryFileManager(memory_dir, agent_id=agent_id, user_id=user_id)
+        self.storage_manager = MemoryFileManager(
+            memory_dir, agent_id=agent_id, user_id=user_id
+        )
 
         # Initialize embedding client for semantic search
         try:
@@ -58,16 +60,22 @@ class RecallAgent:
             self.semantic_search_enabled = True
             logger.info("Semantic search enabled")
         except Exception as e:
-            logger.warning(f"Failed to initialize embedding client: {e}. Semantic search disabled.")
+            logger.warning(
+                f"Failed to initialize embedding client: {e}. Semantic search disabled."
+            )
             self.embedding_client = None
             self.semantic_search_enabled = False
 
         # Default categories for core retrieval
         self.default_categories = ["profile", "event"]
 
-        logger.info(f"Recall Agent initialized with memory directory: {self.memory_dir}")
+        logger.info(
+            f"Recall Agent initialized with memory directory: {self.memory_dir}"
+        )
 
-    def retrieve_default_category(self, agent_id: str = None, user_id: str = None) -> Dict[str, Any]:
+    def retrieve_default_category(
+        self, agent_id: str = None, user_id: str = None
+    ) -> Dict[str, Any]:
         """
         Method 1: Retrieve Default Category
         Get complete content from ['profile', 'event'] categories
@@ -83,7 +91,9 @@ class RecallAgent:
             results = []
 
             all_categories = self.storage_manager.list_memory_files()
-            existing_defaults = [cat for cat in self.default_categories if cat in all_categories]
+            existing_defaults = [
+                cat for cat in self.default_categories if cat in all_categories
+            ]
 
             for category in self.default_categories:
                 content = self.storage_manager.read_memory_file(category)
@@ -99,7 +109,9 @@ class RecallAgent:
                         }
                     )
                 else:
-                    logger.debug(f"No content found for {agent_id}:{user_id}:{category}")
+                    logger.debug(
+                        f"No content found for {agent_id}:{user_id}:{category}"
+                    )
 
             return {
                 "success": True,
@@ -113,14 +125,18 @@ class RecallAgent:
             }
 
         except Exception as e:
-            logger.error(f"Error in retrieve_default_category for {agent_id}:{user_id}: {e}")
+            logger.error(
+                f"Error in retrieve_default_category for {agent_id}:{user_id}: {e}"
+            )
             return {
                 "success": False,
                 "error": str(e),
                 "method": "retrieve_default_category",
             }
 
-    def retrieve_relevant_category(self, agent_id: str, user_id: str, query: str, top_k: int = 5) -> Dict[str, Any]:
+    def retrieve_relevant_category(
+        self, agent_id: str, user_id: str, query: str, top_k: int = 5
+    ) -> Dict[str, Any]:
         """
         Method 2: Retrieve Relevant Category
         Retrieve relevant contents from top-k similar category names (excluding profile, event, and activity)
@@ -138,7 +154,9 @@ class RecallAgent:
         try:
             all_categories = self.storage_manager.list_memory_files("all")
             excluded_categories = self.default_categories + ["activity"]
-            relevant_categories = [cat for cat in all_categories if cat not in excluded_categories]
+            relevant_categories = [
+                cat for cat in all_categories if cat not in excluded_categories
+            ]
 
             if not relevant_categories:
                 return {
@@ -172,14 +190,17 @@ class RecallAgent:
                         )  # Limit content length for embedding
 
                         # Calculate semantic similarity
-                        semantic_similarity = self._cosine_similarity(query_embedding, content_embedding)
+                        semantic_similarity = self._cosine_similarity(
+                            query_embedding, content_embedding
+                        )
                         content_relevance = semantic_similarity
                     except Exception as e:
                         logger.warning(f"Semantic search failed for {category}: {e}")
                         # Fallback to simple keyword matching
                         content_lower = content.lower()
                         content_relevance = (
-                            sum(1 for word in query_words if word in content_lower) / len(query_words)
+                            sum(1 for word in query_words if word in content_lower)
+                            / len(query_words)
                             if query_words
                             else 0
                         )
@@ -187,7 +208,10 @@ class RecallAgent:
                     # Fallback to simple keyword matching when semantic search is not available
                     content_lower = content.lower()
                     content_relevance = (
-                        sum(1 for word in query_words if word in content_lower) / len(query_words) if query_words else 0
+                        sum(1 for word in query_words if word in content_lower)
+                        / len(query_words)
+                        if query_words
+                        else 0
                     )
 
                 # Use semantic score directly
@@ -200,7 +224,8 @@ class RecallAgent:
                             "content": content,
                             "score": combined_score,
                             "content_relevance": content_relevance,
-                            "semantic_search_used": self.semantic_search_enabled and self.embedding_client is not None,
+                            "semantic_search_used": self.semantic_search_enabled
+                            and self.embedding_client is not None,
                             "length": len(content),
                             "lines": len(content.split("\n")),
                         }
@@ -241,7 +266,9 @@ class RecallAgent:
             }
 
         except Exception as e:
-            logger.error(f"Error in retrieve_relevant_category for {agent_id}:{user_id}: {e}")
+            logger.error(
+                f"Error in retrieve_relevant_category for {agent_id}:{user_id}: {e}"
+            )
             return {
                 "success": False,
                 "error": str(e),
@@ -249,7 +276,9 @@ class RecallAgent:
                 "query": query,
             }
 
-    def retrieve_relevant_memories(self, agent_id: str, user_id: str, query: str, top_k: int = 10) -> Dict[str, Any]:
+    def retrieve_relevant_memories(
+        self, agent_id: str, user_id: str, query: str, top_k: int = 10
+    ) -> Dict[str, Any]:
         """
         Method 3: Retrieve Relevant Memories
         Retrieve top-k memories using embedding search across all categories
@@ -300,9 +329,13 @@ class RecallAgent:
 
                     # Search through stored embeddings
                     for emb_data in embeddings_data.get("embeddings", []):
-                        similarity = self._cosine_similarity(query_embedding, emb_data["embedding"])
+                        similarity = self._cosine_similarity(
+                            query_embedding, emb_data["embedding"]
+                        )
 
-                        if similarity > 0.1:  # Minimum threshold for semantic similarity
+                        if (
+                            similarity > 0.1
+                        ):  # Minimum threshold for semantic similarity
                             results.append(
                                 {
                                     "content": emb_data["text"],
@@ -337,7 +370,9 @@ class RecallAgent:
             }
 
         except Exception as e:
-            logger.error(f"Error in retrieve_relevant_memories for {agent_id}:{user_id}: {e}")
+            logger.error(
+                f"Error in retrieve_relevant_memories for {agent_id}:{user_id}: {e}"
+            )
             return {
                 "success": False,
                 "error": str(e),

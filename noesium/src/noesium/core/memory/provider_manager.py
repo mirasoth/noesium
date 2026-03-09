@@ -64,9 +64,13 @@ class ProviderMemoryManager:
         else:
             candidates = self.providers_by_tier(tier)
             if not candidates:
-                raise ProviderNotFoundError(f"No provider registered for tier {tier.value}")
+                raise ProviderNotFoundError(
+                    f"No provider registered for tier {tier.value}"
+                )
             provider = candidates[0]
-        return await provider.write(key, value, content_type=content_type, metadata=metadata)
+        return await provider.write(
+            key, value, content_type=content_type, metadata=metadata
+        )
 
     async def recall(self, query: RecallQuery) -> list[RecallResult]:
         """Unified recall across providers (RFC-2001 §9)."""
@@ -89,7 +93,9 @@ class ProviderMemoryManager:
                 continue
         return merge_results(all_results, limit=query.limit)
 
-    async def read(self, key: str, provider_id: str | None = None) -> MemoryEntry | None:
+    async def read(
+        self, key: str, provider_id: str | None = None
+    ) -> MemoryEntry | None:
         if provider_id:
             return await self.get_provider(provider_id).read(key)
         for tier in [MemoryTier.WORKING, MemoryTier.PERSISTENT, MemoryTier.INDEXED]:

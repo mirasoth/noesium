@@ -21,7 +21,9 @@ _gmail_service: GmailService | None = None
 class GetRecentEmailsParams(BaseModel):
     """Parameters for getting recent emails"""
 
-    keyword: str = Field(default="", description="A single keyword for search, e.g. github, airbnb, etc.")
+    keyword: str = Field(
+        default="", description="A single keyword for search, e.g. github, airbnb, etc."
+    )
     max_results: int = Field(
         default=3,
         ge=1,
@@ -90,7 +92,9 @@ def register_gmail_actions(
             )
 
             if not emails:
-                query_info = f" matching '{params.keyword}'" if params.keyword.strip() else ""
+                query_info = (
+                    f" matching '{params.keyword}'" if params.keyword.strip() else ""
+                )
                 memory = f"No recent emails found from last {time_filter}{query_info}"
                 return ActionResult(
                     extracted_content=memory,
@@ -98,9 +102,7 @@ def register_gmail_actions(
                 )
 
             # Format with full email content for large display
-            content = (
-                f'Found {len(emails)} recent email{"s" if len(emails) > 1 else ""} from the last {time_filter}:\n\n'
-            )
+            content = f'Found {len(emails)} recent email{"s" if len(emails) > 1 else ""} from the last {time_filter}:\n\n'
 
             for i, email in enumerate(emails, 1):
                 content += f"Email {i}:\n"

@@ -56,7 +56,9 @@ class TaskOrchestrator:
         await self._state.save_task(task)
         return task
 
-    async def start_task(self, task_id: str, sio: socketio.AsyncServer, sid: str) -> None:
+    async def start_task(
+        self, task_id: str, sio: socketio.AsyncServer, sid: str
+    ) -> None:
         """Start task execution with WebSocket streaming."""
         task = await self._state.get_task(task_id)
         if task is None:
@@ -228,7 +230,9 @@ class TaskOrchestrator:
                     {
                         "tool": event.tool_name,
                         "args": event.tool_args,
-                        "result": (event.tool_result[:500] if event.tool_result else None),
+                        "result": (
+                            event.tool_result[:500] if event.tool_result else None
+                        ),
                         "timestamp": datetime.utcnow().isoformat(),
                     }
                 )
@@ -253,7 +257,9 @@ class TaskOrchestrator:
             error=event.error,
         )
 
-    async def _emit_error(self, sio: socketio.AsyncServer, sid: str, task_id: str, error: str) -> None:
+    async def _emit_error(
+        self, sio: socketio.AsyncServer, sid: str, task_id: str, error: str
+    ) -> None:
         """Emit error event."""
         await sio.emit(
             "task.error",

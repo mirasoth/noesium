@@ -79,7 +79,9 @@ class VideoRecorderService:
                 macro_block_size=None,
             )
             self._is_active = True
-            logger.debug(f"Video recorder started. Output will be saved to {self.output_path}")
+            logger.debug(
+                f"Video recorder started. Output will be saved to {self.output_path}"
+            )
         except Exception as e:
             logger.error(f"Failed to initialize video writer: {e}")
             self._is_active = False
@@ -110,7 +112,10 @@ class VideoRecorderService:
 
                 # 2. Handle Padding (Macro block alignment for codecs)
                 # Check if padding is actually needed
-                if self.padded_size["width"] != self.size["width"] or self.padded_size["height"] != self.size["height"]:
+                if (
+                    self.padded_size["width"] != self.size["width"]
+                    or self.padded_size["height"] != self.size["height"]
+                ):
                     new_img = Image.new(
                         "RGB",
                         (self.padded_size["width"], self.padded_size["height"]),

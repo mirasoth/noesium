@@ -72,21 +72,31 @@ class ConversationMomentum(str, Enum):
 class NextActionPlan(BaseModel):
     """Response for intent classification and next action determination."""
 
-    next_action: str = Field(description="The selected next action from available options")
+    next_action: str = Field(
+        description="The selected next action from available options"
+    )
     intent_type: str = Field(description="Intent classification: 'smalltalk' or 'task'")
     is_smalltalk: bool = Field(description="Whether the user's intent is smalltalk")
-    reasoning: str = Field(description="Brief explanation of why this action was chosen")
-    confidence: float = Field(default=0.0, description="Confidence score (0.0-1.0) in the action choice")
+    reasoning: str = Field(
+        description="Brief explanation of why this action was chosen"
+    )
+    confidence: float = Field(
+        default=0.0, description="Confidence score (0.0-1.0) in the action choice"
+    )
 
 
 class KnowledgeGapAnalysis(BaseModel):
     """Analysis of knowledge gaps and next topics to explore."""
 
-    knowledge_gap_summary: str = Field(description="Overall summary of what's missing compared to conversation purpose")
+    knowledge_gap_summary: str = Field(
+        description="Overall summary of what's missing compared to conversation purpose"
+    )
     critical_missing_info: List[str] = Field(
         description="Most important information still needed", default_factory=list
     )
-    suggested_next_topics: List[str] = Field(description="3-5 specific topics to explore next", default_factory=list)
+    suggested_next_topics: List[str] = Field(
+        description="3-5 specific topics to explore next", default_factory=list
+    )
     readiness_to_proceed: float = Field(
         description="Confidence (0.0-1.0) that we can proceed with current information",
         default=0.0,
@@ -97,9 +107,13 @@ class KnowledgeGapAnalysis(BaseModel):
 class MessageRoutingDecision(BaseModel):
     """LLM-based routing decision for new messages."""
 
-    routing_destination: str = Field(description="Where to route: 'start_deep_thinking' or 'response_generator'")
+    routing_destination: str = Field(
+        description="Where to route: 'start_deep_thinking' or 'response_generator'"
+    )
     reasoning: str = Field(description="Brief explanation of the routing decision")
-    confidence: float = Field(default=0.0, description="Confidence score (0.0-1.0) in the routing decision")
+    confidence: float = Field(
+        default=0.0, description="Confidence score (0.0-1.0) in the routing decision"
+    )
 
 
 class InformationSlot(BaseModel):
@@ -109,11 +123,19 @@ class InformationSlot(BaseModel):
     description: str
     priority: int = Field(default=1, description="Higher number = higher priority")
     required: bool = Field(default=True)
-    extraction_tools: List[str] = Field(default_factory=list, description="Names of extraction tools to use")
-    extraction_model: Optional[Type[BaseModel]] = Field(default=None, description="Pydantic model class for extraction")
-    question_templates: Dict[str, Dict[str, Dict[str, str]]] = Field(default_factory=dict)
+    extraction_tools: List[str] = Field(
+        default_factory=list, description="Names of extraction tools to use"
+    )
+    extraction_model: Optional[Type[BaseModel]] = Field(
+        default=None, description="Pydantic model class for extraction"
+    )
+    question_templates: Dict[str, Dict[str, Dict[str, str]]] = Field(
+        default_factory=dict
+    )
     validation_rules: List[str] = Field(default_factory=list)
-    dependencies: List[str] = Field(default_factory=list, description="Other slots this depends on")
+    dependencies: List[str] = Field(
+        default_factory=list, description="Other slots this depends on"
+    )
 
     model_config = ConfigDict(use_enum_values=True)
 
@@ -131,8 +153,12 @@ class ConversationContext(BaseModel):
     conversation_depth: ConversationDepth = Field(default=ConversationDepth.SURFACE)
     user_confidence: UserConfidence = Field(default=UserConfidence.MEDIUM)
     conversation_flow: ConversationFlow = Field(default=ConversationFlow.NATURAL)
-    conversation_momentum: ConversationMomentum = Field(default=ConversationMomentum.POSITIVE)
-    last_message_sentiment: ConversationSentiment = Field(default=ConversationSentiment.NEUTRAL)
+    conversation_momentum: ConversationMomentum = Field(
+        default=ConversationMomentum.POSITIVE
+    )
+    last_message_sentiment: ConversationSentiment = Field(
+        default=ConversationSentiment.NEUTRAL
+    )
 
     model_config = ConfigDict(use_enum_values=True)
 
@@ -167,7 +193,9 @@ class AskuraState(BaseModel):
 
     # Conversation state
     messages: Sequence[BaseMessage] = Field(default_factory=list)
-    conversation_context: ConversationContext = Field(default_factory=ConversationContext)
+    conversation_context: ConversationContext = Field(
+        default_factory=ConversationContext
+    )
 
     # Information slots (dynamic based on configuration)
     extracted_info: Dict[str, Any] = Field(default_factory=dict)

@@ -8,7 +8,10 @@ def truncate_message_content(content: str, max_length: int = 10000) -> str:
     if len(content) <= max_length:
         return content
     # Truncate and add marker
-    return content[:max_length] + f"\n\n[... truncated {len(content) - max_length} characters for history]"
+    return (
+        content[:max_length]
+        + f"\n\n[... truncated {len(content) - max_length} characters for history]"
+    )
 
 
 def detect_token_limit_issue(
@@ -54,7 +57,9 @@ def detect_token_limit_issue(
 def extract_url_from_task(task: str) -> str | None:
     """Extract URL from task string using naive pattern matching."""
     # Remove email addresses from task before looking for URLs
-    task_without_emails = re.sub(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "", task)
+    task_without_emails = re.sub(
+        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "", task
+    )
 
     # Look for common URL patterns
     patterns = [
@@ -127,7 +132,9 @@ def extract_code_blocks(text: str) -> dict[str, str]:
 
         # Only process supported types
         if lang_normalized in ("python", "js", "bash", "markdown"):
-            content = content.rstrip()  # Only strip trailing whitespace, preserve leading for indentation
+            content = (
+                content.rstrip()
+            )  # Only strip trailing whitespace, preserve leading for indentation
             if content:
                 # Determine the key to use
                 if var_name:

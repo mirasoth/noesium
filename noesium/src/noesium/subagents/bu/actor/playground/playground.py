@@ -71,7 +71,9 @@ async def main():
         # Try to find and interact with links using CSS selector
         try:
             # Find article links on the page
-            links = await page.get_elements_by_css_selector('a[href*="/wiki/"]:not([href*=":"])')
+            links = await page.get_elements_by_css_selector(
+                'a[href*="/wiki/"]:not([href*=":"])'
+            )
 
             if links:
                 logger.info(f"📋 Found {len(links)} wiki links via CSS selector")
@@ -88,7 +90,9 @@ async def main():
 
                 if basic_info["boundingBox"]:
                     bbox = basic_info["boundingBox"]
-                    logger.info(f'📏 Position: ({bbox["x"]}, {bbox["y"]}) Size: {bbox["width"]}x{bbox["height"]}')
+                    logger.info(
+                        f'📏 Position: ({bbox["x"]}, {bbox["y"]}) Size: {bbox["width"]}x{bbox["height"]}'
+                    )
 
                 # Test element interactions with robust implementations
                 logger.info("👆 Hovering over the element...")
@@ -134,7 +138,9 @@ async def main():
         # Simple expressions
         page_height = await page.evaluate("() => document.body.scrollHeight")
         current_scroll = await page.evaluate("() => window.pageYOffset")
-        logger.info(f"📏 Page height: {page_height}px, current scroll: {current_scroll}px")
+        logger.info(
+            f"📏 Page height: {page_height}px, current scroll: {current_scroll}px"
+        )
 
         # JavaScript with arguments
         result = await page.evaluate("(x) => x * 2", 21)
@@ -190,7 +196,9 @@ async def main():
         # Test form interaction if we can find a form
         try:
             # Look for search input on the page
-            search_inputs = await page.get_elements_by_css_selector('input[type="search"], input[name*="search"]')
+            search_inputs = await page.get_elements_by_css_selector(
+                'input[type="search"], input[name*="search"]'
+            )
 
             if search_inputs:
                 search_input = search_inputs[0]

@@ -62,12 +62,18 @@ class FileEditToolkit(AsyncBaseToolkit):
 
         # Configuration
         self.work_dir = Path(
-            self.config.config.get("work_dir", get_toolkit_tmp_dir(TOOLKIT_FILE_EDIT, "workspace"))
+            self.config.config.get(
+                "work_dir", get_toolkit_tmp_dir(TOOLKIT_FILE_EDIT, "workspace")
+            )
         ).resolve()
         self.default_encoding = self.config.config.get("default_encoding", "utf-8")
         self.backup_enabled = self.config.config.get("backup_enabled", True)
-        self.max_file_size = self.config.config.get("max_file_size", 10 * 1024 * 1024)  # 10MB
-        self.allowed_extensions = self.config.config.get("allowed_extensions", None)  # None = all allowed
+        self.max_file_size = self.config.config.get(
+            "max_file_size", 10 * 1024 * 1024
+        )  # 10MB
+        self.allowed_extensions = self.config.config.get(
+            "allowed_extensions", None
+        )  # None = all allowed
 
         # Create working directory
         self.work_dir.mkdir(parents=True, exist_ok=True)
@@ -77,7 +83,9 @@ class FileEditToolkit(AsyncBaseToolkit):
         if self.backup_enabled:
             self.backup_dir.mkdir(parents=True, exist_ok=True)
 
-        self.logger.info(f"FileEditToolkit initialized with work directory: {self.work_dir}")
+        self.logger.info(
+            f"FileEditToolkit initialized with work directory: {self.work_dir}"
+        )
 
     def _sanitize_filename(self, filename: str) -> str:
         """
@@ -433,7 +441,9 @@ class FileEditToolkit(AsyncBaseToolkit):
                 if file_path.is_file():
                     size = file_path.stat().st_size
                     modified = datetime.fromtimestamp(file_path.stat().st_mtime)
-                    result_lines.append(f"  📄 {file_path.name} ({size} bytes, {modified.strftime('%Y-%m-%d %H:%M')})")
+                    result_lines.append(
+                        f"  📄 {file_path.name} ({size} bytes, {modified.strftime('%Y-%m-%d %H:%M')})"
+                    )
                 elif file_path.is_dir():
                     result_lines.append(f"  📁 {file_path.name}/")
 
@@ -444,7 +454,9 @@ class FileEditToolkit(AsyncBaseToolkit):
             self.logger.error(error_msg)
             return error_msg
 
-    async def search_in_files(self, pattern: str, directory: str = ".", file_pattern: str = "*") -> str:
+    async def search_in_files(
+        self, pattern: str, directory: str = ".", file_pattern: str = "*"
+    ) -> str:
         """
         Search for text patterns within files.
 
@@ -486,10 +498,14 @@ class FileEditToolkit(AsyncBaseToolkit):
                     continue
 
                 try:
-                    with open(file_path, "r", encoding=self.default_encoding, errors="ignore") as f:
+                    with open(
+                        file_path, "r", encoding=self.default_encoding, errors="ignore"
+                    ) as f:
                         for line_num, line in enumerate(f, 1):
                             if regex.search(line):
-                                results.append(f"{file_path.name}:{line_num}: {line.strip()}")
+                                results.append(
+                                    f"{file_path.name}:{line_num}: {line.strip()}"
+                                )
 
                     files_searched += 1
 

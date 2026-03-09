@@ -14,7 +14,8 @@ try:
     from langgraph.graph import StateGraph
 except ImportError:
     raise ImportError(
-        "Noe requires langchain-core and langgraph. " "Install them with: uv run pip install langchain-core langgraph"
+        "Noe requires langchain-core and langgraph. "
+        "Install them with: uv run pip install langchain-core langgraph"
     )
 
 from uuid_extensions import uuid7str
@@ -31,12 +32,10 @@ from noesium.core.capability.providers import (
     ToolCapabilityProvider,
 )
 from noesium.core.capability.registry import CapabilityRegistry
+from noesium.core.context import CognitiveContext
 from noesium.core.event import ProgressEvent, ProgressEventType
-from noesium.core.event.envelope import AgentRef
-from noesium.core.event.store import InMemoryEventStore
 from noesium.core.memory.provider import MemoryTier
 from noesium.core.memory.provider_manager import ProviderMemoryManager
-from noesium.core.memory.providers.event_sourced import EventSourcedProvider
 from noesium.core.memory.providers.memu import MemuProvider
 from noesium.core.memory.providers.working import WorkingMemoryProvider
 from noesium.core.toolify.adapters.function_adapter import FunctionAdapter
@@ -81,7 +80,6 @@ class NoeAgent(BaseGraphicAgent):
         self._planner: TaskPlanner | None = None
         self._planning_llm: Any = None
         self._cli_adapter: "ExternalCliAdapter | None" = None
-        self._event_store = InMemoryEventStore()
         self._subagents: dict[str, "NoeAgent"] = {}
         self._depth: int = 0
         self._initialized: bool = False
@@ -91,6 +89,7 @@ class NoeAgent(BaseGraphicAgent):
         self._tool_desc_provider_count: int = -1
         self._subagent_event_queue: asyncio.Queue[ProgressEvent] | None = None
         self._subagent_manager: SubagentManager | None = None
+        self._context = CognitiveContext(max_findings=self.config.context_max_findings)
 
     # ------------------------------------------------------------------
     # Properties for autonomous runner / cognitive loop (RFC-1005)
@@ -107,9 +106,14 @@ class NoeAgent(BaseGraphicAgent):
         return self._registry
 
     @property
-    def producer(self) -> AgentRef:
-        """Producer identity for event envelope and storage."""
-        return AgentRef(agent_id=self._agent_id, agent_type="noe")
+    def producer(self) -> dict[str, str]:
+        """Producer identity for tracking (simple dict instead of AgentRef)."""
+        return {"agent_id": self._agent_id, "agent_type": "noe"}
+
+    @property
+    def context(self) -> CognitiveContext:
+        """Cognitive context for session state continuity (RFC-1009)."""
+        return self._context
 
     # ------------------------------------------------------------------
     # Initialization
@@ -203,7 +207,10 @@ class NoeAgent(BaseGraphicAgent):
         if self._registry is None:
             return "No tools available."
         provider_count = len(self._registry.list_providers())
-        if self._tool_desc_cache is not None and self._tool_desc_provider_count == provider_count:
+        if (
+            self._tool_desc_cache is not None
+            and self._tool_desc_provider_count == provider_count
+        ):
             return self._tool_desc_cache
         from .graph.nodes import _build_tool_descriptions
 
@@ -212,12 +219,10 @@ class NoeAgent(BaseGraphicAgent):
         return self._tool_desc_cache
 
     async def _setup_memory(self) -> None:
+        """Setup memory providers (RFC-1009: simplified to Working + Memu)."""
         providers = []
         if "working" in self.config.memory_providers:
             providers.append(WorkingMemoryProvider())
-        if "event_sourced" in self.config.memory_providers:
-            producer = AgentRef(agent_id=self._agent_id, agent_type="noe")
-            providers.append(EventSourcedProvider(self._event_store, producer))
         if "memu" in self.config.memory_providers:
             try:
                 from noesium.core.memory.memu.memory_store import MemuMemoryStore
@@ -227,13 +232,7 @@ class NoeAgent(BaseGraphicAgent):
                     agent_id=self._agent_id,
                     user_id=self.config.memu_user_id,
                 )
-                providers.append(
-                    MemuProvider(
-                        memory_store,
-                        self._event_store,
-                        AgentRef(agent_id=self._agent_id, agent_type="noe"),
-                    )
-                )
+                providers.append(MemuProvider(memory_store))
             except Exception as exc:
                 logger.warning("Failed to initialize memu provider: %s", exc)
         self._memory_manager = ProviderMemoryManager(providers)
@@ -242,15 +241,11 @@ class NoeAgent(BaseGraphicAgent):
         """Create CapabilityRegistry and register all providers."""
         from noeagent.capabilities.tools import register_subagent_tool, setup_tools
 
-        self._registry = CapabilityRegistry(
-            event_store=self._event_store,
-            producer=AgentRef(agent_id=self._agent_id, agent_type="noe"),
-        )
+        self._registry = CapabilityRegistry()
 
         # Setup tools, MCP servers, and custom tools
         self._tool_executor, self._tool_context = await setup_tools(
             registry=self._registry,
-            event_store=self._event_store,
             agent_id=self._agent_id,
             enabled_toolkits=self.config.enabled_toolkits,
             permissions=self.config.permissions,
@@ -272,7 +267,9 @@ class NoeAgent(BaseGraphicAgent):
 
         for func in self.config.custom_tools:
             tool = FunctionAdapter.from_function(func)
-            provider = ToolCapabilityProvider(tool, self._tool_executor, self._tool_context)
+            provider = ToolCapabilityProvider(
+                tool, self._tool_executor, self._tool_context
+            )
             self._registry.register(provider)
 
         if self.config.enable_subagents:
@@ -341,12 +338,16 @@ class NoeAgent(BaseGraphicAgent):
         try:
             logger.info("Warming up LLM connection...")
             await asyncio.wait_for(
-                asyncio.to_thread(self.llm.completion, [{"role": "user", "content": "Ready"}]),
+                asyncio.to_thread(
+                    self.llm.completion, [{"role": "user", "content": "Ready"}]
+                ),
                 timeout=self.config.llm_warmup_timeout,
             )
             logger.info("LLM warm-up complete")
         except asyncio.TimeoutError:
-            logger.warning(f"LLM warm-up timed out after {self.config.llm_warmup_timeout}s")
+            logger.warning(
+                f"LLM warm-up timed out after {self.config.llm_warmup_timeout}s"
+            )
         except Exception as e:
             logger.warning(f"LLM warm-up failed (non-fatal): {e}")
 
@@ -379,7 +380,9 @@ class NoeAgent(BaseGraphicAgent):
                 else:
                     # Invalid value, fall back to default
                     headless = DEFAULT_HEADLESS
-                logger.debug(f"BROWSER_USE_HEADLESS={env_headless} -> headless={headless}")
+                logger.debug(
+                    f"BROWSER_USE_HEADLESS={env_headless} -> headless={headless}"
+                )
             elif "headless" in opts:
                 # Config file setting (second priority)
                 headless = opts.pop("headless")
@@ -461,6 +464,20 @@ class NoeAgent(BaseGraphicAgent):
     # Progress helpers
     # ------------------------------------------------------------------
 
+    def _update_context_from_event(self, event: ProgressEvent) -> None:
+        """Update CognitiveContext based on progress events (RFC-1009)."""
+        if event.type == ProgressEventType.TOOL_END:
+            tool_name = event.tool_name or "tool"
+            result = event.tool_result or event.summary or ""
+            self._context.add_finding(f"{tool_name}: {result[:80]}")
+        elif event.type == ProgressEventType.SUBAGENT_END:
+            subagent_id = event.subagent_id or "subagent"
+            detail = event.detail or event.summary or ""
+            self._context.add_finding(f"[{subagent_id}] {detail[:80]}")
+        elif event.type == ProgressEventType.PLAN_CREATED:
+            if event.plan_snapshot:
+                self._context.set_scratchpad("current_plan", event.plan_snapshot)
+
     def _make_session_id(self) -> str:
         return uuid7str()
 
@@ -482,7 +499,15 @@ class NoeAgent(BaseGraphicAgent):
         if self.config.mode == NoeMode.ASK:
             initial["memory_context"] = []
         else:
-            initial.update({"plan": None, "iteration": 0, "tool_results": [], "reflection": ""})
+            initial.update(
+                {
+                    "plan": None,
+                    "iteration": 0,
+                    "tool_results": [],
+                    "reflection": "",
+                    "context_summary": self._context.export(),  # RFC-1009
+                }
+            )
         return initial
 
     # ------------------------------------------------------------------
@@ -579,12 +604,10 @@ class NoeAgent(BaseGraphicAgent):
             "Running main graph: %.80s",
             user_message,
         )
+        # Set context goal for this session (RFC-1009)
+        self._context.set_goal(user_message)
         compiled = self._get_compiled_graph()
         self.graph = compiled
-
-        # O6: trim event store for long sessions to bound memory
-        if hasattr(self._event_store, "_events") and len(self._event_store._events) > 10000:
-            self._event_store._events = self._event_store._events[-5000:]
 
         # Callback-to-yield bridge: subagent events emitted inside nodes
         # are pushed to this queue so we can yield them from the generator.
@@ -599,10 +622,13 @@ class NoeAgent(BaseGraphicAgent):
             return seq
 
         def _evt(tp: ProgressEventType, **kw: Any) -> ProgressEvent:
-            return ProgressEvent(type=tp, session_id=session_id, sequence=_next_seq(), **kw)
+            return ProgressEvent(
+                type=tp, session_id=session_id, sequence=_next_seq(), **kw
+            )
 
         async def _emit(evt: ProgressEvent) -> None:
             await self._fire_callbacks(evt)
+            self._update_context_from_event(evt)  # RFC-1009
 
         def _brief_args(args: dict[str, Any], max_len: int = 60) -> str:
             if not args:
@@ -681,7 +707,11 @@ class NoeAgent(BaseGraphicAgent):
                         if plan_id != _prev_plan_id:
                             is_revision = _prev_plan_id is not None
                             _prev_plan_id = plan_id
-                            tp = ProgressEventType.PLAN_REVISED if is_revision else ProgressEventType.PLAN_CREATED
+                            tp = (
+                                ProgressEventType.PLAN_REVISED
+                                if is_revision
+                                else ProgressEventType.PLAN_CREATED
+                            )
                             # Emit thinking event before plan
                             think_evt = _evt(
                                 ProgressEventType.THINKING,
@@ -706,7 +736,9 @@ class NoeAgent(BaseGraphicAgent):
 
                         cur_idx = plan.current_step_index
                         if cur_idx > _prev_step_index and _prev_step_index >= 0:
-                            for completed_idx in range(_prev_step_index, min(cur_idx, len(plan.steps))):
+                            for completed_idx in range(
+                                _prev_step_index, min(cur_idx, len(plan.steps))
+                            ):
                                 step = plan.steps[completed_idx]
                                 if step.status == "completed":
                                     evt = _evt(
@@ -744,7 +776,11 @@ class NoeAgent(BaseGraphicAgent):
                                 node=node_name,
                                 tool_name=tname,
                                 tool_result=first_line,
-                                summary=(f"{tname}: {first_line}" if first_line else f"{tname}: done"),
+                                summary=(
+                                    f"{tname}: {first_line}"
+                                    if first_line
+                                    else f"{tname}: done"
+                                ),
                                 detail=raw_result[:5000],
                             )
                             await _emit(evt)
@@ -772,14 +808,20 @@ class NoeAgent(BaseGraphicAgent):
                                         node=node_name,
                                         tool_name=cname,
                                         tool_args=cargs,
-                                        summary=(f"Using {cname}({brief_args})" if brief_args else f"Using {cname}"),
+                                        summary=(
+                                            f"Using {cname}({brief_args})"
+                                            if brief_args
+                                            else f"Using {cname}"
+                                        ),
                                         detail=str(cargs)[:2000],
                                     )
                                     await _emit(evt)
                                     yield evt
                             content = getattr(msg, "content", "")
                             if content and not tc:
-                                sa = getattr(msg, "additional_kwargs", {}).get("subagent_action")
+                                sa = getattr(msg, "additional_kwargs", {}).get(
+                                    "subagent_action"
+                                )
                                 if sa:
                                     sa_name = sa.get("name", "?")
                                     sa_msg = sa.get("message", "")[:80]
@@ -787,7 +829,11 @@ class NoeAgent(BaseGraphicAgent):
                                         ProgressEventType.SUBAGENT_START,
                                         node=node_name,
                                         subagent_id=sa_name,
-                                        summary=(f"[{sa_name}] {sa_msg}" if sa_msg else f"[{sa_name}] spawned"),
+                                        summary=(
+                                            f"[{sa_name}] {sa_msg}"
+                                            if sa_msg
+                                            else f"[{sa_name}] spawned"
+                                        ),
                                         detail=str(sa),
                                     )
                                     await _emit(evt)
@@ -914,8 +960,12 @@ class NoeAgent(BaseGraphicAgent):
             child._tool_executor = self._tool_executor
             child._tool_context = ToolContext(
                 agent_id=f"{self._agent_id}:{name}",
-                granted_permissions=(self._tool_context.granted_permissions if self._tool_context else []),
-                working_directory=(self._tool_context.working_directory if self._tool_context else None),
+                granted_permissions=(
+                    self._tool_context.granted_permissions if self._tool_context else []
+                ),
+                working_directory=(
+                    self._tool_context.working_directory if self._tool_context else None
+                ),
             )
 
         subagent_id = f"{name}-{len(self._subagents) + 1}"
@@ -933,7 +983,8 @@ class NoeAgent(BaseGraphicAgent):
     async def interact_with_subagent(self, subagent_id: str, message: str) -> str:
         """Stream child agent progress via SubagentManager, forwarding events to callbacks."""
         if subagent_id not in self._subagents and (
-            self._subagent_manager is None or self._subagent_manager.get_provider(subagent_id) is None
+            self._subagent_manager is None
+            or self._subagent_manager.get_provider(subagent_id) is None
         ):
             raise KeyError(f"Unknown subagent: {subagent_id}")
 
@@ -967,9 +1018,12 @@ class NoeAgent(BaseGraphicAgent):
             message=message,
             timeout_s=timeout_s,
         )
+        # RFC-1009: Create scoped context for subagent and pass via shared_memory
+        child_context = self._context.for_subagent(task=message)
         context = SubagentContext(
             session_id=self._agent_id,
             parent_id=self._agent_id,
+            shared_memory=child_context,  # Pass cognitive context to subagent
             depth=getattr(self, "_depth", 0),
             max_depth=self.config.subagent_max_depth,
         )
@@ -977,7 +1031,9 @@ class NoeAgent(BaseGraphicAgent):
         final_result = ""
         error_info: str | None = None
 
-        async for event in self._subagent_manager.invoke_stream(subagent_id, request, context):
+        async for event in self._subagent_manager.invoke_stream(
+            subagent_id, request, context
+        ):
             progress_event = self._subagent_event_to_progress(event, subagent_id)
             if progress_event is not None:
                 await self._fire_callbacks(progress_event)
@@ -1023,7 +1079,11 @@ class NoeAgent(BaseGraphicAgent):
         # Extract metadata from the subagent event's payload (carries child_event_type,
         # agent_type, step_index, plan_snapshot forwarded by NoeBuiltinSubagentRuntime).
         payload = event.payload or {}
-        metadata: dict = {k: v for k, v in payload.items() if k not in ("step_index", "plan_snapshot", "step_desc")}
+        metadata: dict = {
+            k: v
+            for k, v in payload.items()
+            if k not in ("step_index", "plan_snapshot", "step_desc")
+        }
         step_index: int | None = payload.get("step_index")
         step_desc: str | None = payload.get("step_desc")
         plan_snapshot: dict | None = payload.get("plan_snapshot")
@@ -1033,21 +1093,32 @@ class NoeAgent(BaseGraphicAgent):
             subagent_id=subagent_id,
             summary=event.summary,
             detail=event.detail,
-            error=(event.error_message if event.event_type == SubagentEventType.SUBAGENT_ERROR else None),
+            error=(
+                event.error_message
+                if event.event_type == SubagentEventType.SUBAGENT_ERROR
+                else None
+            ),
             tool_name=event.tool_name,
             tool_args=event.tool_args,
-            tool_result=(str(event.tool_result) if event.tool_result is not None else None),
+            tool_result=(
+                str(event.tool_result) if event.tool_result is not None else None
+            ),
             step_index=step_index,
             step_desc=step_desc,
             plan_snapshot=plan_snapshot,
             metadata=metadata,
         )
 
-    async def interact_with_subagents(self, requests: list[tuple[str, str]]) -> dict[str, str]:
+    async def interact_with_subagents(
+        self, requests: list[tuple[str, str]]
+    ) -> dict[str, str]:
         """Execute multiple subagent interactions in parallel (O3)."""
         tasks = [self.interact_with_subagent(sid, msg) for sid, msg in requests]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        return {sid: (r if isinstance(r, str) else f"Error: {r}") for (sid, _), r in zip(requests, results)}
+        return {
+            sid: (r if isinstance(r, str) else f"Error: {r}")
+            for (sid, _), r in zip(requests, results)
+        }
 
     async def execute_builtin_subagent_streaming(
         self,
@@ -1096,7 +1167,9 @@ class NoeAgent(BaseGraphicAgent):
             return seq
 
         def _evt(tp: ProgressEventType, **kw: Any) -> ProgressEvent:
-            return ProgressEvent(type=tp, session_id=session_id, sequence=_next_seq(), **kw)
+            return ProgressEvent(
+                type=tp, session_id=session_id, sequence=_next_seq(), **kw
+            )
 
         subagent_name = command.subagent_name
         message = command.message
@@ -1117,7 +1190,9 @@ class NoeAgent(BaseGraphicAgent):
             )
             await self._fire_callbacks(error_evt)
             yield error_evt
-            end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
+            end_evt = _evt(
+                ProgressEventType.SESSION_END, summary="Session ended (error)"
+            )
             await self._fire_callbacks(end_evt)
             yield end_evt
             return
@@ -1135,7 +1210,9 @@ class NoeAgent(BaseGraphicAgent):
         # not with CapabilityRegistry. Use invoke_stream so the agent actually runs.
         mgr = self._subagent_manager
         if mgr is not None and mgr.get_provider(subagent_name) is not None:
-            request = SubagentInvocationRequest(subagent_id=subagent_name, message=message)
+            request = SubagentInvocationRequest(
+                subagent_id=subagent_name, message=message
+            )
             context = SubagentContext(
                 session_id=self._agent_id,
                 parent_id=self._agent_id,
@@ -1145,7 +1222,9 @@ class NoeAgent(BaseGraphicAgent):
             final_result = ""
             try:
                 async for event in mgr.invoke_stream(subagent_name, request, context):
-                    progress_event = self._subagent_event_to_progress(event, subagent_name)
+                    progress_event = self._subagent_event_to_progress(
+                        event, subagent_name
+                    )
                     if progress_event is not None:
                         await self._fire_callbacks(progress_event)
                         yield progress_event
@@ -1173,7 +1252,9 @@ class NoeAgent(BaseGraphicAgent):
                 )
                 await self._fire_callbacks(sa_end_evt)
                 yield sa_end_evt
-                end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
+                end_evt = _evt(
+                    ProgressEventType.SESSION_END, summary="Session ended (error)"
+                )
                 await self._fire_callbacks(end_evt)
                 yield end_evt
                 return
@@ -1200,7 +1281,9 @@ class NoeAgent(BaseGraphicAgent):
             )
             await self._fire_callbacks(error_evt)
             yield error_evt
-            end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
+            end_evt = _evt(
+                ProgressEventType.SESSION_END, summary="Session ended (error)"
+            )
             await self._fire_callbacks(end_evt)
             yield end_evt
             return
@@ -1228,7 +1311,9 @@ class NoeAgent(BaseGraphicAgent):
             )
             await self._fire_callbacks(sa_end_evt)
             yield sa_end_evt
-            end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
+            end_evt = _evt(
+                ProgressEventType.SESSION_END, summary="Session ended (error)"
+            )
             await self._fire_callbacks(end_evt)
             yield end_evt
             return
@@ -1239,7 +1324,9 @@ class NoeAgent(BaseGraphicAgent):
             if hasattr(provider, "invoke_streaming"):
                 async for event in provider.invoke_streaming(message=message):
                     if event.subagent_id is None:
-                        event = ProgressEvent(**{**event.model_dump(), "subagent_id": subagent_name})
+                        event = ProgressEvent(
+                            **{**event.model_dump(), "subagent_id": subagent_name}
+                        )
                     await self._fire_callbacks(event)
                     yield event
                     if event.type == ProgressEventType.SUBAGENT_END:
@@ -1274,7 +1361,9 @@ class NoeAgent(BaseGraphicAgent):
             await self._fire_callbacks(sa_end_evt)
             yield sa_end_evt
 
-            end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended (error)")
+            end_evt = _evt(
+                ProgressEventType.SESSION_END, summary="Session ended (error)"
+            )
             await self._fire_callbacks(end_evt)
             yield end_evt
             return

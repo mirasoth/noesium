@@ -82,7 +82,9 @@ def create_history_gif(
             break
 
     if not first_real_screenshot:
-        logger.warning("No valid screenshots found (all are placeholders or from new tab pages)")
+        logger.warning(
+            "No valid screenshots found (all are placeholders or from new tab pages)"
+        )
         return
 
     # Try to load nicer fonts
@@ -156,7 +158,9 @@ def create_history_gif(
             )
             images.append(task_frame)
         else:
-            logger.warning("No real screenshots found for task frame, skipping task frame")
+            logger.warning(
+                "No real screenshots found for task frame, skipping task frame"
+            )
 
     # Process each history item with its corresponding screenshot
     for i, (item, screenshot) in enumerate(zip(history.history, screenshots), 1):
@@ -166,14 +170,18 @@ def create_history_gif(
         # Skip placeholder screenshots from about:blank pages
         # These are 4x4 white PNGs encoded as a specific base64 string
         if screenshot == PLACEHOLDER_4PX_SCREENSHOT:
-            logger.debug(f"Skipping placeholder screenshot from about:blank page at step {i}")
+            logger.debug(
+                f"Skipping placeholder screenshot from about:blank page at step {i}"
+            )
             continue
 
         # Skip screenshots from new tab pages
         from ..utils import is_new_tab_page
 
         if is_new_tab_page(item.state.url):
-            logger.debug(f"Skipping screenshot from new tab page ({item.state.url}) at step {i}")
+            logger.debug(
+                f"Skipping screenshot from new tab page ({item.state.url}) at step {i}"
+            )
             continue
 
         # Convert base64 screenshot to PIL Image
@@ -379,7 +387,9 @@ def _add_overlay_to_image(
         logo_layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
         logo_margin = 20
         logo_x = image.width - logo.width - logo_margin
-        logo_layer.paste(logo, (logo_x, logo_margin), logo if logo.mode == "RGBA" else None)
+        logo_layer.paste(
+            logo, (logo_x, logo_margin), logo if logo.mode == "RGBA" else None
+        )
         txt_layer = Image.alpha_composite(logo_layer, txt_layer)
 
     # Composite and convert

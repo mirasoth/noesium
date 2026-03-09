@@ -13,7 +13,11 @@ class ScreenshotService:
 
     def __init__(self, agent_directory: str | Path):
         """Initialize with agent directory path"""
-        self.agent_directory = Path(agent_directory) if isinstance(agent_directory, str) else agent_directory
+        self.agent_directory = (
+            Path(agent_directory)
+            if isinstance(agent_directory, str)
+            else agent_directory
+        )
 
         # Create screenshots subdirectory
         self.screenshots_dir = self.agent_directory / "screenshots"

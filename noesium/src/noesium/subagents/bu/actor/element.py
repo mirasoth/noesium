@@ -75,15 +75,21 @@ class Element:
 
     async def _get_node_id(self) -> int:
         """Get DOM node ID from backend node ID."""
-        params: "PushNodesByBackendIdsToFrontendParameters" = {"backendNodeIds": [self._backend_node_id]}
-        result = await self._client.send.DOM.pushNodesByBackendIdsToFrontend(params, session_id=self._session_id)
+        params: "PushNodesByBackendIdsToFrontendParameters" = {
+            "backendNodeIds": [self._backend_node_id]
+        }
+        result = await self._client.send.DOM.pushNodesByBackendIdsToFrontend(
+            params, session_id=self._session_id
+        )
         return result["nodeIds"][0]
 
     async def _get_remote_object_id(self) -> str | None:
         """Get remote object ID for this element."""
         node_id = await self._get_node_id()
         params: "ResolveNodeParameters" = {"nodeId": node_id}
-        result = await self._client.send.DOM.resolveNode(params, session_id=self._session_id)
+        result = await self._client.send.DOM.resolveNode(
+            params, session_id=self._session_id
+        )
         object_id = result["object"].get("objectId", None)
 
         if not object_id:
@@ -100,7 +106,9 @@ class Element:
 
         try:
             # Get viewport dimensions for visibility checks
-            layout_metrics = await self._client.send.Page.getLayoutMetrics(session_id=self._session_id)
+            layout_metrics = await self._client.send.Page.getLayoutMetrics(
+                session_id=self._session_id
+            )
             viewport_width = layout_metrics["layoutViewport"]["clientWidth"]
             viewport_height = layout_metrics["layoutViewport"]["clientHeight"]
 
@@ -174,7 +182,10 @@ class Element:
                             session_id=self._session_id,
                         )
 
-                        if "result" in bounds_result and "value" in bounds_result["result"]:
+                        if (
+                            "result" in bounds_result
+                            and "value" in bounds_result["result"]
+                        ):
                             rect = bounds_result["result"]["value"]
                             # Convert rect to quad format
                             x, y, w, h = (
@@ -238,7 +249,12 @@ class Element:
                 min_y, max_y = min(ys), max(ys)
 
                 # Check if quad intersects with viewport
-                if max_x < 0 or max_y < 0 or min_x > viewport_width or min_y > viewport_height:
+                if (
+                    max_x < 0
+                    or max_y < 0
+                    or min_x > viewport_width
+                    or min_y > viewport_height
+                ):
                     continue  # Quad is completely outside viewport
 
                 # Calculate visible area (intersection with viewport)
@@ -409,7 +425,9 @@ class Element:
                     center_x = bounds["x"] + bounds["width"] / 2
                     center_y = bounds["y"] + bounds["height"] / 2
                     input_coordinates = {"input_x": center_x, "input_y": center_y}
-                    logger.debug(f"Using element coordinates: x={center_x:.1f}, y={center_y:.1f}")
+                    logger.debug(
+                        f"Using element coordinates: x={center_x:.1f}, y={center_y:.1f}"
+                    )
             except Exception as e:
                 logger.debug(f"Could not get element coordinates: {e}")
 
@@ -432,7 +450,9 @@ class Element:
                     object_id=object_id, cdp_client=cdp_client, session_id=session_id
                 )
                 if not cleared_successfully:
-                    logger.warning("Text field clearing failed, typing may append to existing text")
+                    logger.warning(
+                        "Text field clearing failed, typing may append to existing text"
+                    )
 
             # Step 3: Type the text character by character using proper human-like key events
             logger.debug(f'Typing text character by character: "{value}"')
@@ -533,7 +553,9 @@ class Element:
         y = box["y"] + box["height"] / 2
 
         params: "DispatchMouseEventParameters" = {"type": "mouseMoved", "x": x, "y": y}
-        await self._client.send.Input.dispatchMouseEvent(params, session_id=self._session_id)
+        await self._client.send.Input.dispatchMouseEvent(
+            params, session_id=self._session_id
+        )
 
     async def focus(self) -> None:
         """Focus the element."""
@@ -563,11 +585,15 @@ class Element:
 
         # Request child nodes to get the options
         params: "RequestChildNodesParameters" = {"nodeId": node_id, "depth": 1}
-        await self._client.send.DOM.requestChildNodes(params, session_id=self._session_id)
+        await self._client.send.DOM.requestChildNodes(
+            params, session_id=self._session_id
+        )
 
         # Get the updated node description with children
         describe_params: "DescribeNodeParameters" = {"nodeId": node_id, "depth": 1}
-        describe_result = await self._client.send.DOM.describeNode(describe_params, session_id=self._session_id)
+        describe_result = await self._client.send.DOM.describeNode(
+            describe_params, session_id=self._session_id
+        )
 
         select_node = describe_result["node"]
 
@@ -592,14 +618,22 @@ class Element:
                     option_node_id = child.get("nodeId")
                     if option_node_id:
                         # Get backend node ID for the option
-                        option_describe_params: "DescribeNodeParameters" = {"nodeId": option_node_id}
-                        option_backend_result = await self._client.send.DOM.describeNode(
-                            option_describe_params, session_id=self._session_id
+                        option_describe_params: "DescribeNodeParameters" = {
+                            "nodeId": option_node_id
+                        }
+                        option_backend_result = (
+                            await self._client.send.DOM.describeNode(
+                                option_describe_params, session_id=self._session_id
+                            )
                         )
-                        option_backend_id = option_backend_result["node"]["backendNodeId"]
+                        option_backend_id = option_backend_result["node"][
+                            "backendNodeId"
+                        ]
 
                         # Create an Element for the option and click it
-                        option_element = Element(self._browser_session, option_backend_id, self._session_id)
+                        option_element = Element(
+                            self._browser_session, option_backend_id, self._session_id
+                        )
                         await option_element.click()
 
     async def drag_to(
@@ -659,7 +693,9 @@ class Element:
         """Get an attribute value."""
         node_id = await self._get_node_id()
         params: "GetAttributesParameters" = {"nodeId": node_id}
-        result = await self._client.send.DOM.getAttributes(params, session_id=self._session_id)
+        result = await self._client.send.DOM.getAttributes(
+            params, session_id=self._session_id
+        )
 
         attributes = result["attributes"]
         for i in range(0, len(attributes), 2):
@@ -672,7 +708,9 @@ class Element:
         try:
             node_id = await self._get_node_id()
             params: "GetBoxModelParameters" = {"nodeId": node_id}
-            result = await self._client.send.DOM.getBoxModel(params, session_id=self._session_id)
+            result = await self._client.send.DOM.getBoxModel(
+                params, session_id=self._session_id
+            )
 
             if "model" not in result:
                 return None
@@ -727,7 +765,9 @@ class Element:
             params["quality"] = quality
 
         # Take screenshot
-        result = await self._client.send.Page.captureScreenshot(params, session_id=self._session_id)
+        result = await self._client.send.Page.captureScreenshot(
+            params, session_id=self._session_id
+        )
 
         return result["data"]
 
@@ -761,12 +801,17 @@ class Element:
         # Get remote object ID for this element
         object_id = await self._get_remote_object_id()
         if not object_id:
-            raise RuntimeError("Element has no remote object ID (element may be detached from DOM)")
+            raise RuntimeError(
+                "Element has no remote object ID (element may be detached from DOM)"
+            )
 
         # Validate arrow function format (allow async prefix)
         page_function = page_function.strip()
         # Check for arrow function with optional async prefix
-        if not ("=>" in page_function and (page_function.startswith("(") or page_function.startswith("async"))):
+        if not (
+            "=>" in page_function
+            and (page_function.startswith("(") or page_function.startswith("async"))
+        ):
             raise ValueError(
                 f"JavaScript code must start with (...args) => or async (...args) => format. Got: {page_function[:50]}..."
             )
@@ -798,7 +843,9 @@ class Element:
 
         # If body doesn't start with {, it's an expression that needs implicit return
         if not body.startswith("{"):
-            function_declaration = f"{async_prefix}function({params_str}) {{ return {body}; }}"
+            function_declaration = (
+                f"{async_prefix}function({params_str}) {{ return {body}; }}"
+            )
         else:
             # Body already has braces, use as-is
             function_declaration = f"{async_prefix}function({params_str}) {body}"
@@ -832,7 +879,9 @@ class Element:
 
         # Handle exceptions
         if "exceptionDetails" in result:
-            raise RuntimeError(f'JavaScript evaluation failed: {result["exceptionDetails"]}')
+            raise RuntimeError(
+                f'JavaScript evaluation failed: {result["exceptionDetails"]}'
+            )
 
         # Extract and return value
         value = result.get("result", {}).get("value")
@@ -847,7 +896,9 @@ class Element:
             import json
 
             try:
-                return json.dumps(value) if isinstance(value, (dict, list)) else str(value)
+                return (
+                    json.dumps(value) if isinstance(value, (dict, list)) else str(value)
+                )
             except (TypeError, ValueError):
                 return str(value)
 
@@ -969,9 +1020,15 @@ class Element:
             return f"Digit{char}"
         else:
             # Fallback for unknown characters
-            return f"Key{char.upper()}" if char.isascii() and char.isalpha() else "Unidentified"
+            return (
+                f"Key{char.upper()}"
+                if char.isascii() and char.isalpha()
+                else "Unidentified"
+            )
 
-    async def _clear_text_field(self, object_id: str, cdp_client, session_id: str) -> bool:
+    async def _clear_text_field(
+        self, object_id: str, cdp_client, session_id: str
+    ) -> bool:
         """Clear text field using multiple strategies, starting with the most reliable."""
         try:
             # Strategy 1: Direct JavaScript value setting (most reliable for modern web apps)
@@ -1018,7 +1075,9 @@ class Element:
                 logger.debug("Text field cleared successfully using JavaScript")
                 return True
             else:
-                logger.debug(f'JavaScript clear partially failed, field still contains: "{current_value}"')
+                logger.debug(
+                    f'JavaScript clear partially failed, field still contains: "{current_value}"'
+                )
 
         except Exception as e:
             logger.debug(f"JavaScript clear failed: {e}")
@@ -1104,7 +1163,9 @@ class Element:
         try:
             # Strategy 1: CDP focus (most reliable)
             logger.debug("Focusing element using CDP focus")
-            await cdp_client.send.DOM.focus(params={"backendNodeId": backend_node_id}, session_id=session_id)
+            await cdp_client.send.DOM.focus(
+                params={"backendNodeId": backend_node_id}, session_id=session_id
+            )
             logger.debug("Element focused successfully using CDP focus")
             return True
         except Exception as e:
@@ -1128,7 +1189,9 @@ class Element:
         try:
             # Strategy 3: Click to focus (last resort)
             if input_coordinates:
-                logger.debug(f"Focusing element by clicking at coordinates: {input_coordinates}")
+                logger.debug(
+                    f"Focusing element by clicking at coordinates: {input_coordinates}"
+                )
                 center_x = input_coordinates["input_x"]
                 center_y = input_coordinates["input_y"]
 
@@ -1166,7 +1229,9 @@ class Element:
         try:
             # Get basic node information
             node_id = await self._get_node_id()
-            describe_result = await self._client.send.DOM.describeNode({"nodeId": node_id}, session_id=self._session_id)
+            describe_result = await self._client.send.DOM.describeNode(
+                {"nodeId": node_id}, session_id=self._session_id
+            )
 
             node_info = describe_result["node"]
 

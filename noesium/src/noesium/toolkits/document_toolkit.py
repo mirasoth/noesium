@@ -29,9 +29,15 @@ logger = get_logger(__name__)
 try:
     # Suppress SWIG deprecation warnings from PyMuPDF
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*SwigPyPacked.*")
-        warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*SwigPyObject.*")
-        warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*swigvarlink.*")
+        warnings.filterwarnings(
+            "ignore", category=DeprecationWarning, message=".*SwigPyPacked.*"
+        )
+        warnings.filterwarnings(
+            "ignore", category=DeprecationWarning, message=".*SwigPyObject.*"
+        )
+        warnings.filterwarnings(
+            "ignore", category=DeprecationWarning, message=".*swigvarlink.*"
+        )
         import fitz  # PyMuPDF
 
     PYMUPDF_AVAILABLE = True
@@ -89,9 +95,15 @@ class DocumentToolkit(AsyncBaseToolkit):
         # Configuration
         self.parser_type = self.config.config.get("parser", "pymupdf")
         self.text_limit = self.config.config.get("text_limit", 100000)
-        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir(TOOLKIT_DOCUMENT, "cache")))
+        self.cache_dir = Path(
+            self.config.config.get(
+                "cache_dir", get_toolkit_tmp_dir(TOOLKIT_DOCUMENT, "cache")
+            )
+        )
         self.download_dir = Path(
-            self.config.config.get("download_dir", get_toolkit_tmp_dir(TOOLKIT_DOCUMENT, "downloads"))
+            self.config.config.get(
+                "download_dir", get_toolkit_tmp_dir(TOOLKIT_DOCUMENT, "downloads")
+            )
         )
 
         # Create directories
@@ -122,7 +134,9 @@ class DocumentToolkit(AsyncBaseToolkit):
                 self.parser = PyMuPDFParser(self.config.config)
                 self.logger.info("PyMuPDF parser initialized")
             else:
-                self.logger.error("PyMuPDF not available, install with: pip install PyMuPDF")
+                self.logger.error(
+                    "PyMuPDF not available, install with: pip install PyMuPDF"
+                )
                 self.parser = None
         else:
             self.logger.error(f"Unknown parser type: {self.parser_type}")
@@ -248,14 +262,18 @@ class DocumentToolkit(AsyncBaseToolkit):
             with open(cache_file, "w", encoding="utf-8") as f:
                 f.write(content)
 
-            self.logger.info(f"Document parsed successfully ({len(content)} characters)")
+            self.logger.info(
+                f"Document parsed successfully ({len(content)} characters)"
+            )
             return content
 
         except Exception as e:
             self.logger.error(f"Document parsing failed: {e}")
             raise
 
-    async def document_qa(self, document_path: str, question: Optional[str] = None) -> str:
+    async def document_qa(
+        self, document_path: str, question: Optional[str] = None
+    ) -> str:
         """
         Analyze a document and answer questions about its content.
 

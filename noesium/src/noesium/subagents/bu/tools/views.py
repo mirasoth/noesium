@@ -24,7 +24,9 @@ class ClickElementAction(BaseModel):
 
 
 class InputTextAction(BaseModel):
-    index: int = Field(ge=0, description="index of the element to input text into, 0 is the page")
+    index: int = Field(
+        ge=0, description="index of the element to input text into, 0 is the page"
+    )
     text: str
     clear_existing: bool = Field(
         default=True,
@@ -55,13 +57,19 @@ class SwitchTabAction(BaseModel):
 
 
 class CloseTabAction(BaseModel):
-    tab_id: str = Field(min_length=4, max_length=4, description="4 character Tab ID")  # last 4 chars of TargetID
+    tab_id: str = Field(
+        min_length=4, max_length=4, description="4 character Tab ID"
+    )  # last 4 chars of TargetID
 
 
 class ScrollAction(BaseModel):
     down: bool  # True to scroll down, False to scroll up
-    num_pages: float  # Number of pages to scroll (0.5 = half page, 1.0 = one page, etc.)
-    frame_element_index: int | None = None  # Optional element index to find scroll container for
+    num_pages: (
+        float  # Number of pages to scroll (0.5 = half page, 1.0 = one page, etc.)
+    )
+    frame_element_index: int | None = (
+        None  # Optional element index to find scroll container for
+    )
 
 
 class SendKeysAction(BaseModel):
@@ -88,9 +96,13 @@ class NoParamsAction(BaseModel):
 
 
 class GetDropdownOptionsAction(BaseModel):
-    index: int = Field(ge=1, description="index of the dropdown element to get the option values for")
+    index: int = Field(
+        ge=1, description="index of the dropdown element to get the option values for"
+    )
 
 
 class SelectDropdownOptionAction(BaseModel):
-    index: int = Field(ge=1, description="index of the dropdown element to select an option for")
+    index: int = Field(
+        ge=1, description="index of the dropdown element to select an option for"
+    )
     text: str = Field(description="the text or exact value of the option to select")

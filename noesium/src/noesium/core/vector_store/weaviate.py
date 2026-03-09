@@ -43,7 +43,9 @@ class WeaviateVectorStore(BaseVectorStore):
         super().__init__(embedding_model_dims)
 
         if "localhost" in cluster_url:
-            self.client = weaviate.connect_to_local(host="localhost", port=8080, headers=additional_headers)
+            self.client = weaviate.connect_to_local(
+                host="localhost", port=8080, headers=additional_headers
+            )
         else:
             self.client = weaviate.connect_to_weaviate_cloud(
                 cluster_url=cluster_url,
@@ -76,14 +78,24 @@ class WeaviateVectorStore(BaseVectorStore):
             values.append(value)
 
         ids, distances, metadatas = values
-        max_length = max(len(v) for v in values if isinstance(v, list) and v is not None)
+        max_length = max(
+            len(v) for v in values if isinstance(v, list) and v is not None
+        )
 
         result = []
         for i in range(max_length):
             entry = OutputData(
                 id=ids[i] if isinstance(ids, list) and ids and i < len(ids) else None,
-                score=(distances[i] if isinstance(distances, list) and distances and i < len(distances) else None),
-                payload=(metadatas[i] if isinstance(metadatas, list) and metadatas and i < len(metadatas) else None),
+                score=(
+                    distances[i]
+                    if isinstance(distances, list) and distances and i < len(distances)
+                    else None
+                ),
+                payload=(
+                    metadatas[i]
+                    if isinstance(metadatas, list) and metadatas and i < len(metadatas)
+                    else None
+                ),
             )
             result.append(entry)
 
@@ -98,7 +110,9 @@ class WeaviateVectorStore(BaseVectorStore):
             distance (str, optional): Distance metric for vector similarity. Defaults to "cosine".
         """
         if self.client.collections.exists(self.weaviate_collection_name):
-            logging.debug(f"Collection {self.collection_name} already exists. Skipping creation.")
+            logging.debug(
+                f"Collection {self.collection_name} already exists. Skipping creation."
+            )
             return
 
         properties = [
@@ -146,7 +160,9 @@ class WeaviateVectorStore(BaseVectorStore):
         # Validate vector dimensions
         self._validate_vector_dimensions(vectors)
 
-        logger.info(f"Inserting {len(vectors)} vectors into collection {self.collection_name}")
+        logger.info(
+            f"Inserting {len(vectors)} vectors into collection {self.collection_name}"
+        )
         with self.client.batch.fixed_size(batch_size=100) as batch:
             for idx, vector in enumerate(vectors):
                 object_id = ids[idx] if ids and idx < len(ids) else str(uuid.uuid4())
@@ -175,7 +191,9 @@ class WeaviateVectorStore(BaseVectorStore):
         """
         Search for similar vectors.
         """
-        logger.info(f"Searching in collection {self.weaviate_collection_name} with query: {query}")
+        logger.info(
+            f"Searching in collection {self.weaviate_collection_name} with query: {query}"
+        )
         logger.info(f"Vector dimensions: {len(vectors)}, limit: {limit}")
 
         collection = self.client.collections.get(str(self.weaviate_collection_name))
@@ -184,7 +202,9 @@ class WeaviateVectorStore(BaseVectorStore):
             for key, value in filters.items():
                 if value:
                     filter_conditions.append(Filter.by_property(key).equal(value))
-        combined_filter = Filter.all_of(filter_conditions) if filter_conditions else None
+        combined_filter = (
+            Filter.all_of(filter_conditions) if filter_conditions else None
+        )
 
         try:
             # Try vector similarity search first
@@ -199,7 +219,9 @@ class WeaviateVectorStore(BaseVectorStore):
 
             # If no results from vector search, fall back to filtered object retrieval
             if len(response.objects) == 0:
-                response = collection.query.fetch_objects(limit=limit, filters=combined_filter)
+                response = collection.query.fetch_objects(
+                    limit=limit, filters=combined_filter
+                )
 
         except Exception as e:
             logger.error(f"Search failed with error: {e}")
@@ -213,7 +235,9 @@ class WeaviateVectorStore(BaseVectorStore):
                 OutputData(
                     id=str(obj.uuid),
                     score=(
-                        1 if obj.metadata.distance is None else 1 - obj.metadata.distance
+                        1
+                        if obj.metadata.distance is None
+                        else 1 - obj.metadata.distance
                     ),  # Convert distance to score
                     payload=payload,
                 )
@@ -256,7 +280,9 @@ class WeaviateVectorStore(BaseVectorStore):
                 if "id" in existing_data:
                     del existing_data["id"]
                 existing_payload: Mapping[str, str] = existing_data
-                collection.data.update(uuid=vector_id, properties=existing_payload, vector=vector)
+                collection.data.update(
+                    uuid=vector_id, properties=existing_payload, vector=vector
+                )
 
     def close(self) -> None:
         """
@@ -309,7 +335,9 @@ class WeaviateVectorStore(BaseVectorStore):
             collection_names = list(collections.keys())
         else:
             # Handle case where it returns a list of objects with .name
-            collection_names = [col.name if hasattr(col, "name") else str(col) for col in collections]
+            collection_names = [
+                col.name if hasattr(col, "name") else str(col) for col in collections
+            ]
 
         # Return simple list of collection names for test compatibility
         # Convert back to original naming convention (uncapitalized)
@@ -343,7 +371,9 @@ class WeaviateVectorStore(BaseVectorStore):
             logger.error(f"Error getting collection info: {e}")
             return {"name": self.collection_name, "error": str(e)}
 
-    def list(self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None) -> List[OutputData]:
+    def list(
+        self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None
+    ) -> List[OutputData]:
         """
         List all vectors in a collection.
         """
@@ -353,7 +383,9 @@ class WeaviateVectorStore(BaseVectorStore):
             for key, value in filters.items():
                 if value:
                     filter_conditions.append(Filter.by_property(key).equal(value))
-        combined_filter = Filter.all_of(filter_conditions) if filter_conditions else None
+        combined_filter = (
+            Filter.all_of(filter_conditions) if filter_conditions else None
+        )
 
         try:
             # Use fetch_objects with filters when filters are applied
@@ -377,7 +409,9 @@ class WeaviateVectorStore(BaseVectorStore):
         for obj in response.objects:
             payload = obj.properties.copy()
             payload["id"] = str(obj.uuid).split("'")[0]
-            results.append(OutputData(id=str(obj.uuid).split("'")[0], score=1.0, payload=payload))
+            results.append(
+                OutputData(id=str(obj.uuid).split("'")[0], score=1.0, payload=payload)
+            )
         return results
 
     def reset(self) -> None:

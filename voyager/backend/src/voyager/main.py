@@ -38,7 +38,9 @@ async def lifespan(app: FastAPI):
     state_manager = StateManager(config.data_root)
     git_client = GitClient(config.workspace_root)
     session_manager = SessionManager(state_manager, config)
-    task_orchestrator = TaskOrchestrator(state_manager, session_manager, git_client, config)
+    task_orchestrator = TaskOrchestrator(
+        state_manager, session_manager, git_client, config
+    )
 
     # Inject dependencies into API modules
     repositories.state_manager = state_manager
@@ -90,7 +92,9 @@ socket_app = socketio.ASGIApp(sio, app)
 
 def main() -> None:
     """CLI entry point for `voyager`."""
-    parser = argparse.ArgumentParser(description="Voyager - Personal coding assistant webserver")
+    parser = argparse.ArgumentParser(
+        description="Voyager - Personal coding assistant webserver"
+    )
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")

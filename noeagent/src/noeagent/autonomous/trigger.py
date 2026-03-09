@@ -34,7 +34,9 @@ class Trigger(BaseModel):
     """
 
     id: str = Field(description="Unique trigger identifier")
-    event_type: str = Field(description="Event type to match (e.g., 'github.issue.created')")
+    event_type: str = Field(
+        description="Event type to match (e.g., 'github.issue.created')"
+    )
     condition: Callable[[AutonomousEvent], bool] | None = Field(
         default=None,
         description="Optional condition function for filtering events",
@@ -44,7 +46,9 @@ class Trigger(BaseModel):
         default="Process event",
         description="Goal description template. Use {field} to substitute from event.payload",
     )
-    priority: int = Field(ge=0, le=100, default=50, description="Priority for created goals")
+    priority: int = Field(
+        ge=0, le=100, default=50, description="Priority for created goals"
+    )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -101,7 +105,9 @@ class TriggerRule(BaseModel):
     priority: int = 50
     condition_type: str | None = None  # e.g., "payload_equals", "payload_contains"
 
-    def to_trigger(self, condition_func: Callable[[AutonomousEvent], bool] | None = None) -> Trigger:
+    def to_trigger(
+        self, condition_func: Callable[[AutonomousEvent], bool] | None = None
+    ) -> Trigger:
         """Convert to Trigger with condition function.
 
         Args:

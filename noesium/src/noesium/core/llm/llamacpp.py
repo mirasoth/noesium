@@ -55,10 +55,14 @@ def _download_default_model() -> str:
         Path to the downloaded model file
     """
     if not HUGGINGFACE_HUB_AVAILABLE:
-        raise ImportError("huggingface-hub package is not installed. Install it with: pip install 'noesium[local-llm]'")
+        raise ImportError(
+            "huggingface-hub package is not installed. Install it with: pip install 'noesium[local-llm]'"
+        )
 
     try:
-        logger.info(f"No model path provided, downloading default model: {DEFAULT_MODEL_REPO}")
+        logger.info(
+            f"No model path provided, downloading default model: {DEFAULT_MODEL_REPO}"
+        )
 
         # Download the model repository to local cache
         local_dir = snapshot_download(DEFAULT_MODEL_REPO)
@@ -73,7 +77,9 @@ def _download_default_model() -> str:
                 model_path = os.path.join(local_dir, gguf_files[0])
                 logger.info(f"Using found model file: {gguf_files[0]}")
             else:
-                raise FileNotFoundError(f"No .gguf files found in downloaded model directory: {local_dir}")
+                raise FileNotFoundError(
+                    f"No .gguf files found in downloaded model directory: {local_dir}"
+                )
 
         logger.info(f"Model downloaded successfully to: {model_path}")
         return model_path
@@ -135,7 +141,9 @@ class LLMClient(BaseLLMClient):
         # Get model path from parameter or environment, or download default model
         self.model_path = model_path or os.getenv("LLAMACPP_MODEL_PATH")
         if not self.model_path:
-            logger.info("No model path provided, attempting to download default model...")
+            logger.info(
+                "No model path provided, attempting to download default model..."
+            )
             self.model_path = _download_default_model()
 
         if not os.path.exists(self.model_path):
@@ -159,8 +167,12 @@ class LLMClient(BaseLLMClient):
         # Model configurations
         model_filename = Path(self.model_path).stem
         self.chat_model = chat_model or os.getenv("LLAMACPP_CHAT_MODEL", model_filename)
-        self.vision_model = vision_model or os.getenv("LLAMACPP_VISION_MODEL", model_filename)
-        self.embed_model = embed_model or os.getenv("LLAMACPP_EMBED_MODEL", model_filename)
+        self.vision_model = vision_model or os.getenv(
+            "LLAMACPP_VISION_MODEL", model_filename
+        )
+        self.embed_model = embed_model or os.getenv(
+            "LLAMACPP_EMBED_MODEL", model_filename
+        )
 
         # Set instructor flag
         self.instructor_enabled = instructor
@@ -190,7 +202,9 @@ class LLMClient(BaseLLMClient):
             Generated text response
         """
         if stream:
-            logger.warning("Streaming is not supported in llamacpp provider, falling back to non-streaming")
+            logger.warning(
+                "Streaming is not supported in llamacpp provider, falling back to non-streaming"
+            )
 
         try:
             # Convert messages to prompt format
@@ -251,7 +265,9 @@ class LLMClient(BaseLLMClient):
             Structured response as the specified model type
         """
         if not self.instructor_enabled:
-            raise ValueError("Instructor is not enabled. Initialize LLMClient with instructor=True")
+            raise ValueError(
+                "Instructor is not enabled. Initialize LLMClient with instructor=True"
+            )
 
         # Add JSON schema instruction to the last message
         schema = response_model.model_json_schema()
@@ -295,19 +311,25 @@ class LLMClient(BaseLLMClient):
                     result = response_model(**parsed_json)
 
                     # Log token usage for structured completion
-                    prompt_text = "\n".join([msg.get("content", "") for msg in modified_messages])
+                    prompt_text = "\n".join(
+                        [msg.get("content", "") for msg in modified_messages]
+                    )
                     self._log_token_usage(prompt_text, str(result), "structured")
 
                     return result
 
                 except (json.JSONDecodeError, ValueError) as e:
-                    logger.warning(f"Failed to parse JSON response (attempt {i+1}): {e}")
+                    logger.warning(
+                        f"Failed to parse JSON response (attempt {i+1}): {e}"
+                    )
                     last_err = e
                     if i < attempts - 1:
                         time.sleep(backoff * (2**i))
                         continue
                     else:
-                        raise ValueError(f"Failed to get valid JSON after {attempts} attempts: {last_err}")
+                        raise ValueError(
+                            f"Failed to get valid JSON after {attempts} attempts: {last_err}"
+                        )
 
             except Exception as e:
                 logger.error(f"Error in structured completion attempt {i+1}: {e}")
@@ -317,7 +339,9 @@ class LLMClient(BaseLLMClient):
                 else:
                     raise
 
-        raise ValueError(f"Failed to complete structured generation after {attempts} attempts: {last_err}")
+        raise ValueError(
+            f"Failed to complete structured generation after {attempts} attempts: {last_err}"
+        )
 
     def understand_image(
         self,
@@ -343,7 +367,9 @@ class LLMClient(BaseLLMClient):
         Raises:
             NotImplementedError: Vision capabilities are not supported by llamacpp
         """
-        raise NotImplementedError("Vision capabilities are not supported by the llamacpp provider")
+        raise NotImplementedError(
+            "Vision capabilities are not supported by the llamacpp provider"
+        )
 
     def understand_image_from_url(
         self,
@@ -369,7 +395,9 @@ class LLMClient(BaseLLMClient):
         Raises:
             NotImplementedError: Vision capabilities are not supported by llamacpp
         """
-        raise NotImplementedError("Vision capabilities are not supported by the llamacpp provider")
+        raise NotImplementedError(
+            "Vision capabilities are not supported by the llamacpp provider"
+        )
 
     def _format_messages_as_prompt(self, messages: List[Dict[str, str]]) -> str:
         """
@@ -398,7 +426,9 @@ class LLMClient(BaseLLMClient):
         prompt_parts.append("Assistant:")
         return "\n\n".join(prompt_parts)
 
-    def _log_token_usage(self, prompt: str, completion: str, call_type: str = "completion"):
+    def _log_token_usage(
+        self, prompt: str, completion: str, call_type: str = "completion"
+    ):
         """Estimate and record token usage."""
         try:
             usage = estimate_token_usage(prompt, completion, self.chat_model, call_type)

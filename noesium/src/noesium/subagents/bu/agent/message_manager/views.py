@@ -26,7 +26,9 @@ class HistoryItem(BaseModel):
     def model_post_init(self, __context) -> None:
         """Validate that error and system_message are not both provided"""
         if self.error is not None and self.system_message is not None:
-            raise ValueError("Cannot have both error and system_message at the same time")
+            raise ValueError(
+                "Cannot have both error and system_message at the same time"
+            )
 
     def to_string(self) -> str:
         """Get string representation of the history item"""
@@ -89,7 +91,9 @@ class MessageManagerState(BaseModel):
     history: MessageHistory = Field(default_factory=MessageHistory)
     tool_id: int = 1
     agent_history_items: list[HistoryItem] = Field(
-        default_factory=lambda: [HistoryItem(step_number=0, system_message="Agent initialized")]
+        default_factory=lambda: [
+            HistoryItem(step_number=0, system_message="Agent initialized")
+        ]
     )
     read_state_description: str = ""
     read_state_images: list[dict[str, Any]] = Field(default_factory=list)

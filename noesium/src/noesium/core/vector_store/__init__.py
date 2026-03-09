@@ -76,4 +76,6 @@ def get_vector_store(
             **kwargs,
         )
     else:
-        raise ValueError(f"Unsupported provider: {provider}. Supported providers: weaviate, pgvector")
+        raise ValueError(
+            f"Unsupported provider: {provider}. Supported providers: weaviate, pgvector"
+        )

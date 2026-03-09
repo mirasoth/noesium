@@ -180,7 +180,11 @@ def filter_dynamic_classes(class_str: str | None) -> str:
     if not class_str:
         return ""
     classes = class_str.split()
-    stable = [c for c in classes if not any(pattern in c.lower() for pattern in DYNAMIC_CLASS_PATTERNS)]
+    stable = [
+        c
+        for c in classes
+        if not any(pattern in c.lower() for pattern in DYNAMIC_CLASS_PATTERNS)
+    ]
     return " ".join(sorted(stable))
 
 
@@ -229,7 +233,9 @@ class SimplifiedNode:
     ignored_by_paint_order: bool = False  # More info in dom/serializer/paint_order.py
     excluded_by_parent: bool = False  # New field for bbox filtering
     is_shadow_host: bool = False  # New field for shadow DOM hosts
-    is_compound_component: bool = False  # True for virtual components of compound controls
+    is_compound_component: bool = (
+        False  # True for virtual components of compound controls
+    )
 
     def _clean_original_node_json(self, node_json: dict) -> dict:
         """Recursively remove children_nodes and shadow_roots from original_node JSON."""
@@ -241,7 +247,9 @@ class SimplifiedNode:
 
         # Clean nested content_document if it exists
         if node_json.get("content_document"):
-            node_json["content_document"] = self._clean_original_node_json(node_json["content_document"])
+            node_json["content_document"] = self._clean_original_node_json(
+                node_json["content_document"]
+            )
 
         return node_json
 
@@ -504,7 +512,10 @@ class EnhancedDOMTreeNode:
                 continue
 
             # stop ONLY if we hit iframe
-            if current_element.parent_node and current_element.parent_node.node_name.lower() == "iframe":
+            if (
+                current_element.parent_node
+                and current_element.parent_node.node_name.lower() == "iframe"
+            ):
                 break
 
             position = self._get_element_position(current_element)
@@ -526,7 +537,8 @@ class EnhancedDOMTreeNode:
         same_tag_siblings = [
             child
             for child in element.parent_node.children_nodes
-            if child.node_type == NodeType.ELEMENT_NODE and child.node_name.lower() == element.node_name.lower()
+            if child.node_type == NodeType.ELEMENT_NODE
+            and child.node_name.lower() == element.node_name.lower()
         ]
 
         if len(same_tag_siblings) <= 1:
@@ -553,13 +565,21 @@ class EnhancedDOMTreeNode:
             "session_id": self.session_id,
             "target_id": self.target_id,
             "frame_id": self.frame_id,
-            "content_document": (self.content_document.__json__() if self.content_document else None),
+            "content_document": (
+                self.content_document.__json__() if self.content_document else None
+            ),
             "shadow_root_type": self.shadow_root_type,
             "ax_node": asdict(self.ax_node) if self.ax_node else None,
             "snapshot_node": asdict(self.snapshot_node) if self.snapshot_node else None,
             # these two in the end, so it's easier to read json
-            "shadow_roots": ([r.__json__() for r in self.shadow_roots] if self.shadow_roots else []),
-            "children_nodes": ([c.__json__() for c in self.children_nodes] if self.children_nodes else []),
+            "shadow_roots": (
+                [r.__json__() for r in self.shadow_roots] if self.shadow_roots else []
+            ),
+            "children_nodes": (
+                [c.__json__() for c in self.children_nodes]
+                if self.children_nodes
+                else []
+            ),
         }
 
     def get_all_children_text(self, max_depth: int = -1) -> str:
@@ -644,7 +664,9 @@ class EnhancedDOMTreeNode:
 
         if scroll_rects and client_rects:
             # Content is larger than visible area = scrollable
-            has_vertical_scroll = scroll_rects.height > client_rects.height + 1  # +1 for rounding
+            has_vertical_scroll = (
+                scroll_rects.height > client_rects.height + 1
+            )  # +1 for rounding
             has_horizontal_scroll = scroll_rects.width > client_rects.width + 1
 
             if has_vertical_scroll or has_horizontal_scroll:
@@ -704,7 +726,9 @@ class EnhancedDOMTreeNode:
             return True
 
         # Don't show if parent is already scrollable (avoid nested spam)
-        if self.parent_node and (self.parent_node.is_scrollable or self.parent_node.is_actually_scrollable):
+        if self.parent_node and (
+            self.parent_node.is_scrollable or self.parent_node.is_actually_scrollable
+        ):
             return False
 
         return True
@@ -764,11 +788,15 @@ class EnhancedDOMTreeNode:
 
         if scrollable_height > visible_height:
             max_scroll_top = scrollable_height - visible_height
-            vertical_scroll_percentage = (scroll_top / max_scroll_top) * 100 if max_scroll_top > 0 else 0
+            vertical_scroll_percentage = (
+                (scroll_top / max_scroll_top) * 100 if max_scroll_top > 0 else 0
+            )
 
         if scrollable_width > visible_width:
             max_scroll_left = scrollable_width - visible_width
-            horizontal_scroll_percentage = (scroll_left / max_scroll_left) * 100 if max_scroll_left > 0 else 0
+            horizontal_scroll_percentage = (
+                (scroll_left / max_scroll_left) * 100 if max_scroll_left > 0 else 0
+            )
 
         # Calculate pages equivalent (using visible height as page unit)
         pages_above = content_above / visible_height if visible_height > 0 else 0
@@ -825,11 +853,15 @@ class EnhancedDOMTreeNode:
 
         # Vertical scroll info (concise format)
         if scroll_info["scrollable_height"] > scroll_info["visible_height"]:
-            parts.append(f'{scroll_info["pages_above"]:.1f} pages above, {scroll_info["pages_below"]:.1f} pages below')
+            parts.append(
+                f'{scroll_info["pages_above"]:.1f} pages above, {scroll_info["pages_below"]:.1f} pages below'
+            )
 
         # Horizontal scroll info (concise format)
         if scroll_info["scrollable_width"] > scroll_info["visible_width"]:
-            parts.append(f'horizontal {scroll_info["horizontal_scroll_percentage"]:.0f}%')
+            parts.append(
+                f'horizontal {scroll_info["horizontal_scroll_percentage"]:.0f}%'
+            )
 
         return " ".join(parts)
 
@@ -857,7 +889,9 @@ class EnhancedDOMTreeNode:
                     continue
             filtered_attrs[k] = v
 
-        attributes_string = "".join(f"{k}={v}" for k, v in sorted(filtered_attrs.items()))
+        attributes_string = "".join(
+            f"{k}={v}" for k, v in sorted(filtered_attrs.items())
+        )
 
         ax_name = ""
         if self.ax_node and self.ax_node.name:
@@ -882,7 +916,10 @@ class EnhancedDOMTreeNode:
         parent_branch_path_string = "/".join(parent_branch_path)
 
         attributes_string = "".join(
-            f"{k}={v}" for k, v in sorted((k, v) for k, v in self.attributes.items() if k in STATIC_ATTRIBUTES)
+            f"{k}={v}"
+            for k, v in sorted(
+                (k, v) for k, v in self.attributes.items() if k in STATIC_ATTRIBUTES
+            )
         )
 
         # Include accessibility name (ax_name) if available - this helps distinguish
@@ -1033,7 +1070,9 @@ class DOMInteractedElement:
         }
 
     @classmethod
-    def load_from_enhanced_dom_tree(cls, enhanced_dom_tree: EnhancedDOMTreeNode) -> "DOMInteractedElement":
+    def load_from_enhanced_dom_tree(
+        cls, enhanced_dom_tree: EnhancedDOMTreeNode
+    ) -> "DOMInteractedElement":
         # Extract accessibility name if available
         ax_name = None
         if enhanced_dom_tree.ax_node and enhanced_dom_tree.ax_node.name:
@@ -1047,7 +1086,11 @@ class DOMInteractedElement:
             node_value=enhanced_dom_tree.node_value,
             node_name=enhanced_dom_tree.node_name,
             attributes=enhanced_dom_tree.attributes,
-            bounds=(enhanced_dom_tree.snapshot_node.bounds if enhanced_dom_tree.snapshot_node else None),
+            bounds=(
+                enhanced_dom_tree.snapshot_node.bounds
+                if enhanced_dom_tree.snapshot_node
+                else None
+            ),
             x_path=enhanced_dom_tree.xpath,
             element_hash=hash(enhanced_dom_tree),
             stable_hash=enhanced_dom_tree.compute_stable_hash(),  # Compute from source for single source of truth

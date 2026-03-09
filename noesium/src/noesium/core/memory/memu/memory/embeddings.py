@@ -30,7 +30,9 @@ class EmbeddingClient:
             llm_client: The LLM client with embed/embed_batch capabilities
         """
         self.llm_client = llm_client
-        logger.info(f"EmbeddingClient initialized with LLM client: {type(llm_client).__name__}")
+        logger.info(
+            f"EmbeddingClient initialized with LLM client: {type(llm_client).__name__}"
+        )
 
     def embed(self, text: str) -> List[float]:
         """

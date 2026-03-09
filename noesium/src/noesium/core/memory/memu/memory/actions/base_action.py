@@ -83,7 +83,9 @@ class BaseAction(ABC):
             required_params = schema["parameters"].get("required", [])
 
             # Check for missing required parameters
-            missing_params = [param for param in required_params if param not in arguments]
+            missing_params = [
+                param for param in required_params if param not in arguments
+            ]
 
             if missing_params:
                 return {
@@ -240,7 +242,9 @@ class BaseAction(ABC):
         for i, line in enumerate(lines):
             line = line.strip()
             if line:  # Only process non-empty lines
-                memory_id, mentioned_at, clean_content, links = self._extract_timestamped_memory_item(line)
+                memory_id, mentioned_at, clean_content, links = (
+                    self._extract_timestamped_memory_item(line)
+                )
 
                 if clean_content:
                     item = {
@@ -296,7 +300,9 @@ class BaseAction(ABC):
                 content = self._read_memory_content(character_name, category)
                 existing_memory[category] = content if isinstance(content, str) else ""
             except Exception as e:
-                logger.warning(f"Failed to load existing {category} for {character_name}: {e}")
+                logger.warning(
+                    f"Failed to load existing {category} for {character_name}: {e}"
+                )
                 existing_memory[category] = ""
 
         return existing_memory
@@ -310,7 +316,9 @@ class BaseAction(ABC):
             logger.warning(f"Failed to read {category} for {character_name}: {e}")
             return ""
 
-    def _save_memory_content(self, character_name: str, category: str, content: str) -> bool:
+    def _save_memory_content(
+        self, character_name: str, category: str, content: str
+    ) -> bool:
         """Save memory content to storage"""
         try:
             # agent_id and user_id are managed inside storage_manager
@@ -319,7 +327,9 @@ class BaseAction(ABC):
             logger.error(f"Failed to save {category} for {character_name}: {e}")
             return False
 
-    def _append_memory_content(self, character_name: str, category: str, content: str) -> bool:
+    def _append_memory_content(
+        self, character_name: str, category: str, content: str
+    ) -> bool:
         """Append memory content to storage"""
         try:
             # agent_id and user_id are managed inside storage_manager

@@ -125,7 +125,9 @@ class MessageManager:
         self.include_recent_events = include_recent_events
         self.sample_images = sample_images
 
-        assert max_history_items is None or max_history_items > 5, "max_history_items must be None or greater than 5"
+        assert (
+            max_history_items is None or max_history_items > 5
+        ), "max_history_items must be None or greater than 5"
 
         # Store settings as direct attributes instead of in a settings object
         self.include_attributes = include_attributes or []
@@ -148,7 +150,9 @@ class MessageManager:
 
         if self.max_history_items is None:
             # Include all items but with character limit as safety
-            full_history = "\n".join(item.to_string() for item in self.state.agent_history_items)
+            full_history = "\n".join(
+                item.to_string() for item in self.state.agent_history_items
+            )
             if len(full_history) > MAX_HISTORY_CHARS:
                 # Truncate with ellipsis
                 truncated = full_history[:MAX_HISTORY_CHARS]
@@ -166,7 +170,9 @@ class MessageManager:
 
         # If we have fewer items than the limit, just return all items
         if total_items <= self.max_history_items:
-            full_history = "\n".join(item.to_string() for item in self.state.agent_history_items)
+            full_history = "\n".join(
+                item.to_string() for item in self.state.agent_history_items
+            )
             if len(full_history) > MAX_HISTORY_CHARS:
                 # Truncate with ellipsis
                 truncated = full_history[:MAX_HISTORY_CHARS]
@@ -187,11 +193,18 @@ class MessageManager:
         recent_items_count = self.max_history_items - 1  # -1 for first item
 
         items_to_include = [
-            self.state.agent_history_items[0].to_string(),  # Keep first item (initialization)
+            self.state.agent_history_items[
+                0
+            ].to_string(),  # Keep first item (initialization)
             f"<sys>[... {omitted_count} previous steps omitted...]</sys>",
         ]
         # Add most recent items
-        items_to_include.extend([item.to_string() for item in self.state.agent_history_items[-recent_items_count:]])
+        items_to_include.extend(
+            [
+                item.to_string()
+                for item in self.state.agent_history_items[-recent_items_count:]
+            ]
+        )
 
         full_history = "\n".join(items_to_include)
         if len(full_history) > MAX_HISTORY_CHARS:
@@ -201,13 +214,17 @@ class MessageManager:
             if last_step_end > 0:
                 truncated = truncated[: last_step_end + len("</step>")]
             full_history = truncated + "\n... [History truncated at 50k characters]"
-            logger.warning(f"Truncated agent_history_description from {len(full_history)} to {MAX_HISTORY_CHARS} chars")
+            logger.warning(
+                f"Truncated agent_history_description from {len(full_history)} to {MAX_HISTORY_CHARS} chars"
+            )
 
         return compacted_prefix + full_history
 
     def add_new_task(self, new_task: str) -> None:
         self.task = new_task
-        task_update_item = HistoryItem(system_message=f"User updated <user_request> to: {new_task}")
+        task_update_item = HistoryItem(
+            system_message=f"User updated <user_request> to: {new_task}"
+        )
         self.state.agent_history_items.append(task_update_item)
 
     def _update_agent_history_description(
@@ -229,30 +246,48 @@ class MessageManager:
         len(result)
         read_state_idx = 0
         for idx, action_result in enumerate(result):
-            if action_result.include_extracted_content_only_once and action_result.extracted_content:
+            if (
+                action_result.include_extracted_content_only_once
+                and action_result.extracted_content
+            ):
                 self.state.read_state_description += (
                     f"<read_state_{read_state_idx}>\n"
                     f"{action_result.extracted_content}\n"
                     f"</read_state_{read_state_idx}>\n"
                 )
                 read_state_idx += 1
-                logger.debug(f"Added extracted_content to read_state_description: {action_result.extracted_content}")
+                logger.debug(
+                    f"Added extracted_content to read_state_description: {action_result.extracted_content}"
+                )
 
             # Store images for one-time inclusion in the next message
             if action_result.images:
                 self.state.read_state_images.extend(action_result.images)
-                logger.debug(f"Added {len(action_result.images)} image(s) to read_state_images")
+                logger.debug(
+                    f"Added {len(action_result.images)} image(s) to read_state_images"
+                )
 
             if action_result.long_term_memory:
                 action_results += f"{action_result.long_term_memory}\n"
-                logger.debug(f"Added long_term_memory to action_results: {action_result.long_term_memory}")
-            elif action_result.extracted_content and not action_result.include_extracted_content_only_once:
+                logger.debug(
+                    f"Added long_term_memory to action_results: {action_result.long_term_memory}"
+                )
+            elif (
+                action_result.extracted_content
+                and not action_result.include_extracted_content_only_once
+            ):
                 action_results += f"{action_result.extracted_content}\n"
-                logger.debug(f"Added extracted_content to action_results: {action_result.extracted_content}")
+                logger.debug(
+                    f"Added extracted_content to action_results: {action_result.extracted_content}"
+                )
 
             if action_result.error:
                 if len(action_result.error) > 200:
-                    error_text = action_result.error[:100] + "......" + action_result.error[-100:]
+                    error_text = (
+                        action_result.error[:100]
+                        + "......"
+                        + action_result.error[-100:]
+                    )
                 else:
                     error_text = action_result.error
                 action_results += f"{error_text}\n"
@@ -262,11 +297,16 @@ class MessageManager:
         MAX_CONTENT_SIZE = 60000
         if len(self.state.read_state_description) > MAX_CONTENT_SIZE:
             self.state.read_state_description = (
-                self.state.read_state_description[:MAX_CONTENT_SIZE] + "\n... [Content truncated at 60k characters]"
+                self.state.read_state_description[:MAX_CONTENT_SIZE]
+                + "\n... [Content truncated at 60k characters]"
             )
-            logger.debug(f"Truncated read_state_description to {MAX_CONTENT_SIZE} characters")
+            logger.debug(
+                f"Truncated read_state_description to {MAX_CONTENT_SIZE} characters"
+            )
 
-        self.state.read_state_description = self.state.read_state_description.strip("\n")
+        self.state.read_state_description = self.state.read_state_description.strip(
+            "\n"
+        )
 
         if action_results:
             action_results = f"Result\n{action_results}"
@@ -274,7 +314,10 @@ class MessageManager:
 
         # Simple 60k character limit for action_results
         if action_results and len(action_results) > MAX_CONTENT_SIZE:
-            action_results = action_results[:MAX_CONTENT_SIZE] + "\n... [Content truncated at 60k characters]"
+            action_results = (
+                action_results[:MAX_CONTENT_SIZE]
+                + "\n... [Content truncated at 60k characters]"
+            )
             logger.debug(f"Truncated action_results to {MAX_CONTENT_SIZE} characters")
 
         # Build the history item
@@ -283,7 +326,9 @@ class MessageManager:
             if step_number is not None:
                 if step_number == 0 and action_results:
                     # Step 0 with initial action results
-                    history_item = HistoryItem(step_number=step_number, action_results=action_results)
+                    history_item = HistoryItem(
+                        step_number=step_number, action_results=action_results
+                    )
                     self.state.agent_history_items.append(history_item)
                 elif step_number > 0:
                     # Error case for steps > 0
@@ -313,7 +358,9 @@ class MessageManager:
         for key, value in sensitive_data.items():
             if isinstance(value, dict):
                 # New format: {domain: {key: value}}
-                if current_page_url and match_url_with_domain_pattern(current_page_url, key, True):
+                if current_page_url and match_url_with_domain_pattern(
+                    current_page_url, key, True
+                ):
                     placeholders.update(value.keys())
             else:
                 # Old format: {key: value}
@@ -338,7 +385,9 @@ class MessageManager:
         use_vision=True,
         page_filtered_actions: str | None = None,
         sensitive_data=None,
-        available_file_paths: list[str] | None = None,  # Always pass current available_file_paths
+        available_file_paths: (
+            list[str] | None
+        ) = None,  # Always pass current available_file_paths
     ) -> None:
         """Create single state message with all content"""
 
@@ -349,11 +398,15 @@ class MessageManager:
         self._update_agent_history_description(model_output, result, step_info)
 
         # Use the passed sensitive_data parameter, falling back to instance variable
-        effective_sensitive_data = sensitive_data if sensitive_data is not None else self.sensitive_data
+        effective_sensitive_data = (
+            sensitive_data if sensitive_data is not None else self.sensitive_data
+        )
         if effective_sensitive_data is not None:
             # Update instance variable to keep it in sync
             self.sensitive_data = effective_sensitive_data
-            self.sensitive_data_description = self._get_sensitive_data_description(browser_state_summary.url)
+            self.sensitive_data_description = self._get_sensitive_data_description(
+                browser_state_summary.url
+            )
 
         # Use only the current screenshot
         screenshots = []
@@ -429,7 +482,9 @@ class MessageManager:
         self.last_input_messages = self.state.history.get_messages()
         return self.last_input_messages
 
-    def _set_message_with_type(self, message: BaseMessage, message_type: Literal["system", "state"]) -> None:
+    def _set_message_with_type(
+        self, message: BaseMessage, message_type: Literal["system", "state"]
+    ) -> None:
         """Replace a specific state message slot with a new message"""
         # filter out sensitive data from the message
         if self.sensitive_data:
@@ -468,7 +523,9 @@ class MessageManager:
                     for key, val in content.items():
                         if val:  # Skip empty values
                             sensitive_values[key] = val
-                elif content:  # Old format: {key: value} - convert to new format internally
+                elif (
+                    content
+                ):  # Old format: {key: value} - convert to new format internally
                     # We treat this as if it was {'http*://*': {key_or_domain: content}}
                     sensitive_values[key_or_domain] = content
 
@@ -516,12 +573,16 @@ class MessageManager:
 
         # Char floor gate
         history_items = self.state.agent_history_items
-        full_history_text = "\n".join(item.to_string() for item in history_items).strip()
+        full_history_text = "\n".join(
+            item.to_string() for item in history_items
+        ).strip()
         trigger_char_count = settings.trigger_char_count or 40000
         if len(full_history_text) < trigger_char_count:
             return False
 
-        logger.debug(f"Compacting message history (items={len(history_items)}, chars={len(full_history_text)})")
+        logger.debug(
+            f"Compacting message history (items={len(history_items)}, chars={len(full_history_text)})"
+        )
 
         # Build compaction input
         compaction_sections = []
@@ -529,15 +590,21 @@ class MessageManager:
             compaction_sections.append(
                 f"<previous_compacted_memory>\n{self.state.compacted_memory}\n</previous_compacted_memory>"
             )
-        compaction_sections.append(f"<agent_history>\n{full_history_text}\n</agent_history>")
+        compaction_sections.append(
+            f"<agent_history>\n{full_history_text}\n</agent_history>"
+        )
         if settings.include_read_state and self.state.read_state_description:
-            compaction_sections.append(f"<read_state>\n{self.state.read_state_description}\n</read_state>")
+            compaction_sections.append(
+                f"<read_state>\n{self.state.read_state_description}\n</read_state>"
+            )
         compaction_input = "\n\n".join(compaction_sections)
 
         if self.sensitive_data:
             from ...adapters.llm_adapter import UserMessage
 
-            filtered = self._filter_sensitive_data(UserMessage(content=compaction_input))
+            filtered = self._filter_sensitive_data(
+                UserMessage(content=compaction_input)
+            )
             compaction_input = filtered.text
 
         system_prompt = (
@@ -547,7 +614,9 @@ class MessageManager:
             "Return plain text only. Do not include tool calls or JSON."
         )
         if settings.summary_max_chars:
-            system_prompt += f" Keep under {settings.summary_max_chars} characters if possible."
+            system_prompt += (
+                f" Keep under {settings.summary_max_chars} characters if possible."
+            )
 
         from ...adapters.llm_adapter import SystemMessage
 
@@ -578,7 +647,9 @@ class MessageManager:
             if keep_last == 0:
                 self.state.agent_history_items = [history_items[0]]
             else:
-                self.state.agent_history_items = [history_items[0]] + history_items[-keep_last:]
+                self.state.agent_history_items = [history_items[0]] + history_items[
+                    -keep_last:
+                ]
 
         logger.debug(
             f"Compaction complete (summary_chars={len(summary)}, history_items={len(self.state.agent_history_items)})"

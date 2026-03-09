@@ -34,7 +34,9 @@ class InformationExtractor:
         self.extraction_tools = extraction_tools
         self.llm = llm_client
 
-    def extract_all_information(self, user_message: str, current_state: Optional[AskuraState] = None) -> Dict[str, Any]:
+    def extract_all_information(
+        self, user_message: str, current_state: Optional[AskuraState] = None
+    ) -> Dict[str, Any]:
         """Extract all possible information from a user message using all available tools.
 
         Args:
@@ -52,7 +54,9 @@ class InformationExtractor:
             if not slot.extraction_tools:
                 continue
             try:
-                result = self._extract_slot_information_with_tools(user_message, slot, current_extractions)
+                result = self._extract_slot_information_with_tools(
+                    user_message, slot, current_extractions
+                )
                 if result:
                     extracted_info[slot.name] = result
             except Exception as e:
@@ -60,7 +64,9 @@ class InformationExtractor:
 
         return self._merge_extracted_info(current_state, extracted_info)
 
-    def _merge_extracted_info(self, state: AskuraState, extracted_info: Dict[str, Any]) -> Dict[str, Any]:
+    def _merge_extracted_info(
+        self, state: AskuraState, extracted_info: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Update state with extracted information, handling conflicts and merging data."""
         merged = state.extracted_info
         for slot_name, extracted_value in extracted_info.items():
@@ -70,7 +76,9 @@ class InformationExtractor:
                 logger.info(f"Extracted slot {slot_name}: {extracted_value}")
             else:
                 # Merge existing values for certain types
-                merged[slot_name] = self._merge_values(merged[slot_name], extracted_value, slot_name)
+                merged[slot_name] = self._merge_values(
+                    merged[slot_name], extracted_value, slot_name
+                )
                 logger.info(f"Updated slot {slot_name}: {merged[slot_name]}")
         return merged
 
@@ -81,9 +89,15 @@ class InformationExtractor:
         current_extractions: Dict[str, Any],
     ) -> Optional[Any]:
         """Extract information for a specific slot with context from current extractions."""
-        valid_tools = [tool_name for tool_name in slot.extraction_tools if tool_name in self.extraction_tools]
+        valid_tools = [
+            tool_name
+            for tool_name in slot.extraction_tools
+            if tool_name in self.extraction_tools
+        ]
         if not valid_tools:
-            logger.warning(f"No valid tools found for slot {slot.name}, skipping extraction")
+            logger.warning(
+                f"No valid tools found for slot {slot.name}, skipping extraction"
+            )
             return None
 
         for tool_name in valid_tools:
@@ -91,7 +105,9 @@ class InformationExtractor:
                 tool = self.extraction_tools[tool_name]
 
                 # Prepare context for the tool
-                context_prompt = self._build_extraction_context_prompt(slot, current_extractions)
+                context_prompt = self._build_extraction_context_prompt(
+                    slot, current_extractions
+                )
                 tool_context = {
                     "user_message": user_message,
                     "slot_name": slot.name,
@@ -112,7 +128,9 @@ class InformationExtractor:
                         # Fallback to original signature if tool doesn't accept context
                         result = tool(user_message)
                 else:
-                    logger.warning(f"Tool {tool_name} is not callable or a LangChain tool, skipping")
+                    logger.warning(
+                        f"Tool {tool_name} is not callable or a LangChain tool, skipping"
+                    )
                     continue
 
                 # Check if the tool returned useful information
@@ -125,7 +143,9 @@ class InformationExtractor:
 
         return None
 
-    def _is_valid_extraction(self, result: Dict[str, Any], slot: InformationSlot) -> bool:
+    def _is_valid_extraction(
+        self, result: Dict[str, Any], slot: InformationSlot
+    ) -> bool:
         """Check if the extraction result is valid for the slot."""
         # Basic validation - check if result has any non-empty values
         if not result:
@@ -138,7 +158,9 @@ class InformationExtractor:
 
         return False
 
-    def _process_extraction_result(self, result: Dict[str, Any], slot: InformationSlot) -> Any:
+    def _process_extraction_result(
+        self, result: Dict[str, Any], slot: InformationSlot
+    ) -> Any:
         """Process the extraction result based on slot configuration."""
         # For now, return the result as-is
         # This can be extended with more sophisticated processing
@@ -165,17 +187,23 @@ class InformationExtractor:
         else:
             return existing_value
 
-    def _build_extraction_context_prompt(self, slot: InformationSlot, current_extractions: Dict[str, Any]) -> str:
+    def _build_extraction_context_prompt(
+        self, slot: InformationSlot, current_extractions: Dict[str, Any]
+    ) -> str:
         """Build a context prompt to help tools understand current extraction state."""
         if not current_extractions:
             return f"Extract information for slot '{slot.name}': {slot.description}"
 
-        context_parts = [f"Extract information for slot '{slot.name}': {slot.description}"]
+        context_parts = [
+            f"Extract information for slot '{slot.name}': {slot.description}"
+        ]
         context_parts.append("\nCurrently extracted information:")
 
         for slot_name, value in current_extractions.items():
             if value and value not in (None, "", [], {}):
                 context_parts.append(f"- {slot_name}: {value}")
 
-        context_parts.append(f"\nFocus on extracting missing or additional information for '{slot.name}'.")
+        context_parts.append(
+            f"\nFocus on extracting missing or additional information for '{slot.name}'."
+        )
         return "\n".join(context_parts)

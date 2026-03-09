@@ -102,12 +102,21 @@ class TabularDataToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         if not PANDAS_AVAILABLE:
-            raise ImportError("pandas is required for TabularDataToolkit. " "Install with: pip install pandas")
+            raise ImportError(
+                "pandas is required for TabularDataToolkit. "
+                "Install with: pip install pandas"
+            )
 
         # Configuration
-        self.max_file_size = self.config.config.get("max_file_size", 100 * 1024 * 1024)  # 100MB
+        self.max_file_size = self.config.config.get(
+            "max_file_size", 100 * 1024 * 1024
+        )  # 100MB
         self.max_rows_preview = self.config.config.get("max_rows_preview", 1000)
-        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir(TOOLKIT_TABULAR_DATA, "cache")))
+        self.cache_dir = Path(
+            self.config.config.get(
+                "cache_dir", get_toolkit_tmp_dir(TOOLKIT_TABULAR_DATA, "cache")
+            )
+        )
 
         # Create cache directory
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -132,7 +141,9 @@ class TabularDataToolkit(AsyncBaseToolkit):
 
         # Check file size
         if file_path.stat().st_size > self.max_file_size:
-            raise ValueError(f"File too large ({file_path.stat().st_size} bytes, max: {self.max_file_size})")
+            raise ValueError(
+                f"File too large ({file_path.stat().st_size} bytes, max: {self.max_file_size})"
+            )
 
         file_ext = file_path.suffix.lower()
 
@@ -143,7 +154,9 @@ class TabularDataToolkit(AsyncBaseToolkit):
                 for encoding in encodings:
                     try:
                         df = pd.read_csv(file_path, encoding=encoding, **kwargs)
-                        self.logger.info(f"Successfully loaded CSV with {encoding} encoding")
+                        self.logger.info(
+                            f"Successfully loaded CSV with {encoding} encoding"
+                        )
                         return df
                     except UnicodeDecodeError:
                         continue
@@ -169,8 +182,12 @@ class TabularDataToolkit(AsyncBaseToolkit):
                 encodings = ["utf-8", "latin1", "cp1252", "iso-8859-1"]
                 for encoding in encodings:
                     try:
-                        df = pd.read_csv(file_path, sep="\t", encoding=encoding, **kwargs)
-                        self.logger.info(f"Successfully loaded TSV with {encoding} encoding")
+                        df = pd.read_csv(
+                            file_path, sep="\t", encoding=encoding, **kwargs
+                        )
+                        self.logger.info(
+                            f"Successfully loaded TSV with {encoding} encoding"
+                        )
                         return df
                     except UnicodeDecodeError:
                         continue
@@ -189,7 +206,9 @@ class TabularDataToolkit(AsyncBaseToolkit):
             self.logger.error(f"Failed to load tabular data: {e}")
             raise
 
-    def _extract_column_info(self, df: pd.DataFrame, return_features: Optional[List[str]] = None) -> List[Dict]:
+    def _extract_column_info(
+        self, df: pd.DataFrame, return_features: Optional[List[str]] = None
+    ) -> List[Dict]:
         """
         Extract detailed information about DataFrame columns.
 
@@ -268,7 +287,9 @@ class TabularDataToolkit(AsyncBaseToolkit):
 
         return column_info
 
-    def _format_column_info(self, column_info: List[Dict], return_features: Optional[List[str]] = None) -> str:
+    def _format_column_info(
+        self, column_info: List[Dict], return_features: Optional[List[str]] = None
+    ) -> str:
         """
         Format column information as a readable string.
 
@@ -299,11 +320,15 @@ class TabularDataToolkit(AsyncBaseToolkit):
             # Filter features to show
             filtered_info = {k: col[k] for k in features_to_show if k in col}
 
-            lines.append(f"- Column {i + 1}: {json.dumps(filtered_info, ensure_ascii=False, default=str)}")
+            lines.append(
+                f"- Column {i + 1}: {json.dumps(filtered_info, ensure_ascii=False, default=str)}"
+            )
 
         return "\n".join(lines)
 
-    async def get_tabular_columns(self, file_path: str, return_features: Optional[List[str]] = None) -> str:
+    async def get_tabular_columns(
+        self, file_path: str, return_features: Optional[List[str]] = None
+    ) -> str:
         """
         Extract raw column metadata from tabular data files.
 
@@ -396,7 +421,9 @@ class TabularDataToolkit(AsyncBaseToolkit):
             self.logger.error(error_msg)
             return error_msg
 
-    async def get_data_summary(self, file_path: str, max_rows: Optional[int] = None) -> str:
+    async def get_data_summary(
+        self, file_path: str, max_rows: Optional[int] = None
+    ) -> str:
         """
         Get a comprehensive summary of the tabular data.
 
@@ -471,7 +498,9 @@ class TabularDataToolkit(AsyncBaseToolkit):
             unique_ratios = df.nunique() / len(df)
             high_cardinality = unique_ratios[unique_ratios > 0.9].index.tolist()
             if high_cardinality:
-                summary_lines.append(f"  High cardinality columns: {', '.join(high_cardinality)}")
+                summary_lines.append(
+                    f"  High cardinality columns: {', '.join(high_cardinality)}"
+                )
 
             return "\n".join(summary_lines)
 

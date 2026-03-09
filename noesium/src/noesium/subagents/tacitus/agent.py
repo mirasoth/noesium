@@ -87,7 +87,9 @@ class TacitusAgent(BaseGraphicAgent):
         # Override the LLM client with instructor support if needed
         # Base class already initializes self.llm, so we can reuse it
         self.llm_client = self.llm
-        self.query_generation_llm = query_generation_llm if query_generation_llm else self.llm
+        self.query_generation_llm = (
+            query_generation_llm if query_generation_llm else self.llm
+        )
         self.reflection_llm = reflection_llm if reflection_llm else self.llm
         self.number_of_initial_queries = number_of_initial_queries
         self.max_research_loops = max_research_loops
@@ -137,9 +139,13 @@ class TacitusAgent(BaseGraphicAgent):
         workflow.add_edge(START, "generate_query")
 
         # Add conditional edges
-        workflow.add_conditional_edges("generate_query", self._continue_to_web_research, ["web_research"])
+        workflow.add_conditional_edges(
+            "generate_query", self._continue_to_web_research, ["web_research"]
+        )
         workflow.add_edge("web_research", "reflection")
-        workflow.add_conditional_edges("reflection", self._evaluate_research, ["web_research", "finalize_answer"])
+        workflow.add_conditional_edges(
+            "reflection", self._evaluate_research, ["web_research", "finalize_answer"]
+        )
         workflow.add_edge("finalize_answer", END)
 
         return workflow.compile()
@@ -234,7 +240,9 @@ class TacitusAgent(BaseGraphicAgent):
                     research_topic += f"Assistant: {message.content}\n"
         return research_topic
 
-    def _generate_query_node(self, state: ResearchState, config: RunnableConfig) -> QueryState:
+    def _generate_query_node(
+        self, state: ResearchState, config: RunnableConfig
+    ) -> QueryState:
         """Generate search queries based on user request using instructor structured output."""
         # Get research topic from messages (can be customized by subclasses)
         research_topic = self._preprocess_research_topic(state["messages"])
@@ -244,7 +252,9 @@ class TacitusAgent(BaseGraphicAgent):
         formatted_prompt = self.prompts["query_writer"].format(
             current_date=current_date,
             research_topic=research_topic,
-            number_queries=state.get("initial_search_query_count", self.number_of_initial_queries),
+            number_queries=state.get(
+                "initial_search_query_count", self.number_of_initial_queries
+            ),
         )
 
         try:
@@ -256,10 +266,14 @@ class TacitusAgent(BaseGraphicAgent):
                 max_tokens=self.query_generation_max_tokens,
             )
 
-            logger.info(f"Generated {len(result.query)} queries: {result.query}, rationale: {result.rationale}")
+            logger.info(
+                f"Generated {len(result.query)} queries: {result.query}, rationale: {result.rationale}"
+            )
 
             # Create query list with rationale
-            query_list = [{"query": q, "rationale": result.rationale} for q in result.query]
+            query_list = [
+                {"query": q, "rationale": result.rationale} for q in result.query
+            ]
             return {"query_list": query_list}
 
         except ContentPolicyError as e:
@@ -288,7 +302,9 @@ class TacitusAgent(BaseGraphicAgent):
             for idx, item in enumerate(state["query_list"])
         ]
 
-    async def _research_node(self, state: WebSearchState, config: RunnableConfig) -> ResearchState:
+    async def _research_node(
+        self, state: WebSearchState, config: RunnableConfig
+    ) -> ResearchState:
         """Perform web research using Tavily Search API."""
         search_query = state["search_query"]
 
@@ -314,7 +330,10 @@ class TacitusAgent(BaseGraphicAgent):
             if sources_gathered:
                 # Create a summary from the actual content found
                 content_summary = "\n\n".join(
-                    [f"Source: {s['title']}\n{s['content']}" for s in sources_gathered[:5]]  # Use top 5 results
+                    [
+                        f"Source: {s['title']}\n{s['content']}"
+                        for s in sources_gathered[:5]
+                    ]  # Use top 5 results
                 )
 
                 summary_prompt = f"""
@@ -377,7 +396,9 @@ class TacitusAgent(BaseGraphicAgent):
             logger.error(f"Error in web search: {e}")
             raise RuntimeError(f"Web search failed: {str(e)}")
 
-    def _reflection_node(self, state: ResearchState, config: RunnableConfig) -> ReflectionState:
+    def _reflection_node(
+        self, state: ResearchState, config: RunnableConfig
+    ) -> ReflectionState:
         """Reflect on research results and identify gaps using instructor structured output."""
         # Increment research loop count
         research_loop_count = state.get("research_loop_count", 0) + 1
@@ -427,7 +448,10 @@ class TacitusAgent(BaseGraphicAgent):
     def _evaluate_research(self, state: ReflectionState, config: RunnableConfig):
         """Evaluate research and decide next step."""
 
-        if state["is_sufficient"] or state["research_loop_count"] >= self.max_research_loops:
+        if (
+            state["is_sufficient"]
+            or state["research_loop_count"] >= self.max_research_loops
+        ):
             return "finalize_answer"
         else:
             return [
@@ -462,7 +486,9 @@ class TacitusAgent(BaseGraphicAgent):
             )
         except ContentPolicyError as e:
             # Content policy violation during final answer generation
-            logger.warning(f"Content policy violation during final answer generation: {e}")
+            logger.warning(
+                f"Content policy violation during final answer generation: {e}"
+            )
             # Return the summaries directly as the final answer
             final_answer = (
                 f"⚠️ Content Policy Notice\n\n"
@@ -625,7 +651,11 @@ class TacitusAgent(BaseGraphicAgent):
                                 summary="✓ Research sufficient",
                             )
                         else:
-                            gap_text = knowledge_gap[:50] if knowledge_gap else "more research needed"
+                            gap_text = (
+                                knowledge_gap[:50]
+                                if knowledge_gap
+                                else "more research needed"
+                            )
                             follow_up_queries = node_output.get("follow_up_queries", [])
                             if follow_up_queries:
                                 # Emit plan snapshot so TUI can show second-round (follow-up) steps

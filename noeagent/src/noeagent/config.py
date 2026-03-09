@@ -229,8 +229,11 @@ def _builtin_from_global_config(
                 task_types=list(getattr(s, "task_types", d.task_types if d else [])),
                 use_cases=list(getattr(s, "use_cases", d.use_cases if d else [])),
                 keywords=list(getattr(s, "keywords", d.keywords if d else [])),
-                preferred_for=list(getattr(s, "preferred_for", d.preferred_for if d else [])),
-                config=getattr(s, "config", None) or (d.config.copy() if d and d.config else None),
+                preferred_for=list(
+                    getattr(s, "preferred_for", d.preferred_for if d else [])
+                ),
+                config=getattr(s, "config", None)
+                or (d.config.copy() if d and d.config else None),
             )
         )
     return result
@@ -259,7 +262,9 @@ class NoeConfig(BaseModel):
     """
 
     mode: NoeMode = NoeMode.AGENT
-    llm_provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
+    llm_provider: str = Field(
+        default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai")
+    )
     model_name: str | None = None
     planning_model: str | None = None
 
@@ -273,7 +278,9 @@ class NoeConfig(BaseModel):
     dotenv_path: str | None = None  # None means auto-detect .env in current directory
 
     progress_callbacks: list[Callable] = Field(default_factory=list)
-    session_log_dir: str = Field(default_factory=lambda: str(_NOEAGENT_HOME / "sessions"))
+    session_log_dir: str = Field(
+        default_factory=lambda: str(_NOEAGENT_HOME / "sessions")
+    )
     enable_session_logging: bool = True
 
     # Session isolation — all per-session artefacts live under session_dir
@@ -285,7 +292,9 @@ class NoeConfig(BaseModel):
     file_log_level: str = "INFO"
 
     # TUI settings
-    tui_history_file: str = Field(default_factory=lambda: str(_NOEAGENT_HOME / "history.json"))
+    tui_history_file: str = Field(
+        default_factory=lambda: str(_NOEAGENT_HOME / "history.json")
+    )
     tui_history_size: int = 1000
 
     enabled_toolkits: list[str] = Field(
@@ -308,11 +317,21 @@ class NoeConfig(BaseModel):
     custom_tools: list[Callable] = Field(default_factory=list)
 
     memory_providers: list[str] = Field(
-        default_factory=lambda: ["working", "event_sourced", "memu"],
+        default_factory=lambda: ["working", "memu"],
     )
     memu_memory_dir: str = Field(default_factory=lambda: str(_NOEAGENT_HOME / "memory"))
     memu_user_id: str = "default_user"
     persist_memory: bool = True
+
+    # CognitiveContext settings (RFC-1009)
+    context_auto_recall: bool = Field(
+        default=False,
+        description="Auto-recall relevant memories before planning",
+    )
+    context_max_findings: int = Field(
+        default=8,
+        description="Maximum findings to retain in CognitiveContext (FIFO)",
+    )
 
     working_directory: str | None = None
     permissions: list[str] = Field(
@@ -327,7 +346,9 @@ class NoeConfig(BaseModel):
     subagent_max_depth: int = 2
     # Built-in agent subagents (browser_use, tacitus, etc.) - in-process agents
     builtin: list[AgentSubagentConfig] = Field(
-        default_factory=lambda: [AgentSubagentConfig(**s.model_dump()) for s in DEFAULT_AGENT_SUBAGENTS]
+        default_factory=lambda: [
+            AgentSubagentConfig(**s.model_dump()) for s in DEFAULT_AGENT_SUBAGENTS
+        ]
     )
     external: list[CliSubagentConfig] = Field(default_factory=list)
 
@@ -336,7 +357,9 @@ class NoeConfig(BaseModel):
         default=True,
         description="Send warm-up request to LLM during initialization to reduce first-query latency",
     )
-    llm_warmup_timeout: int = Field(default=30, description="Timeout in seconds for LLM warm-up request")
+    llm_warmup_timeout: int = Field(
+        default=30, description="Timeout in seconds for LLM warm-up request"
+    )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -354,7 +377,9 @@ class NoeConfig(BaseModel):
             )
         # Resolve session_dir from session_id when not explicitly set
         if cfg.session_dir is None:
-            cfg = cfg.model_copy(update={"session_dir": str(Path(cfg.session_log_dir) / cfg.session_id)})
+            cfg = cfg.model_copy(
+                update={"session_dir": str(Path(cfg.session_log_dir) / cfg.session_id)}
+            )
         return cfg
 
     def load_dotenv_if_enabled(self) -> None:
@@ -409,9 +434,13 @@ class NoeConfig(BaseModel):
             global_config.llm.provider = os.getenv("NOESIUM_LLM_PROVIDER")
 
         # Get the chat model for the configured provider
-        provider_config = global_config.llm.providers.get(global_config.llm.provider, {})
+        provider_config = global_config.llm.providers.get(
+            global_config.llm.provider, {}
+        )
         model_name = (
-            provider_config.chat_model if hasattr(provider_config, "chat_model") else provider_config.get("chat_model")
+            provider_config.chat_model
+            if hasattr(provider_config, "chat_model")
+            else provider_config.get("chat_model")
         )
 
         # Get planning model
@@ -430,12 +459,17 @@ class NoeConfig(BaseModel):
             dotenv_path=getattr(global_config.agent, "dotenv_path", None),
             session_log_dir=global_config.memory.session_log_dir,
             enable_session_logging=global_config.memory.session_logging,
-            file_log_level=global_config.logging.file_level or global_config.logging.level,
-            tui_history_file=_tui_field(global_config, "history_file", str(_NOEAGENT_HOME / "history.json")),
+            file_log_level=global_config.logging.file_level
+            or global_config.logging.level,
+            tui_history_file=_tui_field(
+                global_config, "history_file", str(_NOEAGENT_HOME / "history.json")
+            ),
             tui_history_size=_tui_field(global_config, "history_size", 1000),
             enabled_toolkits=global_config.tools.enabled_toolkits,
             toolkit_configs={
-                name: entry.model_dump(exclude_none=True, exclude={"timeout", "shell", "max_output_length"})
+                name: entry.model_dump(
+                    exclude_none=True, exclude={"timeout", "shell", "max_output_length"}
+                )
                 for name, entry in global_config.tools.toolkit_configs.items()
             },
             mcp_servers=[s.model_dump() for s in global_config.tools.mcp_servers],
@@ -448,5 +482,8 @@ class NoeConfig(BaseModel):
             enable_subagents=global_config.subagents.enabled,
             subagent_max_depth=global_config.subagents.max_depth,
             builtin=_builtin_from_global_config(global_config.subagents.builtin),
-            external=[CliSubagentConfig(**s.model_dump()) for s in global_config.subagents.external],
+            external=[
+                CliSubagentConfig(**s.model_dump())
+                for s in global_config.subagents.external
+            ],
         )

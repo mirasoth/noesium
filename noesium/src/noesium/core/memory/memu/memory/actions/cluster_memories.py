@@ -117,10 +117,16 @@ class ClusterMemoriesAction(BaseAction):
         Merge existing clusters with new memory items and theory of mind items
         """
 
-        all_items = {item["memory_id"]: item for item in itertools.chain(new_memory_items, new_theory_of_mind_items)}
+        all_items = {
+            item["memory_id"]: item
+            for item in itertools.chain(new_memory_items, new_theory_of_mind_items)
+        }
 
         memory_items_text = "\n".join(
-            [f"Memory ID: {item['memory_id']}\nContent: {item['content']}" for item in all_items.values()]
+            [
+                f"Memory ID: {item['memory_id']}\nContent: {item['content']}"
+                for item in all_items.values()
+            ]
         )
 
         # Create cluster list string outside f-string to avoid backslash issue
@@ -157,7 +163,9 @@ Example: "We went to hiking in Blue Ridge Mountains this summer" is related to b
         response = self.llm_client.simple_chat(system_message)
 
         if not response.strip():
-            return self._add_metadata({"success": False, "error": "LLM returned empty response"})
+            return self._add_metadata(
+                {"success": False, "error": "LLM returned empty response"}
+            )
 
         updated_clusters = {}
 
@@ -174,7 +182,9 @@ Example: "We went to hiking in Blue Ridge Mountains this summer" is related to b
                 if cluster not in existing_clusters:
                     continue
 
-                self.storage_manager.append_memory_file(cluster, self._format_memory_item(all_items[memory_id]))
+                self.storage_manager.append_memory_file(
+                    cluster, self._format_memory_item(all_items[memory_id])
+                )
 
                 if cluster not in updated_clusters:
                     updated_clusters[cluster] = []
@@ -195,14 +205,22 @@ Example: "We went to hiking in Blue Ridge Mountains this summer" is related to b
         Detect new clusters from new memory items and theory of mind items
         """
 
-        all_items = {item["memory_id"]: item for item in itertools.chain(new_memory_items, new_theory_of_mind_items)}
+        all_items = {
+            item["memory_id"]: item
+            for item in itertools.chain(new_memory_items, new_theory_of_mind_items)
+        }
 
         memory_items_text = "\n".join(
-            [f"Memory ID: {item['memory_id']}\nContent: {item['content']}" for item in all_items.values()]
+            [
+                f"Memory ID: {item['memory_id']}\nContent: {item['content']}"
+                for item in all_items.values()
+            ]
         )
 
         # Create cluster list string outside f-string to avoid backslash issue
-        existing_clusters_list = "\n".join(f"- {cluster}" for cluster in existing_clusters)
+        existing_clusters_list = "\n".join(
+            f"- {cluster}" for cluster in existing_clusters
+        )
 
         system_message = f"""You are an expert in discovering some important or repeating events in one's memory records.
 
@@ -240,7 +258,9 @@ Your task is to discover NEW events/themes that are either:
         response = self.llm_client.simple_chat(system_message)
 
         if not response.strip():
-            return self._add_metadata({"success": False, "error": "LLM returned empty response"})
+            return self._add_metadata(
+                {"success": False, "error": "LLM returned empty response"}
+            )
 
         new_clusters = {}
 
@@ -259,7 +279,9 @@ Your task is to discover NEW events/themes that are either:
                 memory_id = memory_id.strip()
                 if memory_id not in all_items:
                     continue
-                self.storage_manager.append_memory_file(cluster, self._format_memory_item(all_items[memory_id]))
+                self.storage_manager.append_memory_file(
+                    cluster, self._format_memory_item(all_items[memory_id])
+                )
 
                 new_clusters[cluster].append(memory_id)
 

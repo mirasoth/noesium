@@ -28,7 +28,9 @@ class TaskStep(BaseModel):
     description: str
     status: Literal["pending", "in_progress", "completed", "failed"] = "pending"
     result: str | None = None
-    execution_hint: Literal["tool", "subagent", "external_subagent", "builtin_agent", "auto"] = "auto"
+    execution_hint: Literal[
+        "tool", "subagent", "external_subagent", "builtin_agent", "auto"
+    ] = "auto"
 
     def to_todo_line(self, index: int) -> str:
         marker = "x" if self.status == "completed" else " "
@@ -69,6 +71,7 @@ class AgentState(TypedDict):
     tool_results: list[dict[str, Any]]
     reflection: str
     final_answer: str
+    context_summary: str  # RFC-1009: injected from CognitiveContext.export()
 
 
 class AskState(TypedDict):

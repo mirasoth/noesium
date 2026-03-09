@@ -117,7 +117,9 @@ class AutonomousRunner:
 
         # Event sources
         self.timer_source: TimerEventSource | None = None
-        self.fs_source: FileSystemEventSource | WatchdogFileSystemEventSource | None = None
+        self.fs_source: FileSystemEventSource | WatchdogFileSystemEventSource | None = (
+            None
+        )
         self._watch_path = watch_path
         self._prefer_watchdog = prefer_watchdog
 

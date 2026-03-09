@@ -128,13 +128,17 @@ def draw_enhanced_bounding_box_with_text(
             y = start_y
             while y < end_y:
                 dash_end = min(y + dash_length, end_y)
-                draw.line([(start_x, y), (start_x, dash_end)], fill=color, width=line_width)
+                draw.line(
+                    [(start_x, y), (start_x, dash_end)], fill=color, width=line_width
+                )
                 y += dash_length + gap_length
         else:  # Horizontal line
             x = start_x
             while x < end_x:
                 dash_end = min(x + dash_length, end_x)
-                draw.line([(x, start_y), (dash_end, start_y)], fill=color, width=line_width)
+                draw.line(
+                    [(x, start_y), (dash_end, start_y)], fill=color, width=line_width
+                )
                 x += dash_length + gap_length
 
     # Draw dashed rectangle
@@ -169,7 +173,9 @@ def draw_enhanced_bounding_box_with_text(
                 text_height = bbox_text[3] - bbox_text[1]
 
             # Scale padding appropriately for different resolutions
-            padding = max(4, min(10, int(css_width * 0.005)))  # 0.3% of CSS width, max 4px
+            padding = max(
+                4, min(10, int(css_width * 0.005))
+            )  # 0.3% of CSS width, max 4px
             element_width = x2 - x1
             element_height = y2 - y1
 
@@ -195,7 +201,9 @@ def draw_enhanced_bounding_box_with_text(
             # Center the number within the index box with proper baseline handling
             text_x = bg_x1 + (container_width - text_width) // 2
             # Add extra vertical space to prevent clipping
-            text_y = bg_y1 + (container_height - text_height) // 2 - bbox_text[1]  # Subtract top offset
+            text_y = (
+                bg_y1 + (container_height - text_height) // 2 - bbox_text[1]
+            )  # Subtract top offset
 
             # Ensure container stays within image bounds
             img_width, img_height = image_size
@@ -221,7 +229,9 @@ def draw_enhanced_bounding_box_with_text(
                 text_y -= offset
 
             # Draw bigger background rectangle with thicker border
-            draw.rectangle([bg_x1, bg_y1, bg_x2, bg_y2], fill=color, outline="white", width=2)
+            draw.rectangle(
+                [bg_x1, bg_y1, bg_x2, bg_y2], fill=color, outline="white", width=2
+            )
 
             # Draw white text centered in the index box
             draw.text((text_x, text_y), text, fill="white", font=big_font or font)
@@ -327,7 +337,9 @@ def draw_bounding_box_with_text(
             bg_y2 = text_y + text_height + padding
 
             # Use white background with thick black border for maximum visibility
-            draw.rectangle([bg_x1, bg_y1, bg_x2, bg_y2], fill="white", outline="black", width=2)
+            draw.rectangle(
+                [bg_x1, bg_y1, bg_x2, bg_y2], fill="white", outline="black", width=2
+            )
 
             # Draw bold dark text on light background for best contrast
             draw.text((text_x, text_y), text, fill="black", font=font)
@@ -410,7 +422,9 @@ def process_element_highlight(
         logger.debug(f"Failed to draw highlight for element {element_id}: {e}")
 
 
-@observe_debug(ignore_input=True, ignore_output=True, name="create_highlighted_screenshot")
+@observe_debug(
+    ignore_input=True, ignore_output=True, name="create_highlighted_screenshot"
+)
 @time_execution_async("create_highlighted_screenshot")
 async def create_highlighted_screenshot(
     screenshot_b64: str,
@@ -464,7 +478,9 @@ async def create_highlighted_screenshot(
             output_buffer.seek(0)
             highlighted_b64 = base64.b64encode(output_buffer.getvalue()).decode("utf-8")
 
-            logger.debug(f"Successfully created highlighted screenshot with {len(selector_map)} elements")
+            logger.debug(
+                f"Successfully created highlighted screenshot with {len(selector_map)} elements"
+            )
             return highlighted_b64
         finally:
             # Explicit cleanup to prevent memory leaks
@@ -489,7 +505,9 @@ async def get_viewport_info_from_cdp(cdp_session) -> tuple[float, int, int]:
     """
     try:
         # Get layout metrics which includes viewport info and device pixel ratio
-        metrics = await cdp_session.cdp_client.send.Page.getLayoutMetrics(session_id=cdp_session.session_id)
+        metrics = await cdp_session.cdp_client.send.Page.getLayoutMetrics(
+            session_id=cdp_session.session_id
+        )
 
         # Extract viewport information
         visual_viewport = metrics.get("visualViewport", {})
@@ -497,7 +515,9 @@ async def get_viewport_info_from_cdp(cdp_session) -> tuple[float, int, int]:
         css_layout_viewport = metrics.get("cssLayoutViewport", {})
 
         # Calculate device pixel ratio
-        css_width = css_visual_viewport.get("clientWidth", css_layout_viewport.get("clientWidth", 1280.0))
+        css_width = css_visual_viewport.get(
+            "clientWidth", css_layout_viewport.get("clientWidth", 1280.0)
+        )
         device_width = visual_viewport.get("clientWidth", css_width)
         device_pixel_ratio = device_width / css_width if css_width > 0 else 1.0
 
@@ -537,7 +557,9 @@ async def create_highlighted_screenshot_async(
 
     if cdp_session:
         try:
-            device_pixel_ratio, viewport_offset_x, viewport_offset_y = await get_viewport_info_from_cdp(cdp_session)
+            device_pixel_ratio, viewport_offset_x, viewport_offset_y = (
+                await get_viewport_info_from_cdp(cdp_session)
+            )
         except Exception as e:
             logger.debug(f"Failed to get viewport info from CDP: {e}")
 

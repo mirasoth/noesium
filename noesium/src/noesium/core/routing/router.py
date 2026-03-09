@@ -43,7 +43,9 @@ class ModelRouter:
             lite_client_config: Configuration for lite client creation
             strategy_config: Strategy-specific configuration
         """
-        self.strategy_config = (strategy_config or {}).copy()  # Make a copy to avoid modifying original
+        self.strategy_config = (
+            strategy_config or {}
+        ).copy()  # Make a copy to avoid modifying original
 
         # Setup lite client if needed
         self.lite_client = self._setup_lite_client(lite_client, lite_client_config)
@@ -51,7 +53,9 @@ class ModelRouter:
         # Initialize routing strategy
         self.strategy = self._setup_strategy(strategy)
 
-        logger.info(f"Initialized ModelRouter with strategy: {self.strategy.get_strategy_name()}")
+        logger.info(
+            f"Initialized ModelRouter with strategy: {self.strategy.get_strategy_name()}"
+        )
 
     def route(self, query: str) -> RoutingResult:
         """
@@ -188,7 +192,9 @@ class ModelRouter:
         return list(cls.STRATEGIES.keys())
 
     @classmethod
-    def register_strategy(cls, name: str, strategy_class: Type[BaseRoutingStrategy]) -> None:
+    def register_strategy(
+        cls, name: str, strategy_class: Type[BaseRoutingStrategy]
+    ) -> None:
         """
         Register a new routing strategy.
 
@@ -230,7 +236,9 @@ class ModelRouter:
                 logger.warning(f"Could not create default lite client: {e}")
                 return None
 
-    def _setup_strategy(self, strategy: Union[str, BaseRoutingStrategy]) -> BaseRoutingStrategy:
+    def _setup_strategy(
+        self, strategy: Union[str, BaseRoutingStrategy]
+    ) -> BaseRoutingStrategy:
         """Setup the routing strategy."""
         if isinstance(strategy, BaseRoutingStrategy):
             return strategy
@@ -238,10 +246,13 @@ class ModelRouter:
         if isinstance(strategy, str):
             if strategy not in self.STRATEGIES:
                 raise ValueError(
-                    f"Unknown strategy: {strategy}. " f"Available strategies: {list(self.STRATEGIES.keys())}"
+                    f"Unknown strategy: {strategy}. "
+                    f"Available strategies: {list(self.STRATEGIES.keys())}"
                 )
 
             strategy_class = self.STRATEGIES[strategy]
-            return strategy_class(lite_client=self.lite_client, config=self.strategy_config)
+            return strategy_class(
+                lite_client=self.lite_client, config=self.strategy_config
+            )
 
         raise ValueError(f"Invalid strategy type: {type(strategy)}")

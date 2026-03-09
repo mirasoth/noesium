@@ -52,7 +52,10 @@ class TokenCost:
     PRICING_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 
     def __init__(self, include_cost: bool = False):
-        self.include_cost = include_cost or os.getenv("BROWSER_USE_CALCULATE_COST", "false").lower() == "true"
+        self.include_cost = (
+            include_cost
+            or os.getenv("BROWSER_USE_CALCULATE_COST", "false").lower() == "true"
+        )
 
         self.usage_history: list[TokenUsageEntry] = []
         self.registered_llms: dict[str, BaseChatModel] = {}
@@ -114,7 +117,9 @@ class TokenCost:
                 return False
 
             # Read the cached data
-            cached = CachedPricingData.model_validate_json(await anyio.Path(cache_file).read_text())
+            cached = CachedPricingData.model_validate_json(
+                await anyio.Path(cache_file).read_text()
+            )
 
             # Check if cache is still valid
             return datetime.now() - cached.timestamp < self.CACHE_DURATION
@@ -142,7 +147,9 @@ class TokenCost:
                 self._pricing_data = response.json()
 
             # Create cache object with timestamp
-            cached = CachedPricingData(timestamp=datetime.now(), data=self._pricing_data or {})
+            cached = CachedPricingData(
+                timestamp=datetime.now(), data=self._pricing_data or {}
+            )
 
             # Ensure cache directory exists
             self._cache_dir.mkdir(parents=True, exist_ok=True)
@@ -174,7 +181,9 @@ class TokenCost:
                 max_input_tokens=data.get("max_input_tokens"),
                 max_output_tokens=data.get("max_output_tokens"),
                 cache_read_input_token_cost=data.get("cache_read_input_token_cost"),
-                cache_creation_input_token_cost=data.get("cache_creation_input_token_cost"),
+                cache_creation_input_token_cost=data.get(
+                    "cache_creation_input_token_cost"
+                ),
             )
 
         # Map model name to LiteLLM model name if needed
@@ -195,7 +204,9 @@ class TokenCost:
             cache_creation_input_token_cost=data.get("cache_creation_input_token_cost"),
         )
 
-    async def calculate_cost(self, model: str, usage: ChatInvokeUsage) -> TokenCostCalculated | None:
+    async def calculate_cost(
+        self, model: str, usage: ChatInvokeUsage
+    ) -> TokenCostCalculated | None:
         if not self.include_cost:
             return None
 
@@ -218,13 +229,16 @@ class TokenCost:
             # Cache creation tokens
             prompt_cached_creation_tokens=usage.prompt_cache_creation_tokens,
             prompt_cache_creation_cost=(
-                usage.prompt_cache_creation_tokens * data.cache_creation_input_token_cost
-                if data.cache_creation_input_token_cost and usage.prompt_cache_creation_tokens
+                usage.prompt_cache_creation_tokens
+                * data.cache_creation_input_token_cost
+                if data.cache_creation_input_token_cost
+                and usage.prompt_cache_creation_tokens
                 else None
             ),
             # Completion tokens
             completion_tokens=usage.completion_tokens,
-            completion_cost=usage.completion_tokens * float(data.output_cost_per_token or 0),
+            completion_cost=usage.completion_tokens
+            * float(data.output_cost_per_token or 0),
         )
 
     def add_usage(self, model: str, usage: ChatInvokeUsage) -> TokenUsageEntry:
@@ -271,7 +285,9 @@ class TokenCost:
 
         cost_logger.debug(f"🧠 {C_CYAN}{model}{C_RESET} | {input_part} | {output_part}")
 
-    def _build_input_tokens_display(self, usage: ChatInvokeUsage, cost: TokenCostCalculated | None) -> str:
+    def _build_input_tokens_display(
+        self, usage: ChatInvokeUsage, cost: TokenCostCalculated | None
+    ) -> str:
         """Build a clear display of input tokens breakdown with emojis and optional costs"""
         C_YELLOW = "\033[93m"
         C_BLUE = "\033[94m"
@@ -287,21 +303,29 @@ class TokenCost:
             if new_tokens > 0:
                 new_tokens_fmt = self._format_tokens(new_tokens)
                 if self.include_cost and cost and cost.new_prompt_cost > 0:
-                    parts.append(f"🆕 {C_YELLOW}{new_tokens_fmt} (${cost.new_prompt_cost:.4f}){C_RESET}")
+                    parts.append(
+                        f"🆕 {C_YELLOW}{new_tokens_fmt} (${cost.new_prompt_cost:.4f}){C_RESET}"
+                    )
                 else:
                     parts.append(f"🆕 {C_YELLOW}{new_tokens_fmt}{C_RESET}")
 
             if usage.prompt_cached_tokens:
                 cached_tokens_fmt = self._format_tokens(usage.prompt_cached_tokens)
                 if self.include_cost and cost and cost.prompt_read_cached_cost:
-                    parts.append(f"💾 {C_BLUE}{cached_tokens_fmt} (${cost.prompt_read_cached_cost:.4f}){C_RESET}")
+                    parts.append(
+                        f"💾 {C_BLUE}{cached_tokens_fmt} (${cost.prompt_read_cached_cost:.4f}){C_RESET}"
+                    )
                 else:
                     parts.append(f"💾 {C_BLUE}{cached_tokens_fmt}{C_RESET}")
 
             if usage.prompt_cache_creation_tokens:
-                creation_tokens_fmt = self._format_tokens(usage.prompt_cache_creation_tokens)
+                creation_tokens_fmt = self._format_tokens(
+                    usage.prompt_cache_creation_tokens
+                )
                 if self.include_cost and cost and cost.prompt_cache_creation_cost:
-                    parts.append(f"🔧 {C_BLUE}{creation_tokens_fmt} (${cost.prompt_cache_creation_cost:.4f}){C_RESET}")
+                    parts.append(
+                        f"🔧 {C_BLUE}{creation_tokens_fmt} (${cost.prompt_cache_creation_cost:.4f}){C_RESET}"
+                    )
                 else:
                     parts.append(f"🔧 {C_BLUE}{creation_tokens_fmt}{C_RESET}")
 
@@ -309,7 +333,9 @@ class TokenCost:
             # Fallback to simple display when no cache information available
             total_tokens_fmt = self._format_tokens(usage.prompt_tokens)
             if self.include_cost and cost and cost.new_prompt_cost > 0:
-                parts.append(f"📥 {C_YELLOW}{total_tokens_fmt} (${cost.new_prompt_cost:.4f}){C_RESET}")
+                parts.append(
+                    f"📥 {C_YELLOW}{total_tokens_fmt} (${cost.new_prompt_cost:.4f}){C_RESET}"
+                )
             else:
                 parts.append(f"📥 {C_YELLOW}{total_tokens_fmt}{C_RESET}")
 
@@ -326,7 +352,9 @@ class TokenCost:
 
         # Check if this exact instance is already registered
         if instance_id in self.registered_llms:
-            logger.debug(f"LLM instance {instance_id} ({llm.provider}_{llm.model}) is already registered")
+            logger.debug(
+                f"LLM instance {instance_id} ({llm.provider}_{llm.model}) is already registered"
+            )
             return llm
 
         self.registered_llms[instance_id] = llm
@@ -372,12 +400,19 @@ class TokenCost:
         return ModelUsageTokens(
             model=model,
             prompt_tokens=sum(u.usage.prompt_tokens for u in filtered_usage),
-            prompt_cached_tokens=sum(u.usage.prompt_cached_tokens or 0 for u in filtered_usage),
+            prompt_cached_tokens=sum(
+                u.usage.prompt_cached_tokens or 0 for u in filtered_usage
+            ),
             completion_tokens=sum(u.usage.completion_tokens for u in filtered_usage),
-            total_tokens=sum(u.usage.prompt_tokens + u.usage.completion_tokens for u in filtered_usage),
+            total_tokens=sum(
+                u.usage.prompt_tokens + u.usage.completion_tokens
+                for u in filtered_usage
+            ),
         )
 
-    async def get_usage_summary(self, model: str | None = None, since: datetime | None = None) -> UsageSummary:
+    async def get_usage_summary(
+        self, model: str | None = None, since: datetime | None = None
+    ) -> UsageSummary:
         """Get summary of token usage and costs (costs calculated on-the-fly)"""
         filtered_usage = self.usage_history
 
@@ -404,7 +439,9 @@ class TokenCost:
         total_prompt = sum(u.usage.prompt_tokens for u in filtered_usage)
         total_completion = sum(u.usage.completion_tokens for u in filtered_usage)
         total_tokens = total_prompt + total_completion
-        total_prompt_cached = sum(u.usage.prompt_cached_tokens or 0 for u in filtered_usage)
+        total_prompt_cached = sum(
+            u.usage.prompt_cached_tokens or 0 for u in filtered_usage
+        )
         list({u.model for u in filtered_usage})
 
         # Calculate per-model stats with record-by-record cost calculation
@@ -420,7 +457,9 @@ class TokenCost:
             stats = model_stats[entry.model]
             stats.prompt_tokens += entry.usage.prompt_tokens
             stats.completion_tokens += entry.usage.completion_tokens
-            stats.total_tokens += entry.usage.prompt_tokens + entry.usage.completion_tokens
+            stats.total_tokens += (
+                entry.usage.prompt_tokens + entry.usage.completion_tokens
+            )
             stats.invocations += 1
 
             if self.include_cost:
@@ -435,7 +474,9 @@ class TokenCost:
         # Calculate averages
         for stats in model_stats.values():
             if stats.invocations > 0:
-                stats.average_tokens_per_invocation = stats.total_tokens / stats.invocations
+                stats.average_tokens_per_invocation = (
+                    stats.total_tokens / stats.invocations
+                )
 
         return UsageSummary(
             total_prompt_tokens=total_prompt,
@@ -445,7 +486,9 @@ class TokenCost:
             total_completion_tokens=total_completion,
             total_completion_cost=total_completion_cost,
             total_tokens=total_tokens,
-            total_cost=total_prompt_cost + total_completion_cost + total_prompt_cached_cost,
+            total_cost=total_prompt_cost
+            + total_completion_cost
+            + total_prompt_cached_cost,
             entry_count=len(filtered_usage),
             by_model=model_stats,
         )
@@ -505,7 +548,9 @@ class TokenCost:
             model_total_fmt = self._format_tokens(stats.total_tokens)
             model_prompt_fmt = self._format_tokens(stats.prompt_tokens)
             model_completion_fmt = self._format_tokens(stats.completion_tokens)
-            avg_tokens_fmt = self._format_tokens(int(stats.average_tokens_per_invocation))
+            avg_tokens_fmt = self._format_tokens(
+                int(stats.average_tokens_per_invocation)
+            )
 
             # Format cost display (only if cost tracking is enabled)
             if self.include_cost:

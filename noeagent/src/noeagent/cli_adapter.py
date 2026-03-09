@@ -256,7 +256,9 @@ class ClaudeCliAdapter:
         args = self.build_command_args(task, **kwargs)
         env = dict(self.config.env) if self.config.env else None
 
-        logger.info("Executing Claude CLI: %s %s", self.config.command, shlex.join(args))
+        logger.info(
+            "Executing Claude CLI: %s %s", self.config.command, shlex.join(args)
+        )
 
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -497,7 +499,9 @@ class ExternalCliAdapter:
             config = self._configs.get(name)
             if config is None:
                 # Fallback to handle-based config lookup
-                configs_by_name = {h.config.name: h.config for h in self._handles.values()}
+                configs_by_name = {
+                    h.config.name: h.config for h in self._handles.values()
+                }
                 config = configs_by_name.get(name)
 
             if config is None:
@@ -505,7 +509,9 @@ class ExternalCliAdapter:
 
             return await self._spawn_with_config(config, initial_message)
 
-    async def spawn_from_config(self, config: CliSubagentConfig, initial_message: str = "") -> str:
+    async def spawn_from_config(
+        self, config: CliSubagentConfig, initial_message: str = ""
+    ) -> str:
         """Start a daemon from an explicit config.
 
         Also registers the config for later oneshot execution.
@@ -519,7 +525,9 @@ class ExternalCliAdapter:
         async with self._lock:
             return await self._spawn_with_config(config, initial_message)
 
-    async def _spawn_with_config(self, config: CliSubagentConfig, initial_message: str) -> str:
+    async def _spawn_with_config(
+        self, config: CliSubagentConfig, initial_message: str
+    ) -> str:
         """Spawn a persistent daemon process."""
         name = config.name
         env = dict(config.env) if config.env else None
@@ -594,7 +602,9 @@ class ExternalCliAdapter:
                     response_lines.append(line.decode().strip())
             except asyncio.TimeoutError:
                 handle.state = "IDLE"
-                return f"CLI subagent '{name}' timed out after {handle.config.timeout}s."
+                return (
+                    f"CLI subagent '{name}' timed out after {handle.config.timeout}s."
+                )
 
             handle.state = "IDLE"
 

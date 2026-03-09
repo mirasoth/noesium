@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 class CloudSync:
     """Service for syncing events to the Browser Use cloud"""
 
-    def __init__(self, base_url: str | None = None, allow_session_events_for_auth: bool = False):
+    def __init__(
+        self, base_url: str | None = None, allow_session_events_for_auth: bool = False
+    ):
         # Backend API URL for all API requests - can be passed directly or defaults to env var
         self.base_url = base_url or CONFIG.BROWSER_USE_CLOUD_API_URL
         self.auth_client = DeviceAuthClient(base_url=self.base_url)
@@ -49,7 +51,9 @@ class CloudSync:
                     self.auth_flow_active = True
             else:
                 # User is not authenticated and no auth in progress - don't send anything
-                logger.debug(f"Skipping event {event.event_type} - user not authenticated")
+                logger.debug(
+                    f"Skipping event {event.event_type} - user not authenticated"
+                )
 
         except Exception as e:
             logger.error(
@@ -105,7 +109,9 @@ class CloudSync:
         except httpx.HTTPError as e:
             logger.debug(f"HTTP error sending event {event}: {type(e).__name__}: {e}")
         except Exception as e:
-            logger.debug(f"Unexpected error sending event {event}: {type(e).__name__}: {e}")
+            logger.debug(
+                f"Unexpected error sending event {event}: {type(e).__name__}: {e}"
+            )
 
     # async def _update_wal_user_ids(self, session_id: str) -> None:
     # 	"""Update user IDs in WAL file after authentication"""

@@ -47,7 +47,9 @@ logger = get_logger(__name__)
 
 def _require_wizsearch():
     if not WIZSEARCH_AVAILABLE:
-        raise ImportError("wizsearch package is not installed. Install it with: pip install 'noesium[tools]'")
+        raise ImportError(
+            "wizsearch package is not installed. Install it with: pip install 'noesium[tools]'"
+        )
 
 
 def _normalize_engine_list(value: Optional[List[str]], default: List[str]) -> List[str]:
@@ -97,8 +99,12 @@ class WebSearchToolkit(AsyncBaseToolkit):
     def __init__(self, config: ToolkitConfig = None):
         super().__init__(config)
 
-        self.enabled_engines: List[str] = _normalize_engine_list(self.config.config.get("enabled_engines"), ["tavily"])
-        self.max_results_per_engine: int = self.config.config.get("max_results_per_engine", 10)
+        self.enabled_engines: List[str] = _normalize_engine_list(
+            self.config.config.get("enabled_engines"), ["tavily"]
+        )
+        self.max_results_per_engine: int = self.config.config.get(
+            "max_results_per_engine", 10
+        )
         self.search_timeout: int = self.config.config.get("search_timeout", 30)
         self.content_format: str = self.config.config.get("content_format", "markdown")
 
@@ -140,7 +146,8 @@ class WebSearchToolkit(AsyncBaseToolkit):
         result = await wiz.search(query=query)
 
         self.logger.info(
-            f"Web search complete: {len(result.sources)} results from " f"{', '.join(wiz.get_enabled_engines())}"
+            f"Web search complete: {len(result.sources)} results from "
+            f"{', '.join(wiz.get_enabled_engines())}"
         )
         return result
 

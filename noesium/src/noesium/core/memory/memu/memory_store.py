@@ -81,7 +81,9 @@ class MemuMemoryStore(BaseMemoryStore):
             enable_embeddings=enable_embeddings,
         )
 
-        logger.info(f"MemuMemoryStore initialized: agent={agent_id}, user={user_id}, dir={memory_dir}")
+        logger.info(
+            f"MemuMemoryStore initialized: agent={agent_id}, user={user_id}, dir={memory_dir}"
+        )
 
     # ==========================================
     # Core CRUD Operations
@@ -99,7 +101,11 @@ class MemuMemoryStore(BaseMemoryStore):
                 {
                     "character_name": memory_item.user_id or "User",
                     "content": conversation_content,
-                    "session_date": (memory_item.created_at.strftime("%Y-%m-%d") if memory_item.created_at else None),
+                    "session_date": (
+                        memory_item.created_at.strftime("%Y-%m-%d")
+                        if memory_item.created_at
+                        else None
+                    ),
                 },
             )
 
@@ -117,7 +123,9 @@ class MemuMemoryStore(BaseMemoryStore):
                 else:
                     raise Exception("No memory items were created")
             else:
-                raise Exception(f"Failed to add memory: {result.get('error', 'Unknown error')}")
+                raise Exception(
+                    f"Failed to add memory: {result.get('error', 'Unknown error')}"
+                )
 
         except Exception as e:
             logger.error(f"Error adding memory item: {e}")
@@ -167,7 +175,9 @@ class MemuMemoryStore(BaseMemoryStore):
                         "version": existing_item.version,
                     }
                 )
-                self._store_memory_mapping(memory_id, existing_item, mapping.get("memory_items", []))
+                self._store_memory_mapping(
+                    memory_id, existing_item, mapping.get("memory_items", [])
+                )
 
             return True
 
@@ -246,7 +256,9 @@ class MemuMemoryStore(BaseMemoryStore):
             # Apply sorting
             if sort_by:
                 reverse = sort_order.lower() == "desc"
-                items.sort(key=lambda x: getattr(x, sort_by, None) or 0, reverse=reverse)
+                items.sort(
+                    key=lambda x: getattr(x, sort_by, None) or 0, reverse=reverse
+                )
 
             # Apply pagination
             if offset:
@@ -289,7 +301,9 @@ class MemuMemoryStore(BaseMemoryStore):
 
             # Filter by memory types if specified
             if memory_types:
-                all_items = [item for item in all_items if item.memory_type in memory_types]
+                all_items = [
+                    item for item in all_items if item.memory_type in memory_types
+                ]
 
             # If embeddings are enabled, use similarity search
             if self.enable_embeddings and self.llm_client:
@@ -363,7 +377,9 @@ class MemuMemoryStore(BaseMemoryStore):
     # Memory Management Operations
     # ==========================================
 
-    async def get_stats(self, filters: Optional[MemoryFilter] = None, **kwargs) -> MemoryStats:
+    async def get_stats(
+        self, filters: Optional[MemoryFilter] = None, **kwargs
+    ) -> MemoryStats:
         """Get statistics about the memory store."""
         try:
             items = await self.get_all(filters=filters)
@@ -385,7 +401,9 @@ class MemuMemoryStore(BaseMemoryStore):
 
             for item in items:
                 # Count by type
-                items_by_type[item.memory_type] = items_by_type.get(item.memory_type, 0) + 1
+                items_by_type[item.memory_type] = (
+                    items_by_type.get(item.memory_type, 0) + 1
+                )
 
                 # Count by user
                 user = item.user_id or "unknown"
@@ -482,9 +500,13 @@ class MemuMemoryStore(BaseMemoryStore):
 
         return content
 
-    def _store_memory_mapping(self, memory_id: str, memory_item: MemoryItem, memory_items: List[Any]):
+    def _store_memory_mapping(
+        self, memory_id: str, memory_item: MemoryItem, memory_items: List[Any]
+    ):
         """Store mapping between memory ID and MemU storage."""
-        mappings_file = self.memory_dir / f"{self.agent_id}_{self.user_id}_mappings.json"
+        mappings_file = (
+            self.memory_dir / f"{self.agent_id}_{self.user_id}_mappings.json"
+        )
 
         # Load existing mappings
         mappings = {}
@@ -507,7 +529,9 @@ class MemuMemoryStore(BaseMemoryStore):
             "metadata": memory_item.metadata,
             "tags": memory_item.tags,
             "created_at": memory_item.created_at.isoformat(),
-            "updated_at": (memory_item.updated_at.isoformat() if memory_item.updated_at else None),
+            "updated_at": (
+                memory_item.updated_at.isoformat() if memory_item.updated_at else None
+            ),
             "version": memory_item.version,
             "memory_items": memory_items,  # MemU-specific data
         }
@@ -522,7 +546,9 @@ class MemuMemoryStore(BaseMemoryStore):
 
     def _get_memory_mapping(self, memory_id: str) -> Optional[Dict[str, Any]]:
         """Get mapping data for a memory ID."""
-        mappings_file = self.memory_dir / f"{self.agent_id}_{self.user_id}_mappings.json"
+        mappings_file = (
+            self.memory_dir / f"{self.agent_id}_{self.user_id}_mappings.json"
+        )
 
         if not mappings_file.exists():
             return None
@@ -537,7 +563,9 @@ class MemuMemoryStore(BaseMemoryStore):
 
     def _get_all_memory_mappings(self) -> Dict[str, Dict[str, Any]]:
         """Get all memory mappings."""
-        mappings_file = self.memory_dir / f"{self.agent_id}_{self.user_id}_mappings.json"
+        mappings_file = (
+            self.memory_dir / f"{self.agent_id}_{self.user_id}_mappings.json"
+        )
 
         if not mappings_file.exists():
             return {}
@@ -551,7 +579,9 @@ class MemuMemoryStore(BaseMemoryStore):
 
     def _remove_memory_mapping(self, memory_id: str) -> bool:
         """Remove a memory mapping."""
-        mappings_file = self.memory_dir / f"{self.agent_id}_{self.user_id}_mappings.json"
+        mappings_file = (
+            self.memory_dir / f"{self.agent_id}_{self.user_id}_mappings.json"
+        )
 
         if not mappings_file.exists():
             return False
@@ -573,7 +603,9 @@ class MemuMemoryStore(BaseMemoryStore):
             logger.error(f"Error removing mapping for {memory_id}: {e}")
             return False
 
-    def _reconstruct_memory_item(self, memory_id: str, mapping: Dict[str, Any]) -> Optional[MemoryItem]:
+    def _reconstruct_memory_item(
+        self, memory_id: str, mapping: Dict[str, Any]
+    ) -> Optional[MemoryItem]:
         """Reconstruct a MemoryItem from mapping data."""
         try:
             return MemoryItem(
@@ -588,44 +620,74 @@ class MemuMemoryStore(BaseMemoryStore):
                 metadata=mapping.get("metadata", {}),
                 tags=mapping.get("tags", []),
                 created_at=datetime.fromisoformat(mapping["created_at"]),
-                updated_at=(datetime.fromisoformat(mapping["updated_at"]) if mapping.get("updated_at") else None),
+                updated_at=(
+                    datetime.fromisoformat(mapping["updated_at"])
+                    if mapping.get("updated_at")
+                    else None
+                ),
                 version=mapping.get("version", 1),
             )
         except Exception as e:
             logger.error(f"Error reconstructing memory item {memory_id}: {e}")
             return None
 
-    def _apply_filters(self, items: List[MemoryItem], filters: MemoryFilter) -> List[MemoryItem]:
+    def _apply_filters(
+        self, items: List[MemoryItem], filters: MemoryFilter
+    ) -> List[MemoryItem]:
         """Apply filters to a list of memory items."""
         filtered_items = items
 
         if filters.user_id:
-            filtered_items = [item for item in filtered_items if item.user_id == filters.user_id]
+            filtered_items = [
+                item for item in filtered_items if item.user_id == filters.user_id
+            ]
 
         if filters.agent_id:
-            filtered_items = [item for item in filtered_items if item.agent_id == filters.agent_id]
+            filtered_items = [
+                item for item in filtered_items if item.agent_id == filters.agent_id
+            ]
 
         if filters.session_id:
-            filtered_items = [item for item in filtered_items if item.session_id == filters.session_id]
+            filtered_items = [
+                item for item in filtered_items if item.session_id == filters.session_id
+            ]
 
         if filters.memory_type:
-            filtered_items = [item for item in filtered_items if item.memory_type == filters.memory_type]
+            filtered_items = [
+                item
+                for item in filtered_items
+                if item.memory_type == filters.memory_type
+            ]
 
         if filters.tags:
-            filtered_items = [item for item in filtered_items if all(tag in item.tags for tag in filters.tags)]
+            filtered_items = [
+                item
+                for item in filtered_items
+                if all(tag in item.tags for tag in filters.tags)
+            ]
 
         if filters.date_from:
-            filtered_items = [item for item in filtered_items if item.created_at >= filters.date_from]
+            filtered_items = [
+                item for item in filtered_items if item.created_at >= filters.date_from
+            ]
 
         if filters.date_to:
-            filtered_items = [item for item in filtered_items if item.created_at <= filters.date_to]
+            filtered_items = [
+                item for item in filtered_items if item.created_at <= filters.date_to
+            ]
 
         if filters.min_importance is not None:
-            filtered_items = [item for item in filtered_items if item.importance >= filters.min_importance]
+            filtered_items = [
+                item
+                for item in filtered_items
+                if item.importance >= filters.min_importance
+            ]
 
         # Apply metadata filters
         for key, value in filters.metadata_filters.items():
-            filtered_items = [item for item in filtered_items if item.metadata.get(key) == value]
+            filtered_items = [
+                item for item in filtered_items if item.metadata.get(key) == value
+            ]
 
         return filtered_items
 

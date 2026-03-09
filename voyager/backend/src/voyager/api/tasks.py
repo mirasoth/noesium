@@ -83,7 +83,9 @@ async def cancel_task(task_id: str) -> dict[str, bool]:
 
 
 @router.get("/{task_id}/events")
-async def get_task_events(task_id: str, limit: int = Query(100)) -> dict[str, list[dict[str, Any]]]:
+async def get_task_events(
+    task_id: str, limit: int = Query(100)
+) -> dict[str, list[dict[str, Any]]]:
     """Get task event log."""
     if state_manager is None:
         raise HTTPException(500, "Server not initialized")

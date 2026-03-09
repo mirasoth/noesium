@@ -99,8 +99,12 @@ class UpdateMemoryWithSuggestionsAction(BaseAction):
 
             # Load existing content
             existing_content = self._read_memory_content(character_name, category)
-            existing_memory_items = self._extract_memory_items_from_content(existing_content)
-            formatted_existing_content = self._format_existing_content(existing_memory_items)
+            existing_memory_items = self._extract_memory_items_from_content(
+                existing_content
+            )
+            formatted_existing_content = self._format_existing_content(
+                existing_memory_items
+            )
 
             operation_response = self._analyze_memory_operation_from_suggestion(
                 category, character_name, formatted_existing_content, suggestion
@@ -137,9 +141,16 @@ class UpdateMemoryWithSuggestionsAction(BaseAction):
         except Exception as e:
             return self._handle_error(e)
 
-    def _format_existing_content(self, existing_memory_items: List[Dict[str, str]]) -> str:
+    def _format_existing_content(
+        self, existing_memory_items: List[Dict[str, str]]
+    ) -> str:
         """Format existing content into a list of memory items"""
-        return "\n".join([f"[Memory ID: {item['memory_id']}] {item['content']}" for item in existing_memory_items])
+        return "\n".join(
+            [
+                f"[Memory ID: {item['memory_id']}] {item['content']}"
+                for item in existing_memory_items
+            ]
+        )
 
     def _analyze_memory_operation_from_suggestion(
         self,
@@ -329,7 +340,9 @@ Memory Update Suggestion:
         for line in lines:
             line = line.strip()
 
-            pattern = r"^\[([^\]]+)\]\[mentioned at ([^\]]+)\]\s*(.*?)(?:\s*\[([^\]]*)\])?$"
+            pattern = (
+                r"^\[([^\]]+)\]\[mentioned at ([^\]]+)\]\s*(.*?)(?:\s*\[([^\]]*)\])?$"
+            )
             match = re.match(pattern, line)
             if match:
                 memory_id = match.group(1)
@@ -349,7 +362,9 @@ Memory Update Suggestion:
 
         return items
 
-    def _add_memory_item_embedding(self, character_name: str, category: str, new_items: list[dict]) -> Dict[str, Any]:
+    def _add_memory_item_embedding(
+        self, character_name: str, category: str, new_items: list[dict]
+    ) -> Dict[str, Any]:
         """Add embedding for new memory items"""
         try:
             if not self.embeddings_enabled or not new_items:
@@ -373,7 +388,9 @@ Memory Update Suggestion:
                 try:
                     embedding_vector = self.embedding_client.embed(item["content"])
 
-                    new_item_id = f"{character_name}_{category}_item_{len(existing_embeddings)}"
+                    new_item_id = (
+                        f"{character_name}_{category}_item_{len(existing_embeddings)}"
+                    )
 
                     new_embedding = {
                         "item_id": new_item_id,
@@ -395,7 +412,9 @@ Memory Update Suggestion:
                     existing_embeddings.append(new_embedding)
 
                 except Exception as e:
-                    logger.warning(f"Failed to generate embedding for memory item {item.get('memory_id')}: {repr(e)}")
+                    logger.warning(
+                        f"Failed to generate embedding for memory item {item.get('memory_id')}: {repr(e)}"
+                    )
                     continue
 
             # Save updated embeddings

@@ -37,7 +37,9 @@ from noesium.core.consts import NOESIUM_HOME
 _BROWSER_USE_SESSIONS_DIR = NOESIUM_HOME / "browser-use-sessions"
 
 
-def _create_session_dir(session_id: str, *, parent_session_dir: str | Path | None = None) -> Path:
+def _create_session_dir(
+    session_id: str, *, parent_session_dir: str | Path | None = None
+) -> Path:
     """Create an isolated session directory for browser-use.
 
     When ``parent_session_dir`` is supplied (the caller's session directory),
@@ -115,7 +117,9 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         self._cleanup_on_close = cleanup_on_close
         self._session_dir: Path | None = None
 
-        self._session_dir = _create_session_dir(session_id, parent_session_dir=parent_session_dir)
+        self._session_dir = _create_session_dir(
+            session_id, parent_session_dir=parent_session_dir
+        )
 
         # Create default browser profile with isolated session directory
         if browser_profile is None:
@@ -464,7 +468,9 @@ class BrowserUseAgent(BaseAgent, Generic[T]):
         elif hasattr(action, "text") and action.text:
             text_preview = str(action.text)[:30]
             context = f": {text_preview}..."
-        elif hasattr(action, "index") and isinstance(getattr(action, "index", None), int):
+        elif hasattr(action, "index") and isinstance(
+            getattr(action, "index", None), int
+        ):
             context = f" (element {action.index})"
         elif hasattr(action, "query") and action.query:
             context = f": {action.query[:40]}"

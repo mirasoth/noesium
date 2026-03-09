@@ -133,7 +133,11 @@ class EventSourcedProvider(MemoryProvider):
         if prefix:
             keys = [k for k in keys if k.startswith(prefix)]
         if content_types:
-            keys = [k for k in keys if entries[k].get("content_type", "fact") in content_types]
+            keys = [
+                k
+                for k in keys
+                if entries[k].get("content_type", "fact") in content_types
+            ]
         return keys
 
     async def rebuild(self) -> None:

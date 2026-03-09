@@ -169,7 +169,10 @@ async def recall_memory_node(
         try:
             query = RecallQuery(query=user_msg, scope=RecallScope.ALL, limit=10)
             results = await memory_manager.recall(query)
-            context = [{"key": r.entry.key, "value": r.entry.value, "score": r.score} for r in results]
+            context = [
+                {"key": r.entry.key, "value": r.entry.value, "score": r.score}
+                for r in results
+            ]
         except Exception as exc:
             logger.warning("Memory recall failed: %s", exc)
     return {"memory_context": context}
@@ -181,9 +184,14 @@ async def generate_answer_node(
     llm: Any,
 ) -> dict[str, Any]:
     mem_ctx = state.get("memory_context") or []
-    mem_text = "\n".join(f"- {m.get('key', '')}: {m.get('value', '')}" for m in mem_ctx) or "No memory context."
+    mem_text = (
+        "\n".join(f"- {m.get('key', '')}: {m.get('value', '')}" for m in mem_ctx)
+        or "No memory context."
+    )
     pm = get_prompt_manager()
-    system = pm.render("ask_system", memory_context=mem_text, current_datetime=_get_current_datetime())
+    system = pm.render(
+        "ask_system", memory_context=mem_text, current_datetime=_get_current_datetime()
+    )
     user_msg = state["messages"][-1].content if state["messages"] else ""
     answer = await _run_llm_async(
         llm,
@@ -250,9 +258,18 @@ async def execute_step_node(
     }.get(hint, "Choose the best approach.")
 
     completed = "\n".join(
-        f"- {r.get('tool', 'unknown')}: {str(r.get('result', ''))[:200]}" for r in state.get("tool_results", [])
+        f"- {r.get('tool', 'unknown')}: {str(r.get('result', ''))[:200]}"
+        for r in state.get("tool_results", [])
     )
-    tool_desc = tool_desc_cache if tool_desc_cache is not None else _build_tool_descriptions(registry)
+    tool_desc = (
+        tool_desc_cache
+        if tool_desc_cache is not None
+        else _build_tool_descriptions(registry)
+    )
+
+    # RFC-1009: Include cognitive context summary if available
+    context_summary = state.get("context_summary", "")
+    context_block = f"\n\n## Context\n{context_summary}" if context_summary else ""
 
     pm = get_prompt_manager()
     system = pm.render(
@@ -263,6 +280,9 @@ async def execute_step_node(
         tool_descriptions=tool_desc,
         current_datetime=_get_current_datetime(),
     )
+    # Inject context block after the rendered prompt
+    if context_block:
+        system = system + context_block
     user_msg = state["messages"][-1].content if state["messages"] else ""
 
     try:
@@ -298,7 +318,11 @@ async def execute_step_node(
             # Check if fallback also hit content filter
             if _is_content_filter_error(fallback_exc):
                 logger.error("Content policy violation in fallback: %s", fallback_exc)
-                return {"messages": [AIMessage(content=_content_filter_error_message(fallback_exc))]}
+                return {
+                    "messages": [
+                        AIMessage(content=_content_filter_error_message(fallback_exc))
+                    ]
+                }
             raise
 
     if action.mark_step_complete and plan:
@@ -400,8 +424,12 @@ async def tool_node(
                     "mode": args.get("mode", "agent"),
                 }
                 result = await provider.invoke(**sa_args)
-                results.append({"tool": f"subagent:{sa_args['name']}", "result": result})
-                messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
+                results.append(
+                    {"tool": f"subagent:{sa_args['name']}", "result": result}
+                )
+                messages.append(
+                    ToolMessage(content=str(result), tool_call_id=call["id"])
+                )
                 continue
 
             provider = registry.get_by_name(tool_name)
@@ -490,7 +518,11 @@ async def subagent_node(
 
                 # Check config for requires_explicit_command flag
                 for cfg in agent.config.builtin:
-                    cfg_name = getattr(cfg, "name", None) if hasattr(cfg, "name") else cfg.get("name")
+                    cfg_name = (
+                        getattr(cfg, "name", None)
+                        if hasattr(cfg, "name")
+                        else cfg.get("name")
+                    )
                     if cfg_name == subagent_name:
                         requires_explicit = (
                             getattr(cfg, "requires_explicit_command", False)
@@ -511,11 +543,16 @@ async def subagent_node(
                     try:
                         result = await agent.invoke_subagent(subagent_name, sa.message)
                     except Exception as exc:
-                        result = f"Failed to invoke built-in agent '{subagent_name}': {exc}"
+                        result = (
+                            f"Failed to invoke built-in agent '{subagent_name}': {exc}"
+                        )
         elif sa.action == "invoke_cli":
             # Invoke CLI subagent via SubagentManager (oneshot mode)
             subagent_manager = getattr(agent, "_subagent_manager", None)
-            if subagent_manager is None or subagent_manager.get_provider(sa.name) is None:
+            if (
+                subagent_manager is None
+                or subagent_manager.get_provider(sa.name) is None
+            ):
                 # Fallback: direct CLI adapter if SubagentManager has no entry
                 cli_adapter = getattr(agent, "_cli_adapter", None)
                 if cli_adapter is None:
@@ -527,9 +564,15 @@ async def subagent_node(
                             cli_kwargs["allowed_tools"] = sa.allowed_tools
                         if sa.skip_permissions is not None:
                             cli_kwargs["skip_permissions"] = sa.skip_permissions
-                        exec_result = await cli_adapter.execute_oneshot(sa.name, sa.message, **cli_kwargs)
+                        exec_result = await cli_adapter.execute_oneshot(
+                            sa.name, sa.message, **cli_kwargs
+                        )
                         if hasattr(exec_result, "success"):
-                            result = exec_result.content if exec_result.success else f"Error: {exec_result.error}"
+                            result = (
+                                exec_result.content
+                                if exec_result.success
+                                else f"Error: {exec_result.error}"
+                            )
                         else:
                             result = str(exec_result)
                     except Exception as exc:
@@ -547,7 +590,8 @@ async def subagent_node(
         result = f"Subagent error: {exc}"
 
     return {
-        "tool_results": state.get("tool_results", []) + [{"tool": f"subagent:{sa.name}", "result": result}],
+        "tool_results": state.get("tool_results", [])
+        + [{"tool": f"subagent:{sa.name}", "result": result}],
         "messages": [AIMessage(content=str(result))],
         "iteration": state["iteration"] + 1,
     }
@@ -562,9 +606,12 @@ async def reflect_node(
     goal = plan.goal if plan else ""
     plan_steps = ""
     if plan:
-        plan_steps = "\n".join(f"  {i + 1}. [{s.status}] {s.description}" for i, s in enumerate(plan.steps))
+        plan_steps = "\n".join(
+            f"  {i + 1}. [{s.status}] {s.description}" for i, s in enumerate(plan.steps)
+        )
     completed = "\n".join(
-        f"- {r.get('tool', 'unknown')}: {str(r.get('result', ''))[:200]}" for r in state.get("tool_results", [])
+        f"- {r.get('tool', 'unknown')}: {str(r.get('result', ''))[:200]}"
+        for r in state.get("tool_results", [])
     )
     pm = get_prompt_manager()
     prompt = pm.render(
@@ -623,7 +670,8 @@ async def finalize_node(
     plan: TaskPlan | None = state.get("plan")
     goal = plan.goal if plan else ""
     results = "\n".join(
-        f"- {r.get('tool', 'unknown')}: {str(r.get('result', ''))[:300]}" for r in state.get("tool_results", [])
+        f"- {r.get('tool', 'unknown')}: {str(r.get('result', ''))[:300]}"
+        for r in state.get("tool_results", [])
     )
     if not results:
         last_msg = state["messages"][-1].content if state["messages"] else ""
@@ -632,7 +680,9 @@ async def finalize_node(
     # Skip full synthesis for empty/error prompts to avoid redundant long output
     if _is_no_task_finalize(goal, results):
         if goal and goal.strip():
-            answer = "No results to synthesize. Please provide a specific question or task."
+            answer = (
+                "No results to synthesize. Please provide a specific question or task."
+            )
         else:
             answer = "No question or task was provided. Please enter a specific request (e.g. a topic to research, a file to analyze, or code to run)."
         return {"final_answer": answer}

@@ -29,7 +29,9 @@ class BaseWatchdog(BaseModel):
 
     # Class variables to statically define the list of events relevant to each watchdog
     # (not enforced, just to make it easier to understand the code and debug watchdogs at runtime)
-    LISTENS_TO: ClassVar[list[type[BaseEvent[Any]]]] = []  # Events this watchdog listens to
+    LISTENS_TO: ClassVar[list[type[BaseEvent[Any]]]] = (
+        []
+    )  # Events this watchdog listens to
     EMITS: ClassVar[list[type[BaseEvent[Any]]]] = []  # Events this watchdog emits
 
     # Core dependencies
@@ -66,14 +68,18 @@ class BaseWatchdog(BaseModel):
 
         # Validate handler naming convention
         assert hasattr(handler, "__name__"), "Handler must have a __name__ attribute"
-        assert handler.__name__.startswith("on_"), f'Handler {handler.__name__} must start with "on_"'
+        assert handler.__name__.startswith(
+            "on_"
+        ), f'Handler {handler.__name__} must start with "on_"'
         assert handler.__name__.endswith(
             event_class.__name__
         ), f"Handler {handler.__name__} must end with event type {event_class.__name__}"
 
         # Get the watchdog instance if this is a bound method
         watchdog_instance = getattr(handler, "__self__", None)
-        watchdog_class_name = watchdog_instance.__class__.__name__ if watchdog_instance else "Unknown"
+        watchdog_class_name = (
+            watchdog_instance.__class__.__name__ if watchdog_instance else "Unknown"
+        )
 
         # Color codes for logging
         red = "\033[91m"
@@ -88,7 +94,11 @@ class BaseWatchdog(BaseModel):
         def make_unique_handler(actual_handler):
             async def unique_handler(event):
                 # just for debug logging, not used for anything else
-                parent_event = event_bus.event_history.get(event.event_parent_id) if event.event_parent_id else None
+                parent_event = (
+                    event_bus.event_history.get(event.event_parent_id)
+                    if event.event_parent_id
+                    else None
+                )
                 grandparent_event = (
                     event_bus.event_history.get(parent_event.event_parent_id)
                     if parent_event and parent_event.event_parent_id
@@ -110,7 +120,9 @@ class BaseWatchdog(BaseModel):
                 )
                 event_str = f"#{event.event_id[-4:]}"
                 time_start = time.time()
-                watchdog_and_handler_str = f"[{watchdog_class_name}.{actual_handler.__name__}({event_str})]".ljust(54)
+                watchdog_and_handler_str = f"[{watchdog_class_name}.{actual_handler.__name__}({event_str})]".ljust(
+                    54
+                )
                 browser_session.logger.debug(
                     f"{cyan}🚌 {watchdog_and_handler_str} ⏳ Starting...      {reset} {parent} {grandparent}"
                 )
@@ -125,10 +137,16 @@ class BaseWatchdog(BaseModel):
                     # just for debug logging, not used for anything else
                     time_end = time.time()
                     time_elapsed = time_end - time_start
-                    result_summary = "" if result is None else f" ➡️ {magenta}<{type(result).__name__}>{reset}"
+                    result_summary = (
+                        ""
+                        if result is None
+                        else f" ➡️ {magenta}<{type(result).__name__}>{reset}"
+                    )
                     parents_summary = f" {parent}".replace(
                         "↲  triggered by ", f"⤴  {green}returned to  {cyan}"
-                    ).replace("👈 by Agent", f"👉 {green}returned to  {magenta}Agent{reset}")
+                    ).replace(
+                        "👈 by Agent", f"👉 {green}returned to  {magenta}Agent{reset}"
+                    )
                     browser_session.logger.debug(
                         f"{green}🚌 {watchdog_and_handler_str} ✅ Succeeded ({time_elapsed:.2f}s){reset}{result_summary}{parents_summary}"
                     )
@@ -149,22 +167,32 @@ class BaseWatchdog(BaseModel):
                             browser_session.logger.debug(
                                 f"{yellow}🚌 {watchdog_and_handler_str} ⚠️ Re-foregrounding target to try and recover crashed CDP session\n\t{browser_session.agent_focus_target_id}{reset}"
                             )
-                            del browser_session._cdp_session_pool[browser_session.agent_focus_target_id]
+                            del browser_session._cdp_session_pool[
+                                browser_session.agent_focus_target_id
+                            ]
                             _ = await browser_session.get_or_create_cdp_session(
                                 target_id=browser_session.agent_focus_target_id,
                                 new_socket=True,
                             )
-                            cdp_session = await browser_session.get_or_create_cdp_session(
-                                target_id=browser_session.agent_focus_target_id,
-                                new_socket=True,
+                            cdp_session = (
+                                await browser_session.get_or_create_cdp_session(
+                                    target_id=browser_session.agent_focus_target_id,
+                                    new_socket=True,
+                                )
                             )
                             await cdp_session.cdp_client.send.Target.activateTarget(
-                                params={"targetId": browser_session.agent_focus_target_id}
+                                params={
+                                    "targetId": browser_session.agent_focus_target_id
+                                }
                             )
                         else:
-                            await browser_session.get_or_create_cdp_session(target_id=None, new_socket=True, focus=True)
+                            await browser_session.get_or_create_cdp_session(
+                                target_id=None, new_socket=True, focus=True
+                            )
                     except Exception as sub_error:
-                        if "ConnectionClosedError" in str(type(sub_error)) or "ConnectionError" in str(type(sub_error)):
+                        if "ConnectionClosedError" in str(
+                            type(sub_error)
+                        ) or "ConnectionError" in str(type(sub_error)):
                             browser_session.logger.error(
                                 f"{red}🚌 {watchdog_and_handler_str} ❌ Browser closed or CDP Connection disconnected by remote. {red}{type(sub_error).__name__}: {sub_error}{reset}\n"
                             )
@@ -201,14 +229,20 @@ class BaseWatchdog(BaseModel):
         bound to a browser session via self.browser_session from initialization.
         """
         # Register event handlers automatically based on method names
-        assert self.browser_session is not None, "Root CDP client not initialized - browser may not be connected yet"
+        assert (
+            self.browser_session is not None
+        ), "Root CDP client not initialized - browser may not be connected yet"
 
         from . import events
 
         event_classes = {}
         for name in dir(events):
             obj = getattr(events, name)
-            if inspect.isclass(obj) and issubclass(obj, BaseEvent) and obj is not BaseEvent:
+            if (
+                inspect.isclass(obj)
+                and issubclass(obj, BaseEvent)
+                and obj is not BaseEvent
+            ):
                 event_classes[name] = obj
 
         # Find all handler methods (on_EventName)
@@ -231,7 +265,9 @@ class BaseWatchdog(BaseModel):
                     handler = getattr(self, method_name)
 
                     # Use the static helper to attach the handler
-                    self.attach_handler_to_session(self.browser_session, event_class, handler)
+                    self.attach_handler_to_session(
+                        self.browser_session, event_class, handler
+                    )
                     registered_events.add(event_class)
 
         # ASSERTION: If LISTENS_TO is defined, ensure all declared events have handlers
@@ -254,7 +290,11 @@ class BaseWatchdog(BaseModel):
                 if attr_name.startswith("_") and attr_name.endswith("_task"):
                     try:
                         task = getattr(self, attr_name)
-                        if hasattr(task, "cancel") and callable(task.cancel) and not task.done():
+                        if (
+                            hasattr(task, "cancel")
+                            and callable(task.cancel)
+                            and not task.done()
+                        ):
                             task.cancel()
                             # self.logger.debug(f'[{self.__class__.__name__}] Cancelled {attr_name} during cleanup')
                     except Exception:
@@ -268,7 +308,11 @@ class BaseWatchdog(BaseModel):
                 ):
                     for task in getattr(self, attr_name):
                         try:
-                            if hasattr(task, "cancel") and callable(task.cancel) and not task.done():
+                            if (
+                                hasattr(task, "cancel")
+                                and callable(task.cancel)
+                                and not task.done()
+                            ):
                                 task.cancel()
                                 # self.logger.debug(f'[{self.__class__.__name__}] Cancelled {attr_name} during cleanup')
                         except Exception:
