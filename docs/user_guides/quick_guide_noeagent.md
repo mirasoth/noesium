@@ -36,6 +36,7 @@ NoeAgent is an autonomous research assistant built on the Noesium framework. It 
       - [Agent Mode Workflow](#agent-mode-workflow)
     - [Ask Mode](#ask-mode)
       - [Ask Mode Overrides](#ask-mode-overrides)
+    - [Autonomous Mode (RFC-1005)](#autonomous-mode-rfc-1005)
   - [Advanced Features](#advanced-features)
     - [Subagents](#subagents)
       - [In-Process Subagents](#in-process-subagents)
@@ -94,17 +95,13 @@ asyncio.run(main())
 
 ```bash
 # Run the interactive terminal UI
+noeagent
+
+# Or using Python module
 python -m noeagent.tui
 
 # Or using uv
 uv run python -m noeagent.tui
-
-# Start in specific mode
-noeagent --mode ask
-noeagent --mode agent
-
-# Specify model
-noeagent --model gpt-4o
 ```
 
 ## Modes of Operation
@@ -123,7 +120,6 @@ The `noeagent` module exports the following:
 - `NoeAgent` - Main agent class
 - `NoeConfig` - Configuration class
 - `NoeMode` - Agent mode enum (`ASK` or `AGENT`)
-- `AgentSubagentConfig` - Built-in agent subagent configuration (browser_use, tacitus, etc.)
 - `CliSubagentConfig` - External CLI subagent daemon configuration
 - `TaskPlan` - Plan structure with steps
 - `TaskStep` - Individual plan step
@@ -134,6 +130,15 @@ The `noeagent` module exports the following:
 - `ProgressEventType` - Enumeration of all progress event kinds
 - `ProgressCallback` - Push-style callback protocol for consumers
 - `SessionLogger` - JSONL session logger
+- `BUILTIN_SUBAGENT_NAMES` - List of built-in subagent technical names
+- `InlineCommand` - Parsed inline command for subagent invocation
+- `SubagentCommandType` - Enum for subagent command types
+
+**Note:** `AgentSubagentConfig` is defined in `noeagent.config` but not exported from the main module. Import it directly if needed:
+
+```python
+from noeagent.config import AgentSubagentConfig
+```
 
 ## Library Mode
 
@@ -199,42 +204,56 @@ result = agent.run("Your research question")
 | `reflection_interval` | `int` | `3` | Iterations between reflections |
 | `interface_mode` | `str` | `"library"` | `"library"` or `"tui"` |
 | `progress_callbacks` | `list[Callable]` | `[]` | Push-style ProgressCallback instances |
+| `session_id` | `str` | Auto-generated | Unique session identifier |
+| `session_dir` | `str \| None` | Derived from `session_id` | Session artifact directory |
 | `session_log_dir` | `str` | `"~/.noeagent/sessions"` | JSONL session log directory |
 | `enable_session_logging` | `bool` | `True` | Enable JSONL session logging |
-| `enabled_toolkits` | `list[str]` | All 18 toolkits | Enabled toolkits |
+| `file_log_level` | `str` | `"INFO"` | File logging level (console is always ERROR) |
+| `load_dotenv` | `bool` | `True` | Auto-load .env file on import |
+| `dotenv_path` | `str \| None` | `None` | Custom .env file path |
+| `enabled_toolkits` | `list[str]` | 8 core toolkits | Enabled toolkits (see below) |
+| `toolkit_configs` | `dict[str, dict]` | `{}` | Per-toolkit configuration overrides |
 | `mcp_servers` | `list[dict]` | `[]` | MCP server configurations |
 | `custom_tools` | `list[Callable]` | `[]` | Custom tool functions |
 | `memory_providers` | `list[str]` | `["working", "event_sourced", "memu"]` | Memory providers |
+| `memu_memory_dir` | `str` | `"~/.noeagent/memory"` | Memu memory storage directory |
+| `memu_user_id` | `str` | `"default_user"` | Memu user identifier |
 | `persist_memory` | `bool` | `True` | Persist research results |
 | `working_directory` | `str \| None` | `None` | Working directory for tools |
 | `permissions` | `list[str]` | See defaults | Tool permissions |
 | `enable_subagents` | `bool` | `True` | Enable in-process subagent spawning |
 | `subagent_max_depth` | `int` | `2` | Max subagent nesting depth |
-| `agent_subagents` | `list[AgentSubagentConfig]` | See defaults | Built-in agent subagent configurations |
-| `cli_subagents` | `list[CliSubagentConfig]` | `[]` | External CLI subagent daemon configurations |
+| `builtin` | `list[AgentSubagentConfig]` | browser_use, tacitus | Built-in agent subagent configurations |
+| `external` | `list[CliSubagentConfig]` | `[]` | External CLI subagent daemon configurations |
+| `llm_warmup_on_init` | `bool` | `True` | Warm-up LLM during initialization |
+| `llm_warmup_timeout` | `int` | `30` | Timeout in seconds for LLM warm-up |
+| `tui_history_file` | `str` | `"~/.noeagent/history.json"` | TUI command history file |
+| `tui_history_size` | `int` | `1000` | Maximum TUI history entries |
 
 #### Default Toolkits
 
-All 18 registered toolkits are enabled by default in AGENT mode:
+The following 8 core toolkits are enabled by default in AGENT mode:
 
-- `web_search` - Multi-engine web search
-- `jina_research` - Research via Jina Reader
 - `bash` - Shell command execution
-- `python_executor` - Python code execution
 - `file_edit` - File operations
-- `memory` - Memory operations
 - `document` - Document processing (PDF, Word, etc.)
 - `image` - Image processing and generation
+- `python_executor` - Python code execution
 - `tabular_data` - CSV/Excel data processing
-- `video` - Video processing
+- `web_search` - Multi-engine web search
 - `user_interaction` - User prompts
+
+**Additional available toolkits** (can be enabled via `enabled_toolkits`):
+
+- `jina_research` - Research via Jina Reader
+- `memory` - Memory operations
+- `video` - Video processing
+- `audio` - General audio processing
 - `arxiv` - ArXiv paper search and retrieval
 - `serper` - Google search via Serper API
 - `wikipedia` - Wikipedia search and retrieval
 - `github` - GitHub API operations
 - `gmail` - Gmail email operations
-- `audio` - General audio processing
-- `audio_aliyun` - Aliyun audio processing (TTS, STT)
 
 #### Default Permissions
 
@@ -486,6 +505,28 @@ noe> /exit
 | `/clear` | Clear the screen |
 | Any text | Submit a research task to the agent |
 
+**Subagent Selector (Numeric Prefix):**
+
+Use numeric prefixes before your message to route directly to specific subagents:
+
+| Prefix | Subagent | Description |
+|--------|----------|-------------|
+| `1` | Main | Default agent (no prefix needed) |
+| `2` | Browser | Web automation via browser_use |
+| `3` | Research | Deep research via tacitus |
+| `4` | Coding | Code tasks via claude |
+
+**Examples:**
+```
+noe> 2 Navigate to example.com and take a screenshot
+noe> 3 Research the history of quantum computing
+noe> 2 3 Compare browser data with research findings
+```
+
+**Ctrl+C Behavior:**
+- First press during task execution: Cancel current task, return to prompt
+- Second press at prompt (within 2 seconds): Exit the TUI
+
 **TUI Features:**
 
 - **Live spinner** shows current activity (thinking, executing tools, etc.)
@@ -567,6 +608,34 @@ When using `NoeMode.ASK`, the following configuration is automatically applied:
 - `permissions = []`
 - `persist_memory = False`
 
+### Autonomous Mode (RFC-1005)
+
+A long-running autonomous mode for continuous operation with a cognitive loop:
+
+```bash
+# Start autonomous mode from CLI
+noeagent --autonomous --goal "Monitor GitHub issues for bug reports"
+
+# Or programmatically
+python -c "
+import asyncio
+from noeagent.agent import NoeAgent
+from noeagent.autonomous import run_autonomous_mode
+
+async def main():
+    agent = NoeAgent()
+    await run_autonomous_mode(agent, 'Monitor system health')
+
+asyncio.run(main())
+"
+```
+
+**Features:**
+- **Cognitive Loop**: Ticks at configurable intervals (default 10s)
+- **Goal Engine**: Manages long-term goals and priorities
+- **Event System**: Processes internal and external events
+- **Self-Direction**: Agent decides what to do next without user input
+
 ## Advanced Features
 
 ### Subagents
@@ -595,15 +664,18 @@ NoeAgent comes with pre-configured agent subagents for specialized tasks:
 
 - **browser_use**: Web automation agent for browser interaction and DOM manipulation
 - **tacitus**: Research agent with iterative query generation and web search
+- **askura**: Conversation agent for interactive Q&A and information extraction
+- **claude**: Coding agent for code generation and review tasks
 
-These are enabled by default and can be customized via `config.agent_subagents`:
+These are enabled by default and can be customized via `config.builtin`:
 
 ```python
-from noeagent import NoeAgent, NoeConfig, AgentSubagentConfig
+from noeagent import NoeAgent, NoeConfig
+from noeagent.config import AgentSubagentConfig
 
 config = NoeConfig(
     enable_subagents=True,
-    agent_subagents=[
+    builtin=[
         AgentSubagentConfig(
             name="browser_use",
             agent_type="browser_use",
@@ -626,13 +698,13 @@ To disable specific built-in subagents, set `enabled=False` or remove them from 
 
 #### External CLI Subagent Daemons
 
-Long-lived external CLI processes (e.g., Claude Code CLI) that run as persistent daemons. Configured via `CliSubagentConfig`:
+Long-lived external CLI processes (e.g., Claude Code CLI) that run as persistent daemons. Configured via `CliSubagentConfig` in the `external` field:
 
 ```python
 from noeagent import NoeAgent, NoeConfig, CliSubagentConfig
 
 config = NoeConfig(
-    cli_subagents=[
+    external=[
         CliSubagentConfig(
             name="claude-code",
             command="claude",
@@ -640,6 +712,7 @@ config = NoeConfig(
             timeout=300,
             restart_policy="on-failure",
             task_types=["code_generation", "code_review"],
+            mode="oneshot",  # or "daemon" for persistent process
         ),
     ],
 )
@@ -647,7 +720,24 @@ config = NoeConfig(
 agent = NoeAgent(config)
 ```
 
-The `SubagentAction` schema supports five actions for routing:
+**CliSubagentConfig Fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | `str` | required | Subagent identifier |
+| `command` | `str` | required | Executable command |
+| `args` | `list[str]` | `[]` | Command arguments |
+| `env` | `dict[str, str]` | `{}` | Environment variables |
+| `timeout` | `int` | `300` | Timeout in seconds |
+| `restart_policy` | `str` | `"on-failure"` | Restart behavior (daemon mode) |
+| `task_types` | `list[str]` | `[]` | Supported task types |
+| `mode` | `str` | `"oneshot"` | `"oneshot"` or `"daemon"` |
+| `output_format` | `str` | `"text"` | Output format: `text`, `json`, `stream-json`, `ndjson` |
+| `input_format` | `str` | `"text"` | Input format: `text`, `stream-json` |
+| `allowed_tools` | `list[str]` | `[]` | Tools to allow in CLI session |
+| `skip_permissions` | `bool` | `True` | Skip permission prompts |
+
+The `SubagentAction` schema supports seven actions for routing:
 
 | Action | Target | Description |
 |--------|--------|-------------|
@@ -656,6 +746,8 @@ The `SubagentAction` schema supports five actions for routing:
 | `spawn_cli` | CLI daemon | Start an external CLI subagent |
 | `interact_cli` | CLI daemon | Send a task to a running CLI daemon |
 | `terminate_cli` | CLI daemon | Shut down a CLI daemon |
+| `invoke_builtin` | Built-in | Invoke a built-in subagent (browser_use, tacitus) |
+| `invoke_cli` | CLI | Execute CLI subagent (oneshot or daemon mode) |
 
 The LLM intelligently determines whether to use a tool, an in-process subagent, or a CLI subagent based on task complexity, required autonomy, and configured `task_types`.
 
@@ -717,10 +809,15 @@ step.step_id: str                       # Unique identifier
 step.description: str                   # Step description
 step.status: str                        # "pending" | "in_progress" | "completed" | "failed"
 step.result: str | None                 # Step result (if completed)
-step.execution_hint: str                # "tool" | "subagent" | "cli_subagent" | "auto"
+step.execution_hint: str                # "tool" | "subagent" | "external_subagent" | "builtin_agent" | "auto"
 ```
 
-The `execution_hint` guides the planner's routing heuristic. When set to `"auto"` (default), the LLM decides the execution strategy at runtime.
+The `execution_hint` guides the planner's routing heuristic:
+- `"tool"` - Execute using a tool
+- `"subagent"` - Delegate to an in-process child NoeAgent
+- `"external_subagent"` - Delegate to an external CLI daemon
+- `"builtin_agent"` - Delegate to a built-in specialized agent (browser_use, tacitus)
+- `"auto"` (default) - Let the LLM decide the execution strategy at runtime
 
 ### Memory Providers
 
@@ -869,16 +966,16 @@ result = agent.run("Find recent papers about transformer architectures and summa
 from noeagent import (
     NoeAgent,
     NoeConfig,
-    AgentSubagentConfig,
     CliSubagentConfig,
 )
+from noeagent.config import AgentSubagentConfig
 
 # Configure with both agent subagents and CLI subagents
 config = NoeConfig(
     enable_subagents=True,
     subagent_max_depth=2,
     # Built-in agent subagents (browser_use, tacitus)
-    agent_subagents=[
+    builtin=[
         AgentSubagentConfig(
             name="browser_use",
             agent_type="browser_use",
@@ -893,7 +990,7 @@ config = NoeConfig(
         ),
     ],
     # External CLI subagents
-    cli_subagents=[
+    external=[
         CliSubagentConfig(
             name="claude-code",
             command="claude",
@@ -993,14 +1090,23 @@ except ContentPolicyError as e:
 ## CLI Reference
 
 ```bash
+# TUI mode (default)
 noeagent                          # Start TUI
-noeagent --mode ask               # Ask mode
-noeagent --mode agent             # Agent mode
-noeagent --model gpt-4o           # Specify model
-noeagent --max-iterations 20      # Set limits
-noeagent config init openai       # Initialize config
-noeagent config show              # Show config
+
+# Autonomous mode (RFC-1005)
+noeagent --autonomous             # Run in autonomous mode
+noeagent --autonomous --goal "Monitor issues"  # With initial goal
+noeagent --tick-interval 15       # Custom cognitive loop interval
+
+# Config management
+noeagent config path              # Show config file path
+noeagent config show              # Show current config
+noeagent config show -k llm.provider  # Show specific key
+noeagent config init openai       # Initialize config with provider
+noeagent config set llm.provider openrouter  # Set config value
 ```
+
+**Note:** The `--mode` and `--model` flags shown in older documentation are not implemented in the current CLI. Use the config file or `NoeConfig` for mode and model settings.
 
 ## Next Steps
 

@@ -579,7 +579,6 @@ class TestBenchmarkReport:
             "github",
             "gmail",
             "audio",
-            "audio_aliyun",
         ]
         config = _make_config(enabled_toolkits=all_toolkits)
         agent = NoeAgent(config)

@@ -301,7 +301,7 @@ bash, file_edit, document, image, python_executor, tabular_data,
 web_search, user_interaction
 ```
 
-Additional available toolkits (not enabled by default): `jina_research`, `memory`, `video`, `arxiv`, `serper`, `wikipedia`, `github`, `gmail`, `audio`, `audio_aliyun`
+Additional available toolkits (not enabled by default): `jina_research`, `memory`, `video`, `arxiv`, `serper`, `wikipedia`, `github`, `gmail`, `audio`
 
 **`max_tool_calls_per_step` enforcement**: `tool_node` enforces the configured limit by processing only the first N tool calls and returning a warning message for any excess.
 
