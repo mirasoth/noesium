@@ -23,6 +23,9 @@ from uuid_extensions import uuid7str
 
 from noesium.subagents import (
     SUBAGENT_BROWSER_USE,
+    SUBAGENT_DAVINCI,
+    SUBAGENT_EXPLORE,
+    SUBAGENT_PLAN,
     SUBAGENT_TACITUS,
 )
 from noesium.toolkits import (
@@ -120,7 +123,7 @@ class CliSubagentConfig(BaseModel):
     skip_permissions: bool = True  # For automation workflows
 
 
-# Default agent subagents (browser_use and tacitus)
+# Default agent subagents (browser_use, tacitus, plan, explore, davinci)
 DEFAULT_AGENT_SUBAGENTS = [
     AgentSubagentConfig(
         name=SUBAGENT_BROWSER_USE,
@@ -194,6 +197,77 @@ DEFAULT_AGENT_SUBAGENTS = [
             "multi-source research",
             "complex questions",
             "fact verification",
+        ],
+    ),
+    AgentSubagentConfig(
+        name=SUBAGENT_PLAN,
+        agent_type=SUBAGENT_PLAN,
+        description="Planning agent for complex tasks with file analysis and user interaction",
+        enabled=True,
+        requires_explicit_command=False,
+        task_types=[
+            "planning",
+            "task_breakdown",
+            "analysis",
+        ],
+        use_cases=[
+            "Create implementation plans from requirements",
+            "Analyze codebase and propose solutions",
+            "Break down complex tasks into steps",
+        ],
+        keywords=[
+            "plan",
+            "analyze",
+            "breakdown",
+            "strategy",
+            "implementation",
+            "steps",
+        ],
+        preferred_for=[
+            "multi-step tasks",
+            "code analysis",
+            "requirements planning",
+        ],
+    ),
+    AgentSubagentConfig(
+        name=SUBAGENT_EXPLORE,
+        agent_type=SUBAGENT_EXPLORE,
+        description="Exploration agent for gathering information from files, code, and data",
+        enabled=True,
+        requires_explicit_command=False,
+        task_types=[
+            "exploration",
+            "information_gathering",
+            "analysis",
+        ],
+        use_cases=[
+            "Explore codebase structure",
+            "Find relevant files and information",
+            "Analyze documents and data",
+        ],
+        keywords=[
+            "explore",
+            "find",
+            "search",
+            "analyze",
+            "gather",
+            "information",
+        ],
+        preferred_for=[
+            "code exploration",
+            "document analysis",
+            "data investigation",
+        ],
+    ),
+    AgentSubagentConfig(
+        name=SUBAGENT_DAVINCI,
+        agent_type=SUBAGENT_DAVINCI,
+        description="Scientific research agent (coming soon)",
+        enabled=False,  # Not yet implemented
+        requires_explicit_command=True,
+        task_types=[
+            "scientific_research",
+            "hypothesis_testing",
         ],
     ),
 ]

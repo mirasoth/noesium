@@ -40,7 +40,13 @@ from noesium.core.memory.providers.working import WorkingMemoryProvider
 from noesium.core.toolify.adapters.function_adapter import FunctionAdapter
 from noesium.core.toolify.atomic import ToolContext
 from noesium.core.toolify.executor import ToolExecutor
-from noesium.subagents import SUBAGENT_BROWSER_USE, SUBAGENT_TACITUS
+from noesium.subagents import (
+    SUBAGENT_BROWSER_USE,
+    SUBAGENT_DAVINCI,
+    SUBAGENT_EXPLORE,
+    SUBAGENT_PLAN,
+    SUBAGENT_TACITUS,
+)
 
 from .config import _NOEAGENT_CONSOLE_LOG_LEVEL, NoeConfig, NoeMode
 from .graph import builder
@@ -311,6 +317,9 @@ class NoeAgent(BaseGraphicAgent):
         agent_factories = {
             SUBAGENT_BROWSER_USE: self._create_browser_use_agent,
             SUBAGENT_TACITUS: self._create_tacitus_agent,
+            SUBAGENT_PLAN: self._create_plan_agent,
+            SUBAGENT_EXPLORE: self._create_explore_agent,
+            SUBAGENT_DAVINCI: self._create_davinci_agent,
         }
 
         await setup_builtin_subagents(
@@ -405,6 +414,76 @@ class NoeAgent(BaseGraphicAgent):
         except ImportError as exc:
             logger.error("Failed to import TacitusAgent: %s", exc)
             raise RuntimeError(f"TacitusAgent not available: {exc}") from exc
+
+    def _create_plan_agent(self, subagent_cfg: Any = None) -> Any:
+        """Factory method to create a PlanAgent instance.
+
+        Args:
+            subagent_cfg: Built-in subagent config (optional; may contain max_planning_loops).
+
+        Returns:
+            PlanAgent instance configured with the parent's LLM provider.
+        """
+        try:
+            from noesium.subagents.plan import PlanAgent
+
+            opts = (subagent_cfg.config or {}).copy() if subagent_cfg else {}
+            max_planning_loops = opts.get("max_planning_loops", 3)
+
+            return PlanAgent(
+                llm_provider=self.config.llm_provider,
+                max_planning_loops=max_planning_loops,
+            )
+        except ImportError as exc:
+            logger.error("Failed to import PlanAgent: %s", exc)
+            raise RuntimeError(f"PlanAgent not available: {exc}") from exc
+
+    def _create_explore_agent(self, subagent_cfg: Any = None) -> Any:
+        """Factory method to create an ExploreAgent instance.
+
+        Args:
+            subagent_cfg: Built-in subagent config (optional; may contain max_exploration_depth).
+
+        Returns:
+            ExploreAgent instance configured with the parent's LLM provider.
+        """
+        try:
+            from noesium.subagents.explore import ExploreAgent
+
+            opts = (subagent_cfg.config or {}).copy() if subagent_cfg else {}
+            max_exploration_depth = opts.get("max_exploration_depth", 3)
+
+            return ExploreAgent(
+                llm_provider=self.config.llm_provider,
+                max_exploration_depth=max_exploration_depth,
+            )
+        except ImportError as exc:
+            logger.error("Failed to import ExploreAgent: %s", exc)
+            raise RuntimeError(f"ExploreAgent not available: {exc}") from exc
+
+    def _create_davinci_agent(self, subagent_cfg: Any = None) -> Any:
+        """Factory method to create a DavinciAgent instance.
+
+        Args:
+            subagent_cfg: Built-in subagent config (unused, placeholder).
+
+        Returns:
+            DavinciAgent instance (raises NotImplementedError).
+
+        Raises:
+            NotImplementedError: DavinciAgent is not yet implemented.
+        """
+        try:
+            from noesium.subagents.davinci import DavinciAgent
+
+            # This will raise NotImplementedError from DavinciAgent.__init__
+            return DavinciAgent(llm_provider=self.config.llm_provider)
+        except NotImplementedError:
+            # Re-raise the NotImplementedError with clear message
+            raise
+        except ImportError as exc:
+            logger.error("Failed to import DavinciAgent: %s", exc)
+            raise RuntimeError(f"DavinciAgent not available: {exc}") from exc
 
     async def _cleanup_subagents(self) -> None:
         self._subagents.clear()

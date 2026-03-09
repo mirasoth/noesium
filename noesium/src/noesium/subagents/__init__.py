@@ -8,9 +8,12 @@ Available Subagents:
     - AskuraAgent: General-purpose conversation agent
     - TacitusAgent: Research agent with iterative query generation
     - BrowserUseAgent: Web automation agent (lazy-loaded due to heavy dependencies)
+    - PlanAgent: Planning agent for creating implementation plans
+    - ExploreAgent: Exploration agent for gathering information from codebases
+    - DavinciAgent: Scientific research agent (placeholder, lazy-loaded)
 
 Usage:
-    from noesium.subagents import AskuraAgent, TacitusAgent
+    from noesium.subagents import AskuraAgent, TacitusAgent, PlanAgent, ExploreAgent
 
     # AskuraAgent for conversations
     agent = AskuraAgent()
@@ -19,6 +22,14 @@ Usage:
     # TacitusAgent for research
     researcher = TacitusAgent()
     result = await researcher.research("What is quantum computing?")
+
+    # PlanAgent for creating implementation plans
+    planner = PlanAgent()
+    plan = await planner.run("Plan how to implement a REST API")
+
+    # ExploreAgent for gathering information
+    explorer = ExploreAgent()
+    findings = await explorer.run("Explore the authentication module")
 """
 
 # Subagent names / types (defined here, not in core)
@@ -26,12 +37,29 @@ SUBAGENT_ASKURA = "askura"
 SUBAGENT_BROWSER_USE = "browser_use"
 SUBAGENT_CLAUDE = "claude"
 SUBAGENT_TACITUS = "tacitus"
+SUBAGENT_PLAN = "plan"
+SUBAGENT_EXPLORE = "explore"
+SUBAGENT_DAVINCI = "davinci"
 
 from noesium.subagents.askura import (
     AskuraAgent,
     AskuraConfig,
     AskuraResponse,
     AskuraState,
+)
+from noesium.subagents.explore import (
+    ExploreAgent,
+    ExplorationFinding,
+    ExplorationResult,
+    ExplorationSource,
+    ExploreState,
+)
+from noesium.subagents.plan import (
+    ClarificationQuestion,
+    PlanAgent,
+    PlanResult,
+    PlanStep,
+    PlanState,
 )
 from noesium.subagents.tacitus import ResearchState, TacitusAgent
 
@@ -41,6 +69,9 @@ __all__ = [
     "SUBAGENT_BROWSER_USE",
     "SUBAGENT_CLAUDE",
     "SUBAGENT_TACITUS",
+    "SUBAGENT_PLAN",
+    "SUBAGENT_EXPLORE",
+    "SUBAGENT_DAVINCI",
     # Subagent classes
     "AskuraAgent",
     "AskuraConfig",
@@ -48,13 +79,24 @@ __all__ = [
     "AskuraState",
     "TacitusAgent",
     "ResearchState",
+    "PlanAgent",
+    "PlanState",
+    "PlanStep",
+    "PlanResult",
+    "ClarificationQuestion",
+    "ExploreAgent",
+    "ExploreState",
+    "ExplorationFinding",
+    "ExplorationResult",
+    "ExplorationSource",
     "BrowserUseAgent",  # Lazy-loaded
+    "DavinciAgent",  # Lazy-loaded
 ]
 
 
-# Lazy import for BrowserUseAgent to avoid loading heavy dependencies
+# Lazy import for BrowserUseAgent and DavinciAgent to avoid loading heavy dependencies
 def __getattr__(name: str):
-    """Lazy import mechanism for BrowserUseAgent."""
+    """Lazy import mechanism for BrowserUseAgent and DavinciAgent."""
     if name == "BrowserUseAgent":
         try:
             from noesium.subagents.bu import BrowserUseAgent as _BrowserUseAgent
@@ -65,5 +107,14 @@ def __getattr__(name: str):
             raise ImportError(
                 f"Failed to import BrowserUseAgent. " f"Ensure browser-use dependencies are installed: {e}"
             ) from e
+
+    if name == "DavinciAgent":
+        try:
+            from noesium.subagents.davinci import DavinciAgent as _DavinciAgent
+
+            globals()["DavinciAgent"] = _DavinciAgent
+            return _DavinciAgent
+        except ImportError as e:
+            raise ImportError(f"Failed to import DavinciAgent: {e}") from e
 
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
