@@ -69,12 +69,10 @@ from noesium.core.event import (
 # Exceptions - User-facing only
 from noesium.core.exceptions import (
     CapabilityError,
-    ContentPolicyError,
     EventError,
     EventValidationError,
     IterationLimitError,
     KernelError,
-    LLMError,
     MemoryError,
     ModeError,
     NodeExecutionError,

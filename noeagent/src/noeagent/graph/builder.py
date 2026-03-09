@@ -9,11 +9,13 @@ try:
 except ImportError:
     raise ImportError("Noe requires langgraph. Install it with: uv run pip install langgraph")
 
+# Import state types at module level to ensure they're available in globals
+# when LangGraph's get_type_hints() resolves type annotations in nested functions
+from noeagent.state import AgentState, AskState
+
 from . import nodes, routing
 
 if TYPE_CHECKING:
-    pass
-
     from noeagent.config import NoeConfig
     from noeagent.planner import TaskPlanner
 
@@ -34,8 +36,6 @@ def build_ask_graph(
     Returns:
         Compiled StateGraph
     """
-    from noeagent.state import AskState
-
     workflow = StateGraph(AskState)
 
     async def _recall(state: "AskState") -> dict:
@@ -75,8 +75,6 @@ def build_agent_graph(
     Returns:
         Compiled StateGraph
     """
-    from noeagent.state import AgentState
-
     workflow = StateGraph(AgentState)
 
     async def _plan(state: "AgentState") -> dict:
