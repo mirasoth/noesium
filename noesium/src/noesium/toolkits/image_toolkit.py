@@ -69,10 +69,7 @@ class ImageToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         if not PIL_AVAILABLE:
-            raise ImportError(
-                "PIL (Pillow) is required for ImageToolkit. "
-                "Install with: pip install Pillow"
-            )
+            raise ImportError("PIL (Pillow) is required for ImageToolkit. " "Install with: pip install Pillow")
 
         # Configuration
         self.max_image_size = self.config.config.get("max_image_size", (1024, 1024))
@@ -101,9 +98,7 @@ class ImageToolkit(AsyncBaseToolkit):
                     # Check content type
                     content_type = response.headers.get("content-type", "")
                     if not content_type.startswith("image/"):
-                        raise ValueError(
-                            f"URL does not point to an image: {content_type}"
-                        )
+                        raise ValueError(f"URL does not point to an image: {content_type}")
 
                     image_data = await response.read()
                     image = Image.open(BytesIO(image_data))
@@ -276,18 +271,14 @@ class ImageToolkit(AsyncBaseToolkit):
                         {"type": "text", "text": prompt},
                         {
                             "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}"
-                            },
+                            "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
                         },
                     ],
                 }
             ]
 
             # Use the LLM client for vision analysis
-            response = await self.llm_client.completion(
-                messages=messages, max_tokens=max_tokens, temperature=0.1
-            )
+            response = await self.llm_client.completion(messages=messages, max_tokens=max_tokens, temperature=0.1)
 
             self.logger.info("Image analysis completed successfully")
             return response.strip()
@@ -323,9 +314,7 @@ class ImageToolkit(AsyncBaseToolkit):
 
         return await self.analyze_image(image_path, prompt, max_tokens=1000)
 
-    async def describe_image(
-        self, image_path: str, detail_level: str = "medium"
-    ) -> str:
+    async def describe_image(self, image_path: str, detail_level: str = "medium") -> str:
         """
         Generate a comprehensive description of an image.
 
@@ -350,9 +339,7 @@ class ImageToolkit(AsyncBaseToolkit):
         }
 
         prompt = prompts.get(detail_level, prompts["medium"])
-        max_tokens = {"brief": 100, "medium": 300, "detailed": 600}.get(
-            detail_level, 300
-        )
+        max_tokens = {"brief": 100, "medium": 300, "detailed": 600}.get(detail_level, 300)
 
         return await self.analyze_image(image_path, prompt, max_tokens)
 

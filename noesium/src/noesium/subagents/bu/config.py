@@ -24,10 +24,7 @@ DEFAULT_HEADLESS: bool = True
 def is_running_in_docker() -> bool:
     """Detect if we are running in a docker container, for the purpose of optimizing chrome launch flags (dev shm usage, gpu settings, etc.)"""
     try:
-        if (
-            Path("/.dockerenv").exists()
-            or "docker" in Path("/proc/1/cgroup").read_text().lower()
-        ):
+        if Path("/.dockerenv").exists() or "docker" in Path("/proc/1/cgroup").read_text().lower():
             return True
     except Exception:
         pass
@@ -73,13 +70,7 @@ class OldConfig:
     @property
     def BROWSER_USE_CONFIG_DIR(self) -> Path:
         path = (
-            Path(
-                os.getenv(
-                    "BROWSER_USE_CONFIG_DIR", str(self.XDG_CONFIG_HOME / "browseruse")
-                )
-            )
-            .expanduser()
-            .resolve()
+            Path(os.getenv("BROWSER_USE_CONFIG_DIR", str(self.XDG_CONFIG_HOME / "browseruse"))).expanduser().resolve()
         )
         self._ensure_dirs()
         return path
@@ -166,10 +157,7 @@ class OldConfig:
     # Runtime hints
     @property
     def IN_DOCKER(self) -> bool:
-        return (
-            os.getenv("IN_DOCKER", "false").lower()[:1] in "ty1"
-            or is_running_in_docker()
-        )
+        return os.getenv("IN_DOCKER", "false").lower()[:1] in "ty1" or is_running_in_docker()
 
     @property
     def IS_IN_EVALS(self) -> bool:
@@ -183,9 +171,7 @@ class OldConfig:
 class FlatEnvConfig(BaseSettings):
     """All environment variables in a flat namespace."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="allow"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="allow")
 
     # Logging
     BROWSER_USE_LOGGING_LEVEL: str = Field(default="info")
@@ -290,9 +276,7 @@ def create_default_config() -> DBStyleConfigJSON:
     )
 
     # Create default LLM entry
-    new_config.llm[llm_id] = LLMEntry(
-        id=llm_id, default=True, model="gpt-4o", api_key="your-openai-api-key-here"
-    )
+    new_config.llm[llm_id] = LLMEntry(id=llm_id, default=True, model="gpt-4o", api_key="your-openai-api-key-here")
 
     # Create default agent entry
     new_config.agent[agent_id] = AgentEntry(id=agent_id, default=True)
@@ -316,21 +300,17 @@ def load_and_migrate_config(config_path: Path) -> DBStyleConfigJSON:
 
         # Check if it's already in DB-style format
         if all(key in data for key in ["browser_profile", "llm", "agent"]) and all(
-            isinstance(data.get(key, {}), dict)
-            for key in ["browser_profile", "llm", "agent"]
+            isinstance(data.get(key, {}), dict) for key in ["browser_profile", "llm", "agent"]
         ):
             # Check if the values are DB-style entries (have UUIDs as keys)
             if data.get("browser_profile") and all(
-                isinstance(v, dict) and "id" in v
-                for v in data["browser_profile"].values()
+                isinstance(v, dict) and "id" in v for v in data["browser_profile"].values()
             ):
                 # Already in new format
                 return DBStyleConfigJSON(**data)
 
         # Old format detected - delete it and create fresh config
-        logger.debug(
-            f"Old config format detected at {config_path}, creating fresh config"
-        )
+        logger.debug(f"Old config format detected at {config_path}, creating fresh config")
         new_config = create_default_config()
 
         # Overwrite with new config
@@ -341,9 +321,7 @@ def load_and_migrate_config(config_path: Path) -> DBStyleConfigJSON:
         return new_config
 
     except Exception as e:
-        logger.error(
-            f"Failed to load config from {config_path}: {e}, creating fresh config"
-        )
+        logger.error(f"Failed to load config from {config_path}: {e}, creating fresh config")
         # On any error, create fresh config
         new_config = create_default_config()
         try:
@@ -371,9 +349,7 @@ class Config:
         """
         # Special handling for internal attributes
         if name.startswith("_"):
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute '{name}'"
-            )
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
         # Create fresh instances on every access
         old_config = OldConfig()
@@ -399,9 +375,7 @@ class Config:
         elif name == "_ensure_dirs":
             return lambda: old_config._ensure_dirs()
 
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{name}'"
-        )
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def _get_config_path(self) -> Path:
         """Get config path from fresh env config."""
@@ -428,9 +402,7 @@ class Config:
 
         # Return first profile if no default
         if db_config.browser_profile:
-            return next(iter(db_config.browser_profile.values())).model_dump(
-                exclude_none=True
-            )
+            return next(iter(db_config.browser_profile.values())).model_dump(exclude_none=True)
 
         return {}
 
@@ -476,11 +448,7 @@ class Config:
             config["browser_profile"]["headless"] = env_config.BROWSER_USE_HEADLESS
 
         if env_config.BROWSER_USE_ALLOWED_DOMAINS:
-            domains = [
-                d.strip()
-                for d in env_config.BROWSER_USE_ALLOWED_DOMAINS.split(",")
-                if d.strip()
-            ]
+            domains = [d.strip() for d in env_config.BROWSER_USE_ALLOWED_DOMAINS.split(",") if d.strip()]
             config["browser_profile"]["allowed_domains"] = domains
 
         # Proxy settings (Chromium) -> consolidated `proxy` dict
@@ -490,11 +458,7 @@ class Config:
         if env_config.BROWSER_USE_NO_PROXY:
             # store bypass as comma-separated string to match Chrome flag
             proxy_dict["bypass"] = ",".join(
-                [
-                    d.strip()
-                    for d in env_config.BROWSER_USE_NO_PROXY.split(",")
-                    if d.strip()
-                ]
+                [d.strip() for d in env_config.BROWSER_USE_NO_PROXY.split(",") if d.strip()]
             )
         if env_config.BROWSER_USE_PROXY_USERNAME:
             proxy_dict["username"] = env_config.BROWSER_USE_PROXY_USERNAME

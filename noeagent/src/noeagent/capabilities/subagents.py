@@ -65,9 +65,7 @@ class NoeChildSubagentRuntime(BaseSubagentRuntime):
 
     @classmethod
     def get_descriptor(cls) -> SubagentDescriptor:
-        raise NotImplementedError(
-            "NoeChildSubagentRuntime uses instance-specific descriptors"
-        )
+        raise NotImplementedError("NoeChildSubagentRuntime uses instance-specific descriptors")
 
     @property
     def descriptor(self) -> SubagentDescriptor:
@@ -174,9 +172,7 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
 
     @classmethod
     def get_descriptor(cls) -> SubagentDescriptor:
-        raise NotImplementedError(
-            "NoeBuiltinSubagentRuntime uses instance-specific descriptors"
-        )
+        raise NotImplementedError("NoeBuiltinSubagentRuntime uses instance-specific descriptors")
 
     @property
     def descriptor(self) -> SubagentDescriptor:
@@ -275,8 +271,7 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
                         yield SubagentProgressEvent.progress(
                             request_id=request_id,
                             subagent_id=self._subagent_id,
-                            summary=event.summary
-                            or f"Step {(event.step_index or 0) + 1} starting",
+                            summary=event.summary or f"Step {(event.step_index or 0) + 1} starting",
                             detail=event.detail,
                             payload={
                                 "child_event_type": "step.start",
@@ -289,8 +284,7 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
                         yield SubagentProgressEvent.progress(
                             request_id=request_id,
                             subagent_id=self._subagent_id,
-                            summary=event.summary
-                            or f"Step {(event.step_index or 0) + 1} complete",
+                            summary=event.summary or f"Step {(event.step_index or 0) + 1} complete",
                             detail=event.detail,
                             payload={
                                 "child_event_type": "step.complete",
@@ -330,9 +324,7 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
                     res = await agent.research(task)
                     result = res.content if hasattr(res, "content") else str(res)
                 else:
-                    raise RuntimeError(
-                        f"Agent {self._subagent_id} has no astream_progress/arun/research method"
-                    )
+                    raise RuntimeError(f"Agent {self._subagent_id} has no astream_progress/arun/research method")
 
                 yield SubagentProgressEvent.end(
                     request_id=request_id,
@@ -393,9 +385,7 @@ class NoeCliSubagentRuntime(BaseSubagentRuntime):
 
     @classmethod
     def get_descriptor(cls) -> SubagentDescriptor:
-        raise NotImplementedError(
-            "NoeCliSubagentRuntime uses instance-specific descriptors"
-        )
+        raise NotImplementedError("NoeCliSubagentRuntime uses instance-specific descriptors")
 
     @property
     def descriptor(self) -> SubagentDescriptor:
@@ -461,9 +451,7 @@ class NoeCliSubagentRuntime(BaseSubagentRuntime):
             try:
                 await self._cli_adapter.terminate(self._subagent_id)
             except Exception as e:
-                logger.warning(
-                    "Failed to terminate CLI subagent '%s': %s", self._subagent_id, e
-                )
+                logger.warning("Failed to terminate CLI subagent '%s': %s", self._subagent_id, e)
         await super().shutdown()
 
 
@@ -562,8 +550,7 @@ async def setup_builtin_subagents(
                 agent_factory=make_factory(subagent_cfg, factory_callable),
                 subagent_id=subagent_cfg.name,
                 display_name=subagent_cfg.name,
-                description=subagent_cfg.description
-                or f"Built-in {subagent_cfg.agent_type} subagent",
+                description=subagent_cfg.description or f"Built-in {subagent_cfg.agent_type} subagent",
                 task_types=subagent_cfg.task_types,
             )
             if subagent_manager is not None:

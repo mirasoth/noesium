@@ -138,9 +138,7 @@ def setup_logging(
         console.setFormatter(BrowserUseFormatter("%(message)s", log_level))
     else:
         console.setLevel(log_level)  # Keep console at original log level (e.g., INFO)
-        console.setFormatter(
-            BrowserUseFormatter("%(levelname)-8s [%(name)s] %(message)s", log_level)
-        )
+        console.setFormatter(BrowserUseFormatter("%(levelname)-8s [%(name)s] %(message)s", log_level))
 
     # Configure root logger only
     root.addHandler(console)
@@ -153,9 +151,7 @@ def setup_logging(
         debug_handler = logging.FileHandler(debug_log_file)
         debug_handler.setLevel(logging.DEBUG)
         debug_handler.setFormatter(
-            BrowserUseFormatter(
-                "%(asctime)s - %(levelname)-8s [%(name)s] %(message)s", logging.DEBUG
-            )
+            BrowserUseFormatter("%(asctime)s - %(levelname)-8s [%(name)s] %(message)s", logging.DEBUG)
         )
         file_handlers.append(debug_handler)
         root.addHandler(debug_handler)
@@ -165,9 +161,7 @@ def setup_logging(
         info_handler = logging.FileHandler(info_log_file)
         info_handler.setLevel(logging.INFO)
         info_handler.setFormatter(
-            BrowserUseFormatter(
-                "%(asctime)s - %(levelname)-8s [%(name)s] %(message)s", logging.INFO
-            )
+            BrowserUseFormatter("%(asctime)s - %(levelname)-8s [%(name)s] %(message)s", logging.INFO)
         )
         file_handlers.append(info_handler)
         root.addHandler(info_handler)
@@ -205,11 +199,7 @@ def setup_logging(
         setup_cdp_logging(
             level=cdp_level,
             stream=stream or sys.stdout,
-            format_string=(
-                "%(levelname)-8s [%(name)s] %(message)s"
-                if log_type != "result"
-                else "%(message)s"
-            ),
+            format_string=("%(levelname)-8s [%(name)s] %(message)s" if log_type != "result" else "%(message)s"),
         )
     except ImportError:
         # If cdp_use doesn't have the new logging module, fall back to manual config
@@ -324,9 +314,7 @@ def setup_log_pipes(session_id: str, base_dir: str | None = None):
     # Agent logs
     agent_handler = FIFOHandler(str(pipe_dir / "agent.pipe"))
     agent_handler.setLevel(logging.DEBUG)
-    agent_handler.setFormatter(
-        logging.Formatter("%(levelname)-8s [%(name)s] %(message)s")
-    )
+    agent_handler.setFormatter(logging.Formatter("%(levelname)-8s [%(name)s] %(message)s"))
     for name in ["noesium.subagents.bu.agent", "noesium.subagents.bu.tools"]:
         logger = logging.getLogger(name)
         logger.addHandler(agent_handler)
@@ -336,9 +324,7 @@ def setup_log_pipes(session_id: str, base_dir: str | None = None):
     # CDP logs
     cdp_handler = FIFOHandler(str(pipe_dir / "cdp.pipe"))
     cdp_handler.setLevel(logging.DEBUG)
-    cdp_handler.setFormatter(
-        logging.Formatter("%(levelname)-8s [%(name)s] %(message)s")
-    )
+    cdp_handler.setFormatter(logging.Formatter("%(levelname)-8s [%(name)s] %(message)s"))
     for name in ["websockets.client", "cdp_use.client"]:
         logger = logging.getLogger(name)
         logger.addHandler(cdp_handler)
@@ -348,9 +334,7 @@ def setup_log_pipes(session_id: str, base_dir: str | None = None):
     # Event logs
     event_handler = FIFOHandler(str(pipe_dir / "events.pipe"))
     event_handler.setLevel(logging.INFO)
-    event_handler.setFormatter(
-        logging.Formatter("%(levelname)-8s [%(name)s] %(message)s")
-    )
+    event_handler.setFormatter(logging.Formatter("%(levelname)-8s [%(name)s] %(message)s"))
     for name in ["bubus", "noesium.subagents.bu.browser.session"]:
         logger = logging.getLogger(name)
         logger.addHandler(event_handler)

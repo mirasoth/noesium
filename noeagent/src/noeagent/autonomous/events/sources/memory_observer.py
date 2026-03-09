@@ -60,9 +60,7 @@ class MemoryObserverEventSource(BaseEventSource):
     async def start(self) -> None:
         """Start monitoring memory changes."""
         self._running = True
-        self.logger.info(
-            f"MemoryObserverEventSource started, watching {len(self.watch_patterns)} patterns"
-        )
+        self.logger.info(f"MemoryObserverEventSource started, watching {len(self.watch_patterns)} patterns")
 
     def stop(self) -> None:
         """Stop monitoring memory."""

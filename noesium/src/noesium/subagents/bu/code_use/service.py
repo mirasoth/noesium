@@ -108,15 +108,11 @@ class CodeAgent:
         """
         # Log and ignore unknown kwargs for compatibility
         if kwargs:
-            logger.debug(
-                f"Ignoring additional kwargs for CodeAgent compatibility: {list(kwargs.keys())}"
-            )
+            logger.debug(f"Ignoring additional kwargs for CodeAgent compatibility: {list(kwargs.keys())}")
 
         if llm is None:
             # For noesium, we require an LLM to be provided
-            raise RuntimeError(
-                "CodeAgent requires an LLM to be provided. Please pass an llm parameter."
-            )
+            raise RuntimeError("CodeAgent requires an LLM to be provided. Please pass an llm parameter.")
 
         # No longer restrict to ChatBrowserUse - work with any LLM adapter
 
@@ -148,23 +144,14 @@ class CodeAgent:
         self.llm = llm
         self.browser_session = browser_session
         if self.browser_session:
-            if (
-                demo_mode is not None
-                and self.browser_session.browser_profile.demo_mode != demo_mode
-            ):
-                self.browser_session.browser_profile = (
-                    self.browser_session.browser_profile.model_copy(
-                        update={"demo_mode": demo_mode}
-                    )
+            if demo_mode is not None and self.browser_session.browser_profile.demo_mode != demo_mode:
+                self.browser_session.browser_profile = self.browser_session.browser_profile.model_copy(
+                    update={"demo_mode": demo_mode}
                 )
-            self._demo_mode_enabled = bool(
-                self.browser_session.browser_profile.demo_mode
-            )
+            self._demo_mode_enabled = bool(self.browser_session.browser_profile.demo_mode)
         self.tools = tools or CodeAgentTools()
         self.page_extraction_llm = page_extraction_llm
-        self.file_system = (
-            file_system if file_system is not None else FileSystem(base_dir="./")
-        )
+        self.file_system = file_system if file_system is not None else FileSystem(base_dir="./")
         self.available_file_paths = available_file_paths or []
         self.sensitive_data = sensitive_data
         self.max_steps = max_steps
@@ -175,33 +162,23 @@ class CodeAgent:
         self.session = NotebookSession()
         self.namespace: dict[str, Any] = {}
         self._llm_messages: list[BaseMessage] = []  # Internal LLM conversation history
-        self.complete_history: list[CodeAgentHistory] = (
-            []
-        )  # Type-safe history with model_output and result
+        self.complete_history: list[CodeAgentHistory] = []  # Type-safe history with model_output and result
         self.dom_service: DomService | None = None
-        self._last_browser_state_text: str | None = (
-            None  # Track last browser state text
-        )
+        self._last_browser_state_text: str | None = None  # Track last browser state text
         self._last_screenshot: str | None = None  # Track last screenshot (base64)
         self._consecutive_errors = 0  # Track consecutive errors for auto-termination
         self._validation_count = 0  # Track number of validator runs
         self._last_llm_usage: Any | None = None  # Track last LLM call usage stats
         self._step_start_time = 0.0  # Track step start time for duration calculation
-        self.usage_summary: UsageSummary | None = (
-            None  # Track usage summary across run for history property
-        )
+        self.usage_summary: UsageSummary | None = None  # Track usage summary across run for history property
         self._sample_output_added = False  # Track whether preview cell already created
 
         # Initialize screenshot service for eval tracking
         self.id = uuid7str()
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         base_tmp = Path("/tmp")
-        self.agent_directory = (
-            base_tmp / f"browser_use_code_agent_{self.id}_{timestamp}"
-        )
-        self.screenshot_service = ScreenshotService(
-            agent_directory=self.agent_directory
-        )
+        self.agent_directory = base_tmp / f"browser_use_code_agent_{self.id}_{timestamp}"
+        self.screenshot_service = ScreenshotService(agent_directory=self.agent_directory)
 
         # Initialize token cost service for usage tracking
         self.token_cost_service = TokenCost(include_cost=calculate_cost)
@@ -237,25 +214,17 @@ class CodeAgent:
         # Start browser if not provided
         if self.browser_session is None:
             assert self._browser_profile_for_init is not None
-            self.browser_session = BrowserSession(
-                browser_profile=self._browser_profile_for_init
-            )
+            self.browser_session = BrowserSession(browser_profile=self._browser_profile_for_init)
             await self.browser_session.start()
 
         if self.browser_session:
-            self._demo_mode_enabled = bool(
-                self.browser_session.browser_profile.demo_mode
-            )
-            if self._demo_mode_enabled and getattr(
-                self.browser_session.browser_profile, "headless", False
-            ):
+            self._demo_mode_enabled = bool(self.browser_session.browser_profile.demo_mode)
+            if self._demo_mode_enabled and getattr(self.browser_session.browser_profile, "headless", False):
                 logger.warning(
                     "Demo mode is enabled but the browser is headless=True; set headless=False to view the panel."
                 )
             if self._demo_mode_enabled:
-                await self._demo_mode_log(
-                    f"Started CodeAgent task: {self.task}", "info", {"tag": "task"}
-                )
+                await self._demo_mode_log(f"Started CodeAgent task: {self.task}", "info", {"tag": "task"})
 
         # Initialize DOM service with cross-origin iframe support enabled
         self.dom_service = DomService(
@@ -302,14 +271,10 @@ class CodeAgent:
                         browser_state_text, _ = await self._get_browser_state()
                         cell.browser_state = browser_state_text
                     except Exception as state_error:
-                        logger.debug(
-                            f"Failed to capture browser state for initial navigation cell: {state_error}"
-                        )
+                        logger.debug(f"Failed to capture browser state for initial navigation cell: {state_error}")
 
             except Exception as e:
-                logger.warning(
-                    f"Failed to navigate to extracted URL {initial_url}: {e}"
-                )
+                logger.warning(f"Failed to navigate to extracted URL {initial_url}: {e}")
                 # Record failed navigation as error cell
                 nav_code = f"await navigate('{initial_url}')"
                 cell = self.session.add_cell(source=nav_code)
@@ -329,9 +294,7 @@ class CodeAgent:
         # Main execution loop
         for step in range(self.max_steps):
             logger.info(f"\n\n\n\n\n\n\nStep {step + 1}/{self.max_steps}")
-            await self._demo_mode_log(
-                f"Starting step {step + 1}/{self.max_steps}", "info", {"step": step + 1}
-            )
+            await self._demo_mode_log(f"Starting step {step + 1}/{self.max_steps}", "info", {"step": step + 1})
 
             # Start timing this step
             self._step_start_time = datetime.datetime.now().timestamp()
@@ -343,9 +306,7 @@ class CodeAgent:
             should_warn = (
                 steps_remaining <= 1  # Last step or next to last
                 or errors_remaining <= 1  # One more error will terminate
-                or (
-                    steps_remaining <= 2 and self._consecutive_errors >= 2
-                )  # Close to both limits
+                or (steps_remaining <= 2 and self._consecutive_errors >= 2)  # Close to both limits
             )
 
             if should_warn:
@@ -364,11 +325,7 @@ class CodeAgent:
 
             try:
                 # Fetch fresh browser state right before LLM call (only if not already set)
-                if (
-                    not self._last_browser_state_text
-                    and self.browser_session
-                    and self.dom_service
-                ):
+                if not self._last_browser_state_text and self.browser_session and self.dom_service:
                     try:
                         logger.debug("🔍 Fetching browser state before LLM call...")
                         browser_state_text, screenshot = await self._get_browser_state()
@@ -383,15 +340,11 @@ class CodeAgent:
                         # else:
                         # 	logger.info(f'Browser state (before LLM):\n{browser_state_text}')
                     except Exception as e:
-                        logger.warning(
-                            f"Failed to get browser state before LLM call: {e}"
-                        )
+                        logger.warning(f"Failed to get browser state before LLM call: {e}")
 
                 # Get code from LLM (this also adds to self._llm_messages)
                 try:
-                    code, full_llm_response = await self._get_code_from_llm(
-                        step_number=step + 1
-                    )
+                    code, full_llm_response = await self._get_code_from_llm(step_number=step + 1)
                 except Exception as llm_error:
                     # LLM call failed - count as consecutive error and retry
                     self._consecutive_errors += 1
@@ -406,9 +359,7 @@ class CodeAgent:
 
                     # Check if we've hit the consecutive error limit
                     if self._consecutive_errors >= self.max_failures:
-                        logger.error(
-                            f"Terminating: {self.max_failures} consecutive LLM failures"
-                        )
+                        logger.error(f"Terminating: {self.max_failures} consecutive LLM failures")
                         break
 
                     await asyncio.sleep(1)  # Brief pause before retry
@@ -417,9 +368,7 @@ class CodeAgent:
                 if not code or code.strip() == "":
                     # If task is already done, empty code is fine (LLM explaining completion)
                     if self._is_task_done():
-                        logger.info(
-                            "Task already marked as done, LLM provided explanation without code"
-                        )
+                        logger.info("Task already marked as done, LLM provided explanation without code")
                         # Add the text response to history as a non-code step
                         await self._add_step_to_complete_history(
                             model_output_code="",
@@ -436,9 +385,7 @@ class CodeAgent:
                     # new state
                     if self.browser_session and self.dom_service:
                         try:
-                            browser_state_text, screenshot = (
-                                await self._get_browser_state()
-                            )
+                            browser_state_text, screenshot = await self._get_browser_state()
                             self._last_browser_state_text = browser_state_text
                             self._last_screenshot = screenshot
                         except Exception as e:
@@ -448,9 +395,7 @@ class CodeAgent:
                 # Execute code blocks sequentially if multiple python blocks exist
                 # This allows JS/bash blocks to be injected into namespace before Python code uses them
                 all_blocks = self.namespace.get("_all_code_blocks", {})
-                python_blocks = [
-                    k for k in sorted(all_blocks.keys()) if k.startswith("python_")
-                ]
+                python_blocks = [k for k in sorted(all_blocks.keys()) if k.startswith("python_")]
 
                 if len(python_blocks) > 1:
                     # Multiple Python blocks - execute each sequentially
@@ -458,13 +403,9 @@ class CodeAgent:
                     error = None
 
                     for i, block_key in enumerate(python_blocks):
-                        logger.info(
-                            f"Executing Python block {i + 1}/{len(python_blocks)}"
-                        )
+                        logger.info(f"Executing Python block {i + 1}/{len(python_blocks)}")
                         block_code = all_blocks[block_key]
-                        block_output, block_error, _ = await self._execute_code(
-                            block_code
-                        )
+                        block_output, block_error, _ = await self._execute_code(block_code)
 
                         # Accumulate outputs
                         if block_output:
@@ -480,9 +421,7 @@ class CodeAgent:
                 # Track consecutive errors
                 if error:
                     self._consecutive_errors += 1
-                    logger.warning(
-                        f"Consecutive errors: {self._consecutive_errors}/{self.max_failures}"
-                    )
+                    logger.warning(f"Consecutive errors: {self._consecutive_errors}/{self.max_failures}")
 
                     # Check if we've hit the consecutive error limit
                     if self._consecutive_errors >= self.max_failures:
@@ -515,11 +454,9 @@ class CodeAgent:
                     # Check if we should validate (not at step/error limits and under max validations)
                     steps_remaining = self.max_steps - step - 1
                     should_validate = (
-                        self._validation_count
-                        < self.max_validations  # Haven't exceeded max validations
+                        self._validation_count < self.max_validations  # Haven't exceeded max validations
                         and steps_remaining >= 4  # At least 4 steps away from limit
-                        and self._consecutive_errors
-                        < 3  # Not close to error limit (8 consecutive)
+                        and self._consecutive_errors < 3  # Not close to error limit (8 consecutive)
                     )
 
                     if should_validate:
@@ -535,9 +472,7 @@ class CodeAgent:
 
                         if not is_complete:
                             # Task not truly complete - inject feedback and continue
-                            logger.warning(
-                                "Validator: Task not complete, continuing..."
-                            )
+                            logger.warning("Validator: Task not complete, continuing...")
                             validation_feedback = (
                                 f"\n\n⚠️ VALIDATOR FEEDBACK:\n"
                                 f"Your done() call was rejected. The task is NOT complete yet.\n\n"
@@ -552,9 +487,7 @@ class CodeAgent:
                             self.namespace.pop("_task_success", None)
 
                             # Add validation feedback to LLM messages
-                            self._llm_messages.append(
-                                UserMessage(content=validation_feedback)
-                            )
+                            self._llm_messages.append(UserMessage(content=validation_feedback))
 
                             # Don't override output - let execution continue normally
                         else:
@@ -621,9 +554,7 @@ class CodeAgent:
                 # The feedback message has already been added to _llm_messages
 
                 # Add result to LLM messages for next iteration (without browser state)
-                result_message = self._format_execution_result(
-                    code, output, error, current_step=step + 1
-                )
+                result_message = self._format_execution_result(code, output, error, current_step=step + 1)
                 truncated_result = truncate_message_content(result_message)
                 self._llm_messages.append(UserMessage(content=truncated_result))
 
@@ -633,9 +564,7 @@ class CodeAgent:
                 break
         else:
             # Loop completed without break - max_steps reached
-            logger.warning(
-                f"Maximum steps ({self.max_steps}) reached without task completion"
-            )
+            logger.warning(f"Maximum steps ({self.max_steps}) reached without task completion")
             await self._demo_mode_log(
                 f"Maximum steps ({self.max_steps}) reached without completing the task.",
                 "error",
@@ -652,9 +581,7 @@ class CodeAgent:
 
             # Build a partial result message from the last step
             partial_result_parts = []
-            partial_result_parts.append(
-                f"Task incomplete - reached step limit ({self.max_steps} steps)."
-            )
+            partial_result_parts.append(f"Task incomplete - reached step limit ({self.max_steps} steps).")
             partial_result_parts.append("Last step output:")
 
             if last_output:
@@ -676,14 +603,10 @@ class CodeAgent:
                     var_value = self.namespace[var_name]
                     # Check if it's a list or dict that might contain collected data
                     if isinstance(var_value, (list, dict)) and var_value:
-                        data_vars.append(
-                            f"  - {var_name}: {type(var_value).__name__} with {len(var_value)} items"
-                        )
+                        data_vars.append(f"  - {var_name}: {type(var_value).__name__} with {len(var_value)} items")
 
             if data_vars:
-                partial_result_parts.append(
-                    "\nVariables in namespace that may contain partial data:"
-                )
+                partial_result_parts.append("\nVariables in namespace that may contain partial data:")
                 partial_result_parts.extend(data_vars)
 
             partial_result = "\n".join(partial_result_parts)
@@ -696,9 +619,7 @@ class CodeAgent:
 
             logger.info(f"\nPartial result captured from last step:\n{partial_result}")
             if self._demo_mode_enabled:
-                await self._demo_mode_log(
-                    f"Partial result:\n{partial_result}", "error", {"tag": "task"}
-                )
+                await self._demo_mode_log(f"Partial result:\n{partial_result}", "error", {"tag": "task"})
 
         # Log final summary if task was completed
         if self._is_task_done():
@@ -739,9 +660,7 @@ class CodeAgent:
 
         return self.session
 
-    async def _get_code_from_llm(
-        self, step_number: int | None = None
-    ) -> tuple[str, str]:
+    async def _get_code_from_llm(self, step_number: int | None = None) -> tuple[str, str]:
         """Get Python code from the LLM.
 
         Returns:
@@ -773,9 +692,7 @@ class CodeAgent:
                 messages_to_send.append(UserMessage(content=content_parts))
             else:
                 # Text only
-                messages_to_send.append(
-                    UserMessage(content=self._last_browser_state_text)
-                )
+                messages_to_send.append(UserMessage(content=self._last_browser_state_text))
 
             # Clear browser state after including it so it's only in this request
             self._last_browser_state_text = None
@@ -834,12 +751,8 @@ class CodeAgent:
                 # Store js, bash, markdown blocks (and named variants) as variables in namespace
                 self.namespace[block_type] = block_content
                 self.namespace["_code_block_vars"].add(block_type)
-                print(
-                    f"→ Code block variable: {block_type} (str, {len(block_content)} chars)"
-                )
-                logger.debug(
-                    f"Injected {block_type} block into namespace ({len(block_content)} chars)"
-                )
+                print(f"→ Code block variable: {block_type} (str, {len(block_content)} chars)")
+                logger.debug(f"Injected {block_type} block into namespace ({len(block_content)} chars)")
 
         # Store all code blocks for sequential execution
         self.namespace["_all_code_blocks"] = code_blocks
@@ -878,31 +791,21 @@ class CodeAgent:
             return
 
         # Skip code block variables (already printed)
-        if "_code_block_vars" in self.namespace and var_name in self.namespace.get(
-            "_code_block_vars", set()
-        ):
+        if "_code_block_vars" in self.namespace and var_name in self.namespace.get("_code_block_vars", set()):
             return
 
         # Print compact variable info
         if isinstance(value, (list, dict)):
             preview = str(value)[:100]
-            print(
-                f"→ Variable: {var_name} ({type(value).__name__}, len={len(value)}, preview={preview}...)"
-            )
+            print(f"→ Variable: {var_name} ({type(value).__name__}, len={len(value)}, preview={preview}...)")
         elif isinstance(value, str) and len(value) > 50:
-            print(
-                f"→ Variable: {var_name} (str, {len(value)} chars, preview={value[:50]}...)"
-            )
+            print(f"→ Variable: {var_name} (str, {len(value)} chars, preview={value[:50]}...)")
         elif callable(value):
             print(f"→ Variable: {var_name} (function)")
         else:
-            print(
-                f"→ Variable: {var_name} ({type(value).__name__}, value={repr(value)[:50]})"
-            )
+            print(f"→ Variable: {var_name} ({type(value).__name__}, value={repr(value)[:50]})")
 
-    async def _execute_code(
-        self, code: str
-    ) -> tuple[str | None, str | None, str | None]:
+    async def _execute_code(self, code: str) -> tuple[str | None, str | None, str | None]:
         """
         Execute Python code in the namespace.
 
@@ -944,8 +847,7 @@ class CodeAgent:
                 try:
                     tree = ast.parse(code, mode="exec")
                     has_await = any(
-                        isinstance(node, (ast.Await, ast.AsyncWith, ast.AsyncFor))
-                        for node in ast.walk(tree)
+                        isinstance(node, (ast.Await, ast.AsyncWith, ast.AsyncFor)) for node in ast.walk(tree)
                     )
                 except SyntaxError:
                     # If parse fails, let exec handle the error
@@ -969,14 +871,10 @@ class CodeAgent:
                                 for target in node.targets:
                                     if isinstance(target, ast.Name):
                                         assigned_names.add(target.id)
-                            elif isinstance(node, ast.AugAssign) and isinstance(
-                                node.target, ast.Name
-                            ):
+                            elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name):
                                 assigned_names.add(node.target.id)
                             elif isinstance(node, (ast.AnnAssign, ast.NamedExpr)):
-                                if hasattr(node, "target") and isinstance(
-                                    node.target, ast.Name
-                                ):
+                                if hasattr(node, "target") and isinstance(node.target, ast.Name):
                                     assigned_names.add(node.target.id)
                             elif isinstance(node, ast.Global):
                                 # Track user's explicit global declarations
@@ -991,9 +889,7 @@ class CodeAgent:
                         # Filter to only existing namespace vars (like Jupyter does)
                         # Include both: assigned vars that exist + user's explicit globals
                         existing_vars = {
-                            name
-                            for name in (assigned_names | user_global_names)
-                            if name in self.namespace
+                            name for name in (assigned_names | user_global_names) if name in self.namespace
                         }
                     except Exception:
                         existing_vars = set()
@@ -1006,10 +902,7 @@ class CodeAgent:
                         global_decl = f"    global {vars_str}\n"
                         has_global_decl = True
 
-                    indented_code = "\n".join(
-                        "    " + line if line.strip() else line
-                        for line in code.split("\n")
-                    )
+                    indented_code = "\n".join("    " + line if line.strip() else line for line in code.split("\n"))
                     wrapped_code = f"""async def __code_exec__():
 {global_decl}{indented_code}
     # Return locals so we can update the namespace
@@ -1069,9 +962,7 @@ __code_exec_coro__ = __code_exec__()
 
             cell.status = ExecutionStatus.SUCCESS
             cell.output = output
-            cell.browser_state = (
-                None  # Will be captured in next iteration before LLM call
-            )
+            cell.browser_state = None  # Will be captured in next iteration before LLM call
 
         except Exception as e:
             # Handle EvaluateError specially - JavaScript execution failed
@@ -1104,11 +995,7 @@ __code_exec_coro__ = __code_exec__()
                 error = f"{type(e).__name__}: {error_msg}"
 
                 # Detect common f-string issues with JSON/JavaScript code
-                if (
-                    "unterminated" in error_msg.lower()
-                    and "string" in error_msg.lower()
-                    and code
-                ):
+                if "unterminated" in error_msg.lower() and "string" in error_msg.lower() and code:
                     # Check if code contains f-strings with potential JSON/JS content
                     has_fstring = bool(re.search(r'\bf["\']', code))
                     has_json_pattern = bool(
@@ -1127,10 +1014,7 @@ __code_exec_coro__ = __code_exec__()
                         )
 
                 # Detect and provide helpful hints for common string literal errors
-                if (
-                    "unterminated" in error_msg.lower()
-                    and "string" in error_msg.lower()
-                ):
+                if "unterminated" in error_msg.lower() and "string" in error_msg.lower():
                     # Detect what type of string literal is unterminated
                     is_triple = "triple-quoted" in error_msg.lower()
                     msg_lower = error_msg.lower()
@@ -1181,11 +1065,7 @@ __code_exec_coro__ = __code_exec__()
             else:
                 # For other errors, try to extract useful information
                 error_str = str(e)
-                error = (
-                    f"{type(e).__name__}: {error_str}"
-                    if error_str
-                    else f"{type(e).__name__} occurred"
-                )
+                error = f"{type(e).__name__}: {error_str}" if error_str else f"{type(e).__name__} occurred"
 
                 # For RuntimeError or other exceptions, try to extract traceback info
                 # to show which line in the user's code actually failed
@@ -1223,9 +1103,7 @@ __code_exec_coro__ = __code_exec__()
         try:
             # Get full browser state including screenshot if use_vision is enabled
             include_screenshot = True
-            state = await self.browser_session.get_browser_state_summary(
-                include_screenshot=include_screenshot
-            )
+            state = await self.browser_session.get_browser_state_summary(include_screenshot=include_screenshot)
 
             # Format browser state with namespace context
             browser_state_text = await format_browser_state_for_llm(
@@ -1283,14 +1161,10 @@ __code_exec_coro__ = __code_exec__()
 
         try:
             # Get browser state summary which includes screenshot
-            state = await self.browser_session.get_browser_state_summary(
-                include_screenshot=True
-            )
+            state = await self.browser_session.get_browser_state_summary(include_screenshot=True)
             if state and state.screenshot:
                 # Store screenshot using screenshot service
-                screenshot_path = await self.screenshot_service.store_screenshot(
-                    state.screenshot, step_number
-                )
+                screenshot_path = await self.screenshot_service.store_screenshot(state.screenshot, step_number)
                 return str(screenshot_path) if screenshot_path else None
         except Exception as e:
             logger.warning(f"Failed to capture screenshot for step {step_number}: {e}")
@@ -1328,9 +1202,7 @@ __code_exec_coro__ = __code_exec__()
         self_reported_success: bool | None = None
         if is_done:
             task_success = self.namespace.get("_task_success")
-            self_reported_success = (
-                task_success if isinstance(task_success, bool) else None
-            )
+            self_reported_success = task_success if isinstance(task_success, bool) else None
 
         # Create result entry using typed model
         result_entry = CodeAgentResult(
@@ -1341,19 +1213,13 @@ __code_exec_coro__ = __code_exec__()
         )
 
         # Create state entry using typed model
-        state_entry = CodeAgentState(
-            url=url, title=title, screenshot_path=screenshot_path
-        )
+        state_entry = CodeAgentState(url=url, title=title, screenshot_path=screenshot_path)
 
         # Create metadata entry using typed model
         step_end_time = datetime.datetime.now().timestamp()
         metadata_entry = CodeAgentStepMetadata(
-            input_tokens=(
-                self._last_llm_usage.prompt_tokens if self._last_llm_usage else None
-            ),
-            output_tokens=(
-                self._last_llm_usage.completion_tokens if self._last_llm_usage else None
-            ),
+            input_tokens=(self._last_llm_usage.prompt_tokens if self._last_llm_usage else None),
+            output_tokens=(self._last_llm_usage.completion_tokens if self._last_llm_usage else None),
             step_start_time=self._step_start_time,
             step_end_time=step_end_time,
         )
@@ -1378,9 +1244,7 @@ __code_exec_coro__ = __code_exec__()
         self.complete_history.append(history_entry)
         await self._demo_mode_log_step(history_entry)
 
-    async def _demo_mode_log(
-        self, message: str, level: str = "info", metadata: dict[str, Any] | None = None
-    ) -> None:
+    async def _demo_mode_log(self, message: str, level: str = "info", metadata: dict[str, Any] | None = None) -> None:
         if not (self._demo_mode_enabled and message and self.browser_session):
             return
         try:

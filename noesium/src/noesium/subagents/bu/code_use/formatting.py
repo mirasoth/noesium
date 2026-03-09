@@ -47,35 +47,21 @@ async def format_browser_state_for_llm(
         for tab in state.tabs:
             if tab.url == state.url and tab.title == state.title:
                 current_target_candidates.append(tab.target_id)
-        current_target_id = (
-            current_target_candidates[0]
-            if len(current_target_candidates) == 1
-            else None
-        )
+        current_target_id = current_target_candidates[0] if len(current_target_candidates) == 1 else None
 
         for tab in state.tabs:
             is_current = " (current)" if tab.target_id == current_target_id else ""
-            lines.append(
-                f"  - Tab {tab.target_id[-4:]}: {tab.url} - {tab.title[:30]}{is_current}"
-            )
+            lines.append(f"  - Tab {tab.target_id[-4:]}: {tab.url} - {tab.title[:30]}{is_current}")
         lines.append("")
 
     # Add page scroll info if available
     if state.page_info:
         pi = state.page_info
-        pages_above = (
-            pi.pixels_above / pi.viewport_height if pi.viewport_height > 0 else 0
-        )
-        pages_below = (
-            pi.pixels_below / pi.viewport_height if pi.viewport_height > 0 else 0
-        )
-        total_pages = (
-            pi.page_height / pi.viewport_height if pi.viewport_height > 0 else 0
-        )
+        pages_above = pi.pixels_above / pi.viewport_height if pi.viewport_height > 0 else 0
+        pages_below = pi.pixels_below / pi.viewport_height if pi.viewport_height > 0 else 0
+        total_pages = pi.page_height / pi.viewport_height if pi.viewport_height > 0 else 0
 
-        scroll_info = (
-            f"**Page:** {pages_above:.1f} pages above, {pages_below:.1f} pages below"
-        )
+        scroll_info = f"**Page:** {pages_above:.1f} pages above, {pages_below:.1f} pages below"
         if total_pages > 1.2:  # Only mention total if significantly > 1 page
             scroll_info += f", {total_pages:.1f} total pages"
         lines.append(scroll_info)
@@ -91,9 +77,7 @@ async def format_browser_state_for_llm(
                 seen_urls.add(req.url)
                 unique_requests.append(req)
 
-        lines.append(
-            f"**⏳ Loading:** {len(unique_requests)} network requests still loading"
-        )
+        lines.append(f"**⏳ Loading:** {len(unique_requests)} network requests still loading")
         # Show up to 20 unique requests with truncated URLs (30 chars max)
         for req in unique_requests[:20]:
             duration_sec = req.loading_duration_ms / 1000
@@ -154,9 +138,9 @@ async def format_browser_state_for_llm(
                 value_str = str(value) if not isinstance(value, str) else value
 
                 # Check if it's a function (starts with "(function" or "(async function")
-                is_function = value_str.strip().startswith(
-                    "(function"
-                ) or value_str.strip().startswith("(async function")
+                is_function = value_str.strip().startswith("(function") or value_str.strip().startswith(
+                    "(async function"
+                )
 
                 if is_function:
                     # For functions, only show name and type
@@ -164,11 +148,7 @@ async def format_browser_state_for_llm(
                 else:
                     # For non-functions, show first and last 20 chars
                     first_20 = value_str[:20].replace("\n", "\\n").replace("\t", "\\t")
-                    last_20 = (
-                        value_str[-20:].replace("\n", "\\n").replace("\t", "\\t")
-                        if len(value_str) > 20
-                        else ""
-                    )
+                    last_20 = value_str[-20:].replace("\n", "\\n").replace("\t", "\\t") if len(value_str) > 20 else ""
 
                     if last_20 and first_20 != last_20:
                         detail = f'{var_name}({type_name}): "{first_20}...{last_20}"'
@@ -189,12 +169,8 @@ async def format_browser_state_for_llm(
     # Add scroll position hints for DOM
     if state.page_info:
         pi = state.page_info
-        pages_above = (
-            pi.pixels_above / pi.viewport_height if pi.viewport_height > 0 else 0
-        )
-        pages_below = (
-            pi.pixels_below / pi.viewport_height if pi.viewport_height > 0 else 0
-        )
+        pages_above = pi.pixels_above / pi.viewport_height if pi.viewport_height > 0 else 0
+        pages_below = pi.pixels_below / pi.viewport_height if pi.viewport_height > 0 else 0
 
         if pages_above > 0:
             dom_html = f"... {pages_above:.1f} pages above \n{dom_html}"

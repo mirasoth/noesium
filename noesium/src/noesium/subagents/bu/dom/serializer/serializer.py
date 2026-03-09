@@ -50,18 +50,14 @@ class DOMTreeSerializer:
         self.root_node = root_node
         self._interactive_counter = 1
         self._selector_map: DOMSelectorMap = {}
-        self._previous_cached_selector_map = (
-            previous_cached_state.selector_map if previous_cached_state else None
-        )
+        self._previous_cached_selector_map = previous_cached_state.selector_map if previous_cached_state else None
         # Add timing tracking
         self.timing_info: dict[str, float] = {}
         # Cache for clickable element detection to avoid redundant calls
         self._clickable_cache: dict[int, bool] = {}
         # Bounding box filtering configuration
         self.enable_bbox_filtering = enable_bbox_filtering
-        self.containment_threshold = (
-            containment_threshold or self.DEFAULT_CONTAINMENT_THRESHOLD
-        )
+        self.containment_threshold = containment_threshold or self.DEFAULT_CONTAINMENT_THRESHOLD
 
     def serialize_accessible_elements(
         self,
@@ -108,9 +104,7 @@ class DOMTreeSerializer:
         self.timing_info["assign_interactive_indices"] = end_step4 - start_step4
 
         end_total = time.time()
-        self.timing_info["serialize_accessible_elements_total"] = (
-            end_total - start_total
-        )
+        self.timing_info["serialize_accessible_elements_total"] = end_total - start_total
 
         return (
             SerializedDOMState(_root=filtered_tree, selector_map=self._selector_map),
@@ -134,9 +128,7 @@ class DOMTreeSerializer:
 
         return self._clickable_cache[node.node_id]
 
-    def _create_simplified_tree(
-        self, node: EnhancedDOMTreeNode
-    ) -> SimplifiedNode | None:
+    def _create_simplified_tree(self, node: EnhancedDOMTreeNode) -> SimplifiedNode | None:
         """Step 1: Create a simplified tree with enhanced element detection."""
 
         if node.node_type == NodeType.DOCUMENT_NODE:
@@ -178,11 +170,7 @@ class DOMTreeSerializer:
             is_scrollable = node.is_actually_scrollable
 
             # Include if interactive (regardless of visibility), or scrollable, or has children to process
-            should_include = (
-                (is_interactive and is_visible)
-                or is_scrollable
-                or bool(node.children_and_shadow_roots)
-            )
+            should_include = (is_interactive and is_visible) or is_scrollable or bool(node.children_and_shadow_roots)
 
             if should_include:
                 simplified = SimplifiedNode(original_node=node, children=[])
@@ -195,22 +183,13 @@ class DOMTreeSerializer:
                         simplified.children.append(simplified_child)
 
                 # Return if meaningful or has meaningful children
-                if (
-                    (is_interactive and is_visible)
-                    or is_scrollable
-                    or simplified.children
-                ):
+                if (is_interactive and is_visible) or is_scrollable or simplified.children:
                     return simplified
 
         elif node.node_type == NodeType.TEXT_NODE:
             # Include meaningful text nodes
             is_visible = node.snapshot_node and node.is_visible
-            if (
-                is_visible
-                and node.node_value
-                and node.node_value.strip()
-                and len(node.node_value.strip()) > 1
-            ):
+            if is_visible and node.node_value and node.node_value.strip() and len(node.node_value.strip()) > 1:
                 return SimplifiedNode(original_node=node, children=[])
 
         return None
@@ -234,9 +213,7 @@ class DOMTreeSerializer:
         is_visible = node.original_node.snapshot_node and node.original_node.is_visible
 
         if (
-            (
-                is_interactive_opt and is_visible
-            )  # Only keep interactive nodes that are visible
+            (is_interactive_opt and is_visible)  # Only keep interactive nodes that are visible
             or node.original_node.is_actually_scrollable
             or node.original_node.node_type == NodeType.TEXT_NODE
             or node.children
@@ -245,9 +222,7 @@ class DOMTreeSerializer:
 
         return None
 
-    def _collect_interactive_elements(
-        self, node: SimplifiedNode, elements: list[SimplifiedNode]
-    ) -> None:
+    def _collect_interactive_elements(self, node: SimplifiedNode, elements: list[SimplifiedNode]) -> None:
         """Recursively collect interactive elements that are also visible."""
         is_interactive = self._is_interactive_cached(node.original_node)
         is_visible = node.original_node.snapshot_node and node.original_node.is_visible
@@ -259,9 +234,7 @@ class DOMTreeSerializer:
         for child in node.children:
             self._collect_interactive_elements(child, elements)
 
-    def _assign_interactive_indices_and_mark_new_nodes(
-        self, node: SimplifiedNode | None
-    ) -> None:
+    def _assign_interactive_indices_and_mark_new_nodes(self, node: SimplifiedNode | None) -> None:
         """Assign interactive indices to clickable elements that are also visible."""
         if not node:
             return
@@ -270,9 +243,7 @@ class DOMTreeSerializer:
         if not (hasattr(node, "excluded_by_parent") and node.excluded_by_parent):
             # Assign index to clickable elements that are also visible
             is_interactive_assign = self._is_interactive_cached(node.original_node)
-            is_visible = (
-                node.original_node.snapshot_node and node.original_node.is_visible
-            )
+            is_visible = node.original_node.snapshot_node and node.original_node.is_visible
 
             # Only add to selector map if element is both interactive AND visible
             if is_interactive_assign and is_visible:
@@ -284,22 +255,16 @@ class DOMTreeSerializer:
                 # Check if node is new
                 if self._previous_cached_selector_map:
                     previous_backend_node_ids = {
-                        node.backend_node_id
-                        for node in self._previous_cached_selector_map.values()
+                        node.backend_node_id for node in self._previous_cached_selector_map.values()
                     }
-                    if (
-                        node.original_node.backend_node_id
-                        not in previous_backend_node_ids
-                    ):
+                    if node.original_node.backend_node_id not in previous_backend_node_ids:
                         node.is_new = True
 
         # Process children
         for child in node.children:
             self._assign_interactive_indices_and_mark_new_nodes(child)
 
-    def _apply_bounding_box_filtering(
-        self, node: SimplifiedNode | None
-    ) -> SimplifiedNode | None:
+    def _apply_bounding_box_filtering(self, node: SimplifiedNode | None) -> SimplifiedNode | None:
         """Filter children contained within propagating parent bounds."""
         if not node:
             return None
@@ -335,11 +300,7 @@ class DOMTreeSerializer:
         # Check if this node starts new propagation (even if excluded!)
         new_bounds = None
         tag = node.original_node.tag_name.lower()
-        role = (
-            node.original_node.attributes.get("role")
-            if node.original_node.attributes
-            else None
-        )
+        role = node.original_node.attributes.get("role") if node.original_node.attributes else None
         attributes = {
             "tag": tag,
             "role": role,
@@ -347,10 +308,7 @@ class DOMTreeSerializer:
         # Check if this element matches any propagating element pattern
         if self._is_propagating_element(attributes):
             # This node propagates bounds to ALL its descendants
-            if (
-                node.original_node.snapshot_node
-                and node.original_node.snapshot_node.bounds
-            ):
+            if node.original_node.snapshot_node and node.original_node.snapshot_node.bounds:
                 new_bounds = PropagatingBounds(
                     tag=tag,
                     bounds=node.original_node.snapshot_node.bounds,
@@ -365,9 +323,7 @@ class DOMTreeSerializer:
         for child in node.children:
             self._filter_tree_recursive(child, propagate_bounds, depth + 1)
 
-    def _should_exclude_child(
-        self, node: SimplifiedNode, active_bounds: PropagatingBounds
-    ) -> bool:
+    def _should_exclude_child(self, node: SimplifiedNode, active_bounds: PropagatingBounds) -> bool:
         """
         Determine if child should be excluded based on propagating bounds.
         """
@@ -377,28 +333,19 @@ class DOMTreeSerializer:
             return False
 
         # Get child bounds
-        if (
-            not node.original_node.snapshot_node
-            or not node.original_node.snapshot_node.bounds
-        ):
+        if not node.original_node.snapshot_node or not node.original_node.snapshot_node.bounds:
             return False  # No bounds = can't determine containment
 
         child_bounds = node.original_node.snapshot_node.bounds
 
         # Check containment with configured threshold
-        if not self._is_contained(
-            child_bounds, active_bounds.bounds, self.containment_threshold
-        ):
+        if not self._is_contained(child_bounds, active_bounds.bounds, self.containment_threshold):
             return False  # Not sufficiently contained
 
         # EXCEPTION RULES - Keep these even if contained:
 
         child_tag = node.original_node.tag_name.lower()
-        child_role = (
-            node.original_node.attributes.get("role")
-            if node.original_node.attributes
-            else None
-        )
+        child_role = node.original_node.attributes.get("role") if node.original_node.attributes else None
         child_attributes = {
             "tag": child_tag,
             "role": child_role,
@@ -443,13 +390,11 @@ class DOMTreeSerializer:
         # Calculate intersection
         x_overlap = max(
             0,
-            min(child.x + child.width, parent.x + parent.width)
-            - max(child.x, parent.x),
+            min(child.x + child.width, parent.x + parent.width) - max(child.x, parent.x),
         )
         y_overlap = max(
             0,
-            min(child.y + child.height, parent.y + parent.height)
-            - max(child.y, parent.y),
+            min(child.y + child.height, parent.y + parent.height) - max(child.y, parent.y),
         )
 
         intersection_area = x_overlap * y_overlap
@@ -477,19 +422,14 @@ class DOMTreeSerializer:
         keys_to_check = ["tag", "role"]
         for pattern in self.PROPAGATING_ELEMENTS:
             # Check if the element satisfies the pattern
-            check = [
-                pattern.get(key) is None or pattern.get(key) == attributes.get(key)
-                for key in keys_to_check
-            ]
+            check = [pattern.get(key) is None or pattern.get(key) == attributes.get(key) for key in keys_to_check]
             if all(check):
                 return True
 
         return False
 
     @staticmethod
-    def serialize_tree(
-        node: SimplifiedNode | None, include_attributes: list[str], depth: int = 0
-    ) -> str:
+    def serialize_tree(node: SimplifiedNode | None, include_attributes: list[str], depth: int = 0) -> str:
         """Serialize the optimized tree to string format."""
         if not node:
             return ""
@@ -498,9 +438,7 @@ class DOMTreeSerializer:
         if hasattr(node, "excluded_by_parent") and node.excluded_by_parent:
             formatted_text = []
             for child in node.children:
-                child_text = DOMTreeSerializer.serialize_tree(
-                    child, include_attributes, depth
-                )
+                child_text = DOMTreeSerializer.serialize_tree(child, include_attributes, depth)
                 if child_text:
                     formatted_text.append(child_text)
             return "\n".join(formatted_text)
@@ -513,18 +451,13 @@ class DOMTreeSerializer:
             # Skip displaying nodes marked as should_display=False
             if not node.should_display:
                 for child in node.children:
-                    child_text = DOMTreeSerializer.serialize_tree(
-                        child, include_attributes, depth
-                    )
+                    child_text = DOMTreeSerializer.serialize_tree(child, include_attributes, depth)
                     if child_text:
                         formatted_text.append(child_text)
                 return "\n".join(formatted_text)
 
             # Add element with interactive_index if clickable, scrollable, or iframe
-            is_any_scrollable = (
-                node.original_node.is_actually_scrollable
-                or node.original_node.is_scrollable
-            )
+            is_any_scrollable = node.original_node.is_actually_scrollable or node.original_node.is_scrollable
             should_show_scroll = node.original_node.should_show_scroll_info
             if (
                 node.interactive_index is not None
@@ -547,7 +480,9 @@ class DOMTreeSerializer:
                     # Clickable (and possibly scrollable)
                     new_prefix = "*" if node.is_new else ""
                     scroll_prefix = "|SCROLL+" if should_show_scroll else "["
-                    line = f"{depth_str}{new_prefix}{scroll_prefix}{node.interactive_index}]<{node.original_node.tag_name}"
+                    line = (
+                        f"{depth_str}{new_prefix}{scroll_prefix}{node.interactive_index}]<{node.original_node.tag_name}"
+                    )
                 elif node.original_node.tag_name.upper() == "IFRAME":
                     # Iframe element (not interactive)
                     line = f"{depth_str}|IFRAME|<{node.original_node.tag_name}"
@@ -572,9 +507,7 @@ class DOMTreeSerializer:
 
         elif node.original_node.node_type == NodeType.TEXT_NODE:
             # Include visible text
-            is_visible = (
-                node.original_node.snapshot_node and node.original_node.is_visible
-            )
+            is_visible = node.original_node.snapshot_node and node.original_node.is_visible
             if (
                 is_visible
                 and node.original_node.node_value
@@ -586,18 +519,14 @@ class DOMTreeSerializer:
 
         # Process children
         for child in node.children:
-            child_text = DOMTreeSerializer.serialize_tree(
-                child, include_attributes, next_depth
-            )
+            child_text = DOMTreeSerializer.serialize_tree(child, include_attributes, next_depth)
             if child_text:
                 formatted_text.append(child_text)
 
         return "\n".join(formatted_text)
 
     @staticmethod
-    def _build_attributes_string(
-        node: EnhancedDOMTreeNode, include_attributes: list[str], text: str
-    ) -> str:
+    def _build_attributes_string(node: EnhancedDOMTreeNode, include_attributes: list[str], text: str) -> str:
         """Build the attributes string for an element."""
         attributes_to_include = {}
 
@@ -630,9 +559,7 @@ class DOMTreeSerializer:
             return ""
 
         # Remove duplicate values
-        ordered_keys = [
-            key for key in include_attributes if key in attributes_to_include
-        ]
+        ordered_keys = [key for key in include_attributes if key in attributes_to_include]
 
         if len(ordered_keys) > 1:
             keys_to_remove = set()
@@ -658,15 +585,11 @@ class DOMTreeSerializer:
         for attr in attrs_to_remove_if_text_matches:
             if (
                 attributes_to_include.get(attr)
-                and attributes_to_include.get(attr, "").strip().lower()
-                == text.strip().lower()
+                and attributes_to_include.get(attr, "").strip().lower() == text.strip().lower()
             ):
                 del attributes_to_include[attr]
 
         if attributes_to_include:
-            return " ".join(
-                f"{key}={cap_text_length(value, 100)}"
-                for key, value in attributes_to_include.items()
-            )
+            return " ".join(f"{key}={cap_text_length(value, 100)}" for key, value in attributes_to_include.items())
 
         return ""

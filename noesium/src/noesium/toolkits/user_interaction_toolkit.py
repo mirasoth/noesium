@@ -58,12 +58,8 @@ class UserInteractionToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # Configuration
-        self.interaction_mode = self.config.config.get(
-            "interaction_mode", "console"
-        )  # console, web, api
-        self.timeout_seconds = self.config.config.get(
-            "timeout_seconds", 300
-        )  # 5 minutes default
+        self.interaction_mode = self.config.config.get("interaction_mode", "console")  # console, web, api
+        self.timeout_seconds = self.config.config.get("timeout_seconds", 300)  # 5 minutes default
         self.enable_validation = self.config.config.get("enable_validation", True)
         self.prompt_prefix = self.config.config.get("prompt_prefix", "🤖 ")
 
@@ -74,9 +70,7 @@ class UserInteractionToolkit(AsyncBaseToolkit):
         # Interaction history
         self.interaction_history = []
 
-        self.logger.info(
-            f"User interaction toolkit initialized in {self.interaction_mode} mode"
-        )
+        self.logger.info(f"User interaction toolkit initialized in {self.interaction_mode} mode")
 
     def set_custom_ask_function(self, ask_function: Callable[[str], str]):
         """
@@ -98,9 +92,7 @@ class UserInteractionToolkit(AsyncBaseToolkit):
         self.custom_display_function = display_function
         self.logger.info("Custom display function registered")
 
-    def _record_interaction(
-        self, interaction_type: str, question: str, response: Any = None
-    ):
+    def _record_interaction(self, interaction_type: str, question: str, response: Any = None):
         """Record an interaction in the history."""
         self.interaction_history.append(
             {
@@ -240,9 +232,7 @@ class UserInteractionToolkit(AsyncBaseToolkit):
         """
         # Format choices
         choices_text = "\n".join(f"{i+1}. {choice}" for i, choice in enumerate(choices))
-        full_prompt = (
-            f"{prompt}\n\n{choices_text}\n\nEnter your choice (1-{len(choices)}):"
-        )
+        full_prompt = f"{prompt}\n\n{choices_text}\n\nEnter your choice (1-{len(choices)}):"
 
         while True:
             response = await self.ask_user(full_prompt, "number")
@@ -254,9 +244,7 @@ class UserInteractionToolkit(AsyncBaseToolkit):
                     self.logger.info(f"User selected: {selected}")
                     return selected
                 else:
-                    await self.display_message(
-                        f"Please enter a number between 1 and {len(choices)}"
-                    )
+                    await self.display_message(f"Please enter a number between 1 and {len(choices)}")
             except ValueError:
                 await self.display_message("Please enter a valid number")
 

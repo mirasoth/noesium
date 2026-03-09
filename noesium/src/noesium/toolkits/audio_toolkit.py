@@ -102,15 +102,9 @@ class AudioToolkit(AsyncBaseToolkit):
         self.provider: AudioProvider = self.config.config.get("provider", "openai")
 
         # Common directories
-        self.cache_dir = Path(
-            self.config.config.get(
-                "cache_dir", get_toolkit_tmp_dir(TOOLKIT_AUDIO, "cache")
-            )
-        )
+        self.cache_dir = Path(self.config.config.get("cache_dir", get_toolkit_tmp_dir(TOOLKIT_AUDIO, "cache")))
         self.download_dir = Path(
-            self.config.config.get(
-                "download_dir", get_toolkit_tmp_dir(TOOLKIT_AUDIO, "downloads")
-            )
+            self.config.config.get("download_dir", get_toolkit_tmp_dir(TOOLKIT_AUDIO, "downloads"))
         )
 
         # Create directories
@@ -126,9 +120,7 @@ class AudioToolkit(AsyncBaseToolkit):
         elif self.provider == "openai":
             self._setup_openai()
         else:
-            raise ValueError(
-                f"Unsupported audio provider: {self.provider}. Supported: 'openai', 'aliyun'"
-            )
+            raise ValueError(f"Unsupported audio provider: {self.provider}. Supported: 'openai', 'aliyun'")
 
     def _setup_openai(self) -> None:
         """Setup OpenAI provider configuration."""
@@ -137,20 +129,12 @@ class AudioToolkit(AsyncBaseToolkit):
     def _setup_aliyun(self) -> None:
         """Setup Aliyun provider configuration."""
         if not ALIYUN_AVAILABLE:
-            raise ImportError(
-                "Aliyun packages are not installed. Install them with: pip install 'noesium[aliyun]'"
-            )
+            raise ImportError("Aliyun packages are not installed. Install them with: pip install 'noesium[aliyun]'")
 
         # Aliyun credentials
-        self.ak_id = self.config.config.get("ALIYUN_ACCESS_KEY_ID") or os.getenv(
-            "ALIYUN_ACCESS_KEY_ID"
-        )
-        self.ak_secret = self.config.config.get(
-            "ALIYUN_ACCESS_KEY_SECRET"
-        ) or os.getenv("ALIYUN_ACCESS_KEY_SECRET")
-        self.app_key = self.config.config.get("ALIYUN_NLS_APP_KEY") or os.getenv(
-            "ALIYUN_NLS_APP_KEY"
-        )
+        self.ak_id = self.config.config.get("ALIYUN_ACCESS_KEY_ID") or os.getenv("ALIYUN_ACCESS_KEY_ID")
+        self.ak_secret = self.config.config.get("ALIYUN_ACCESS_KEY_SECRET") or os.getenv("ALIYUN_ACCESS_KEY_SECRET")
+        self.app_key = self.config.config.get("ALIYUN_NLS_APP_KEY") or os.getenv("ALIYUN_NLS_APP_KEY")
         self.region_id = self.config.config.get("ALIYUN_REGION_ID", "cn-shanghai")
 
         if not all([self.ak_id, self.ak_secret, self.app_key]):
@@ -287,17 +271,11 @@ class AudioToolkit(AsyncBaseToolkit):
             import openai
 
             # Get OpenAI client from LLM client
-            client = (
-                self.llm_client._client if hasattr(self.llm_client, "_client") else None
-            )
+            client = self.llm_client._client if hasattr(self.llm_client, "_client") else None
             if not client:
-                api_key = self.config.config.get("OPENAI_API_KEY") or os.getenv(
-                    "OPENAI_API_KEY"
-                )
+                api_key = self.config.config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
                 if not api_key:
-                    raise ValueError(
-                        "OpenAI API key not found in config or environment"
-                    )
+                    raise ValueError("OpenAI API key not found in config or environment")
                 client = openai.AsyncOpenAI(api_key=api_key)
 
             self.logger.info(f"Transcribing audio file with OpenAI: {file_path}")
@@ -307,26 +285,18 @@ class AudioToolkit(AsyncBaseToolkit):
                     model=self.audio_model,
                     file=audio_file,
                     response_format="verbose_json",
-                    timestamp_granularities=(
-                        ["segment"] if self.audio_model != "whisper-1" else None
-                    ),
+                    timestamp_granularities=(["segment"] if self.audio_model != "whisper-1" else None),
                 )
 
             # Convert to dict and cache
-            result = (
-                transcript.model_dump()
-                if hasattr(transcript, "model_dump")
-                else dict(transcript)
-            )
+            result = transcript.model_dump() if hasattr(transcript, "model_dump") else dict(transcript)
             result["provider"] = "openai"
 
             # Cache the result
             with open(cache_file, "w") as f:
                 json.dump(result, f, indent=2)
 
-            self.logger.info(
-                f"Transcription completed, duration: {result.get('duration', 'unknown')}s"
-            )
+            self.logger.info(f"Transcription completed, duration: {result.get('duration', 'unknown')}s")
             return result
 
         except Exception as e:
@@ -367,9 +337,7 @@ class AudioToolkit(AsyncBaseToolkit):
         task_id = ""
         try:
             loop = asyncio.get_event_loop()
-            post_response = await loop.run_in_executor(
-                None, self.aliyun_client.do_action_with_exception, post_request
-            )
+            post_response = await loop.run_in_executor(None, self.aliyun_client.do_action_with_exception, post_request)
             post_response_json = json.loads(post_response)
             self.logger.info(f"Aliyun submit response: {post_response_json}")
 
@@ -412,9 +380,7 @@ class AudioToolkit(AsyncBaseToolkit):
                     None, self.aliyun_client.do_action_with_exception, get_request
                 )
                 get_response_json = json.loads(get_response)
-                self.logger.info(
-                    f"Aliyun poll response (attempt {attempt + 1}): {get_response_json}"
-                )
+                self.logger.info(f"Aliyun poll response (attempt {attempt + 1}): {get_response_json}")
 
                 status_text = get_response_json[self.ALIYUN_KEY_STATUS_TEXT]
                 if status_text in (
@@ -439,9 +405,7 @@ class AudioToolkit(AsyncBaseToolkit):
             self.logger.error(f"Aliyun transcription failed with status: {status_text}")
             return None
 
-    def _extract_transcription_text_aliyun(
-        self, result: Dict[str, Any]
-    ) -> Optional[str]:
+    def _extract_transcription_text_aliyun(self, result: Dict[str, Any]) -> Optional[str]:
         """
         Extract transcription text from the Aliyun NLS result.
 

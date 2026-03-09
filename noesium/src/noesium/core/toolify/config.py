@@ -32,9 +32,7 @@ class ToolkitConfig(BaseModel):
     """Toolkit-specific configuration parameters"""
 
     # LLM Integration
-    llm_provider: str = Field(
-        default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai")
-    )
+    llm_provider: str = Field(default_factory=lambda: os.getenv("NOESIUM_LLM_PROVIDER", "openai"))
     """LLM provider to use (openrouter, openai, ollama, llamacpp, litellm)"""
 
     llm_model: Optional[str] = None
@@ -57,10 +55,7 @@ class ToolkitConfig(BaseModel):
     log_level: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
     """Logging level for this toolkit"""
 
-    enable_tracing: bool = Field(
-        default_factory=lambda: os.getenv("NOESIUM_ENABLE_TRACING", "false").lower()
-        == "true"
-    )
+    enable_tracing: bool = Field(default_factory=lambda: os.getenv("NOESIUM_ENABLE_TRACING", "false").lower() == "true")
     """Enable detailed tracing for debugging"""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -140,6 +135,4 @@ def create_toolkit_config(
     Returns:
         Configured ToolkitConfig instance
     """
-    return ToolkitConfig(
-        name=name, mode=mode, activated_tools=activated_tools, config=config_params
-    )
+    return ToolkitConfig(name=name, mode=mode, activated_tools=activated_tools, config=config_params)

@@ -1,15 +1,12 @@
-"""MemU file-based memory provider (RFC-2002 §6.3).
+"""MemU file-based memory provider (RFC-1009).
 
-Wraps the existing MemuMemoryStore, emitting MemoryWritten events for observability.
+Wraps the existing MemuMemoryStore for persistent, searchable memory.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from noesium.core.event.envelope import AgentRef, TraceContext
-from noesium.core.event.store import EventStore
-from noesium.core.event.types import MemoryWritten
 from noesium.core.memory.models import MemoryItem, SearchResult
 from noesium.core.memory.provider import (
     MemoryEntry,
@@ -26,12 +23,8 @@ class MemuProvider(MemoryProvider):
     def __init__(
         self,
         memory_store: Any,  # MemuMemoryStore (avoid hard import for optional dep)
-        event_store: EventStore | None = None,
-        producer: AgentRef | None = None,
     ) -> None:
         self._store = memory_store
-        self._event_store = event_store
-        self._producer = producer
 
     def capabilities(self) -> ProviderCapabilities:
         return ProviderCapabilities(
@@ -52,23 +45,10 @@ class MemuProvider(MemoryProvider):
         item = MemoryItem(
             id=key,
             content=str(value),
-            memory_type=(
-                content_type if content_type in ("message", "fact", "note") else "fact"
-            ),
+            memory_type=(content_type if content_type in ("message", "fact", "note") else "fact"),
             metadata=metadata or {},
         )
         await self._store.add(item)
-
-        if self._event_store and self._producer:
-            event = MemoryWritten(
-                key=key,
-                value=value,
-                value_type="text",
-                content_type=content_type,
-                provider_id="memu",
-            )
-            envelope = event.to_envelope(producer=self._producer, trace=TraceContext())
-            await self._event_store.append(envelope)
 
         return MemoryEntry(
             key=key,

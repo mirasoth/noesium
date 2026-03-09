@@ -89,11 +89,7 @@ class Registry(Generic[Context]):
 
         for i, param in enumerate(parameters):
             # Check if this is a Type 1 pattern (first param is BaseModel)
-            if (
-                i == 0
-                and param_model_provided
-                and param.name not in special_param_names
-            ):
+            if i == 0 and param_model_provided and param.name not in special_param_names:
                 # This is Type 1 pattern - skip the params argument
                 continue
 
@@ -107,9 +103,7 @@ class Registry(Generic[Context]):
                     if origin is Union:
                         args = get_args(param_type)
                         # Find non-None type
-                        param_type = next(
-                            (arg for arg in args if arg is not type(None)), param_type
-                        )
+                        param_type = next((arg for arg in args if arg is not type(None)), param_type)
 
                     # Check if types are compatible (exact match, subclass, or generic list)
                     types_compatible = (
@@ -121,19 +115,12 @@ class Registry(Generic[Context]):
                         )
                         or
                         # Handle list[T] vs list comparison
-                        (
-                            expected_type is list
-                            and (param_type is list or get_origin(param_type) is list)
-                        )
+                        (expected_type is list and (param_type is list or get_origin(param_type) is list))
                     )
 
                     if not types_compatible:
-                        expected_type_name = getattr(
-                            expected_type, "__name__", str(expected_type)
-                        )
-                        param_type_name = getattr(
-                            param_type, "__name__", str(param_type)
-                        )
+                        expected_type_name = getattr(expected_type, "__name__", str(expected_type))
+                        param_type_name = getattr(param_type, "__name__", str(param_type))
                         raise ValueError(
                             f"Action '{func.__name__}' parameter '{param.name}: {param_type_name}' "
                             f"conflicts with special argument injected by tools: '{param.name}: {expected_type_name}'"
@@ -148,15 +135,11 @@ class Registry(Generic[Context]):
             if action_params:
                 params_dict = {}
                 for param in action_params:
-                    annotation = (
-                        param.annotation if param.annotation != Parameter.empty else str
-                    )
+                    annotation = param.annotation if param.annotation != Parameter.empty else str
                     default = ... if param.default == Parameter.empty else param.default
                     params_dict[param.name] = (annotation, default)
 
-                param_model = create_model(
-                    f"{func.__name__}_Params", __base__=ActionModel, **params_dict
-                )
+                param_model = create_model(f"{func.__name__}_Params", __base__=ActionModel, **params_dict)
             else:
                 # No action params, create empty model
                 param_model = create_model(
@@ -179,15 +162,9 @@ class Registry(Generic[Context]):
             call_args = []
 
             # Handle Type 1 pattern (first arg is the param model)
-            if (
-                param_model_provided
-                and parameters
-                and parameters[0].name not in special_param_names
-            ):
+            if param_model_provided and parameters and parameters[0].name not in special_param_names:
                 if params is None:
-                    raise ValueError(
-                        f"{func.__name__}() missing required 'params' argument"
-                    )
+                    raise ValueError(f"{func.__name__}() missing required 'params' argument")
                 # For Type 1, we'll use the params object as first argument
             else:
                 # Type 2 pattern - need to unpack params
@@ -207,11 +184,7 @@ class Registry(Generic[Context]):
 
             for i, param in enumerate(parameters):
                 # Skip first param for Type 1 pattern (it's the model itself)
-                if (
-                    param_model_provided
-                    and i == 0
-                    and param.name not in special_param_names
-                ):
+                if param_model_provided and i == 0 and param.name not in special_param_names:
                     call_args.append(params)
                 elif param.name in special_param_names:
                     # This is a special parameter
@@ -220,66 +193,42 @@ class Registry(Generic[Context]):
                         # Check if required special param is None
                         if value is None and param.default == Parameter.empty:
                             if param.name == "browser_session":
-                                raise ValueError(
-                                    f"Action {func.__name__} requires browser_session but none provided."
-                                )
+                                raise ValueError(f"Action {func.__name__} requires browser_session but none provided.")
                             elif param.name == "page_extraction_llm":
                                 raise ValueError(
                                     f"Action {func.__name__} requires page_extraction_llm but none provided."
                                 )
                             elif param.name == "file_system":
-                                raise ValueError(
-                                    f"Action {func.__name__} requires file_system but none provided."
-                                )
+                                raise ValueError(f"Action {func.__name__} requires file_system but none provided.")
                             elif param.name == "page":
-                                raise ValueError(
-                                    f"Action {func.__name__} requires page but none provided."
-                                )
+                                raise ValueError(f"Action {func.__name__} requires page but none provided.")
                             elif param.name == "available_file_paths":
                                 raise ValueError(
                                     f"Action {func.__name__} requires available_file_paths but none provided."
                                 )
                             elif param.name == "file_system":
-                                raise ValueError(
-                                    f"Action {func.__name__} requires file_system but none provided."
-                                )
+                                raise ValueError(f"Action {func.__name__} requires file_system but none provided.")
                             else:
-                                raise ValueError(
-                                    f"{func.__name__}() missing required special parameter '{param.name}'"
-                                )
+                                raise ValueError(f"{func.__name__}() missing required special parameter '{param.name}'")
                         call_args.append(value)
                     elif param.default != Parameter.empty:
                         call_args.append(param.default)
                     else:
                         # Special param is required but not provided
                         if param.name == "browser_session":
-                            raise ValueError(
-                                f"Action {func.__name__} requires browser_session but none provided."
-                            )
+                            raise ValueError(f"Action {func.__name__} requires browser_session but none provided.")
                         elif param.name == "page_extraction_llm":
-                            raise ValueError(
-                                f"Action {func.__name__} requires page_extraction_llm but none provided."
-                            )
+                            raise ValueError(f"Action {func.__name__} requires page_extraction_llm but none provided.")
                         elif param.name == "file_system":
-                            raise ValueError(
-                                f"Action {func.__name__} requires file_system but none provided."
-                            )
+                            raise ValueError(f"Action {func.__name__} requires file_system but none provided.")
                         elif param.name == "page":
-                            raise ValueError(
-                                f"Action {func.__name__} requires page but none provided."
-                            )
+                            raise ValueError(f"Action {func.__name__} requires page but none provided.")
                         elif param.name == "available_file_paths":
-                            raise ValueError(
-                                f"Action {func.__name__} requires available_file_paths but none provided."
-                            )
+                            raise ValueError(f"Action {func.__name__} requires available_file_paths but none provided.")
                         elif param.name == "file_system":
-                            raise ValueError(
-                                f"Action {func.__name__} requires file_system but none provided."
-                            )
+                            raise ValueError(f"Action {func.__name__} requires file_system but none provided.")
                         else:
-                            raise ValueError(
-                                f"{func.__name__}() missing required special parameter '{param.name}'"
-                            )
+                            raise ValueError(f"{func.__name__}() missing required special parameter '{param.name}'")
                 else:
                     # This is an action parameter
                     if param.name in params_dict:
@@ -287,9 +236,7 @@ class Registry(Generic[Context]):
                     elif param.default != Parameter.empty:
                         call_args.append(param.default)
                     else:
-                        raise ValueError(
-                            f"{func.__name__}() missing required parameter '{param.name}'"
-                        )
+                        raise ValueError(f"{func.__name__}() missing required parameter '{param.name}'")
 
             # Call original function with positional args
             if iscoroutinefunction(func):
@@ -368,10 +315,8 @@ class Registry(Generic[Context]):
                 return func
 
             # Normalize the function signature
-            normalized_func, actual_param_model = (
-                self._normalize_action_function_signature(
-                    func, description, param_model
-                )
+            normalized_func, actual_param_model = self._normalize_action_function_signature(
+                func, description, param_model
             )
 
             action = RegisteredAction(
@@ -411,9 +356,7 @@ class Registry(Generic[Context]):
             try:
                 validated_params = action.param_model(**params)
             except Exception as e:
-                raise ValueError(
-                    f"Invalid parameters {params} for action {action_name}: {type(e)}: {e}"
-                ) from e
+                raise ValueError(f"Invalid parameters {params} for action {action_name}: {type(e)}: {e}") from e
 
             if sensitive_data:
                 # Get current URL if browser_session is provided
@@ -421,29 +364,21 @@ class Registry(Generic[Context]):
                 if browser_session and browser_session.current_target_id:
                     try:
                         # Get current page info using CDP
-                        targets = (
-                            await browser_session.cdp_client.send.Target.getTargets()
-                        )
+                        targets = await browser_session.cdp_client.send.Target.getTargets()
                         for target in targets.get("targetInfos", []):
-                            if (
-                                target.get("targetId")
-                                == browser_session.current_target_id
-                            ):
+                            if target.get("targetId") == browser_session.current_target_id:
                                 current_url = target.get("url")
                                 break
                     except Exception:
                         pass
-                validated_params = self._replace_sensitive_data(
-                    validated_params, sensitive_data, current_url
-                )
+                validated_params = self._replace_sensitive_data(validated_params, sensitive_data, current_url)
 
             # Build special context dict
             special_context = {
                 "browser_session": browser_session,
                 "page_extraction_llm": page_extraction_llm,
                 "available_file_paths": available_file_paths,
-                "has_sensitive_data": action_name == "input_text"
-                and bool(sensitive_data),
+                "has_sensitive_data": action_name == "input_text" and bool(sensitive_data),
                 "file_system": file_system,
             }
 
@@ -451,9 +386,7 @@ class Registry(Generic[Context]):
             if browser_session:
                 # Add page_url
                 try:
-                    special_context["page_url"] = (
-                        await browser_session.get_current_page_url()
-                    )
+                    special_context["page_url"] = await browser_session.get_current_page_url()
                 except Exception:
                     special_context["page_url"] = None
 
@@ -474,29 +407,17 @@ class Registry(Generic[Context]):
             ) or "requires page_extraction_llm but none provided" in str(e):
                 raise RuntimeError(str(e)) from e
             else:
-                raise RuntimeError(
-                    f"Error executing action {action_name}: {str(e)}"
-                ) from e
+                raise RuntimeError(f"Error executing action {action_name}: {str(e)}") from e
         except TimeoutError as e:
-            raise RuntimeError(
-                f"Error executing action {action_name} due to timeout."
-            ) from e
+            raise RuntimeError(f"Error executing action {action_name} due to timeout.") from e
         except Exception as e:
             raise RuntimeError(f"Error executing action {action_name}: {str(e)}") from e
 
-    def _log_sensitive_data_usage(
-        self, placeholders_used: set[str], current_url: str | None
-    ) -> None:
+    def _log_sensitive_data_usage(self, placeholders_used: set[str], current_url: str | None) -> None:
         """Log when sensitive data is being used on a page"""
         if placeholders_used:
-            url_info = (
-                f" on {current_url}"
-                if current_url and not is_new_tab_page(current_url)
-                else ""
-            )
-            logger.info(
-                f'🔒 Using sensitive data placeholders: {", ".join(sorted(placeholders_used))}{url_info}'
-            )
+            url_info = f" on {current_url}" if current_url and not is_new_tab_page(current_url) else ""
+            logger.info(f'🔒 Using sensitive data placeholders: {", ".join(sorted(placeholders_used))}{url_info}')
 
     def _replace_sensitive_data(
         self,
@@ -572,9 +493,7 @@ class Registry(Generic[Context]):
 
         # Log a warning if any placeholders are missing
         if all_missing_placeholders:
-            logger.warning(
-                f'Missing or empty keys in sensitive_data dictionary: {", ".join(all_missing_placeholders)}'
-            )
+            logger.warning(f'Missing or empty keys in sensitive_data dictionary: {", ".join(all_missing_placeholders)}')
 
         return type(params).model_validate(processed_params)
 

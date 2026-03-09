@@ -239,9 +239,7 @@ class BaseSubagentRuntime(ABC):
         Default implementation raises NotImplementedError. Override in
         subclasses that support HITL.
         """
-        raise NotImplementedError(
-            f"Subagent {self.descriptor.subagent_id} does not support HITL resume"
-        )
+        raise NotImplementedError(f"Subagent {self.descriptor.subagent_id} does not support HITL resume")
         yield  # pragma: no cover  # make it an async generator
 
     async def cancel(self, request_id: str) -> bool:

@@ -66,9 +66,7 @@ class CognitiveContext(BaseModel):
             parts.append(f"**Findings**:\n{findings_str}")
 
         if include_scratchpad and self.scratchpad:
-            scratchpad_items = "\n".join(
-                f"- {k}: {v}" for k, v in self.scratchpad.items()
-            )
+            scratchpad_items = "\n".join(f"- {k}: {v}" for k, v in self.scratchpad.items())
             parts.append(f"**Notes**:\n{scratchpad_items}")
 
         return "\n\n".join(parts) if parts else ""

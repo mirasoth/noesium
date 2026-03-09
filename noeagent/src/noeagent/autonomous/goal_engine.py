@@ -65,9 +65,7 @@ class GoalEngine:
         """
         self._storage = memory_provider
         self._event_store = event_store
-        self._producer = producer or AgentRef(
-            agent_id="goal_engine", agent_type="system"
-        )
+        self._producer = producer or AgentRef(agent_id="goal_engine", agent_type="system")
         self._trace = TraceContext()
         self._queue: list[Goal] = []
         self._goals_by_id: dict[str, Goal] = {}
@@ -90,9 +88,7 @@ class GoalEngine:
                         self._queue.append(goal)
 
             self._sort_queue()
-            logger.info(
-                f"Loaded {len(self._goals_by_id)} goals from storage, {len(self._queue)} active"
-            )
+            logger.info(f"Loaded {len(self._goals_by_id)} goals from storage, {len(self._queue)} active")
         except Exception as e:
             logger.error(f"Failed to load goals from storage: {e}", exc_info=True)
 
@@ -100,9 +96,7 @@ class GoalEngine:
         """Sort queue by (priority DESC, created_at ASC) for deterministic scheduling."""
         self._queue.sort(key=lambda g: (-g.priority, g.created_at))
 
-    async def _emit_event(
-        self, event: GoalCreated | GoalUpdated | GoalCompleted | GoalFailed
-    ) -> None:
+    async def _emit_event(self, event: GoalCreated | GoalUpdated | GoalCompleted | GoalFailed) -> None:
         """Emit domain event to event store if available."""
         if self._event_store is None:
             return
@@ -270,11 +264,7 @@ class GoalEngine:
         await self._emit_event(
             GoalUpdated(
                 goal_id=goal_id,
-                old_status=(
-                    old_status.value
-                    if isinstance(old_status, GoalStatus)
-                    else old_status
-                ),
+                old_status=(old_status.value if isinstance(old_status, GoalStatus) else old_status),
                 new_status=status.value if isinstance(status, GoalStatus) else status,
             )
         )
@@ -305,9 +295,7 @@ class GoalEngine:
         logger.info(f"Completed goal {goal_id[:8]}: {goal.description}")
         return goal
 
-    async def fail_goal(
-        self, goal_id: str, error: str = "", allow_retry: bool = True
-    ) -> Goal:
+    async def fail_goal(self, goal_id: str, error: str = "", allow_retry: bool = True) -> Goal:
         """Mark goal as failed, with optional retry (RFC-1006).
 
         If retry is allowed and goal has retries remaining, the goal will be
@@ -367,10 +355,7 @@ class GoalEngine:
             )
         )
 
-        logger.warning(
-            f"Failed goal {goal_id[:8]}: {goal.description}"
-            + (f" - {error}" if error else "")
-        )
+        logger.warning(f"Failed goal {goal_id[:8]}: {goal.description}" + (f" - {error}" if error else ""))
         return goal
 
     async def list_goals(self, status: GoalStatus | None = None) -> list[Goal]:
@@ -415,14 +400,8 @@ class GoalEngine:
         failed_goals = []
 
         for goal in list(self._queue):
-            if (
-                goal.deadline
-                and goal.deadline < now
-                and goal.status not in (GoalStatus.COMPLETED, GoalStatus.FAILED)
-            ):
-                logger.warning(
-                    f"Goal {goal.id[:8]} deadline exceeded: {goal.deadline.isoformat()}"
-                )
+            if goal.deadline and goal.deadline < now and goal.status not in (GoalStatus.COMPLETED, GoalStatus.FAILED):
+                logger.warning(f"Goal {goal.id[:8]} deadline exceeded: {goal.deadline.isoformat()}")
                 await self.fail_goal(
                     goal.id,
                     error=f"Goal deadline exceeded: {goal.deadline.isoformat()}",

@@ -47,9 +47,7 @@ class EventQueue:
         self._processing = False
         self._dedup_window = dedup_window_seconds
         self._recent_hashes: OrderedDict[str, datetime] = OrderedDict()
-        logger.debug(
-            f"EventQueue initialized with dedup_window={dedup_window_seconds}s"
-        )
+        logger.debug(f"EventQueue initialized with dedup_window={dedup_window_seconds}s")
 
     def _event_hash(self, event: AutonomousEvent) -> str:
         """Generate hash for deduplication based on type, source, and payload.

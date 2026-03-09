@@ -51,9 +51,7 @@ class SubagentLoader:
             for ep in eps:
                 try:
                     subagent_class = ep.load()
-                    if isinstance(subagent_class, type) and issubclass(
-                        subagent_class, BaseSubagentRuntime
-                    ):
+                    if isinstance(subagent_class, type) and issubclass(subagent_class, BaseSubagentRuntime):
                         subagents.append(subagent_class)
                     else:
                         logger.warning(
@@ -84,10 +82,7 @@ class SubagentLoader:
             try:
                 module = importlib.import_module(module_path)
                 for name, obj in inspect.getmembers(module, inspect.isclass):
-                    if (
-                        issubclass(obj, BaseSubagentRuntime)
-                        and obj is not BaseSubagentRuntime
-                    ):
+                    if issubclass(obj, BaseSubagentRuntime) and obj is not BaseSubagentRuntime:
                         subagents.append(obj)
             except Exception as e:
                 logger.warning("Failed to load subagent module %s: %s", module_path, e)
@@ -247,17 +242,13 @@ class SubagentManager:
             # Check cost hint
             if query.max_cost:
                 cost_order = ["low", "medium", "high", "variable"]
-                if cost_order.index(descriptor.cost_hint.value) > cost_order.index(
-                    query.max_cost
-                ):
+                if cost_order.index(descriptor.cost_hint.value) > cost_order.index(query.max_cost):
                     continue
 
             # Check latency hint
             if query.max_latency:
                 latency_order = ["interactive", "batch", "slow"]
-                if latency_order.index(
-                    descriptor.latency_hint.value
-                ) > latency_order.index(query.max_latency):
+                if latency_order.index(descriptor.latency_hint.value) > latency_order.index(query.max_latency):
                     continue
 
             matches.append(provider)

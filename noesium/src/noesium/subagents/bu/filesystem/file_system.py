@@ -9,9 +9,7 @@ from typing import Any
 from markdown_pdf import MarkdownPdf, Section
 from pydantic import BaseModel, Field
 
-INVALID_FILENAME_ERROR_MESSAGE = (
-    "Error: Invalid filename format. Must be alphanumeric with supported extension."
-)
+INVALID_FILENAME_ERROR_MESSAGE = "Error: Invalid filename format. Must be alphanumeric with supported extension."
 DEFAULT_FILE_SYSTEM_PATH = "browseruse_agent_data"
 
 
@@ -51,9 +49,7 @@ class BaseFile(BaseModel, ABC):
     async def sync_to_disk(self, path: Path) -> None:
         file_path = path / self.full_name
         with ThreadPoolExecutor() as executor:
-            await asyncio.get_event_loop().run_in_executor(
-                executor, lambda: file_path.write_text(self.content)
-            )
+            await asyncio.get_event_loop().run_in_executor(executor, lambda: file_path.write_text(self.content))
 
     async def write(self, content: str, path: Path) -> None:
         self.write_file_content(content)
@@ -125,23 +121,17 @@ class PdfFile(BaseFile):
             md_pdf.add_section(Section(self.content))
             md_pdf.save(file_path)
         except Exception as e:
-            raise FileSystemError(
-                f"Error: Could not write to file '{self.full_name}'. {str(e)}"
-            )
+            raise FileSystemError(f"Error: Could not write to file '{self.full_name}'. {str(e)}")
 
     async def sync_to_disk(self, path: Path) -> None:
         with ThreadPoolExecutor() as executor:
-            await asyncio.get_event_loop().run_in_executor(
-                executor, lambda: self.sync_to_disk_sync(path)
-            )
+            await asyncio.get_event_loop().run_in_executor(executor, lambda: self.sync_to_disk_sync(path))
 
 
 class FileSystemState(BaseModel):
     """Serializable state of the file system"""
 
-    files: dict[str, dict[str, Any]] = Field(
-        default_factory=dict
-    )  # full filename -> file data
+    files: dict[str, dict[str, Any]] = Field(default_factory=dict)  # full filename -> file data
     base_dir: str
     extracted_content_count: int = 0
 
@@ -190,9 +180,7 @@ class FileSystem:
             name_without_ext, extension = self._parse_filename(full_filename)
             file_class = self._get_file_type_class(extension)
             if not file_class:
-                raise ValueError(
-                    f"Error: Invalid file extension '{extension}' for file '{full_filename}'."
-                )
+                raise ValueError(f"Error: Invalid file extension '{extension}' for file '{full_filename}'.")
 
             file_obj = file_class(name=name_without_ext)
             self.files[full_filename] = file_obj  # Use full filename as key
@@ -261,9 +249,7 @@ class FileSystem:
                     extracted_text = ""
                     for page in reader.pages[:MAX_PDF_PAGES]:
                         extracted_text += page.extract_text()
-                    extra_pages_text = (
-                        f"{extra_pages} more pages..." if extra_pages > 0 else ""
-                    )
+                    extra_pages_text = f"{extra_pages} more pages..." if extra_pages > 0 else ""
                     return f"Read from file {full_filename}.\n<content>\n{extracted_text}\n{extra_pages_text}</content>"
                 else:
                     return f"Error: Cannot read file {full_filename} as {extension} extension is not supported."
@@ -298,9 +284,7 @@ class FileSystem:
             name_without_ext, extension = self._parse_filename(full_filename)
             file_class = self._get_file_type_class(extension)
             if not file_class:
-                raise ValueError(
-                    f"Error: Invalid file extension '{extension}' for file '{full_filename}'."
-                )
+                raise ValueError(f"Error: Invalid file extension '{extension}' for file '{full_filename}'.")
 
             # Create or get existing file using full filename as key
             if full_filename in self.files:
@@ -334,9 +318,7 @@ class FileSystem:
         except Exception as e:
             return f"Error: Could not append to file '{full_filename}'. {str(e)}"
 
-    async def replace_file_str(
-        self, full_filename: str, old_str: str, new_str: str
-    ) -> str:
+    async def replace_file_str(self, full_filename: str, old_str: str, new_str: str) -> str:
         """Replace old_str with new_str in file_name"""
         if not self._is_valid_filename(full_filename):
             return INVALID_FILENAME_ERROR_MESSAGE
@@ -356,9 +338,7 @@ class FileSystem:
         except FileSystemError as e:
             return str(e)
         except Exception as e:
-            return (
-                f"Error: Could not replace string in file '{full_filename}'. {str(e)}"
-            )
+            return f"Error: Could not replace string in file '{full_filename}'. {str(e)}"
 
     async def save_extracted_content(self, content: str) -> str:
         """Save extracted content to a numbered file"""
@@ -391,7 +371,9 @@ class FileSystem:
             line_count = len(lines)
 
             # For small files, display the entire content
-            whole_file_description = f"<file>\n{file_obj.full_name} - {line_count} lines\n<content>\n{content}\n</content>\n</file>\n"
+            whole_file_description = (
+                f"<file>\n{file_obj.full_name} - {line_count} lines\n<content>\n{content}\n</content>\n</file>\n"
+            )
             if len(content) < int(1.5 * DISPLAY_CHARS):
                 description += whole_file_description
                 continue

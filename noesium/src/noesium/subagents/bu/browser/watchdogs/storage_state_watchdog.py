@@ -48,9 +48,7 @@ class StorageStateWatchdog(BaseWatchdog):
 
     async def on_BrowserConnectedEvent(self, event: BrowserConnectedEvent) -> None:
         """Start monitoring when browser starts."""
-        self.logger.debug(
-            "[StorageStateWatchdog] 🍪 Initializing auth/cookies sync <-> with storage_state.json file"
-        )
+        self.logger.debug("[StorageStateWatchdog] 🍪 Initializing auth/cookies sync <-> with storage_state.json file")
 
         # Start monitoring
         await self._start_monitoring()
@@ -122,17 +120,13 @@ class StorageStateWatchdog(BaseWatchdog):
             # Check for Set-Cookie headers in the response
             headers = event.get("headers", {})
             if "set-cookie" in headers or "Set-Cookie" in headers:
-                self.logger.debug(
-                    "[StorageStateWatchdog] Cookie change detected via CDP"
-                )
+                self.logger.debug("[StorageStateWatchdog] Cookie change detected via CDP")
 
                 # If save on change is enabled, trigger save immediately
                 if self.save_on_change:
                     await self._save_storage_state()
         except Exception as e:
-            self.logger.warning(
-                f"[StorageStateWatchdog] Error checking for cookie changes: {e}"
-            )
+            self.logger.warning(f"[StorageStateWatchdog] Error checking for cookie changes: {e}")
 
     async def _monitor_storage_changes(self) -> None:
         """Periodically check for storage changes and auto-save."""
@@ -142,17 +136,13 @@ class StorageStateWatchdog(BaseWatchdog):
 
                 # Check if cookies have changed
                 if await self._have_cookies_changed():
-                    self.logger.debug(
-                        "[StorageStateWatchdog] Detected changes to sync with storage_state.json"
-                    )
+                    self.logger.debug("[StorageStateWatchdog] Detected changes to sync with storage_state.json")
                     await self._save_storage_state()
 
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self.logger.error(
-                    f"[StorageStateWatchdog] Error in monitoring loop: {e}"
-                )
+                self.logger.error(f"[StorageStateWatchdog] Error in monitoring loop: {e}")
 
     async def _have_cookies_changed(self) -> bool:
         """Check if cookies have changed since last save."""
@@ -165,16 +155,11 @@ class StorageStateWatchdog(BaseWatchdog):
 
             # Convert to comparable format, using .get() for optional fields
             current_cookie_set = {
-                (c.get("name", ""), c.get("domain", ""), c.get("path", "")): c.get(
-                    "value", ""
-                )
-                for c in current_cookies
+                (c.get("name", ""), c.get("domain", ""), c.get("path", "")): c.get("value", "") for c in current_cookies
             }
 
             last_cookie_set = {
-                (c.get("name", ""), c.get("domain", ""), c.get("path", "")): c.get(
-                    "value", ""
-                )
+                (c.get("name", ""), c.get("domain", ""), c.get("path", "")): c.get("value", "")
                 for c in self._last_cookie_state
             }
 
@@ -196,9 +181,7 @@ class StorageStateWatchdog(BaseWatchdog):
             # Skip saving if the storage state is already a dict (indicates it was loaded from memory)
             # We only save to file if it started as a file path
             if isinstance(save_path, dict):
-                self.logger.debug(
-                    "[StorageStateWatchdog] Storage state is already a dict, skipping file save"
-                )
+                self.logger.debug("[StorageStateWatchdog] Storage state is already a dict, skipping file save")
                 return
 
             try:
@@ -217,13 +200,9 @@ class StorageStateWatchdog(BaseWatchdog):
                 if json_path.exists():
                     try:
                         existing_state = json.loads(json_path.read_text())
-                        merged_state = self._merge_storage_states(
-                            existing_state, dict(storage_state)
-                        )
+                        merged_state = self._merge_storage_states(existing_state, dict(storage_state))
                     except Exception as e:
-                        self.logger.error(
-                            f"[StorageStateWatchdog] Failed to merge with existing state: {e}"
-                        )
+                        self.logger.error(f"[StorageStateWatchdog] Failed to merge with existing state: {e}")
 
                 # Write atomically
                 temp_path = json_path.with_suffix(".json.tmp")
@@ -253,16 +232,12 @@ class StorageStateWatchdog(BaseWatchdog):
                 )
 
             except Exception as e:
-                self.logger.error(
-                    f"[StorageStateWatchdog] Failed to save storage state: {e}"
-                )
+                self.logger.error(f"[StorageStateWatchdog] Failed to save storage state: {e}")
 
     async def _load_storage_state(self, path: str | None = None) -> None:
         """Load browser storage state from file."""
         if not self.browser_session.cdp_client:
-            self.logger.warning(
-                "[StorageStateWatchdog] No CDP client available for loading"
-            )
+            self.logger.warning("[StorageStateWatchdog] No CDP client available for loading")
             return
 
         load_path = path or self.browser_session.browser_profile.storage_state
@@ -280,9 +255,7 @@ class StorageStateWatchdog(BaseWatchdog):
             if "cookies" in storage and storage["cookies"]:
                 await self.browser_session._cdp_set_cookies(storage["cookies"])
                 self._last_cookie_state = storage["cookies"].copy()
-                self.logger.debug(
-                    f'[StorageStateWatchdog] Added {len(storage["cookies"])} cookies from storage state'
-                )
+                self.logger.debug(f'[StorageStateWatchdog] Added {len(storage["cookies"])} cookies from storage state')
 
             # Apply origins (localStorage/sessionStorage) if present
             if "origins" in storage and storage["origins"]:
@@ -311,26 +284,18 @@ class StorageStateWatchdog(BaseWatchdog):
                 )
             )
 
-            self.logger.debug(
-                f"[StorageStateWatchdog] Loaded storage state from: {load_path}"
-            )
+            self.logger.debug(f"[StorageStateWatchdog] Loaded storage state from: {load_path}")
 
         except Exception as e:
-            self.logger.error(
-                f"[StorageStateWatchdog] Failed to load storage state: {e}"
-            )
+            self.logger.error(f"[StorageStateWatchdog] Failed to load storage state: {e}")
 
     @staticmethod
-    def _merge_storage_states(
-        existing: dict[str, Any], new: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _merge_storage_states(existing: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
         """Merge two storage states, with new values taking precedence."""
         merged = existing.copy()
 
         # Merge cookies
-        existing_cookies = {
-            (c["name"], c["domain"], c["path"]): c for c in existing.get("cookies", [])
-        }
+        existing_cookies = {(c["name"], c["domain"], c["path"]): c for c in existing.get("cookies", [])}
 
         for cookie in new.get("cookies", []):
             key = (cookie["name"], cookie["domain"], cookie["path"])
@@ -339,9 +304,7 @@ class StorageStateWatchdog(BaseWatchdog):
         merged["cookies"] = list(existing_cookies.values())
 
         # Merge origins
-        existing_origins = {
-            origin["origin"]: origin for origin in existing.get("origins", [])
-        }
+        existing_origins = {origin["origin"]: origin for origin in existing.get("origins", [])}
 
         for origin in new.get("origins", []):
             existing_origins[origin["origin"]] = origin
@@ -366,16 +329,13 @@ class StorageStateWatchdog(BaseWatchdog):
     async def add_cookies(self, cookies: list[dict[str, Any]]) -> None:
         """Add cookies using CDP."""
         if not self.browser_session.cdp_client:
-            self.logger.warning(
-                "[StorageStateWatchdog] No CDP client available for adding cookies"
-            )
+            self.logger.warning("[StorageStateWatchdog] No CDP client available for adding cookies")
             return
 
         try:
             # Convert dicts to Cookie objects
             cookie_objects = [
-                Cookie(**cookie_dict) if isinstance(cookie_dict, dict) else cookie_dict
-                for cookie_dict in cookies
+                Cookie(**cookie_dict) if isinstance(cookie_dict, dict) else cookie_dict for cookie_dict in cookies
             ]
             # Set cookies using CDP
             await self.browser_session._cdp_set_cookies(cookie_objects)

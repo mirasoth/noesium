@@ -175,9 +175,7 @@ class LinkRelatedMemoriesAction(BaseAction):
 
             # Optionally write links to memory
             if write_to_memory and link_ids:
-                self._append_links_to_memory(
-                    character_name, category, memory_id, link_ids
-                )
+                self._append_links_to_memory(character_name, category, memory_id, link_ids)
 
             return self._add_metadata(
                 {
@@ -192,9 +190,7 @@ class LinkRelatedMemoriesAction(BaseAction):
         except Exception as e:
             return self._handle_error(e)
 
-    def _find_memory_item(
-        self, character_name: str, category: str, memory_id: str
-    ) -> Optional[Dict[str, Any]]:
+    def _find_memory_item(self, character_name: str, category: str, memory_id: str) -> Optional[Dict[str, Any]]:
         """Find a specific memory item by ID"""
         try:
             content = self._read_memory_content(character_name, category)
@@ -244,18 +240,14 @@ class LinkRelatedMemoriesAction(BaseAction):
                             if emb_data.get("memory_id") == exclude_memory_id:
                                 continue
 
-                            similarity = self._cosine_similarity(
-                                target_embedding, emb_data["embedding"]
-                            )
+                            similarity = self._cosine_similarity(target_embedding, emb_data["embedding"])
 
                             # Add ALL candidates regardless of similarity threshold initially
                             all_candidates.append(
                                 {
                                     "memory_id": emb_data.get("memory_id", ""),
                                     "content": emb_data["text"],
-                                    "full_line": emb_data.get(
-                                        "full_line", emb_data["text"]
-                                    ),
+                                    "full_line": emb_data.get("full_line", emb_data["text"]),
                                     "category": category,
                                     "similarity": similarity,
                                     "item_id": emb_data.get("item_id", ""),
@@ -264,9 +256,7 @@ class LinkRelatedMemoriesAction(BaseAction):
                             )
 
                     except Exception as e:
-                        logger.warning(
-                            f"Failed to load embeddings for {category}: {repr(e)}"
-                        )
+                        logger.warning(f"Failed to load embeddings for {category}: {repr(e)}")
 
             # Sort ALL candidates by similarity globally
             all_candidates.sort(key=lambda x: x["similarity"], reverse=True)
@@ -274,9 +264,7 @@ class LinkRelatedMemoriesAction(BaseAction):
             # Apply similarity threshold and take top K candidates for LLM filtering
             filtered_results = [
                 candidate
-                for candidate in all_candidates[
-                    : top_k * 2
-                ]  # Take more candidates first
+                for candidate in all_candidates[: top_k * 2]  # Take more candidates first
                 if candidate["similarity"] >= min_similarity
             ]
 
@@ -287,9 +275,7 @@ class LinkRelatedMemoriesAction(BaseAction):
                         character_name, filtered_results, target_content, top_k
                     )
                 else:
-                    relevant_memories = sorted(
-                        filtered_results, key=lambda x: x["similarity"], reverse=True
-                    )[:top_k]
+                    relevant_memories = sorted(filtered_results, key=lambda x: x["similarity"], reverse=True)[:top_k]
                 return relevant_memories
             else:
                 return []
@@ -342,9 +328,7 @@ class LinkRelatedMemoriesAction(BaseAction):
 
             # Save updated content
             updated_content = "\n".join(updated_lines)
-            success = self._save_memory_content(
-                character_name, category, updated_content
-            )
+            success = self._save_memory_content(character_name, category, updated_content)
 
             if success:
                 return updated_content
@@ -379,9 +363,7 @@ class LinkRelatedMemoriesAction(BaseAction):
 
             memory_items = self._parse_memory_items(content)
             if not memory_items:
-                return self._add_metadata(
-                    {"success": False, "error": f"No memory items found in {category}"}
-                )
+                return self._add_metadata({"success": False, "error": f"No memory items found in {category}"})
 
             # Determine search categories - search in ALL categories by default
             if search_categories is None:
@@ -412,9 +394,7 @@ class LinkRelatedMemoriesAction(BaseAction):
 
                 # Optionally write links to memory
                 if write_to_memory and link_ids:
-                    self._append_links_to_memory(
-                        character_name, category, memory_id, link_ids
-                    )
+                    self._append_links_to_memory(character_name, category, memory_id, link_ids)
                     total_linked += 1
 
             return self._add_metadata(
@@ -502,9 +482,7 @@ RELEVANT MEMORY NUMBERS:"""
             relevant_memories = []
             for idx in relevant_indices:
                 if 1 <= idx <= len(candidate_memories):
-                    relevant_memories.append(
-                        candidate_memories[idx - 1]
-                    )  # Convert to 0-based index
+                    relevant_memories.append(candidate_memories[idx - 1])  # Convert to 0-based index
 
             # Limit to max_links
             return relevant_memories[:max_links]
@@ -537,7 +515,5 @@ RELEVANT MEMORY NUMBERS:"""
             return [int(num) for num in numbers if num.isdigit()]
 
         except Exception as e:
-            logger.warning(
-                f"Failed to parse relevance response '{response}': {repr(e)}"
-            )
+            logger.warning(f"Failed to parse relevance response '{response}': {repr(e)}")
             return []

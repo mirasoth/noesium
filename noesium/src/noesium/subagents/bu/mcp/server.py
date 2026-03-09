@@ -58,9 +58,7 @@ def _configure_mcp_server_logging():
     # Also configure the root logger and all existing loggers to use stderr
     logging.root.handlers = []
     stderr_handler = logging.StreamHandler(sys.stderr)
-    stderr_handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
+    stderr_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
     logging.root.addHandler(stderr_handler)
     logging.root.setLevel(logging.ERROR)
 
@@ -103,9 +101,7 @@ def _ensure_all_loggers_use_stderr():
 
     if not stderr_handler:
         stderr_handler = logging.StreamHandler(sys.stderr)
-        stderr_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        )
+        stderr_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 
     # Configure root logger
     logging.root.handlers = [stderr_handler]
@@ -141,11 +137,7 @@ try:
     # Configure MCP SDK logging to stderr as well
     mcp_logger = logging.getLogger("mcp")
     mcp_logger.handlers = []
-    mcp_logger.addHandler(
-        logging.root.handlers[0]
-        if logging.root.handlers
-        else logging.StreamHandler(sys.stderr)
-    )
+    mcp_logger.addHandler(logging.root.handlers[0] if logging.root.handlers else logging.StreamHandler(sys.stderr))
     mcp_logger.setLevel(logging.ERROR)
     mcp_logger.propagate = False
 except ImportError:
@@ -402,9 +394,7 @@ class BrowserUseServer:
             ]
 
         @self.server.call_tool()
-        async def handle_call_tool(
-            name: str, arguments: dict[str, Any] | None
-        ) -> list[types.TextContent]:
+        async def handle_call_tool(name: str, arguments: dict[str, Any] | None) -> list[types.TextContent]:
             """Handle tool execution."""
             time.time()
             try:
@@ -435,27 +425,19 @@ class BrowserUseServer:
                 await self._init_browser_session()
 
             if tool_name == "browser_navigate":
-                return await self._navigate(
-                    arguments["url"], arguments.get("new_tab", False)
-                )
+                return await self._navigate(arguments["url"], arguments.get("new_tab", False))
 
             elif tool_name == "browser_click":
-                return await self._click(
-                    arguments["index"], arguments.get("new_tab", False)
-                )
+                return await self._click(arguments["index"], arguments.get("new_tab", False))
 
             elif tool_name == "browser_type":
                 return await self._type_text(arguments["index"], arguments["text"])
 
             elif tool_name == "browser_get_state":
-                return await self._get_browser_state(
-                    arguments.get("include_screenshot", False)
-                )
+                return await self._get_browser_state(arguments.get("include_screenshot", False))
 
             elif tool_name == "browser_extract_content":
-                return await self._extract_content(
-                    arguments["query"], arguments.get("extract_links", False)
-                )
+                return await self._extract_content(arguments["query"], arguments.get("extract_links", False))
 
             elif tool_name == "browser_scroll":
                 return await self._scroll(arguments.get("direction", "down"))
@@ -477,9 +459,7 @@ class BrowserUseServer:
 
         return f"Unknown tool: {tool_name}"
 
-    async def _init_browser_session(
-        self, allowed_domains: list[str] | None = None, **kwargs
-    ):
+    async def _init_browser_session(self, allowed_domains: list[str] | None = None, **kwargs):
         """Initialize browser session using config"""
         if self.browser_session:
             return
@@ -614,9 +594,7 @@ class BrowserUseServer:
         from ..browser.events import NavigateToUrlEvent
 
         if new_tab:
-            event = self.browser_session.event_bus.dispatch(
-                NavigateToUrlEvent(url=url, new_tab=True)
-            )
+            event = self.browser_session.event_bus.dispatch(NavigateToUrlEvent(url=url, new_tab=True))
             await event
             return f"Opened new tab with URL: {url}"
         else:
@@ -653,30 +631,22 @@ class BrowserUseServer:
                 # Open link in new tab
                 from ..browser.events import NavigateToUrlEvent
 
-                event = self.browser_session.event_bus.dispatch(
-                    NavigateToUrlEvent(url=full_url, new_tab=True)
-                )
+                event = self.browser_session.event_bus.dispatch(NavigateToUrlEvent(url=full_url, new_tab=True))
                 await event
-                return (
-                    f"Clicked element {index} and opened in new tab {full_url[:20]}..."
-                )
+                return f"Clicked element {index} and opened in new tab {full_url[:20]}..."
             else:
                 # For non-link elements, just do a normal click
                 # Opening in new tab without href is not reliably supported
                 from ..browser.events import ClickElementEvent
 
-                event = self.browser_session.event_bus.dispatch(
-                    ClickElementEvent(node=element)
-                )
+                event = self.browser_session.event_bus.dispatch(ClickElementEvent(node=element))
                 await event
                 return f"Clicked element {index} (new tab not supported for non-link elements)"
         else:
             # Normal click
             from ..browser.events import ClickElementEvent
 
-            event = self.browser_session.event_bus.dispatch(
-                ClickElementEvent(node=element)
-            )
+            event = self.browser_session.event_bus.dispatch(ClickElementEvent(node=element))
             await event
             return f"Clicked element {index}"
 
@@ -691,9 +661,7 @@ class BrowserUseServer:
 
         from ..browser.events import TypeTextEvent
 
-        event = self.browser_session.event_bus.dispatch(
-            TypeTextEvent(node=element, text=text)
-        )
+        event = self.browser_session.event_bus.dispatch(TypeTextEvent(node=element, text=text))
         await event
         return f"Typed '{text}' into element {index}"
 
@@ -702,9 +670,7 @@ class BrowserUseServer:
         if not self.browser_session:
             return "Error: No browser session active"
 
-        state = await self.browser_session.get_browser_state_summary(
-            cache_clickable_elements_hashes=False
-        )
+        state = await self.browser_session.get_browser_state_summary(cache_clickable_elements_hashes=False)
 
         result = {
             "url": state.url,
@@ -819,9 +785,7 @@ class BrowserUseServer:
         tabs_info = await self.browser_session.get_tabs()
         tabs = []
         for i, tab in enumerate(tabs_info):
-            tabs.append(
-                {"tab_id": tab.target_id[-4:], "url": tab.url, "title": tab.title or ""}
-            )
+            tabs.append({"tab_id": tab.target_id[-4:], "url": tab.url, "title": tab.title or ""})
         return json.dumps(tabs, indent=2)
 
     async def _switch_tab(self, tab_id: str) -> str:
@@ -832,9 +796,7 @@ class BrowserUseServer:
         from ..browser.events import SwitchTabEvent
 
         target_id = await self.browser_session.get_target_id_from_tab_id(tab_id)
-        event = self.browser_session.event_bus.dispatch(
-            SwitchTabEvent(target_id=target_id)
-        )
+        event = self.browser_session.event_bus.dispatch(SwitchTabEvent(target_id=target_id))
         await event
         state = await self.browser_session.get_browser_state_summary()
         return f"Switched to tab {tab_id}: {state.url}"
@@ -847,9 +809,7 @@ class BrowserUseServer:
         from ..browser.events import CloseTabEvent
 
         target_id = await self.browser_session.get_target_id_from_tab_id(tab_id)
-        event = self.browser_session.event_bus.dispatch(
-            CloseTabEvent(target_id=target_id)
-        )
+        event = self.browser_session.event_bus.dispatch(CloseTabEvent(target_id=target_id))
         await event
         current_url = await self.browser_session.get_current_page_url()
         return f"Closed tab # {tab_id}, now on {current_url}"
@@ -879,9 +839,7 @@ class BrowserUseServer:
             stateless=True,
         )
 
-        async def handle_streamable_http(
-            scope: Scope, receive: Receive, send: Send
-        ) -> None:
+        async def handle_streamable_http(scope: Scope, receive: Receive, send: Send) -> None:
             await session_manager.handle_request(scope, receive, send)
 
         @contextlib.asynccontextmanager
@@ -900,9 +858,7 @@ class BrowserUseServer:
 
         import uvicorn
 
-        config = uvicorn.Config(
-            starlette_app, host="127.0.0.1", port=port, loop="asyncio"
-        )
+        config = uvicorn.Config(starlette_app, host="127.0.0.1", port=port, loop="asyncio")
         server = uvicorn.Server(config)
         await server.serve()
 
@@ -929,12 +885,8 @@ if __name__ == "__main__":
         action="store_true",
         help="Run in Streamable HTTP mode instead of stdio",
     )
-    parser.add_argument(
-        "--port", type=int, default=3000, help="HTTP port (only in HTTP mode)"
-    )
-    parser.add_argument(
-        "--json-response", action="store_true", help="Use JSON responses instead of SSE"
-    )
+    parser.add_argument("--port", type=int, default=3000, help="HTTP port (only in HTTP mode)")
+    parser.add_argument("--json-response", action="store_true", help="Use JSON responses instead of SSE")
     args = parser.parse_args()
 
     asyncio.run(main(http=args.http, port=args.port, json_response=args.json_response))

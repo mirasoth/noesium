@@ -77,9 +77,7 @@ class SessionManager:
         )
 
         # Register synchronous event handlers (CDP requirement)
-        def on_attached(
-            event: AttachedToTargetEvent, session_id: SessionID | None = None
-        ):
+        def on_attached(event: AttachedToTargetEvent, session_id: SessionID | None = None):
             # _handle_target_attached() handles:
             # - setAutoAttach for children
             # - Create CDPSession
@@ -92,9 +90,7 @@ class SessionManager:
                 suppress_exceptions=True,
             )
 
-        def on_detached(
-            event: DetachedFromTargetEvent, session_id: SessionID | None = None
-        ):
+        def on_detached(event: DetachedFromTargetEvent, session_id: SessionID | None = None):
             create_task_with_error_handling(
                 self._handle_target_detached(event),
                 name="handle_target_detached",
@@ -146,9 +142,7 @@ class SessionManager:
 
                 # Trigger recovery if not already in progress
                 if not self._recovery_in_progress:
-                    self.logger.warning(
-                        "[SessionManager] Recovery was not in progress! Triggering now."
-                    )
+                    self.logger.warning("[SessionManager] Recovery was not in progress! Triggering now.")
                     self._recovery_task = create_task_with_error_handling(
                         self._recover_agent_focus(target_id),
                         name="recover_agent_focus_from_stale_get",
@@ -192,9 +186,7 @@ class SessionManager:
             self._target_sessions.clear()
             self._session_to_target.clear()
 
-        self.logger.info(
-            "[SessionManager] Cleared all owned data (targets, sessions, mappings)"
-        )
+        self.logger.info("[SessionManager] Cleared all owned data (targets, sessions, mappings)")
 
     async def is_target_valid(self, target_id: TargetID) -> bool:
         """Check if a target is still valid and has active sessions.
@@ -315,28 +307,20 @@ class SessionManager:
             if self._recovery_in_progress and self._recovery_complete_event:
                 # Recovery is happening, wait for it
                 try:
-                    await asyncio.wait_for(
-                        self._recovery_complete_event.wait(), timeout=timeout
-                    )
+                    await asyncio.wait_for(self._recovery_complete_event.wait(), timeout=timeout)
                     # Check again after recovery - simple existence check
                     focus_id = self.browser_session.agent_focus_target_id
                     return bool(focus_id and self._get_session_for_target(focus_id))
                 except TimeoutError:
-                    self.logger.error(
-                        f"[SessionManager] ❌ Timed out waiting for recovery after {timeout}s"
-                    )
+                    self.logger.error(f"[SessionManager] ❌ Timed out waiting for recovery after {timeout}s")
                     return False
             return False
 
         # Simple existence check - does the focused target have a session?
-        cdp_session = self._get_session_for_target(
-            self.browser_session.agent_focus_target_id
-        )
+        cdp_session = self._get_session_for_target(self.browser_session.agent_focus_target_id)
         if cdp_session:
             # Session exists - validate it's still active
-            is_valid = await self.validate_session(
-                self.browser_session.agent_focus_target_id
-            )
+            is_valid = await self.validate_session(self.browser_session.agent_focus_target_id)
             if is_valid:
                 return True
 
@@ -359,9 +343,7 @@ class SessionManager:
         if self._recovery_complete_event:
             try:
                 start_time = asyncio.get_event_loop().time()
-                await asyncio.wait_for(
-                    self._recovery_complete_event.wait(), timeout=timeout
-                )
+                await asyncio.wait_for(self._recovery_complete_event.wait(), timeout=timeout)
                 elapsed = asyncio.get_event_loop().time() - start_time
 
                 # Verify recovery succeeded - simple existence check
@@ -426,13 +408,8 @@ class SessionManager:
         except Exception as e:
             error_str = str(e)
             # Expected for short-lived targets (workers, temp iframes) that detach before this executes
-            if (
-                "-32001" not in error_str
-                and "Session with given id not found" not in error_str
-            ):
-                self.logger.debug(
-                    f"[SessionManager] Auto-attach failed for {target_type}: {e}"
-                )
+            if "-32001" not in error_str and "Session with given id not found" not in error_str:
+                self.logger.debug(f"[SessionManager] Auto-attach failed for {target_type}: {e}")
 
         async with self._lock:
             # Track this session for the target
@@ -453,9 +430,7 @@ class SessionManager:
                 title=target_info.get("title", "Unknown title"),
             )
             self._targets[target_id] = target
-            self.logger.debug(
-                f"[SessionManager] Created target {target_id[:8]}... (type={target_type})"
-            )
+            self.logger.debug(f"[SessionManager] Created target {target_id[:8]}... (type={target_type})")
         else:
             # Update existing target info
             existing_target = self._targets[target_id]
@@ -465,9 +440,7 @@ class SessionManager:
         # Create CDPSession (communication channel)
         from noesium.subagents.bu.browser.session import CDPSession
 
-        assert (
-            self.browser_session._cdp_client_root is not None
-        ), "Root CDP client required"
+        assert self.browser_session._cdp_client_root is not None, "Root CDP client required"
 
         cdp_session = CDPSession(
             cdp_client=self.browser_session._cdp_client_root,
@@ -491,9 +464,7 @@ class SessionManager:
         if waiting_for_debugger:
             try:
                 assert self.browser_session._cdp_client_root is not None
-                await self.browser_session._cdp_client_root.send.Runtime.runIfWaitingForDebugger(
-                    session_id=session_id
-                )
+                await self.browser_session._cdp_client_root.send.Runtime.runIfWaitingForDebugger(session_id=session_id)
             except Exception as e:
                 self.logger.warning(f"[SessionManager] Failed to resume execution: {e}")
 
@@ -532,9 +503,7 @@ class SessionManager:
                 target_id = self._session_to_target.get(session_id)
 
         if not target_id:
-            self.logger.warning(
-                f"[SessionManager] Session detached but target unknown (session={session_id[:8]}...)"
-            )
+            self.logger.warning(f"[SessionManager] Session detached but target unknown (session={session_id[:8]}...)")
             return
 
         agent_focus_lost = False
@@ -562,9 +531,7 @@ class SessionManager:
                     target_fully_removed = True
 
                     # Check if agent_focus points to this target
-                    agent_focus_lost = (
-                        self.browser_session.agent_focus_target_id == target_id
-                    )
+                    agent_focus_lost = self.browser_session.agent_focus_target_id == target_id
 
                     # Immediately clear stale focus to prevent operations on detached target
                     if agent_focus_lost:
@@ -610,12 +577,8 @@ class SessionManager:
             if target_type in ("page", "tab"):
                 from noesium.subagents.bu.browser.events import TabClosedEvent
 
-                self.browser_session.event_bus.dispatch(
-                    TabClosedEvent(target_id=target_id)
-                )
-                self.logger.debug(
-                    f"[SessionManager] Dispatched TabClosedEvent for page target {target_id[:8]}..."
-                )
+                self.browser_session.event_bus.dispatch(TabClosedEvent(target_id=target_id))
+                self.logger.debug(f"[SessionManager] Dispatched TabClosedEvent for page target {target_id[:8]}...")
             elif target_type:
                 self.logger.debug(
                     f"[SessionManager] Target {target_id[:8]}... fully removed (type={target_type}) - not dispatching TabClosedEvent"
@@ -646,19 +609,13 @@ class SessionManager:
             async with self._recovery_lock:
                 # Set recovery state INSIDE lock to prevent race conditions
                 if self._recovery_in_progress:
-                    self.logger.debug(
-                        "[SessionManager] Recovery already in progress, waiting for it to complete"
-                    )
+                    self.logger.debug("[SessionManager] Recovery already in progress, waiting for it to complete")
                     # Wait for ongoing recovery instead of starting a new one
                     if self._recovery_complete_event:
                         try:
-                            await asyncio.wait_for(
-                                self._recovery_complete_event.wait(), timeout=5.0
-                            )
+                            await asyncio.wait_for(self._recovery_complete_event.wait(), timeout=5.0)
                         except TimeoutError:
-                            self.logger.error(
-                                "[SessionManager] Timed out waiting for ongoing recovery"
-                            )
+                            self.logger.error("[SessionManager] Timed out waiting for ongoing recovery")
                     return
 
                 # Set recovery state
@@ -705,27 +662,17 @@ class SessionManager:
                 # Switch to most recent page that's not the crashed one
                 new_target_id = page_targets[-1].target_id
                 is_existing_tab = True
-                self.logger.info(
-                    f"[SessionManager] Switching agent_focus to existing tab {new_target_id[:8]}..."
-                )
+                self.logger.info(f"[SessionManager] Switching agent_focus to existing tab {new_target_id[:8]}...")
             else:
                 # No pages exist - create a new one
-                self.logger.warning(
-                    "[SessionManager] No tabs remain! Creating new tab for agent..."
-                )
-                new_target_id = await self.browser_session._cdp_create_new_page(
-                    "about:blank"
-                )
-                self.logger.info(
-                    f"[SessionManager] Created new tab {new_target_id[:8]}... for agent"
-                )
+                self.logger.warning("[SessionManager] No tabs remain! Creating new tab for agent...")
+                new_target_id = await self.browser_session._cdp_create_new_page("about:blank")
+                self.logger.info(f"[SessionManager] Created new tab {new_target_id[:8]}... for agent")
 
                 # Dispatch TabCreatedEvent so watchdogs can initialize
                 from noesium.subagents.bu.browser.events import TabCreatedEvent
 
-                self.browser_session.event_bus.dispatch(
-                    TabCreatedEvent(url="about:blank", target_id=new_target_id)
-                )
+                self.browser_session.event_bus.dispatch(TabCreatedEvent(url="about:blank", target_id=new_target_id))
 
             # Wait for CDP attach event to create session
             # Note: This polling is necessary - waiting for external Chrome CDP event
@@ -739,9 +686,7 @@ class SessionManager:
 
             if new_session:
                 self.browser_session.agent_focus_target_id = new_target_id
-                self.logger.info(
-                    f"[SessionManager] ✅ Agent focus recovered: {new_target_id[:8]}..."
-                )
+                self.logger.info(f"[SessionManager] ✅ Agent focus recovered: {new_target_id[:8]}...")
 
                 # Visually activate the tab in browser (only for existing tabs)
                 if is_existing_tab:
@@ -750,13 +695,9 @@ class SessionManager:
                         await self.browser_session._cdp_client_root.send.Target.activateTarget(
                             params={"targetId": new_target_id}
                         )
-                        self.logger.debug(
-                            f"[SessionManager] Activated tab {new_target_id[:8]}... in browser UI"
-                        )
+                        self.logger.debug(f"[SessionManager] Activated tab {new_target_id[:8]}... in browser UI")
                     except Exception as e:
-                        self.logger.debug(
-                            f"[SessionManager] Failed to activate tab visually: {e}"
-                        )
+                        self.logger.debug(f"[SessionManager] Failed to activate tab visually: {e}")
 
                 # Get target to access url (from owned data)
                 target = self.get_target(new_target_id)
@@ -765,9 +706,7 @@ class SessionManager:
                 # Dispatch focus changed event
                 from noesium.subagents.bu.browser.events import AgentFocusChangedEvent
 
-                self.browser_session.event_bus.dispatch(
-                    AgentFocusChangedEvent(target_id=new_target_id, url=target_url)
-                )
+                self.browser_session.event_bus.dispatch(AgentFocusChangedEvent(target_id=new_target_id, url=target_url))
                 return
 
             # Recovery failed - create emergency fallback tab
@@ -775,12 +714,8 @@ class SessionManager:
                 f"[SessionManager] ❌ Failed to get session for {new_target_id[:8]}... after 2s, creating emergency fallback tab"
             )
 
-            fallback_target_id = await self.browser_session._cdp_create_new_page(
-                "about:blank"
-            )
-            self.logger.warning(
-                f"[SessionManager] Created emergency fallback tab {fallback_target_id[:8]}..."
-            )
+            fallback_target_id = await self.browser_session._cdp_create_new_page("about:blank")
+            self.logger.warning(f"[SessionManager] Created emergency fallback tab {fallback_target_id[:8]}...")
 
             # Try one more time with fallback
             # Note: This polling is necessary - waiting for external Chrome CDP event
@@ -802,9 +737,7 @@ class SessionManager:
                         TabCreatedEvent(url="about:blank", target_id=fallback_target_id)
                     )
                     self.browser_session.event_bus.dispatch(
-                        AgentFocusChangedEvent(
-                            target_id=fallback_target_id, url="about:blank"
-                        )
+                        AgentFocusChangedEvent(target_id=fallback_target_id, url="about:blank")
                     )
                     return
 
@@ -814,9 +747,7 @@ class SessionManager:
             )
 
         except Exception as e:
-            self.logger.error(
-                f"[SessionManager] ❌ Error during agent_focus recovery: {type(e).__name__}: {e}"
-            )
+            self.logger.error(f"[SessionManager] ❌ Error during agent_focus recovery: {type(e).__name__}: {e}")
         finally:
             # Always signal completion and reset recovery state
             # This allows all waiting operations to proceed (success or failure)
@@ -842,9 +773,7 @@ class SessionManager:
         targets_result = await cdp_client.send.Target.getTargets()
         existing_targets = targets_result.get("targetInfos", [])
 
-        self.logger.debug(
-            f"[SessionManager] Discovered {len(existing_targets)} existing targets"
-        )
+        self.logger.debug(f"[SessionManager] Discovered {len(existing_targets)} existing targets")
 
         # Track target IDs for verification
         target_ids_to_wait_for = []
@@ -857,9 +786,7 @@ class SessionManager:
 
             try:
                 # Just attach - event handler does everything
-                await cdp_client.send.Target.attachToTarget(
-                    params={"targetId": target_id, "flatten": True}
-                )
+                await cdp_client.send.Target.attachToTarget(params={"targetId": target_id, "flatten": True})
                 target_ids_to_wait_for.append(target_id)
             except Exception as e:
                 self.logger.debug(
@@ -881,10 +808,7 @@ class SessionManager:
                         target_type = target.target_type if target else "unknown"
                         # For pages, verify monitoring is enabled
                         if target_type in ("page", "tab"):
-                            if (
-                                hasattr(session, "_lifecycle_events")
-                                and session._lifecycle_events is not None
-                            ):
+                            if hasattr(session, "_lifecycle_events") and session._lifecycle_events is not None:
                                 ready_count += 1
                         else:
                             # Non-page targets don't need monitoring
@@ -916,10 +840,7 @@ class SessionManager:
                     target_type = target.target_type if target else "unknown"
                     # For pages, verify monitoring is enabled
                     if target_type in ("page", "tab"):
-                        if (
-                            hasattr(session, "_lifecycle_events")
-                            and session._lifecycle_events is not None
-                        ):
+                        if hasattr(session, "_lifecycle_events") and session._lifecycle_events is not None:
                             ready_count += 1
                     else:
                         # Non-page targets don't need monitoring
@@ -945,9 +866,7 @@ class SessionManager:
         """
         try:
             # Enable Page domain first (required for lifecycle events)
-            await cdp_session.cdp_client.send.Page.enable(
-                session_id=cdp_session.session_id
-            )
+            await cdp_session.cdp_client.send.Page.enable(session_id=cdp_session.session_id)
 
             # Enable lifecycle events (load, DOMContentLoaded, networkIdle, etc.)
             await cdp_session.cdp_client.send.Page.setLifecycleEventsEnabled(
@@ -955,9 +874,7 @@ class SessionManager:
             )
 
             # Enable network monitoring for networkIdle detection
-            await cdp_session.cdp_client.send.Network.enable(
-                session_id=cdp_session.session_id
-            )
+            await cdp_session.cdp_client.send.Network.enable(session_id=cdp_session.session_id)
 
             # Initialize lifecycle event storage for this session (thread-safe)
             from collections import deque
@@ -973,9 +890,7 @@ class SessionManager:
                 # Find which target this session belongs to
                 target_id_from_event = None
                 if session_id:
-                    target_id_from_event = self.get_target_id_from_session_id(
-                        session_id
-                    )
+                    target_id_from_event = self.get_target_id_from_session_id(session_id)
 
                 # Check if this event is for our target
                 if target_id_from_event == cdp_session.target_id:
@@ -990,9 +905,7 @@ class SessionManager:
                         cdp_session._lifecycle_events.append(event_data)
                     except Exception as e:
                         # Only log errors, not every event
-                        self.logger.error(
-                            f"[SessionManager] Failed to store lifecycle event: {e}"
-                        )
+                        self.logger.error(f"[SessionManager] Failed to store lifecycle event: {e}")
 
             # Register the handler ONCE (this is the only place we register)
             cdp_session.cdp_client.register.Page.lifecycleEvent(on_lifecycle_event)

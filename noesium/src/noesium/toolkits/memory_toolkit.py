@@ -60,17 +60,9 @@ class MemoryToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # Configuration
-        self.storage_type = self.config.config.get(
-            "storage_type", "memory"
-        )  # "memory" or "file"
-        self.storage_dir = Path(
-            self.config.config.get(
-                "storage_dir", get_toolkit_tmp_dir(TOOLKIT_MEMORY, "storage")
-            )
-        )
-        self.max_memory_size = self.config.config.get(
-            "max_memory_size", 1024 * 1024
-        )  # 1MB
+        self.storage_type = self.config.config.get("storage_type", "memory")  # "memory" or "file"
+        self.storage_dir = Path(self.config.config.get("storage_dir", get_toolkit_tmp_dir(TOOLKIT_MEMORY, "storage")))
+        self.max_memory_size = self.config.config.get("max_memory_size", 1024 * 1024)  # 1MB
         self.enable_versioning = self.config.config.get("enable_versioning", False)
 
         # In-memory storage
@@ -96,9 +88,7 @@ class MemoryToolkit(AsyncBaseToolkit):
                 with open(file_path, "r", encoding="utf-8") as f:
                     self.memory_slots[slot_name] = f.read()
 
-            self.logger.info(
-                f"Loaded {len(self.memory_slots)} memory slots from storage"
-            )
+            self.logger.info(f"Loaded {len(self.memory_slots)} memory slots from storage")
 
         except Exception as e:
             self.logger.warning(f"Failed to load persistent memory: {e}")
@@ -113,9 +103,7 @@ class MemoryToolkit(AsyncBaseToolkit):
 
             # Create backup if versioning is enabled
             if self.enable_versioning and file_path.exists():
-                backup_path = file_path.with_suffix(
-                    f".{int(os.path.getmtime(file_path))}.bak"
-                )
+                backup_path = file_path.with_suffix(f".{int(os.path.getmtime(file_path))}.bak")
                 file_path.rename(backup_path)
 
             with open(file_path, "w", encoding="utf-8") as f:
@@ -201,9 +189,7 @@ class MemoryToolkit(AsyncBaseToolkit):
         self.logger.info(f"Wrote {len(content)} characters to slot '{slot_name}'")
         return warning_msg + result_msg
 
-    async def edit_memory(
-        self, old_string: str, new_string: str, slot_name: str = "default"
-    ) -> str:
+    async def edit_memory(self, old_string: str, new_string: str, slot_name: str = "default") -> str:
         """
         Edit memory content by replacing occurrences of a string.
 
@@ -231,9 +217,7 @@ class MemoryToolkit(AsyncBaseToolkit):
 
         # Check if old_string exists
         if old_string not in current_content:
-            return (
-                f"Error: String '{old_string}' not found in memory slot '{slot_name}'."
-            )
+            return f"Error: String '{old_string}' not found in memory slot '{slot_name}'."
 
         # Count occurrences
         occurrence_count = current_content.count(old_string)
@@ -260,9 +244,7 @@ class MemoryToolkit(AsyncBaseToolkit):
         self.logger.info(f"Edited memory slot '{slot_name}': replaced 1 occurrence")
         return f"Successfully replaced 1 occurrence of '{old_string}' with '{new_string}' in slot '{slot_name}'."
 
-    async def append_to_memory(
-        self, content: str, slot_name: str = "default", separator: str = "\n"
-    ) -> str:
+    async def append_to_memory(self, content: str, slot_name: str = "default", separator: str = "\n") -> str:
         """
         Append content to an existing memory slot.
 
@@ -333,9 +315,7 @@ class MemoryToolkit(AsyncBaseToolkit):
 
             slot_info.append(f"  {slot_name}: {size} chars - {preview}")
 
-        result = f"Memory slots ({len(self.memory_slots)} total):\n" + "\n".join(
-            slot_info
-        )
+        result = f"Memory slots ({len(self.memory_slots)} total):\n" + "\n".join(slot_info)
         return result
 
     async def search_memory(self, query: str, slot_name: Optional[str] = None) -> str:
@@ -351,11 +331,7 @@ class MemoryToolkit(AsyncBaseToolkit):
         """
         results = []
 
-        slots_to_search = (
-            {slot_name: self.memory_slots[slot_name]}
-            if slot_name
-            else self.memory_slots
-        )
+        slots_to_search = {slot_name: self.memory_slots[slot_name]} if slot_name else self.memory_slots
 
         for name, content in slots_to_search.items():
             if query.lower() in content.lower():
@@ -368,10 +344,7 @@ class MemoryToolkit(AsyncBaseToolkit):
                         context_lines = lines[context_start:context_end]
 
                         results.append(f"Slot '{name}', line {i+1}:")
-                        results.extend(
-                            f"  {j+context_start+1}: {line}"
-                            for j, line in enumerate(context_lines)
-                        )
+                        results.extend(f"  {j+context_start+1}: {line}" for j, line in enumerate(context_lines))
                         results.append("")
 
         if not results:
@@ -389,9 +362,7 @@ class MemoryToolkit(AsyncBaseToolkit):
         """
         total_slots = len(self.memory_slots)
         total_chars = sum(len(content) for content in self.memory_slots.values())
-        total_bytes = sum(
-            len(content.encode("utf-8")) for content in self.memory_slots.values()
-        )
+        total_bytes = sum(len(content.encode("utf-8")) for content in self.memory_slots.values())
 
         if total_slots == 0:
             return "No memory slots exist."

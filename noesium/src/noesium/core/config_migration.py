@@ -150,9 +150,7 @@ def migrate_0_0_to_1_0(data: Dict[str, Any]) -> Dict[str, Any]:
                 # Two-level nesting (e.g., memory.memu.memory_dir)
                 intermediate = mapping[1]
                 final_key = mapping[2]
-                data.setdefault(section, {}).setdefault(intermediate, {})[
-                    final_key
-                ] = value
+                data.setdefault(section, {}).setdefault(intermediate, {})[final_key] = value
 
     return data
 

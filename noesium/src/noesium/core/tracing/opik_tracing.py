@@ -31,9 +31,7 @@ def configure_opik() -> bool:
     """
     try:
         # Check global Noesium Opik tracing toggle first
-        noesium_opik_enabled = (
-            os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true"
-        )
+        noesium_opik_enabled = os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true"
 
         if not noesium_opik_enabled:
             logger.debug("Opik tracing disabled via NOESIUM_OPIK_TRACING=false")
@@ -54,9 +52,7 @@ def configure_opik() -> bool:
 
         # For cloud deployment, API key is required
         if not use_local and not opik_api_key:
-            logger.debug(
-                "No OPIK_API_KEY found for cloud deployment, Opik tracing disabled"
-            )
+            logger.debug("No OPIK_API_KEY found for cloud deployment, Opik tracing disabled")
             return False
 
         # Import opik here to avoid import errors if not installed
@@ -67,15 +63,11 @@ def configure_opik() -> bool:
             # Local deployment configuration
             local_url = os.getenv("OPIK_LOCAL_URL", "http://localhost:5173")
             opik.configure(use_local=True)
-            logger.info(
-                f"Opik tracing configured for local deployment at {local_url}, project: {opik_project}"
-            )
+            logger.info(f"Opik tracing configured for local deployment at {local_url}, project: {opik_project}")
         else:
             # Cloud deployment configuration
             opik.configure(api_key=opik_api_key, use_local=False)
-            logger.info(
-                f"Opik tracing configured for cloud deployment, project: {opik_project}"
-            )
+            logger.info(f"Opik tracing configured for cloud deployment, project: {opik_project}")
 
         return True
 
@@ -96,9 +88,7 @@ def is_opik_enabled() -> bool:
     """
     try:
         # Check global Noesium Opik tracing toggle first
-        noesium_opik_enabled = (
-            os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true"
-        )
+        noesium_opik_enabled = os.getenv("NOESIUM_OPIK_TRACING", "false").lower() == "true"
 
         if not noesium_opik_enabled:
             return False

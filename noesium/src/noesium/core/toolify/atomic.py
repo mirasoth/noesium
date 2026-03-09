@@ -1,4 +1,4 @@
-"""AtomicTool model and supporting types (RFC-2004 §4)."""
+"""AtomicTool model and supporting types (RFC-1009 simplified)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from typing import Any, Callable
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from uuid_extensions import uuid7str
 
-from noesium.core.event.envelope import TraceContext
 from noesium.core.exceptions import ToolExecutionError
 
 
@@ -30,7 +29,7 @@ class ToolPermission(str, Enum):
 
 
 class AtomicTool(BaseModel):
-    """The smallest executable unit in the tool system (RFC-2003 §6)."""
+    """The smallest executable unit in the tool system."""
 
     tool_id: str = Field(default_factory=lambda: uuid7str())
     name: str
@@ -65,7 +64,6 @@ class ToolContext(BaseModel):
     """Execution context passed to ToolExecutor for each invocation."""
 
     agent_id: str
-    trace: TraceContext = Field(default_factory=TraceContext)
     granted_permissions: list[ToolPermission] = Field(default_factory=list)
     working_directory: str | None = None
     timeout_ms: int = 30_000

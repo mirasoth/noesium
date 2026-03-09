@@ -66,18 +66,12 @@ class LLMClient(OpenAILLMClient):
                 "OpenRouter API key is required. Provide api_key parameter or set OPENROUTER_API_KEY environment variable."
             )
 
-        self.base_url = base_url or os.getenv(
-            "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
-        )
+        self.base_url = base_url or os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 
         # Model configurations (can be overridden by environment variables)
         self.chat_model = chat_model or os.getenv("OPENROUTER_CHAT_MODEL", GEMINI_FLASH)
-        self.vision_model = vision_model or os.getenv(
-            "OPENROUTER_VISION_MODEL", GEMINI_FLASH
-        )
-        self.embed_model = embed_model or os.getenv(
-            "OPENROUTER_EMBED_MODEL", "text-embedding-3-small"
-        )
+        self.vision_model = vision_model or os.getenv("OPENROUTER_VISION_MODEL", GEMINI_FLASH)
+        self.embed_model = embed_model or os.getenv("OPENROUTER_EMBED_MODEL", "text-embedding-3-small")
 
         super().__init__(
             base_url=self.base_url,

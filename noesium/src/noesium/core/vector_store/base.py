@@ -93,9 +93,7 @@ class BaseVectorStore(ABC):
         """Get information about a collection."""
 
     @abstractmethod
-    def list(
-        self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None
-    ) -> List[OutputData]:
+    def list(self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None) -> List[OutputData]:
         """List all memories."""
 
     @abstractmethod

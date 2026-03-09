@@ -55,9 +55,7 @@ class GetAvailableCategoriesAction(BaseAction):
                     "success": True,
                     "categories": categories,
                     "total_categories": len(categories),
-                    "processing_order": [
-                        cat for cat in self.processing_order if cat != "activity"
-                    ],
+                    "processing_order": [cat for cat in self.processing_order if cat != "activity"],
                     "embeddings_enabled": self.embeddings_enabled,
                     "excluded_categories": ["activity"],
                     "message": f"Found {len(categories)} memory categories from config (excluding activity)",

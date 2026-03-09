@@ -33,15 +33,11 @@ def _get_timeout(env_var: str, default: float) -> float | None:
         try:
             parsed = float(env_value)
             if parsed < 0:
-                print(
-                    f"Warning: {env_var}={env_value} is negative, using default {default}"
-                )
+                print(f"Warning: {env_var}={env_value} is negative, using default {default}")
                 return default
             return parsed
         except (ValueError, TypeError):
-            print(
-                f"Warning: {env_var}={env_value} is not a valid number, using default {default}"
-            )
+            print(f"Warning: {env_var}={env_value} is not a valid number, using default {default}")
 
     # Fall back to default
     return default
@@ -59,9 +55,7 @@ class ElementSelectedEvent(BaseEvent[T_EventResultType]):
 
     @field_validator("node", mode="before")
     @classmethod
-    def serialize_node(
-        cls, data: EnhancedDOMTreeNode | None
-    ) -> EnhancedDOMTreeNode | None:
+    def serialize_node(cls, data: EnhancedDOMTreeNode | None) -> EnhancedDOMTreeNode | None:
         if data is None:
             return None
         return EnhancedDOMTreeNode(
@@ -164,13 +158,9 @@ class TypeTextEvent(ElementSelectedEvent[dict | None]):
     text: str
     clear: bool = True
     is_sensitive: bool = False  # Flag to indicate if text contains sensitive data
-    sensitive_key_name: str | None = (
-        None  # Name of the sensitive key being typed (e.g., 'username', 'password')
-    )
+    sensitive_key_name: str | None = None  # Name of the sensitive key being typed (e.g., 'username', 'password')
 
-    event_timeout: float | None = Field(
-        default_factory=lambda: _get_timeout("TIMEOUT_TypeTextEvent", 60.0)
-    )  # seconds
+    event_timeout: float | None = Field(default_factory=lambda: _get_timeout("TIMEOUT_TypeTextEvent", 60.0))  # seconds
 
 
 class ScrollEvent(ElementSelectedEvent[None]):
@@ -180,21 +170,15 @@ class ScrollEvent(ElementSelectedEvent[None]):
     amount: int  # pixels
     node: "EnhancedDOMTreeNode | None" = None  # None means scroll page
 
-    event_timeout: float | None = Field(
-        default_factory=lambda: _get_timeout("TIMEOUT_ScrollEvent", 8.0)
-    )  # seconds
+    event_timeout: float | None = Field(default_factory=lambda: _get_timeout("TIMEOUT_ScrollEvent", 8.0))  # seconds
 
 
 class SwitchTabEvent(BaseEvent[TargetID]):
     """Switch to a different tab."""
 
-    target_id: TargetID | None = Field(
-        default=None, description="None means switch to the most recently opened tab"
-    )
+    target_id: TargetID | None = Field(default=None, description="None means switch to the most recently opened tab")
 
-    event_timeout: float | None = Field(
-        default_factory=lambda: _get_timeout("TIMEOUT_SwitchTabEvent", 10.0)
-    )  # seconds
+    event_timeout: float | None = Field(default_factory=lambda: _get_timeout("TIMEOUT_SwitchTabEvent", 10.0))  # seconds
 
 
 class CloseTabEvent(BaseEvent[None]):
@@ -202,9 +186,7 @@ class CloseTabEvent(BaseEvent[None]):
 
     target_id: TargetID
 
-    event_timeout: float | None = Field(
-        default_factory=lambda: _get_timeout("TIMEOUT_CloseTabEvent", 10.0)
-    )  # seconds
+    event_timeout: float | None = Field(default_factory=lambda: _get_timeout("TIMEOUT_CloseTabEvent", 10.0))  # seconds
 
 
 class ScreenshotEvent(BaseEvent[str]):
@@ -242,25 +224,19 @@ class BrowserStateRequestEvent(BaseEvent[BrowserStateSummary]):
 class GoBackEvent(BaseEvent[None]):
     """Navigate back in browser history."""
 
-    event_timeout: float | None = Field(
-        default_factory=lambda: _get_timeout("TIMEOUT_GoBackEvent", 15.0)
-    )  # seconds
+    event_timeout: float | None = Field(default_factory=lambda: _get_timeout("TIMEOUT_GoBackEvent", 15.0))  # seconds
 
 
 class GoForwardEvent(BaseEvent[None]):
     """Navigate forward in browser history."""
 
-    event_timeout: float | None = Field(
-        default_factory=lambda: _get_timeout("TIMEOUT_GoForwardEvent", 15.0)
-    )  # seconds
+    event_timeout: float | None = Field(default_factory=lambda: _get_timeout("TIMEOUT_GoForwardEvent", 15.0))  # seconds
 
 
 class RefreshEvent(BaseEvent[None]):
     """Refresh/reload the current page."""
 
-    event_timeout: float | None = Field(
-        default_factory=lambda: _get_timeout("TIMEOUT_RefreshEvent", 15.0)
-    )  # seconds
+    event_timeout: float | None = Field(default_factory=lambda: _get_timeout("TIMEOUT_RefreshEvent", 15.0))  # seconds
 
 
 class WaitEvent(BaseEvent[None]):
@@ -269,9 +245,7 @@ class WaitEvent(BaseEvent[None]):
     seconds: float = 3.0
     max_seconds: float = 10.0  # Safety cap
 
-    event_timeout: float | None = Field(
-        default_factory=lambda: _get_timeout("TIMEOUT_WaitEvent", 60.0)
-    )  # seconds
+    event_timeout: float | None = Field(default_factory=lambda: _get_timeout("TIMEOUT_WaitEvent", 60.0))  # seconds
 
 
 class SendKeysEvent(BaseEvent[None]):
@@ -279,9 +253,7 @@ class SendKeysEvent(BaseEvent[None]):
 
     keys: str  # e.g., "ctrl+a", "cmd+c", "Enter"
 
-    event_timeout: float | None = Field(
-        default_factory=lambda: _get_timeout("TIMEOUT_SendKeysEvent", 60.0)
-    )  # seconds
+    event_timeout: float | None = Field(default_factory=lambda: _get_timeout("TIMEOUT_SendKeysEvent", 60.0))  # seconds
 
 
 class UploadFileEvent(ElementSelectedEvent[None]):
@@ -465,9 +437,7 @@ class TabClosedEvent(BaseEvent):
     # new_focus_target_id: int | None = None
     # new_focus_url: str | None = None
 
-    event_timeout: float | None = Field(
-        default_factory=lambda: _get_timeout("TIMEOUT_TabClosedEvent", 3.0)
-    )  # seconds
+    event_timeout: float | None = Field(default_factory=lambda: _get_timeout("TIMEOUT_TabClosedEvent", 3.0))  # seconds
 
 
 # TODO: emit this when DOM changes significantly, inner frame navigates, form submits, history.pushState(), etc.
@@ -518,9 +488,7 @@ class NavigationCompleteEvent(BaseEvent):
     url: str
     status: int | None = None
     error_message: str | None = None  # Error/timeout message if navigation had issues
-    loading_status: str | None = (
-        None  # Detailed loading status (e.g., network timeout info)
-    )
+    loading_status: str | None = None  # Detailed loading status (e.g., network timeout info)
 
     event_timeout: float | None = Field(
         default_factory=lambda: _get_timeout("TIMEOUT_NavigationCompleteEvent", 30.0)
@@ -639,9 +607,7 @@ class FileDownloadedEvent(BaseEvent):
     file_type: str | None = None  # e.g., 'pdf', 'zip', 'docx', etc.
     mime_type: str | None = None  # e.g., 'application/pdf'
     from_cache: bool = False
-    auto_download: bool = (
-        False  # Whether this was an automatic download (e.g., PDF auto-download)
-    )
+    auto_download: bool = False  # Whether this was an automatic download (e.g., PDF auto-download)
 
     event_timeout: float | None = Field(
         default_factory=lambda: _get_timeout("TIMEOUT_FileDownloadedEvent", 30.0)
@@ -684,9 +650,7 @@ def _check_event_names_dont_overlap():
         and name != "BaseEvent"
     }
     for name_a in event_names:
-        assert name_a.endswith(
-            "Event"
-        ), f'Event with name {name_a} does not end with "Event"'
+        assert name_a.endswith("Event"), f'Event with name {name_a} does not end with "Event"'
         for name_b in event_names:
             if name_a != name_b:  # Skip self-comparison
                 assert (

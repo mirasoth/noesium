@@ -57,9 +57,7 @@ class MCPToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         if not MCP_AVAILABLE:
-            raise MCPNotAvailableError(
-                "MCP package is not available. Install with: pip install mcp"
-            )
+            raise MCPNotAvailableError("MCP package is not available. Install with: pip install mcp")
 
         # MCP server configuration
         self.server_path = self.config.mcp_server_path
@@ -130,15 +128,10 @@ class MCPToolkit(AsyncBaseToolkit):
             self._available_tools = {}
             for tool in tools_response.tools:
                 # Filter tools if specified in config
-                if (
-                    self.config.activated_tools is None
-                    or tool.name in self.config.activated_tools
-                ):
+                if self.config.activated_tools is None or tool.name in self.config.activated_tools:
                     self._available_tools[tool.name] = tool
 
-            self.logger.info(
-                f"Discovered {len(self._available_tools)} MCP tools: {list(self._available_tools.keys())}"
-            )
+            self.logger.info(f"Discovered {len(self._available_tools)} MCP tools: {list(self._available_tools.keys())}")
 
         except Exception as e:
             self.logger.error(f"Failed to discover MCP tools: {e}")
@@ -159,14 +152,10 @@ class MCPToolkit(AsyncBaseToolkit):
             raise RuntimeError("MCP session not initialized")
 
         if tool_name not in self._available_tools:
-            raise ValueError(
-                f"Tool '{tool_name}' not available. Available tools: {list(self._available_tools.keys())}"
-            )
+            raise ValueError(f"Tool '{tool_name}' not available. Available tools: {list(self._available_tools.keys())}")
 
         try:
-            self.logger.debug(
-                f"Calling MCP tool '{tool_name}' with arguments: {arguments}"
-            )
+            self.logger.debug(f"Calling MCP tool '{tool_name}' with arguments: {arguments}")
 
             # Call the tool
             result = await self.session.call_tool(tool_name, arguments)
@@ -180,9 +169,7 @@ class MCPToolkit(AsyncBaseToolkit):
                         content_parts.append(content.text)
                     elif hasattr(content, "data"):
                         # Handle binary data
-                        content_parts.append(
-                            f"[Binary data: {len(content.data)} bytes]"
-                        )
+                        content_parts.append(f"[Binary data: {len(content.data)} bytes]")
                     else:
                         content_parts.append(str(content))
 
@@ -231,9 +218,7 @@ class MCPToolkit(AsyncBaseToolkit):
             info = {
                 "name": tool.name,
                 "description": tool.description,
-                "input_schema": (
-                    tool.inputSchema if hasattr(tool, "inputSchema") else {}
-                ),
+                "input_schema": (tool.inputSchema if hasattr(tool, "inputSchema") else {}),
             }
             tools_info.append(info)
 

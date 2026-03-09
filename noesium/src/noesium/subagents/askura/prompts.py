@@ -108,14 +108,10 @@ CONVERSATION_ANALYSIS_PROMPTS = {
     "conversation_context": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["conversation_context"]
     + "\n\n"
     + CONVERSATION_ANALYSIS_USER_PROMPTS["conversation_context"],
-    "knowledge_gap_analysis": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS[
-        "knowledge_gap_analysis"
-    ]
+    "knowledge_gap_analysis": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["knowledge_gap_analysis"]
     + "\n\n"
     + CONVERSATION_ANALYSIS_USER_PROMPTS["knowledge_gap_analysis"],
-    "determine_next_action": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS[
-        "determine_next_action"
-    ]
+    "determine_next_action": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["determine_next_action"]
     + "\n\n"
     + CONVERSATION_ANALYSIS_USER_PROMPTS["determine_next_action"],
     "message_routing": CONVERSATION_ANALYSIS_SYSTEM_PROMPTS["message_routing"]
@@ -181,9 +177,7 @@ RESPONSE_GENERATION_USER_PROMPT = """**Conversation Purpose:** {conversation_pur
 Generate an appropriate response based on this context."""
 
 # Backward compatibility - combined prompt for legacy usage
-RESPONSE_GENERATION_PROMPT = (
-    RESPONSE_GENERATION_SYSTEM_PROMPT + "\n\n" + RESPONSE_GENERATION_USER_PROMPT
-)
+RESPONSE_GENERATION_PROMPT = RESPONSE_GENERATION_SYSTEM_PROMPT + "\n\n" + RESPONSE_GENERATION_USER_PROMPT
 
 
 def get_response_generation_prompts(**kwargs) -> tuple[str, str]:

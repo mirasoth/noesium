@@ -60,9 +60,7 @@ class MemoryProjector:
 
             keywords = self._extract_keywords(goal.description)
 
-            related = await self._search_related_memories(
-                persistent, keywords, limit=10
-            )
+            related = await self._search_related_memories(persistent, keywords, limit=10)
 
             goal_history = await persistent.read(f"goal:{goal.id}")
             execution_trace = await persistent.read(f"execution:{goal.id}")
@@ -74,14 +72,10 @@ class MemoryProjector:
                 "goal_status": goal.status,
                 "related_memories": related,
                 "goal_history": goal_history.value if goal_history else None,
-                "previous_execution": (
-                    execution_trace.value if execution_trace else None
-                ),
+                "previous_execution": (execution_trace.value if execution_trace else None),
             }
 
-            logger.debug(
-                f"Projected memory context for goal {goal.id[:8]} with {len(related)} related memories"
-            )
+            logger.debug(f"Projected memory context for goal {goal.id[:8]} with {len(related)} related memories")
 
             return context
 
@@ -120,11 +114,7 @@ class MemoryProjector:
             "for",
         }
         words = text.lower().split()
-        keywords = [
-            w.strip(".,!?;:")
-            for w in words
-            if len(w) > 3 and w.lower() not in stopwords
-        ]
+        keywords = [w.strip(".,!?;:") for w in words if len(w) > 3 and w.lower() not in stopwords]
         return keywords[:max_keywords]
 
     async def _search_related_memories(

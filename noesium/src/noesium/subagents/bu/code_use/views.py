@@ -37,17 +37,11 @@ class CodeCell(BaseModel):
     id: str = Field(default_factory=uuid7str)
     cell_type: CellType = CellType.CODE
     source: str = Field(description="The code to execute")
-    output: str | None = Field(
-        default=None, description="The output of the code execution"
-    )
+    output: str | None = Field(default=None, description="The output of the code execution")
     execution_count: int | None = Field(default=None, description="The execution count")
     status: ExecutionStatus = Field(default=ExecutionStatus.PENDING)
-    error: str | None = Field(
-        default=None, description="Error message if execution failed"
-    )
-    browser_state: str | None = Field(
-        default=None, description="Browser state after execution"
-    )
+    error: str | None = Field(default=None, description="Error message if execution failed")
+    browser_state: str | None = Field(default=None, description="Browser state after execution")
 
 
 class NotebookSession(BaseModel):
@@ -58,9 +52,7 @@ class NotebookSession(BaseModel):
     id: str = Field(default_factory=uuid7str)
     cells: list[CodeCell] = Field(default_factory=list)
     current_execution_count: int = Field(default=0)
-    namespace: dict[str, Any] = Field(
-        default_factory=dict, description="Current namespace state"
-    )
+    namespace: dict[str, Any] = Field(default_factory=dict, description="Current namespace state")
     _complete_history: list[CodeAgentHistory] = PrivateAttr(default_factory=list)
     _usage_summary: UsageSummary | None = PrivateAttr(default=None)
 
@@ -111,9 +103,7 @@ class CodeAgentModelOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     model_output: str = Field(description="The extracted code from the LLM response")
-    full_response: str = Field(
-        description="The complete LLM response including any text/reasoning"
-    )
+    full_response: str = Field(description="The complete LLM response including any text/reasoning")
 
 
 class CodeAgentResult(BaseModel):
@@ -121,16 +111,10 @@ class CodeAgentResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    extracted_content: str | None = Field(
-        default=None, description="Output from code execution"
-    )
-    error: str | None = Field(
-        default=None, description="Error message if execution failed"
-    )
+    extracted_content: str | None = Field(default=None, description="Output from code execution")
+    error: str | None = Field(default=None, description="Error message if execution failed")
     is_done: bool = Field(default=False, description="Whether task is marked as done")
-    success: bool | None = Field(
-        default=None, description="Self-reported success from done() call"
-    )
+    success: bool | None = Field(default=None, description="Self-reported success from done() call")
 
 
 class CodeAgentState(BaseModel):
@@ -140,9 +124,7 @@ class CodeAgentState(BaseModel):
 
     url: str | None = Field(default=None, description="Current page URL")
     title: str | None = Field(default=None, description="Current page title")
-    screenshot_path: str | None = Field(
-        default=None, description="Path to screenshot file"
-    )
+    screenshot_path: str | None = Field(default=None, description="Path to screenshot file")
 
     def get_screenshot(self) -> str | None:
         """Load screenshot from disk and return as base64 string."""
@@ -169,12 +151,8 @@ class CodeAgentStepMetadata(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    input_tokens: int | None = Field(
-        default=None, description="Number of input tokens used"
-    )
-    output_tokens: int | None = Field(
-        default=None, description="Number of output tokens used"
-    )
+    input_tokens: int | None = Field(default=None, description="Number of input tokens used")
+    output_tokens: int | None = Field(default=None, description="Number of output tokens used")
     step_start_time: float = Field(description="Step start timestamp (Unix time)")
     step_end_time: float = Field(description="Step end timestamp (Unix time)")
 
@@ -189,26 +167,16 @@ class CodeAgentHistory(BaseModel):
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
-    model_output: CodeAgentModelOutput | None = Field(
-        default=None, description="LLM output for this step"
-    )
-    result: list[CodeAgentResult] = Field(
-        default_factory=list, description="Results from code execution"
-    )
+    model_output: CodeAgentModelOutput | None = Field(default=None, description="LLM output for this step")
+    result: list[CodeAgentResult] = Field(default_factory=list, description="Results from code execution")
     state: CodeAgentState = Field(description="Browser state at this step")
-    metadata: CodeAgentStepMetadata | None = Field(
-        default=None, description="Step timing and token metadata"
-    )
-    screenshot_path: str | None = Field(
-        default=None, description="Legacy field for screenshot path"
-    )
+    metadata: CodeAgentStepMetadata | None = Field(default=None, description="Step timing and token metadata")
+    screenshot_path: str | None = Field(default=None, description="Legacy field for screenshot path")
 
     def model_dump(self, **kwargs) -> dict[str, Any]:
         """Custom serialization for CodeAgentHistory."""
         return {
-            "model_output": (
-                self.model_output.model_dump() if self.model_output else None
-            ),
+            "model_output": (self.model_output.model_dump() if self.model_output else None),
             "result": [r.model_dump() for r in self.result],
             "state": self.state.model_dump(),
             "metadata": self.metadata.model_dump() if self.metadata else None,
@@ -286,10 +254,7 @@ class CodeAgentHistoryList:
 
     def urls(self) -> list[str | None]:
         """Get all URLs from history."""
-        return [
-            h.state.url if h.state.url is not None else None
-            for h in self._complete_history
-        ]
+        return [h.state.url if h.state.url is not None else None for h in self._complete_history]
 
     def screenshot_paths(
         self, n_last: int | None = None, return_none_if_not_screenshot: bool = True
@@ -300,27 +265,15 @@ class CodeAgentHistoryList:
         if n_last is None:
             if return_none_if_not_screenshot:
                 return [
-                    (
-                        h.state.screenshot_path
-                        if h.state.screenshot_path is not None
-                        else None
-                    )
+                    (h.state.screenshot_path if h.state.screenshot_path is not None else None)
                     for h in self._complete_history
                 ]
             else:
-                return [
-                    h.state.screenshot_path
-                    for h in self._complete_history
-                    if h.state.screenshot_path is not None
-                ]
+                return [h.state.screenshot_path for h in self._complete_history if h.state.screenshot_path is not None]
         else:
             if return_none_if_not_screenshot:
                 return [
-                    (
-                        h.state.screenshot_path
-                        if h.state.screenshot_path is not None
-                        else None
-                    )
+                    (h.state.screenshot_path if h.state.screenshot_path is not None else None)
                     for h in self._complete_history[-n_last:]
                 ]
             else:
@@ -330,17 +283,11 @@ class CodeAgentHistoryList:
                     if h.state.screenshot_path is not None
                 ]
 
-    def screenshots(
-        self, n_last: int | None = None, return_none_if_not_screenshot: bool = True
-    ) -> list[str | None]:
+    def screenshots(self, n_last: int | None = None, return_none_if_not_screenshot: bool = True) -> list[str | None]:
         """Get all screenshots from history as base64 strings."""
         if n_last == 0:
             return []
-        history_items = (
-            self._complete_history
-            if n_last is None
-            else self._complete_history[-n_last:]
-        )
+        history_items = self._complete_history if n_last is None else self._complete_history[-n_last:]
         screenshots = []
         for item in history_items:
             screenshot_b64 = item.state.get_screenshot()
@@ -362,9 +309,7 @@ class CodeAgentHistoryList:
         """Get all extracted content from history."""
         content = []
         for h in self._complete_history:
-            content.extend(
-                [r.extracted_content for r in h.result if r.extracted_content]
-            )
+            content.extend([r.extracted_content for r in h.result if r.extracted_content])
         return content
 
     def number_of_steps(self) -> int:
@@ -385,9 +330,7 @@ class CodeAgentHistoryList:
             return {
                 "execute_code": {
                     "code": self._complete_history[-1].model_output.model_output,
-                    "full_response": self._complete_history[
-                        -1
-                    ].model_output.full_response,
+                    "full_response": self._complete_history[-1].model_output.full_response,
                 }
             }
         return None

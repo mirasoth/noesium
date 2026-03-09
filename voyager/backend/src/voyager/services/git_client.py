@@ -44,9 +44,7 @@ class GitClient:
 
         await self._run_async(_pull)
 
-    async def create_branch(
-        self, repo_path: Path, branch_name: str, base: str = "main"
-    ) -> None:
+    async def create_branch(self, repo_path: Path, branch_name: str, base: str = "main") -> None:
         """Create and checkout new branch."""
 
         def _create_branch() -> None:
@@ -75,9 +73,7 @@ class GitClient:
 
         return await self._run_async(_commit)
 
-    async def push(
-        self, repo_path: Path, branch: str, set_upstream: bool = True
-    ) -> None:
+    async def push(self, repo_path: Path, branch: str, set_upstream: bool = True) -> None:
         """Push branch to remote."""
 
         def _push() -> None:
@@ -104,9 +100,7 @@ class GitClient:
         def _status() -> dict[str, Any]:
             repo = Repo(str(repo_path))
             return {
-                "branch": (
-                    repo.active_branch.name if not repo.head.is_detached else "DETACHED"
-                ),
+                "branch": (repo.active_branch.name if not repo.head.is_detached else "DETACHED"),
                 "is_dirty": repo.is_dirty(untracked_files=True),
                 "untracked_files": repo.untracked_files,
                 "changed_files": [item.a_path for item in repo.index.diff(None)],
@@ -141,9 +135,7 @@ class GitClient:
 
         await self._run_async(_checkout)
 
-    async def get_file_content(
-        self, repo_path: Path, file_path: str, revision: str = "HEAD"
-    ) -> str:
+    async def get_file_content(self, repo_path: Path, file_path: str, revision: str = "HEAD") -> str:
         """Get file content at specific revision."""
 
         def _get() -> str:
@@ -152,9 +144,7 @@ class GitClient:
 
         return await self._run_async(_get)
 
-    async def list_files(
-        self, repo_path: Path, path_prefix: str = ""
-    ) -> list[dict[str, Any]]:
+    async def list_files(self, repo_path: Path, path_prefix: str = "") -> list[dict[str, Any]]:
         """List files in repository."""
         full_path = repo_path / path_prefix if path_prefix else repo_path
 

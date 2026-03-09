@@ -59,11 +59,7 @@ def setup_logging(
 
     effective_console = console_level or level
     console_num = getattr(logging, effective_console.upper(), logging.INFO)
-    file_num = (
-        getattr(logging, log_file_level.upper(), logging.INFO)
-        if log_file
-        else logging.WARNING
-    )
+    file_num = getattr(logging, log_file_level.upper(), logging.INFO) if log_file else logging.WARNING
 
     root_logger = logging.getLogger()
     if clear_existing:
@@ -90,9 +86,7 @@ def setup_logging(
             style="%",
         )
     else:
-        console_formatter = logging.Formatter(
-            fmt.replace("%(log_color)s", ""), datefmt=datefmt
-        )
+        console_formatter = logging.Formatter(fmt.replace("%(log_color)s", ""), datefmt=datefmt)
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(console_formatter)
@@ -139,9 +133,7 @@ _ANSI_ATTRS: Dict[str, str] = {
 _ANSI_RESET = "\033[0m"
 
 
-def color_text(
-    message: str, color: Optional[str] = None, attrs: Optional[List[str]] = None
-) -> str:
+def color_text(message: str, color: Optional[str] = None, attrs: Optional[List[str]] = None) -> str:
     """Wrap message with ANSI color/attribute codes.
 
     Works regardless of whether colorlog is installed. Use to color a specific

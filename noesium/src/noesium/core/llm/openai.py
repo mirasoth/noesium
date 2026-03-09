@@ -94,9 +94,7 @@ class LLMClient(BaseLLMClient):
             **kwargs: Additional arguments to pass to the LLM client
         """
         if not OPENAI_AVAILABLE:
-            raise ImportError(
-                "OpenAI package is not installed. Install it with: pip install 'noesium[openai]'"
-            )
+            raise ImportError("OpenAI package is not installed. Install it with: pip install 'noesium[openai]'")
 
         super().__init__(**kwargs)
         # Configure Opik tracing for observability only if enabled
@@ -114,9 +112,7 @@ class LLMClient(BaseLLMClient):
             )
 
         # Set base URL (defaults to OpenAI if not provided)
-        self.base_url = base_url or os.getenv(
-            "OPENAI_BASE_URL", "https://api.openai.com/v1"
-        )
+        self.base_url = base_url or os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 
         # Initialize OpenAI client
         client_kwargs = {"api_key": self.api_key, **kwargs}
@@ -126,28 +122,18 @@ class LLMClient(BaseLLMClient):
         base_client = OpenAI(**client_kwargs)
 
         # Wrap with Opik tracking if available
-        self.client = (
-            track_openai(base_client)
-            if OPIK_AVAILABLE and is_opik_enabled()
-            else base_client
-        )
+        self.client = track_openai(base_client) if OPIK_AVAILABLE and is_opik_enabled() else base_client
 
         # Model configurations
         self.chat_model = chat_model or os.getenv("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
-        self.vision_model = vision_model or os.getenv(
-            "OPENAI_VISION_MODEL", "gpt-4-vision-preview"
-        )
-        self.embed_model = embed_model or os.getenv(
-            "OPENAI_EMBED_MODEL", "text-embedding-3-small"
-        )
+        self.vision_model = vision_model or os.getenv("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
+        self.embed_model = embed_model or os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small")
 
         # Initialize instructor if requested
         self.instructor = None
         if instructor:
             if not INSTRUCTOR_AVAILABLE:
-                raise ImportError(
-                    "Instructor package is not installed. Install it with: pip install 'noesium[openai]'"
-                )
+                raise ImportError("Instructor package is not installed. Install it with: pip install 'noesium[openai]'")
             # Create instructor instance for structured output
             patched_client = patch(self.client, mode=Mode.JSON)
             self.instructor = Instructor(
@@ -202,9 +188,7 @@ class LLMClient(BaseLLMClient):
             original_error=e,
         )
 
-    def _extract_max_tokens_upper_limit(
-        self, e: Exception, default: int = 65536
-    ) -> int:
+    def _extract_max_tokens_upper_limit(self, e: Exception, default: int = 65536) -> int:
         """Parse the upper bound from a max_tokens range error message, e.g. '[1, 65536]'."""
         match = re.search(r"\[(\d+),\s*(\d+)\]", str(e))
         if match:
@@ -260,9 +244,7 @@ class LLMClient(BaseLLMClient):
                 self._raise_content_policy_error(e)
             if self._is_max_tokens_range_error(e):
                 capped = self._extract_max_tokens_upper_limit(e)
-                logger.warning(
-                    f"max_tokens value out of range, capping to {capped} and retrying"
-                )
+                logger.warning(f"max_tokens value out of range, capping to {capped} and retrying")
                 try:
                     response = _do_request(capped)
                     if stream:
@@ -271,9 +253,7 @@ class LLMClient(BaseLLMClient):
                         self._log_token_usage_if_available(response)
                         return response.choices[0].message.content
                 except Exception as retry_e:
-                    logger.error(
-                        f"Error in chat completion after max_tokens adjustment: {retry_e}"
-                    )
+                    logger.error(f"Error in chat completion after max_tokens adjustment: {retry_e}")
                     raise
             logger.error(f"Error in chat completion: {e}")
             raise
@@ -305,9 +285,7 @@ class LLMClient(BaseLLMClient):
             Structured response as the specified model type
         """
         if not self.instructor:
-            raise ValueError(
-                "Instructor is not enabled. Initialize LLMClient with instructor=True"
-            )
+            raise ValueError("Instructor is not enabled. Initialize LLMClient with instructor=True")
 
         if self.debug:
             logger.debug(f"Structured completion: {messages}")
@@ -332,26 +310,18 @@ class LLMClient(BaseLLMClient):
                 # Try to capture token usage from instructor's underlying response
                 # The instructor library usually stores the raw response
                 if hasattr(result, "_raw_response"):
-                    self._log_token_usage_if_available(
-                        result._raw_response, "structured"
-                    )
+                    self._log_token_usage_if_available(result._raw_response, "structured")
                 else:
                     # If no raw response, try to estimate usage
                     try:
-                        prompt_text = "\n".join(
-                            [msg.get("content", "") for msg in messages]
-                        )
+                        prompt_text = "\n".join([msg.get("content", "") for msg in messages])
                         completion_text = str(result)
                         if hasattr(result, "model_dump_json"):
                             completion_text = result.model_dump_json()
 
-                        usage = estimate_token_usage(
-                            prompt_text, completion_text, self.chat_model, "structured"
-                        )
+                        usage = estimate_token_usage(prompt_text, completion_text, self.chat_model, "structured")
                         get_token_tracker().record_usage(usage)
-                        logger.debug(
-                            f"Estimated token usage for structured completion: {usage.total_tokens} tokens"
-                        )
+                        logger.debug(f"Estimated token usage for structured completion: {usage.total_tokens} tokens")
                     except Exception as e:
                         logger.debug(f"Could not estimate token usage: {e}")
 
@@ -359,15 +329,11 @@ class LLMClient(BaseLLMClient):
             except Exception as e:
                 # Content filter errors are non-retryable - skip the loop
                 if self._is_content_filter_error(e):
-                    logger.error(
-                        f"Content policy violation in structured completion (non-retryable): {e}"
-                    )
+                    logger.error(f"Content policy violation in structured completion (non-retryable): {e}")
                     self._raise_content_policy_error(e)
                 if self._is_max_tokens_range_error(e):
                     capped = self._extract_max_tokens_upper_limit(e)
-                    logger.warning(
-                        f"max_tokens value out of range, capping to {capped} and retrying"
-                    )
+                    logger.warning(f"max_tokens value out of range, capping to {capped} and retrying")
                     effective_max_tokens = capped
                     continue
                 last_err = e
@@ -419,9 +385,7 @@ class LLMClient(BaseLLMClient):
                         {"type": "text", "text": prompt},
                         {
                             "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{image_base64}"
-                            },
+                            "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"},
                         },
                     ],
                 }
@@ -502,9 +466,7 @@ class LLMClient(BaseLLMClient):
     def _log_token_usage_if_available(self, response, call_type: str = "completion"):
         """Extract and record token usage from OpenAI response if available."""
         try:
-            usage = extract_token_usage_from_openai_response(
-                response, self.chat_model, call_type
-            )
+            usage = extract_token_usage_from_openai_response(response, self.chat_model, call_type)
             if usage:
                 get_token_tracker().record_usage(usage)
                 logger.debug(
@@ -546,9 +508,7 @@ class LLMClient(BaseLLMClient):
 
                     usage = TokenUsage(**usage_data)
                     get_token_tracker().record_usage(usage)
-                    logger.debug(
-                        f"Token usage for embedding: {usage.total_tokens} tokens"
-                    )
+                    logger.debug(f"Token usage for embedding: {usage.total_tokens} tokens")
             except Exception as e:
                 logger.debug(f"Could not track embedding token usage: {e}")
 
@@ -600,9 +560,7 @@ class LLMClient(BaseLLMClient):
 
                     usage = TokenUsage(**usage_data)
                     get_token_tracker().record_usage(usage)
-                    logger.debug(
-                        f"Token usage for batch embedding: {usage.total_tokens} tokens"
-                    )
+                    logger.debug(f"Token usage for batch embedding: {usage.total_tokens} tokens")
             except Exception as e:
                 logger.debug(f"Could not track batch embedding token usage: {e}")
 

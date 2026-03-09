@@ -82,25 +82,17 @@ class MCPClient:
         error_msg = None
 
         try:
-            logger.info(
-                f"🔌 Connecting to MCP server '{self.server_name}': {self.command} {' '.join(self.args)}"
-            )
+            logger.info(f"🔌 Connecting to MCP server '{self.server_name}': {self.command} {' '.join(self.args)}")
 
             # Create server parameters
-            server_params = StdioServerParameters(
-                command=self.command, args=self.args, env=self.env
-            )
+            server_params = StdioServerParameters(command=self.command, args=self.args, env=self.env)
 
             # Start stdio client in background task
-            self._stdio_task = asyncio.create_task(
-                self._run_stdio_client(server_params)
-            )
+            self._stdio_task = asyncio.create_task(self._run_stdio_client(server_params))
 
             # Wait for connection to be established
             retries = 0
-            max_retries = (
-                100  # 10 second timeout (increased for parallel test execution)
-            )
+            max_retries = 100  # 10 second timeout (increased for parallel test execution)
             while not self._connected and retries < max_retries:
                 await asyncio.sleep(0.1)
                 retries += 1
@@ -109,9 +101,7 @@ class MCPClient:
                 error_msg = f"Failed to connect to MCP server '{self.server_name}' after {max_retries * 0.1} seconds"
                 raise RuntimeError(error_msg)
 
-            logger.info(
-                f"📦 Discovered {len(self._tools)} tools from '{self.server_name}': {list(self._tools.keys())}"
-            )
+            logger.info(f"📦 Discovered {len(self._tools)} tools from '{self.server_name}': {list(self._tools.keys())}")
 
         except Exception as e:
             error_msg = str(e)
@@ -168,9 +158,7 @@ class MCPClient:
                 try:
                     await asyncio.wait_for(self._stdio_task, timeout=2.0)
                 except TimeoutError:
-                    logger.warning(
-                        f"Timeout waiting for MCP server '{self.server_name}' to disconnect"
-                    )
+                    logger.warning(f"Timeout waiting for MCP server '{self.server_name}' to disconnect")
                     self._stdio_task.cancel()
                     try:
                         await self._stdio_task
@@ -222,9 +210,7 @@ class MCPClient:
             f"✅ Registered {len(self._registered_actions)} MCP tools from '{self.server_name}' as browser-use actions"
         )
 
-    def _register_tool_as_action(
-        self, registry: Registry, action_name: str, tool: Any
-    ) -> None:
+    def _register_tool_as_action(self, registry: Registry, action_name: str, tool: Any) -> None:
         """Register a single MCP tool as a browser-use action.
 
         Args:
@@ -242,9 +228,7 @@ class MCPClient:
 
             for param_name, param_schema in properties.items():
                 # Convert JSON Schema type to Python type
-                param_type = self._json_schema_to_python_type(
-                    param_schema, f"{action_name}_{param_name}"
-                )
+                param_type = self._json_schema_to_python_type(param_schema, f"{action_name}_{param_name}")
 
                 # Determine if field is required and handle defaults
                 if param_name in required:
@@ -268,13 +252,9 @@ class MCPClient:
         if param_fields:
             # Create a BaseModel class with proper configuration
             class ConfiguredBaseModel(BaseModel):
-                model_config = ConfigDict(
-                    extra="forbid", validate_by_name=True, validate_by_alias=True
-                )
+                model_config = ConfigDict(extra="forbid", validate_by_name=True, validate_by_alias=True)
 
-            param_model = create_model(
-                f"{action_name}_Params", __base__=ConfiguredBaseModel, **param_fields
-            )
+            param_model = create_model(f"{action_name}_Params", __base__=ConfiguredBaseModel, **param_fields)
         else:
             # No parameters - create empty model
             param_model = None
@@ -302,9 +282,7 @@ class MCPClient:
                 # Convert pydantic model to dict for MCP call
                 tool_params = params.model_dump(exclude_none=True)
 
-                logger.debug(
-                    f"🔧 Calling MCP tool '{tool.name}' with params: {tool_params}"
-                )
+                logger.debug(f"🔧 Calling MCP tool '{tool.name}' with params: {tool_params}")
 
                 time.time()
                 error_msg = None
@@ -363,14 +341,10 @@ class MCPClient:
         mcp_action_wrapper.__qualname__ = f"mcp.{self.server_name}.{action_name}"
 
         # Register the action with browser-use
-        description = (
-            tool.description or f"MCP tool from {self.server_name}: {tool.name}"
-        )
+        description = tool.description or f"MCP tool from {self.server_name}: {tool.name}"
 
         # Use the registry's action decorator
-        registry.action(
-            description=description, param_model=param_model, domains=domains
-        )(mcp_action_wrapper)
+        registry.action(description=description, param_model=param_model, domains=domains)(mcp_action_wrapper)
 
         logger.debug(f"✅ Registered MCP tool '{tool.name}' as action '{action_name}'")
 
@@ -412,9 +386,7 @@ class MCPClient:
             # Direct result or unknown format
             return str(result)
 
-    def _json_schema_to_python_type(
-        self, schema: dict, model_name: str = "NestedModel"
-    ) -> Any:
+    def _json_schema_to_python_type(self, schema: dict, model_name: str = "NestedModel") -> Any:
         """Convert JSON Schema type to Python type.
 
         Args:
@@ -450,9 +422,7 @@ class MCPClient:
 
                 for prop_name, prop_schema in properties.items():
                     # Recursively process nested properties
-                    prop_type = self._json_schema_to_python_type(
-                        prop_schema, f"{model_name}_{prop_name}"
-                    )
+                    prop_type = self._json_schema_to_python_type(prop_schema, f"{model_name}_{prop_name}")
 
                     # Determine if field is required and handle defaults
                     if prop_name in required_fields:
@@ -477,15 +447,11 @@ class MCPClient:
 
                 # Create a BaseModel class with proper configuration
                 class ConfiguredBaseModel(BaseModel):
-                    model_config = ConfigDict(
-                        extra="forbid", validate_by_name=True, validate_by_alias=True
-                    )
+                    model_config = ConfigDict(extra="forbid", validate_by_name=True, validate_by_alias=True)
 
                 try:
                     # Create and return nested pydantic model
-                    return create_model(
-                        model_name, __base__=ConfiguredBaseModel, **nested_fields
-                    )
+                    return create_model(model_name, __base__=ConfiguredBaseModel, **nested_fields)
                 except Exception as e:
                     logger.error(f"Failed to create nested model {model_name}: {e}")
                     logger.debug(f"Fields: {nested_fields}")
@@ -499,9 +465,7 @@ class MCPClient:
         if json_type == "array":
             if "items" in schema:
                 # Get the item type recursively
-                item_type = self._json_schema_to_python_type(
-                    schema["items"], f"{model_name}_item"
-                )
+                item_type = self._json_schema_to_python_type(schema["items"], f"{model_name}_item")
                 # Return properly typed list
                 return list[item_type]
             else:

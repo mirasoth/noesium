@@ -8,7 +8,9 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_serialize
 from ..dom.views import DOMInteractedElement, SerializedDOMState
 
 # Known placeholder image data for about:blank pages - a 4x4 white PNG
-PLACEHOLDER_4PX_SCREENSHOT = "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGP8//8/AwwwMSAB3BwAlm4DBfIlvvkAAAAASUVORK5CYII="
+PLACEHOLDER_4PX_SCREENSHOT = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGP8//8/AwwwMSAB3BwAlm4DBfIlvvkAAAAASUVORK5CYII="
+)
 
 
 # Pydantic
@@ -40,9 +42,7 @@ class TabInfo(BaseModel):
         return target_id[-4:]
 
     @field_serializer("parent_target_id")
-    def serialize_parent_target_id(
-        self, parent_target_id: TargetID | None, _info: Any
-    ) -> str | None:
+    def serialize_parent_target_id(self, parent_target_id: TargetID | None, _info: Any) -> str | None:
         return parent_target_id[-4:] if parent_target_id else None
 
 
@@ -76,12 +76,8 @@ class NetworkRequest:
 
     url: str
     method: str = "GET"
-    loading_duration_ms: float = (
-        0.0  # How long this request has been loading (ms since request started, max 10s)
-    )
-    resource_type: str | None = (
-        None  # e.g., 'Document', 'Stylesheet', 'Image', 'Script', 'XHR', 'Fetch'
-    )
+    loading_duration_ms: float = 0.0  # How long this request has been loading (ms since request started, max 10s)
+    resource_type: str | None = None  # e.g., 'Document', 'Stylesheet', 'Image', 'Script', 'XHR', 'Fetch'
 
 
 @dataclass
@@ -114,15 +110,9 @@ class BrowserStateSummary:
     browser_errors: list[str] = field(default_factory=list)
     is_pdf_viewer: bool = False  # Whether the current page is a PDF viewer
     recent_events: str | None = None  # Text summary of recent browser events
-    pending_network_requests: list[NetworkRequest] = field(
-        default_factory=list
-    )  # Currently loading network requests
-    pagination_buttons: list[PaginationButton] = field(
-        default_factory=list
-    )  # Detected pagination buttons
-    closed_popup_messages: list[str] = field(
-        default_factory=list
-    )  # Messages from auto-closed JavaScript dialogs
+    pending_network_requests: list[NetworkRequest] = field(default_factory=list)  # Currently loading network requests
+    pagination_buttons: list[PaginationButton] = field(default_factory=list)  # Detected pagination buttons
+    closed_popup_messages: list[str] = field(default_factory=list)  # Messages from auto-closed JavaScript dialogs
 
 
 @dataclass
@@ -158,9 +148,7 @@ class BrowserStateHistory:
         data = {}
         data["tabs"] = [tab.model_dump() for tab in self.tabs]
         data["screenshot_path"] = self.screenshot_path
-        data["interacted_element"] = [
-            el.to_dict() if el else None for el in self.interacted_element
-        ]
+        data["interacted_element"] = [el.to_dict() if el else None for el in self.interacted_element]
         data["url"] = self.url
         data["title"] = self.title
         return data
@@ -206,9 +194,7 @@ class BrowserError(Exception):
 
     def __str__(self) -> str:
         if self.details:
-            return (
-                f"{self.message} ({self.details}) during: {self.while_handling_event}"
-            )
+            return f"{self.message} ({self.details}) during: {self.while_handling_event}"
         elif self.while_handling_event:
             return f"{self.message} (while handling: {self.while_handling_event})"
         else:

@@ -117,9 +117,7 @@ class SSEEvent(BaseModel):
 
     def is_browser_created(self) -> bool:
         """Type guard for BrowserCreatedData"""
-        return self.type == SSEEventType.BROWSER_CREATED and isinstance(
-            self.data, BrowserCreatedData
-        )
+        return self.type == SSEEventType.BROWSER_CREATED and isinstance(self.data, BrowserCreatedData)
 
     def is_log(self) -> bool:
         """Type guard for LogData"""

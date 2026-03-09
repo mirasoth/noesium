@@ -166,10 +166,7 @@ def _detect_from_attributes(
             return ("address", None)
 
     # Comment/Note detection
-    if any(
-        keyword in combined_text
-        for keyword in ["comment", "note", "message", "description"]
-    ):
+    if any(keyword in combined_text for keyword in ["comment", "note", "message", "description"]):
         return ("comment", None)
 
     # Email detection
@@ -247,12 +244,7 @@ def _detect_from_value_pattern(value: str) -> tuple[str, str | None] | None:
         return ("date", "date")
 
     # Name detection (capitalized, only letters/spaces, 2-30 chars)
-    if (
-        value
-        and value[0].isupper()
-        and value.replace(" ", "").replace("-", "").isalpha()
-        and 2 <= len(value) <= 30
-    ):
+    if value and value[0].isupper() and value.replace(" ", "").replace("-", "").isalpha() and 2 <= len(value) <= 30:
         words = value.split()
         if len(words) == 1:
             return ("first_name", None)

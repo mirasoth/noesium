@@ -177,9 +177,7 @@ class CognitiveLoop:
                 return
 
             self._current_goal = goal
-            logger.info(
-                f"Processing goal: {goal.description} (priority={goal.priority})"
-            )
+            logger.info(f"Processing goal: {goal.description} (priority={goal.priority})")
 
             try:
                 context = await self.projector.project(goal)
@@ -294,9 +292,7 @@ class CognitiveLoop:
                         SubagentInvocationRequest,
                     )
 
-                    request = SubagentInvocationRequest(
-                        subagent_id=subagent_type, message=subagent_task
-                    )
+                    request = SubagentInvocationRequest(subagent_id=subagent_type, message=subagent_task)
                     context = SubagentContext(
                         session_id=self._session_id,
                         parent_id="cognitive_loop",
@@ -306,9 +302,7 @@ class CognitiveLoop:
 
                     result = ""
                     try:
-                        async for event in self._subagent_manager.invoke_stream(
-                            subagent_type, request, context
-                        ):
+                        async for event in self._subagent_manager.invoke_stream(subagent_type, request, context):
                             if event.event_type == SubagentEventType.SUBAGENT_END:
                                 result = event.detail or event.summary or ""
                             elif event.event_type == SubagentEventType.SUBAGENT_ERROR:
@@ -412,9 +406,7 @@ class CognitiveLoop:
                     "error": f"Unknown action type: {decision.action}",
                 }
 
-            logger.info(
-                f"Executed action: {decision.action} (success={observation.get('success')})"
-            )
+            logger.info(f"Executed action: {decision.action} (success={observation.get('success')})")
             return observation
 
         except Exception as e:
@@ -452,9 +444,7 @@ class CognitiveLoop:
         except Exception as e:
             logger.error(f"Failed to update memory: {e}", exc_info=True)
 
-    async def _evaluate_goal_progress(
-        self, goal: Goal, observation: dict[str, Any]
-    ) -> None:
+    async def _evaluate_goal_progress(self, goal: Goal, observation: dict[str, Any]) -> None:
         """Evaluate goal progress and update status.
 
         Args:

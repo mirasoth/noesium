@@ -170,17 +170,11 @@ def render_plan_tree(plan: "TaskPlan", title: str | None = None) -> Tree:
     for idx, step in enumerate(plan.steps, start=1):
         marker, style = _STATUS_MARKERS.get(step.status, ("[ ]", "dim"))
         if step.status == "in_progress":
-            step_text = Text.assemble(
-                Text(marker, style=style), " ", Text(step.description, style="yellow")
-            )
+            step_text = Text.assemble(Text(marker, style=style), " ", Text(step.description, style="yellow"))
         elif step.status == "completed":
-            step_text = Text.assemble(
-                Text(marker, style=style), " ", Text(step.description, style="green")
-            )
+            step_text = Text.assemble(Text(marker, style=style), " ", Text(step.description, style="green"))
         else:
-            step_text = Text.assemble(
-                Text(marker, style=style), " ", Text(step.description, style="dim")
-            )
+            step_text = Text.assemble(Text(marker, style=style), " ", Text(step.description, style="dim"))
         tree.add(step_text)
     return tree
 
@@ -279,9 +273,7 @@ def _get_subagent_display_tag(subagent_id: str) -> str:
     return display_name
 
 
-def _activity_line(
-    event: ProgressEvent, thinking_gen: DynamicThinkingText | None = None
-) -> Text | None:
+def _activity_line(event: ProgressEvent, thinking_gen: DynamicThinkingText | None = None) -> Text | None:
     """Produce a compact one-liner for an activity event, or None to skip.
 
     Uses display names for better readability (e.g., 'WebSearch' instead of 'web_search').
@@ -321,9 +313,7 @@ def _activity_line(
         # Strip tag prefix if present
         if msg.startswith(f"[{tag}]"):
             msg = msg[len(f"[{tag}]") :].strip()
-        return Text.assemble(
-            ("  ", ""), (f"[{display_tag}] ", "bold magenta"), (msg, "")
-        )
+        return Text.assemble(("  ", ""), (f"[{display_tag}] ", "bold magenta"), (msg, ""))
 
     if etype == ProgressEventType.SUBAGENT_PROGRESS:
         tag = event.subagent_id or "subagent"
@@ -349,9 +339,7 @@ def _activity_line(
                 (f"{icon} ", ""),
                 (summary, "dim"),
             )
-        return Text.assemble(
-            ("  ", ""), (f"[{display_tag}] ", "magenta"), (summary, "dim")
-        )
+        return Text.assemble(("  ", ""), (f"[{display_tag}] ", "magenta"), (summary, "dim"))
 
     if etype == ProgressEventType.SUBAGENT_END:
         tag = event.subagent_id or "subagent"
@@ -364,14 +352,10 @@ def _activity_line(
         )
 
     if etype == ProgressEventType.THINKING:
-        return Text.assemble(
-            ("  . ", "dim"), (event.summary or "Thinking...", "dim italic")
-        )
+        return Text.assemble(("  . ", "dim"), (event.summary or "Thinking...", "dim italic"))
 
     if etype == ProgressEventType.ERROR:
-        return Text.assemble(
-            ("  ! ", "bold red"), (event.error or "unknown error", "red")
-        )
+        return Text.assemble(("  ! ", "bold red"), (event.error or "unknown error", "red"))
 
     return None
 
@@ -424,9 +408,7 @@ class SubagentTracker:
             if child_type in ("plan.created", "plan.revised") and event.plan_snapshot:
                 steps = event.plan_snapshot.get("steps", [])
                 state.plan_steps = len(steps)
-                state.completed_steps = sum(
-                    1 for s in steps if s.get("status") == "completed"
-                )
+                state.completed_steps = sum(1 for s in steps if s.get("status") == "completed")
             elif child_type == "step.start":
                 state.current_step = event.step_desc or ""
             elif child_type == "step.complete":
@@ -440,9 +422,7 @@ class SubagentTracker:
                 summary = summary[len(f"[{sid}]") :].strip()
             state.last_activity = summary
 
-    def _sids_with_recent_activity(
-        self, activity_lines: list[Text], last_n: int
-    ) -> set[str]:
+    def _sids_with_recent_activity(self, activity_lines: list[Text], last_n: int) -> set[str]:
         """Return subagent ids that appear in the last_n activity lines."""
         sids: set[str] = set()
         for line in activity_lines[-last_n:]:
@@ -453,13 +433,9 @@ class SubagentTracker:
                     break
         return sids
 
-    def render_filtered(
-        self, activity_lines: list[Text], last_n: int = 15
-    ) -> list[Text]:
+    def render_filtered(self, activity_lines: list[Text], last_n: int = 15) -> list[Text]:
         """Render tracker lines, omitting subagents that have recent activity (avoids duplicate status)."""
-        return self.render(
-            exclude_sids=self._sids_with_recent_activity(activity_lines, last_n)
-        )
+        return self.render(exclude_sids=self._sids_with_recent_activity(activity_lines, last_n))
 
     def render(self, exclude_sids: set[str] | None = None) -> list[Text]:
         lines: list[Text] = []
@@ -476,11 +452,7 @@ class SubagentTracker:
             type_indicator = ""
 
             if st.status == "done":
-                progress = (
-                    f"+ {st.completed_steps}/{st.plan_steps}"
-                    if st.plan_steps
-                    else "+ done"
-                )
+                progress = f"+ {st.completed_steps}/{st.plan_steps}" if st.plan_steps else "+ done"
                 lines.append(
                     Text.assemble(
                         ("  ", ""),
@@ -502,9 +474,7 @@ class SubagentTracker:
                     cur = st.current_step[:40] if st.current_step else "working..."
                     progress = f"> {st.completed_steps}/{st.plan_steps} · {cur}"
                 else:
-                    progress = (
-                        st.last_activity[:60] if st.last_activity else "running..."
-                    )
+                    progress = st.last_activity[:60] if st.last_activity else "running..."
                     # Strip the [tag] prefix if summary already contains it
                     if progress.startswith(f"[{tag}]"):
                         progress = progress[len(f"[{tag}]") :].strip()
@@ -565,9 +535,7 @@ def handle_slash_command(
             table.add_row(k, v)
         console.print(table)
         # Subagent selector: prefix with numbers (e.g. 2 3 message)
-        sel_table = Table(
-            title="Subagent Selector (prefix before message)", show_lines=False
-        )
+        sel_table = Table(title="Subagent Selector (prefix before message)", show_lines=False)
         sel_table.add_column("Prefix", style="bold magenta")
         sel_table.add_column("Subagent")
         sel_table.add_row("1", "Main (default)")
@@ -706,9 +674,7 @@ class InputHistory:
         self.cursor_index = -1
 
 
-def read_user_input(
-    console: Console, mode: str = "agent", history: InputHistory | None = None
-) -> str | None:
+def read_user_input(console: Console, mode: str = "agent", history: InputHistory | None = None) -> str | None:
     """Read user input with backslash continuation for multiline and history support.
 
     Returns None on EOF/interrupt (signals exit).
@@ -784,9 +750,7 @@ def read_user_input(
             lines.append(first[:-1])
             while True:
                 try:
-                    cont = Prompt.ask(
-                        rich_continuation_str, console=console, show_default=False
-                    )
+                    cont = Prompt.ask(rich_continuation_str, console=console, show_default=False)
                 except (EOFError, KeyboardInterrupt):
                     break
                 if cont.endswith("\\"):
@@ -829,24 +793,14 @@ async def _process_query(
     from .state import TaskPlan
 
     current_plan: TaskPlan | None = None
-    subagent_plans: dict[str, TaskPlan] = (
-        {}
-    )  # subagent_id -> plan (when plan_snapshot has steps)
+    subagent_plans: dict[str, TaskPlan] = {}  # subagent_id -> plan (when plan_snapshot has steps)
     activity_lines: list[Text] = []
     partial_results: list[str] = []
     final_answer: str = ""
-    step_details: list[Text] = (
-        []
-    )  # Step progress details (not shown in live; kept for optional post-Live)
-    plan_created_appended: bool = (
-        False  # dedup: only one "Plan created with N steps" per run
-    )
-    subagent_plan_created_shown: set[str] = (
-        set()
-    )  # dedup: one "[tag] Plan created" per subagent
-    active_subagent_id: str | None = (
-        None  # subagent currently running (for pinned "Live" plan)
-    )
+    step_details: list[Text] = []  # Step progress details (not shown in live; kept for optional post-Live)
+    plan_created_appended: bool = False  # dedup: only one "Plan created with N steps" per run
+    subagent_plan_created_shown: set[str] = set()  # dedup: one "[tag] Plan created" per subagent
+    active_subagent_id: str | None = None  # subagent currently running (for pinned "Live" plan)
     sa_tracker = SubagentTracker(max_display=3)
 
     # Dynamic thinking text generator
@@ -879,11 +833,7 @@ async def _process_query(
             parts.append(Text(""))
         if active_subagent_id and active_subagent_id in subagent_plans:
             sa_plan = subagent_plans[active_subagent_id]
-            parts.append(
-                render_plan_tree(
-                    sa_plan, title=f"Live: [{active_subagent_id}] {sa_plan.goal}"
-                )
-            )
+            parts.append(render_plan_tree(sa_plan, title=f"Live: [{active_subagent_id}] {sa_plan.goal}"))
             parts.append(Text(""))
         # 3. Spinner
         parts.append(_get_spinner())
@@ -891,12 +841,8 @@ async def _process_query(
 
     from rich.live import Live
 
-    with Live(
-        _build_display(), console=console, refresh_per_second=8, transient=True
-    ) as live:
-        async for event in agent.astream_progress(
-            user_input, subagent_names=subagent_names or None
-        ):
+    with Live(_build_display(), console=console, refresh_per_second=8, transient=True) as live:
+        async for event in agent.astream_progress(user_input, subagent_names=subagent_names or None):
             etype = event.type
 
             if etype == ProgressEventType.PLAN_CREATED:
@@ -927,9 +873,7 @@ async def _process_query(
                         thinking_gen.set_phase("executing", f"step {idx + 1}")
                         step_desc = current_plan.steps[idx].description[:60]
                         total = len(current_plan.steps)
-                        completed = sum(
-                            1 for s in current_plan.steps if s.status == "completed"
-                        )
+                        completed = sum(1 for s in current_plan.steps if s.status == "completed")
                         step_details.append(
                             Text.assemble(
                                 (f"o {completed}/{total} · ", "dim"),
@@ -947,9 +891,7 @@ async def _process_query(
                         current_plan.steps[idx].status = "completed"
                         step_desc = current_plan.steps[idx].description[:60]
                         total = len(current_plan.steps)
-                        completed = sum(
-                            1 for s in current_plan.steps if s.status == "completed"
-                        )
+                        completed = sum(1 for s in current_plan.steps if s.status == "completed")
                         step_details.append(
                             Text.assemble(
                                 (f"o {completed}/{total} · ", "dim"),
@@ -976,10 +918,7 @@ async def _process_query(
                 ):
                     sa_tracker.update(event)
                     if event.subagent_id:
-                        if (
-                            etype == ProgressEventType.SUBAGENT_START
-                            or etype == ProgressEventType.SUBAGENT_PROGRESS
-                        ):
+                        if etype == ProgressEventType.SUBAGENT_START or etype == ProgressEventType.SUBAGENT_PROGRESS:
                             active_subagent_id = event.subagent_id
                         elif etype == ProgressEventType.SUBAGENT_END:
                             active_subagent_id = None
@@ -990,9 +929,7 @@ async def _process_query(
                                     if step.status in ("in_progress", "pending"):
                                         step.status = "completed"
                     if sa_tracker.has_active:
-                        thinking_gen.set_phase(
-                            "executing", f"[{event.subagent_id or 'subagent'}]"
-                        )
+                        thinking_gen.set_phase("executing", f"[{event.subagent_id or 'subagent'}]")
 
                 line = _activity_line(event, thinking_gen)
                 if line:
@@ -1007,23 +944,15 @@ async def _process_query(
                     )
                 elif etype == ProgressEventType.SUBAGENT_PROGRESS:
                     child_type = (event.metadata or {}).get("child_event_type", "")
-                    if (
-                        child_type in ("plan.created", "plan.revised")
-                        and event.plan_snapshot
-                    ):
+                    if child_type in ("plan.created", "plan.revised") and event.plan_snapshot:
                         steps = event.plan_snapshot.get("steps", [])
                         if steps and event.subagent_id:
                             try:
-                                subagent_plans[event.subagent_id] = TaskPlan(
-                                    **event.plan_snapshot
-                                )
+                                subagent_plans[event.subagent_id] = TaskPlan(**event.plan_snapshot)
                             except Exception:
                                 pass
                         tag = event.subagent_id or "subagent"
-                        if (
-                            child_type == "plan.created"
-                            and tag not in subagent_plan_created_shown
-                        ):
+                        if child_type == "plan.created" and tag not in subagent_plan_created_shown:
                             subagent_plan_created_shown.add(tag)
                             step_details.append(
                                 Text.assemble(
@@ -1032,11 +961,7 @@ async def _process_query(
                                     ("Plan created", "dim"),
                                 )
                             )
-                    elif (
-                        child_type == "step.start"
-                        and event.subagent_id is not None
-                        and event.step_index is not None
-                    ):
+                    elif child_type == "step.start" and event.subagent_id is not None and event.step_index is not None:
                         sid = event.subagent_id
                         if sid in subagent_plans:
                             plan = subagent_plans[sid]
@@ -1046,9 +971,7 @@ async def _process_query(
                                 if idx > 0:
                                     plan.steps[idx - 1].status = "completed"
                     elif (
-                        child_type == "step.complete"
-                        and event.subagent_id is not None
-                        and event.step_index is not None
+                        child_type == "step.complete" and event.subagent_id is not None and event.step_index is not None
                     ):
                         sid = event.subagent_id
                         if sid in subagent_plans:
@@ -1067,11 +990,7 @@ async def _process_query(
                         )
                 elif etype == ProgressEventType.SUBAGENT_END:
                     tag = event.subagent_id or "subagent"
-                    step_details.append(
-                        Text.assemble(
-                            ("    ", ""), (f"[{tag}] ", "green"), ("completed", "green")
-                        )
-                    )
+                    step_details.append(Text.assemble(("    ", ""), (f"[{tag}] ", "green"), ("completed", "green")))
 
             elif etype == ProgressEventType.THINKING:
                 # Update thinking phase based on the thinking event
@@ -1100,11 +1019,7 @@ async def _process_query(
                 pass
 
             elif etype == ProgressEventType.REFLECTION:
-                activity_lines.append(
-                    Text.assemble(
-                        ("  . ", "dim"), ("Reflected on progress", "dim italic")
-                    )
-                )
+                activity_lines.append(Text.assemble(("  . ", "dim"), ("Reflected on progress", "dim italic")))
                 thinking_gen.set_phase("reflecting")
                 step_details.append(Text("  Reflection completed", style="dim italic"))
 
@@ -1117,9 +1032,7 @@ async def _process_query(
                         if step.status in ("in_progress", "pending"):
                             step.status = "completed"
                     current_plan.is_complete = True
-                step_details.append(
-                    Text("  + Final answer generated", style="bold green")
-                )
+                step_details.append(Text("  + Final answer generated", style="bold green"))
 
             elif etype == ProgressEventType.SESSION_END:
                 # Ensure all steps are marked completed at session end
@@ -1185,11 +1098,7 @@ def run_agent_tui(agent: "NoeAgent") -> None:
             f"Mode: [cyan]{agent.config.mode.value}[/cyan]  |  "
             "Prefix: [bold magenta]2[/]=Browser [bold magenta]3[/]=Research [bold magenta]4[/]=Coding  |  "
             "[bold cyan]/help[/bold cyan] [bold cyan]/exit[/bold cyan]"
-            + (
-                f"\nSession log: [dim]{session_logger.log_path}[/dim]"
-                if session_logger
-                else ""
-            ),
+            + (f"\nSession log: [dim]{session_logger.log_path}[/dim]" if session_logger else ""),
             border_style="bright_blue",
         )
     )
@@ -1199,9 +1108,7 @@ def run_agent_tui(agent: "NoeAgent") -> None:
 
     try:
         while True:
-            user_input = read_user_input(
-                console, mode=agent.config.mode.value, history=history
-            )
+            user_input = read_user_input(console, mode=agent.config.mode.value, history=history)
             if user_input is None:
                 # Check for double ctrl+c
                 now = time.time()
@@ -1215,9 +1122,7 @@ def run_agent_tui(agent: "NoeAgent") -> None:
                     console.print("\n[bold red]Exiting...[/bold red]")
                     break
                 else:
-                    console.print(
-                        "\n[yellow]Press Ctrl+C again to exit, or enter a command to continue.[/yellow]"
-                    )
+                    console.print("\n[yellow]Press Ctrl+C again to exit, or enter a command to continue.[/yellow]")
                     continue
 
             # Reset counter on valid input
@@ -1241,19 +1146,13 @@ def run_agent_tui(agent: "NoeAgent") -> None:
                 continue
 
             # Parse optional subagent selector prefix (e.g. "2 3 message" -> Browser + Research)
-            subagent_names_parsed, message = parse_subagent_prefix_from_input(
-                user_input
-            )
+            subagent_names_parsed, message = parse_subagent_prefix_from_input(user_input)
 
             # prompt_toolkit already echoed the input with prompt, so we only show subagent selection
             # indicator if subagents were selected (no need to re-print the prompt/message)
             if subagent_names_parsed:
-                tags = " ".join(
-                    f"[{get_subagent_display_name(n)}]" for n in subagent_names_parsed
-                )
-                console.print(
-                    Text.assemble((tags, "bold magenta"), (" selected", "dim"))
-                )
+                tags = " ".join(f"[{get_subagent_display_name(n)}]" for n in subagent_names_parsed)
+                console.print(Text.assemble((tags, "bold magenta"), (" selected", "dim")))
             console.print()
 
             try:
@@ -1270,15 +1169,11 @@ def run_agent_tui(agent: "NoeAgent") -> None:
                 current_plan = loop.run_until_complete(task)
             except KeyboardInterrupt:
                 # Task was cancelled by ctrl+c
-                console.print(
-                    "\n[yellow]Task cancelled. Press Ctrl+C again to exit.[/yellow]"
-                )
+                console.print("\n[yellow]Task cancelled. Press Ctrl+C again to exit.[/yellow]")
                 last_ctrl_c_time = time.time()
                 ctrl_c_count = 1
             except asyncio.CancelledError:
-                console.print(
-                    "\n[yellow]Task cancelled. Press Ctrl+C again to exit.[/yellow]"
-                )
+                console.print("\n[yellow]Task cancelled. Press Ctrl+C again to exit.[/yellow]")
                 last_ctrl_c_time = time.time()
                 ctrl_c_count = 1
             except Exception as exc:

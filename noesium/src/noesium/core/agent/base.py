@@ -37,9 +37,7 @@ class BaseAgent(ABC):
         self.llm_provider = llm_provider
         self.model_name = model_name
         self.llm = get_llm_client(provider=llm_provider, chat_model=model_name)
-        self.logger.info(
-            f"Initialized {self.__class__.__name__} with {llm_provider} provider"
-        )
+        self.logger.info(f"Initialized {self.__class__.__name__} with {llm_provider} provider")
 
     @abstractmethod
     async def run(
@@ -123,9 +121,7 @@ class BaseGraphicAgent(BaseAgent):
 
         if not output_path:
             class_name = self.__class__.__name__.lower()
-            output_path = os.path.join(
-                os.path.dirname(__file__), f"{class_name}_graph.{format}"
-            )
+            output_path = os.path.join(os.path.dirname(__file__), f"{class_name}_graph.{format}")
 
         try:
             graph_structure = self.graph.get_graph()
@@ -135,9 +131,7 @@ class BaseGraphicAgent(BaseAgent):
                     graph_structure.draw_png(output_path)
                     self.logger.info(f"Graph exported successfully to {output_path}")
                 except ImportError:
-                    self.logger.warning(
-                        "pygraphviz not installed, trying mermaid fallback"
-                    )
+                    self.logger.warning("pygraphviz not installed, trying mermaid fallback")
                     graph_structure.draw_mermaid_png(output_path)
                     self.logger.info(f"Graph exported with mermaid to {output_path}")
             elif format == "mermaid":
@@ -145,9 +139,7 @@ class BaseGraphicAgent(BaseAgent):
                 mermaid_code = graph_structure.draw_mermaid()
                 with open(output_path.replace(".png", ".md"), "w") as f:
                     f.write(f"```mermaid\n{mermaid_code}\n```")
-                self.logger.info(
-                    f"Mermaid graph exported to {output_path.replace('.png', '.md')}"
-                )
+                self.logger.info(f"Mermaid graph exported to {output_path.replace('.png', '.md')}")
             else:
                 self.logger.error(f"Unsupported export format: {format}")
 

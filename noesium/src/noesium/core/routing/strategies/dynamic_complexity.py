@@ -55,9 +55,7 @@ class DynamicComplexityStrategy(BaseRoutingStrategy):
         # Validate weights sum to 1.0
         total_weight = self.alpha + self.beta + self.gamma
         if abs(total_weight - 1.0) > 0.01:
-            logger.warning(
-                f"Weights don't sum to 1.0 (sum={total_weight}). Normalizing..."
-            )
+            logger.warning(f"Weights don't sum to 1.0 (sum={total_weight}). Normalizing...")
             self.alpha /= total_weight
             self.beta /= total_weight
             self.gamma /= total_weight
@@ -80,18 +78,14 @@ class DynamicComplexityStrategy(BaseRoutingStrategy):
 
             # Compute weighted complexity index
             complexity_index = (
-                self.alpha * linguistic_score
-                + self.beta * reasoning_score
-                + self.gamma * uncertainty_score
+                self.alpha * linguistic_score + self.beta * reasoning_score + self.gamma * uncertainty_score
             )
 
             # Determine tier based on complexity index
             tier = self._index_to_tier(complexity_index)
 
             # Calculate confidence based on component consistency
-            confidence = self._calculate_confidence(
-                linguistic_score, reasoning_score, uncertainty_score
-            )
+            confidence = self._calculate_confidence(linguistic_score, reasoning_score, uncertainty_score)
 
             # Create detailed complexity score
             complexity_score_obj = ComplexityScore(
@@ -184,12 +178,7 @@ class DynamicComplexityStrategy(BaseRoutingStrategy):
             vocab_factor = min(1.0, complex_words / max(1, token_count) * 2)
 
             # Weighted combination
-            linguistic_score = (
-                0.3 * token_factor
-                + 0.3 * clause_factor
-                + 0.2 * sentence_factor
-                + 0.2 * vocab_factor
-            )
+            linguistic_score = 0.3 * token_factor + 0.3 * clause_factor + 0.2 * sentence_factor + 0.2 * vocab_factor
 
             return min(1.0, max(0.0, linguistic_score))
 
@@ -266,9 +255,7 @@ Output: number only"""
         ]
 
         query_lower = query.lower()
-        keyword_count = sum(
-            1 for keyword in reasoning_keywords if keyword in query_lower
-        )
+        keyword_count = sum(1 for keyword in reasoning_keywords if keyword in query_lower)
 
         return min(1.0, keyword_count / 3.0)  # Normalize around 3 keywords
 
@@ -340,9 +327,7 @@ Output: number only"""
         general_score = sum(1 for word in general_indicators if word in query_lower)
 
         base_uncertainty = 0.4
-        uncertainty_adjustment = (
-            question_count * 0.1 + general_score * 0.1 - specific_score * 0.1
-        )
+        uncertainty_adjustment = question_count * 0.1 + general_score * 0.1 - specific_score * 0.1
 
         return min(1.0, max(0.0, base_uncertainty + uncertainty_adjustment))
 
@@ -363,9 +348,7 @@ Output: number only"""
         else:
             return ModelTier.POWER
 
-    def _calculate_confidence(
-        self, linguistic: float, reasoning: float, uncertainty: float
-    ) -> float:
+    def _calculate_confidence(self, linguistic: float, reasoning: float, uncertainty: float) -> float:
         """
         Calculate confidence based on consistency of component scores.
 

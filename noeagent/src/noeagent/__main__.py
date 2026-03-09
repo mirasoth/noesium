@@ -49,28 +49,18 @@ def main() -> None:
 
     # Config subcommand
     config_parser = subparsers.add_parser("config", help="Configuration management")
-    config_subparsers = config_parser.add_subparsers(
-        dest="config_command", help="Config commands"
-    )
+    config_subparsers = config_parser.add_subparsers(dest="config_command", help="Config commands")
 
     # config path
     config_subparsers.add_parser("path", help="Show config file path")
 
     # config show
-    show_parser = config_subparsers.add_parser(
-        "show", help="Show current configuration"
-    )
-    show_parser.add_argument(
-        "-k", "--key", help="Config key to show (e.g., llm.provider)"
-    )
+    show_parser = config_subparsers.add_parser("show", help="Show current configuration")
+    show_parser.add_argument("-k", "--key", help="Config key to show (e.g., llm.provider)")
 
     # config init
-    init_parser = config_subparsers.add_parser(
-        "init", help="Initialize config file with defaults"
-    )
-    init_parser.add_argument(
-        "-p", "--provider", help="LLM provider name (e.g., openai, openrouter, ollama)"
-    )
+    init_parser = config_subparsers.add_parser("init", help="Initialize config file with defaults")
+    init_parser.add_argument("-p", "--provider", help="LLM provider name (e.g., openai, openrouter, ollama)")
 
     # config set
     set_parser = config_subparsers.add_parser("set", help="Set a configuration value")
@@ -166,9 +156,7 @@ def cmd_config_init(provider: str | None = None) -> None:
         config_path = get_noe_config_path()
 
         if config_path.exists():
-            response = input(
-                f"Config file already exists at {config_path}. Overwrite? [y/N] "
-            )
+            response = input(f"Config file already exists at {config_path}. Overwrite? [y/N] ")
             if response.lower() != "y":
                 print("Aborted.")
                 return
@@ -304,18 +292,12 @@ def _handle_import_error(error: ImportError) -> None:
         )
     elif "rich" in error_name:
         print(
-            "Error: Missing 'rich' package for TUI interface.\n"
-            "\n"
-            "Please install it:\n"
-            "  pip install rich",
+            "Error: Missing 'rich' package for TUI interface.\n" "\n" "Please install it:\n" "  pip install rich",
             file=sys.stderr,
         )
     elif "pydantic" in error_name:
         print(
-            "Error: Missing 'pydantic' package.\n"
-            "\n"
-            "Please install it:\n"
-            "  pip install pydantic",
+            "Error: Missing 'pydantic' package.\n" "\n" "Please install it:\n" "  pip install pydantic",
             file=sys.stderr,
         )
     else:

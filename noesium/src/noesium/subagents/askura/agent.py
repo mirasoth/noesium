@@ -53,14 +53,10 @@ class AskuraAgent(BaseGraphicAgent):
     collect required information through natural conversation flow.
     """
 
-    def __init__(
-        self, config: AskuraConfig, extraction_tools: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, config: AskuraConfig, extraction_tools: Optional[Dict[str, Any]] = None):
         """Initialize the AskuraAgent."""
         # Initialize base class with LLM configuration
-        super().__init__(
-            llm_provider=config.llm_api_provider, model_name=config.model_name
-        )
+        super().__init__(llm_provider=config.llm_api_provider, model_name=config.model_name)
 
         self.config = config
         self.extraction_tools = extraction_tools or {}
@@ -69,13 +65,9 @@ class AskuraAgent(BaseGraphicAgent):
 
         # Initialize components (pass LLM client to enable intelligent behavior)
         self.conversation_manager = ConversationManager(config, llm_client=self.llm)
-        self.information_extractor = InformationExtractor(
-            config, self.extraction_tools, llm_client=self.llm
-        )
+        self.information_extractor = InformationExtractor(config, self.extraction_tools, llm_client=self.llm)
         self.reflection = Reflection(config, llm_client=self.llm)
-        self.summarizer = Summarizer(
-            config, llm_client=self.llm, reflection=self.reflection
-        )
+        self.summarizer = Summarizer(config, llm_client=self.llm, reflection=self.reflection)
         self.memory = Memory()
 
         # Build the conversation graph
@@ -93,9 +85,7 @@ class AskuraAgent(BaseGraphicAgent):
         return AskuraState
 
     @override
-    def start_conversation(
-        self, user_id: str, initial_message: Optional[str] = None
-    ) -> AskuraResponse:
+    def start_conversation(self, user_id: str, initial_message: Optional[str] = None) -> AskuraResponse:
         """Start a new conversation with a user."""
         session_id = str(uuid.uuid4())
         now = self._now_iso()
@@ -134,9 +124,7 @@ class AskuraAgent(BaseGraphicAgent):
         return response
 
     @override
-    def process_user_message(
-        self, user_id: str, session_id: str, message: str
-    ) -> AskuraResponse:
+    def process_user_message(self, user_id: str, session_id: str, message: str) -> AskuraResponse:
         """Process a user message and return the agent's response."""
 
         # Get the current state
@@ -164,9 +152,7 @@ class AskuraAgent(BaseGraphicAgent):
         try:
             # Create callbacks with references so we can access token usage
             node_callback = NodeLoggingCallback(node_id="graph")
-            token_callback = TokenUsageCallback(
-                model_name=self.config.model_name, verbose=True
-            )
+            token_callback = TokenUsageCallback(model_name=self.config.model_name, verbose=True)
 
             # Run the graph with per-session thread_id for checkpoints
             config = RunnableConfig(
@@ -248,9 +234,7 @@ class AskuraAgent(BaseGraphicAgent):
             },
         )
 
-        return builder.compile(
-            checkpointer=self.checkpointer, interrupt_before=["human_review"]
-        )
+        return builder.compile(checkpointer=self.checkpointer, interrupt_before=["human_review"])
 
     def _create_response(self, state: AskuraState) -> AskuraResponse:
         """Create response from final state."""
@@ -266,9 +250,7 @@ class AskuraAgent(BaseGraphicAgent):
             session_id=state.session_id,
             is_complete=state.is_complete,
             confidence=self._calculate_confidence(state),
-            next_actions=(
-                [state.next_action_plan.next_action] if state.next_action_plan else []
-            ),
+            next_actions=([state.next_action_plan.next_action] if state.next_action_plan else []),
             requires_user_input=state.requires_user_input,
             metadata={
                 "turns": state.turns,
@@ -278,9 +260,7 @@ class AskuraAgent(BaseGraphicAgent):
             custom_data=state.custom_data,
         )
 
-    def _create_error_response(
-        self, state: AskuraState, error_message: str
-    ) -> AskuraResponse:
+    def _create_error_response(self, state: AskuraState, error_message: str) -> AskuraResponse:
         """Create error response."""
         return AskuraResponse(
             message=f"I encountered an issue while processing your request. Please try again. Error: {error_message}",
@@ -296,11 +276,7 @@ class AskuraAgent(BaseGraphicAgent):
         information_slots = state.extracted_info
 
         # Count filled slots
-        filled_slots = sum(
-            1
-            for slot in self.config.information_slots
-            if information_slots.get(slot.name)
-        )
+        filled_slots = sum(1 for slot in self.config.information_slots if information_slots.get(slot.name))
         total_slots = len(self.config.information_slots)
 
         if total_slots == 0:
@@ -308,16 +284,12 @@ class AskuraAgent(BaseGraphicAgent):
 
         return min(filled_slots / total_slots, 1.0)
 
-    def _start_deep_thinking_node(
-        self, state: AskuraState, config: RunnableConfig
-    ) -> dict:
+    def _start_deep_thinking_node(self, state: AskuraState, config: RunnableConfig) -> dict:
         """Start deep thinking node - indicates deep processing is beginning."""
         logger.info("StartDeepThinking: Beginning deep processing")
         return {}
 
-    def _message_dispatcher_node(
-        self, state: AskuraState, config: RunnableConfig
-    ) -> dict:
+    def _message_dispatcher_node(self, state: AskuraState, config: RunnableConfig) -> dict:
         """Message dispatcher node - prepares state for routing decision."""
         logger.info("MessageDispatcher: Preparing for routing decision")
         # This is a pass-through node that could be used to set flags or prepare state
@@ -336,18 +308,12 @@ class AskuraAgent(BaseGraphicAgent):
                 break
 
         if not last_user_message:
-            logger.warning(
-                "MessageRouter: No user message found, defaulting to response_generator"
-            )
+            logger.warning("MessageRouter: No user message found, defaulting to response_generator")
             return "response_generator"
 
         try:
             # Prepare context for routing evaluation
-            conversation_context = (
-                state.conversation_context.to_dict()
-                if state.conversation_context
-                else {}
-            )
+            conversation_context = state.conversation_context.to_dict() if state.conversation_context else {}
             extracted_info = state.extracted_info or {}
 
             # Get the routing evaluation prompts
@@ -378,9 +344,7 @@ class AskuraAgent(BaseGraphicAgent):
 
     def _context_analysis_node(self, state: AskuraState, config: RunnableConfig):
         logger.info("ContextAnalysis: Analyzing conversation context")
-        conversation_context = self.conversation_manager.analyze_conversation_context(
-            state
-        )
+        conversation_context = self.conversation_manager.analyze_conversation_context(state)
         return {"conversation_context": conversation_context}
 
     def _memory_retrival_node(self, state: AskuraState, config: RunnableConfig):
@@ -399,9 +363,7 @@ class AskuraAgent(BaseGraphicAgent):
         recent_user_messages = self._format_recent_user_messages(state.messages)
 
         # Perform LLM-enhanced knowledge gap analysis
-        gap_analysis = self.reflection.evaluate_knowledge_gap(
-            state, recent_user_messages
-        )
+        gap_analysis = self.reflection.evaluate_knowledge_gap(state, recent_user_messages)
 
         # Update state with the enhanced analysis results
         updated_state = {
@@ -421,9 +383,7 @@ class AskuraAgent(BaseGraphicAgent):
 
         return updated_state
 
-    def _next_action_node(
-        self, state: AskuraState, config: RunnableConfig
-    ) -> AskuraState:
+    def _next_action_node(self, state: AskuraState, config: RunnableConfig) -> AskuraState:
         logger.info("NextAction: Selecting next action")
         conversation_context = state.conversation_context
         # Always extract fresh recent user messages to avoid stale data - optimize for token efficiency
@@ -449,10 +409,7 @@ class AskuraAgent(BaseGraphicAgent):
 
     def _next_action_router(self, state: AskuraState) -> str:
         logger.info("NextActionRouter: Routing next action")
-        if (
-            self.summarizer.is_ready_to_summarize(state)
-            or state.turns >= self.config.max_conversation_turns
-        ):
+        if self.summarizer.is_ready_to_summarize(state) or state.turns >= self.config.max_conversation_turns:
             return "summarizer"
         if state.is_complete:
             return "end"
@@ -462,9 +419,7 @@ class AskuraAgent(BaseGraphicAgent):
         logger.info("InformationExtractor: Extracting information from user message")
 
         if not state.messages:
-            logger.warning(
-                "InformationExtractor: No messages to extract information from"
-            )
+            logger.warning("InformationExtractor: No messages to extract information from")
             return {"pending_extraction": False}
 
         last_user_msg = next(
@@ -472,22 +427,14 @@ class AskuraAgent(BaseGraphicAgent):
             None,
         )
         if not last_user_msg:
-            logger.warning(
-                "InformationExtractor: No last user message to extract information from"
-            )
+            logger.warning("InformationExtractor: No last user message to extract information from")
             return {"pending_extraction": False}
 
-        extracted_info = self.information_extractor.extract_all_information(
-            last_user_msg.content, state
-        )
+        extracted_info = self.information_extractor.extract_all_information(last_user_msg.content, state)
         return {"extracted_info": extracted_info, "pending_extraction": False}
 
-    def _response_generator_node(
-        self, state: AskuraState, config: RunnableConfig
-    ) -> AskuraState:
-        logger.info(
-            "ResponseGenerator: Generating contextual response to guide conversation"
-        )
+    def _response_generator_node(self, state: AskuraState, config: RunnableConfig) -> AskuraState:
+        logger.info("ResponseGenerator: Generating contextual response to guide conversation")
 
         utterance = self.conversation_manager.generate_response(state)
         ai_message = AIMessage(content=utterance)
@@ -495,15 +442,10 @@ class AskuraAgent(BaseGraphicAgent):
         state.requires_user_input = True
         return state
 
-    def _summarizer_node(
-        self, state: AskuraState, config: RunnableConfig
-    ) -> AskuraState:
+    def _summarizer_node(self, state: AskuraState, config: RunnableConfig) -> AskuraState:
         logger.info("Summarizer: Generating conversation summary")
 
-        if (
-            self.summarizer.is_ready_to_summarize(state)
-            or state.turns >= self.config.max_conversation_turns
-        ):
+        if self.summarizer.is_ready_to_summarize(state) or state.turns >= self.config.max_conversation_turns:
             summary = self.summarizer.summarize(state)
             summary_message = AIMessage(content=summary)
             state.messages = add_messages(state.messages, [summary_message])
@@ -514,9 +456,7 @@ class AskuraAgent(BaseGraphicAgent):
             state.requires_user_input = True
         return state
 
-    def _human_review_node(
-        self, state: AskuraState, config: RunnableConfig
-    ) -> AskuraState:
+    def _human_review_node(self, state: AskuraState, config: RunnableConfig) -> AskuraState:
         logger.info("HumanReview: Awaiting human input")
         # When resumed, mark extraction needed
         state.requires_user_input = False
@@ -529,9 +469,7 @@ class AskuraAgent(BaseGraphicAgent):
             return "end"
         return "continue"
 
-    def _enrich_context_with_suggestions(
-        self, state: AskuraState, recent_user_messages: List[str]
-    ) -> None:
+    def _enrich_context_with_suggestions(self, state: AskuraState, recent_user_messages: List[str]) -> None:
         """Enrich context with specific suggestions when user shows interest but lacks knowledge."""
         # TODO: enrich context with specific suggestions when user shows interest but lacks knowledge.
 
@@ -543,9 +481,7 @@ class AskuraAgent(BaseGraphicAgent):
 
         for msg in recent_messages:
             # Preserve full short messages, only truncate very long ones
-            content = (
-                msg.content if len(msg.content) <= 200 else msg.content[:200] + "..."
-            )
+            content = msg.content if len(msg.content) <= 200 else msg.content[:200] + "..."
             user_messages.append(content)
 
         return user_messages

@@ -118,13 +118,7 @@ class UserMessage(_MessageBase):
         if isinstance(self.content, str):
             return self.content
         elif isinstance(self.content, list):
-            return "\n".join(
-                [
-                    part.text
-                    for part in self.content
-                    if hasattr(part, "text") and part.type == "text"
-                ]
-            )
+            return "\n".join([part.text for part in self.content if hasattr(part, "text") and part.type == "text"])
         else:
             return ""
 
@@ -146,13 +140,7 @@ class SystemMessage(_MessageBase):
         if isinstance(self.content, str):
             return self.content
         elif isinstance(self.content, list):
-            return "\n".join(
-                [
-                    part.text
-                    for part in self.content
-                    if hasattr(part, "text") and part.type == "text"
-                ]
-            )
+            return "\n".join([part.text for part in self.content if hasattr(part, "text") and part.type == "text"])
         else:
             return ""
 
@@ -165,9 +153,7 @@ class SystemMessage(_MessageBase):
 
 class AssistantMessage(_MessageBase):
     role: Literal["assistant"] = "assistant"
-    content: Optional[
-        Union[str, List[Union[ContentPartTextParam, ContentPartRefusalParam]]]
-    ] = None
+    content: Optional[Union[str, List[Union[ContentPartTextParam, ContentPartRefusalParam]]]] = None
     name: Optional[str] = None
     refusal: Optional[str] = None
     tool_calls: List[ToolCall] = Field(default_factory=list)

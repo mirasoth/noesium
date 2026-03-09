@@ -165,8 +165,7 @@ def __getattr__(name: str):
             return _BrowserUseAgent
         except ImportError as e:
             raise ImportError(
-                f"Failed to import BrowserUseAgent. "
-                f"Ensure browser-use dependencies are installed: {e}"
+                f"Failed to import BrowserUseAgent. " f"Ensure browser-use dependencies are installed: {e}"
             ) from e
 
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

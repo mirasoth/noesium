@@ -69,9 +69,7 @@ class SubagentDescriptor:
     supports_parallel_invocation: bool = False
     max_concurrency: int | None = 1
     cost_hint: CostHint | Literal["low", "medium", "high", "variable"] = CostHint.MEDIUM
-    latency_hint: LatencyHint | Literal["interactive", "batch", "slow"] = (
-        LatencyHint.BATCH
-    )
+    latency_hint: LatencyHint | Literal["interactive", "batch", "slow"] = LatencyHint.BATCH
     input_schema: dict[str, Any] = field(default_factory=dict)
     output_schema: dict[str, Any] = field(default_factory=dict)
     supports_hitl: bool = False
@@ -138,10 +136,7 @@ class SubagentRoutingPolicy:
         if current_depth >= self.max_depth:
             return False
 
-        if (
-            self.allowed_parent_agent_types
-            and parent_agent_type not in self.allowed_parent_agent_types
-        ):
+        if self.allowed_parent_agent_types and parent_agent_type not in self.allowed_parent_agent_types:
             return False
 
         return True

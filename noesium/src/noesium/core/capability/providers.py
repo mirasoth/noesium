@@ -54,12 +54,8 @@ class ToolCapabilityProvider:
             description=tool.description,
             input_schema=tool.input_schema,
             output_schema=tool.output_schema or {},
-            determinism=_DETERMINISM_MAP.get(
-                tool.determinism_class, DeterminismClass.STOCHASTIC
-            ),
-            side_effects=_SIDE_EFFECT_MAP.get(
-                tool.side_effect_class, SideEffectClass.EFFECTFUL
-            ),
+            determinism=_DETERMINISM_MAP.get(tool.determinism_class, DeterminismClass.STOCHASTIC),
+            side_effects=_SIDE_EFFECT_MAP.get(tool.side_effect_class, SideEffectClass.EFFECTFUL),
             latency=LatencyClass.FAST,
             tags=list(tool.tags),
         )
@@ -330,12 +326,8 @@ class BuiltInAgentCapabilityProvider:
                 else:
                     self._agent_instance = factory_result
             except Exception as exc:
-                logger.error(
-                    "Failed to create built-in agent '%s': %s", self._name, exc
-                )
-                raise RuntimeError(
-                    f"Failed to create built-in agent '{self._name}': {exc}"
-                ) from exc
+                logger.error("Failed to create built-in agent '%s': %s", self._name, exc)
+                raise RuntimeError(f"Failed to create built-in agent '{self._name}': {exc}") from exc
 
         message = kwargs.get("message", kwargs.get("task", str(kwargs)))
 
@@ -358,9 +350,7 @@ class BuiltInAgentCapabilityProvider:
                 else:
                     result = self._agent_instance.run(message)
             else:
-                raise RuntimeError(
-                    f"Agent '{self._name}' has no run/arun/research method"
-                )
+                raise RuntimeError(f"Agent '{self._name}' has no run/arun/research method")
             return result
         except Exception as exc:
             logger.error("Built-in agent '%s' invocation failed: %s", self._name, exc)
@@ -398,18 +388,14 @@ class BuiltInAgentCapabilityProvider:
                 else:
                     self._agent_instance = factory_result
             except Exception as exc:
-                logger.error(
-                    "Failed to create built-in agent '%s': %s", self._name, exc
-                )
+                logger.error("Failed to create built-in agent '%s': %s", self._name, exc)
                 yield ProgressEvent(
                     type=ProgressEventType.ERROR,
                     subagent_id=self._name,
                     error=str(exc),
                     summary=f"Failed to create agent: {exc}",
                 )
-                raise RuntimeError(
-                    f"Failed to create built-in agent '{self._name}': {exc}"
-                ) from exc
+                raise RuntimeError(f"Failed to create built-in agent '{self._name}': {exc}") from exc
 
         # Check for astream_progress support
         if hasattr(self._agent_instance, "astream_progress"):

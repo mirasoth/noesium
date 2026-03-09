@@ -40,9 +40,7 @@ class ToolkitRegistry:
     _registry: Dict[str, Type[Union[BaseToolkit, AsyncBaseToolkit]]] = {}
 
     @classmethod
-    def register(
-        cls, name: str, toolkit_class: Type[Union[BaseToolkit, AsyncBaseToolkit]]
-    ):
+    def register(cls, name: str, toolkit_class: Type[Union[BaseToolkit, AsyncBaseToolkit]]):
         """
         Register a toolkit class.
 
@@ -51,9 +49,7 @@ class ToolkitRegistry:
             toolkit_class: Toolkit class to register
         """
         if not issubclass(toolkit_class, (BaseToolkit, AsyncBaseToolkit)):
-            raise ValueError(
-                "Toolkit class must inherit from BaseToolkit or AsyncBaseToolkit"
-            )
+            raise ValueError("Toolkit class must inherit from BaseToolkit or AsyncBaseToolkit")
 
         cls._registry[name] = toolkit_class
         logger.debug(f"Registered toolkit: {name} -> {toolkit_class.__name__}")
@@ -86,9 +82,7 @@ class ToolkitRegistry:
         """
         _ensure_toolkits_discovered()
         if name not in cls._registry:
-            raise KeyError(
-                f"Toolkit '{name}' not found. Available toolkits: {list(cls._registry.keys())}"
-            )
+            raise KeyError(f"Toolkit '{name}' not found. Available toolkits: {list(cls._registry.keys())}")
         return cls._registry[name]
 
     @classmethod
@@ -163,9 +157,7 @@ def register_toolkit(name: str):
     return decorator
 
 
-def get_toolkit(
-    name: str, config: Optional[Union[ToolkitConfig, Dict]] = None
-) -> Union[BaseToolkit, AsyncBaseToolkit]:
+def get_toolkit(name: str, config: Optional[Union[ToolkitConfig, Dict]] = None) -> Union[BaseToolkit, AsyncBaseToolkit]:
     """
     Convenience function to get a toolkit instance.
 

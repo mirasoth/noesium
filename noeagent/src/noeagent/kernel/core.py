@@ -111,9 +111,7 @@ class AgentKernel:
             # 5. Extract AgentAction from result and convert to Decision
             decision = self._convert_to_decision(goal, result)
 
-            logger.info(
-                f"AgentKernel decision: {decision.action} for goal {goal.id[:8]}"
-            )
+            logger.info(f"AgentKernel decision: {decision.action} for goal {goal.id[:8]}")
             return decision
 
         except Exception as e:
@@ -194,10 +192,7 @@ class AgentKernel:
 
         # Check if cache is still valid
         provider_count = len(registry.list_providers())
-        if (
-            self._tool_desc_cache is not None
-            and self._tool_desc_provider_count == provider_count
-        ):
+        if self._tool_desc_cache is not None and self._tool_desc_provider_count == provider_count:
             return self._tool_desc_cache
 
         # Build new cache
@@ -270,9 +265,7 @@ class AgentKernel:
                     "in summary",
                 ]
                 content_lower = content.lower()
-                is_completion = any(
-                    indicator in content_lower for indicator in completion_indicators
-                )
+                is_completion = any(indicator in content_lower for indicator in completion_indicators)
 
                 if is_completion:
                     return Decision(
@@ -295,11 +288,7 @@ class AgentKernel:
         return Decision(
             action=DecisionAction.FINISH_GOAL,
             goal_id=goal.id,
-            reasoning=(
-                str(last_message.content)
-                if hasattr(last_message, "content")
-                else "Step completed"
-            ),
+            reasoning=(str(last_message.content) if hasattr(last_message, "content") else "Step completed"),
         )
 
     @property

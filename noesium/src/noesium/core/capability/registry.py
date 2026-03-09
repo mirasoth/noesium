@@ -152,9 +152,7 @@ class CapabilityRegistry:
         """Find providers by capability_id with optional version prefix filter."""
         candidates = self._providers.get(capability_id, [])
         if version:
-            candidates = [
-                p for p in candidates if p.descriptor.version.startswith(version)
-            ]
+            candidates = [p for p in candidates if p.descriptor.version.startswith(version)]
         return candidates
 
     def find_by_type(self, cap_type: CapabilityType) -> list[CapabilityProvider]:
@@ -225,8 +223,7 @@ class CapabilityRegistry:
                     continue
             return p
         raise CapabilityNotFoundError(
-            f"No healthy capability found: {capability_id}"
-            + (f" version={version}" if version else "")
+            f"No healthy capability found: {capability_id}" + (f" version={version}" if version else "")
         )
 
     def get_by_name(self, name: str) -> CapabilityProvider:
@@ -367,9 +364,7 @@ class CapabilityRegistry:
             )
             await self._event_store.append(envelope)
         except Exception:
-            logger.debug(
-                "Failed to flush capability event to EventStore", exc_info=True
-            )
+            logger.debug("Failed to flush capability event to EventStore", exc_info=True)
 
     async def rebuild_from_events(self, event_store: EventStore) -> int:
         """Reconstruct changelog from a persisted event stream (cold-start).
@@ -389,14 +384,8 @@ class CapabilityRegistry:
                         capability_id=p.get("capability_id", ""),
                         version=p.get("version", "1.0.0"),
                         capability_type=p.get("capability_type", "tool"),
-                        timestamp=(
-                            env.timestamp.timestamp() if env.timestamp else time.time()
-                        ),
-                        detail={
-                            k: v
-                            for k, v in p.items()
-                            if k not in ("capability_id", "version")
-                        },
+                        timestamp=(env.timestamp.timestamp() if env.timestamp else time.time()),
+                        detail={k: v for k, v in p.items() if k not in ("capability_id", "version")},
                     )
                 )
                 count += 1
@@ -408,9 +397,7 @@ class CapabilityRegistry:
                         capability_id=p.get("capability_id", ""),
                         version=p.get("version", "1.0.0"),
                         capability_type="unknown",
-                        timestamp=(
-                            env.timestamp.timestamp() if env.timestamp else time.time()
-                        ),
+                        timestamp=(env.timestamp.timestamp() if env.timestamp else time.time()),
                     )
                 )
                 count += 1

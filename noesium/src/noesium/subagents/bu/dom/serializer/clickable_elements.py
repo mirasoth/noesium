@@ -20,11 +20,7 @@ class ClickableElementDetector:
 
         # IFRAME elements should be interactive if they're large enough to potentially need scrolling
         # Small iframes (< 100px width or height) are unlikely to have scrollable content
-        if (
-            node.tag_name
-            and node.tag_name.upper() == "IFRAME"
-            or node.tag_name.upper() == "FRAME"
-        ):
+        if node.tag_name and node.tag_name.upper() == "IFRAME" or node.tag_name.upper() == "FRAME":
             if node.snapshot_node and node.snapshot_node.bounds:
                 width = node.snapshot_node.bounds.width
                 height = node.snapshot_node.bounds.height
@@ -53,9 +49,7 @@ class ClickableElementDetector:
 
             # Check class names for search indicators
             class_list = node.attributes.get("class", "").lower().split()
-            if any(
-                indicator in " ".join(class_list) for indicator in search_indicators
-            ):
+            if any(indicator in " ".join(class_list) for indicator in search_indicators):
                 return True
 
             # Check id for search indicators
@@ -83,10 +77,7 @@ class ClickableElementDetector:
                         return False
 
                     # Direct interactiveness indicators
-                    if (
-                        prop.name in ["focusable", "editable", "settable"]
-                        and prop.value
-                    ):
+                    if prop.name in ["focusable", "editable", "settable"] and prop.value:
                         return True
 
                     # Interactive state properties (presence indicates interactive widget)
@@ -217,11 +208,7 @@ class ClickableElementDetector:
                     return True
 
         # Final fallback: cursor style indicates interactivity (for cases Chrome missed)
-        if (
-            node.snapshot_node
-            and node.snapshot_node.cursor_style
-            and node.snapshot_node.cursor_style == "pointer"
-        ):
+        if node.snapshot_node and node.snapshot_node.cursor_style and node.snapshot_node.cursor_style == "pointer":
             return True
 
         return False

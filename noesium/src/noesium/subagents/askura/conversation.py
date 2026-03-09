@@ -24,36 +24,24 @@ logger = get_logger(__name__)
 class ConversationManager:
     """Manages dynamic conversation analysis and flow control."""
 
-    def __init__(
-        self, config: AskuraConfig, llm_client: Optional[BaseLLMClient] = None
-    ):
+    def __init__(self, config: AskuraConfig, llm_client: Optional[BaseLLMClient] = None):
         """Initialize the conversation manager."""
         self.config = config
         self.llm = llm_client
 
-    def analyze_conversation_context(
-        self, state: AskuraState, message_depth: int = 3
-    ) -> ConversationContext:
+    def analyze_conversation_context(self, state: AskuraState, message_depth: int = 3) -> ConversationContext:
         """Analyze conversation context to understand user preferences and conversation flow."""
         if isinstance(self.config.conversation_purpose, str):
-            context = ConversationContext(
-                conversation_purpose=self.config.conversation_purpose
-            )
+            context = ConversationContext(conversation_purpose=self.config.conversation_purpose)
         else:
-            context = ConversationContext(
-                conversation_purpose="\n".join(self.config.conversation_purpose)
-            )
+            context = ConversationContext(conversation_purpose="\n".join(self.config.conversation_purpose))
 
         if not state.messages:
             logger.warning("No recent messages found")
             return context
 
         # Analyze user engagement and style
-        user_messages = [
-            msg
-            for msg in state.messages[-message_depth * 2 :]
-            if isinstance(msg, HumanMessage)
-        ]
+        user_messages = [msg for msg in state.messages[-message_depth * 2 :] if isinstance(msg, HumanMessage)]
         if not user_messages:
             logger.warning("No user messages found")
             state.missing_info = self._get_missing_slots(state)
@@ -66,9 +54,7 @@ class ConversationManager:
                 raise ValueError("LLM client or last user text is not valid")
 
             # Prepare recent messages for analysis - optimize for token efficiency
-            recent_messages_text = self._format_recent_messages(
-                user_messages[-message_depth:]
-            )
+            recent_messages_text = self._format_recent_messages(user_messages[-message_depth:])
 
             # Get structured prompts for conversation analysis
             system_prompt, user_prompt = get_conversation_analysis_prompts(
@@ -102,8 +88,7 @@ class ConversationManager:
         # Get conversation purpose from context or config
         conversation_purpose = (
             state.conversation_context.conversation_purpose
-            if state.conversation_context
-            and state.conversation_context.conversation_purpose
+            if state.conversation_context and state.conversation_context.conversation_purpose
             else (
                 self.config.conversation_purpose
                 if isinstance(self.config.conversation_purpose, str)
@@ -127,21 +112,13 @@ class ConversationManager:
         system_prompt, user_prompt = get_response_generation_prompts(
             conversation_purpose=conversation_purpose,
             missing_required_slots=missing_required_slots,
-            intent_type=(
-                state.next_action_plan.intent_type
-                if state.next_action_plan
-                else "casual conversation"
-            ),
+            intent_type=(state.next_action_plan.intent_type if state.next_action_plan else "casual conversation"),
             next_action_reasoning=(
                 state.next_action_plan.reasoning
                 if state.next_action_plan
                 else "Building rapport and guiding conversation naturally toward the purpose"
             ),
-            known_slots=(
-                str(state.extracted_info)
-                if state.extracted_info
-                else "Nothing specific collected yet"
-            ),
+            known_slots=(str(state.extracted_info) if state.extracted_info else "Nothing specific collected yet"),
         )
         utterance = self.llm.completion(
             messages=[
@@ -166,9 +143,7 @@ class ConversationManager:
         information_slots = state.extracted_info
 
         # Sort slots by priority (higher priority first)
-        for slot in sorted(
-            self.config.information_slots, key=lambda slot: slot.priority, reverse=True
-        ):
+        for slot in sorted(self.config.information_slots, key=lambda slot: slot.priority, reverse=True):
             if slot.required and not information_slots.get(slot.name):
                 missing[f"ask_{slot.name}"] = f"Need to collect {slot.description}"
 
@@ -189,9 +164,7 @@ class ConversationManager:
                 # Keep beginning and end for context
                 content = msg.content[:200] + "..." + msg.content[-50:]
 
-            role_prefix = (
-                "User" if i == len(messages) - 1 else f"U{i+1}"
-            )  # Mark most recent
+            role_prefix = "User" if i == len(messages) - 1 else f"U{i+1}"  # Mark most recent
             formatted.append(f"{role_prefix}: {content}")
 
         return "\n".join(formatted)  # Use newlines for better readability

@@ -27,9 +27,7 @@ class SemanticMemory:
         self._vector_store = vector_store
         self._llm = llm_client
 
-    async def index(
-        self, key: str, text: str, metadata: dict[str, Any] | None = None
-    ) -> None:
+    async def index(self, key: str, text: str, metadata: dict[str, Any] | None = None) -> None:
         """Write to durable memory and optionally index into vector store."""
         await self._durable.write(key, text, value_type="text")
         if self._vector_store is not None:
@@ -44,12 +42,7 @@ class SemanticMemory:
             return []
         results = await self._vector_store.similarity_search(query, k=k)
         return [
-            (
-                {"content": r.page_content, "metadata": r.metadata}
-                if hasattr(r, "page_content")
-                else r
-            )
-            for r in results
+            ({"content": r.page_content, "metadata": r.metadata} if hasattr(r, "page_content") else r) for r in results
         ]
 
     async def rebuild_index(self) -> None:

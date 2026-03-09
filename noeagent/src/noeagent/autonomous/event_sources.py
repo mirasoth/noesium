@@ -313,8 +313,7 @@ class WatchdogFileSystemEventSource:
         """
         if not WATCHDOG_AVAILABLE:
             raise ImportError(
-                "watchdog package required for WatchdogFileSystemEventSource. "
-                "Install with: pip install watchdog"
+                "watchdog package required for WatchdogFileSystemEventSource. " "Install with: pip install watchdog"
             )
 
         self.event_bus = event_bus
@@ -336,8 +335,7 @@ class WatchdogFileSystemEventSource:
         self._running = True
 
         logger.info(
-            f"WatchdogFileSystemEventSource started: watching {self.watch_path} "
-            f"(recursive={self.recursive})"
+            f"WatchdogFileSystemEventSource started: watching {self.watch_path} " f"(recursive={self.recursive})"
         )
 
     def stop(self) -> None:

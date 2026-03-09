@@ -73,9 +73,7 @@ def construct_judge_messages(
     if use_vision is not False:
         # Select last N screenshots
         selected_screenshots = (
-            screenshot_paths[-max_images:]
-            if len(screenshot_paths) > max_images
-            else screenshot_paths
+            screenshot_paths[-max_images:] if len(screenshot_paths) > max_images else screenshot_paths
         )
 
         # Encode screenshots
@@ -217,9 +215,7 @@ Respond with EXACTLY this JSON structure (no additional text before or after):
 Evaluate this agent execution given the criteria and respond with the exact JSON structure requested."""
 
     # Build messages with screenshots
-    content_parts: list[ContentPartTextParam | ContentPartImageParam] = [
-        ContentPartTextParam(text=user_prompt)
-    ]
+    content_parts: list[ContentPartTextParam | ContentPartImageParam] = [ContentPartTextParam(text=user_prompt)]
     content_parts.extend(encoded_images)
 
     return [

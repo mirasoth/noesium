@@ -53,9 +53,7 @@ class ToolRegistry:
             tools = [t for t in tools if all(tag in t.tags for tag in tags)]
         return tools
 
-    async def load_builtin_toolkits(
-        self, toolkit_names: list[str] | None = None
-    ) -> None:
+    async def load_builtin_toolkits(self, toolkit_names: list[str] | None = None) -> None:
         """Discover and wrap existing registered toolkits as AtomicTools."""
         from noesium.core.toolify.adapters.builtin_adapter import BuiltinAdapter
         from noesium.core.toolify.base import AsyncBaseToolkit
@@ -85,15 +83,9 @@ class ToolRegistry:
         """Convert registered AtomicTools to LangChain BaseTool format."""
         from noesium.core.toolify.base import ToolConverter
 
-        tools = (
-            self.list_tools() if names is None else [self.get_by_name(n) for n in names]
-        )
+        tools = self.list_tools() if names is None else [self.get_by_name(n) for n in names]
         lc_tools: list[Any] = []
         for t in tools:
             if t._callable is not None:
-                lc_tools.append(
-                    ToolConverter.function_to_langchain(
-                        t._callable, t.name, t.description
-                    )
-                )
+                lc_tools.append(ToolConverter.function_to_langchain(t._callable, t.name, t.description))
         return lc_tools

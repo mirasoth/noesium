@@ -1,11 +1,13 @@
-"""Memory provider implementations (RFC-2002 §6)."""
+"""Memory provider implementations (RFC-1009).
 
-from .event_sourced import EventSourcedProvider
+Note: EventSourcedProvider has been removed as part of RFC-1009 simplification.
+Use WorkingMemoryProvider for session memory and MemuProvider for persistence.
+"""
+
 from .memu import MemuProvider
 from .working import WorkingMemoryProvider
 
 __all__ = [
-    "EventSourcedProvider",
     "MemuProvider",
     "WorkingMemoryProvider",
 ]

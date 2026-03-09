@@ -60,9 +60,7 @@ class GmailService:
             self.config_dir.mkdir(parents=True, exist_ok=True)
 
         # Set up credential paths
-        self.credentials_file = (
-            credentials_file or self.config_dir / "gmail_credentials.json"
-        )
+        self.credentials_file = credentials_file or self.config_dir / "gmail_credentials.json"
         self.token_file = token_file or self.config_dir / "gmail_token.json"
 
         # Direct access token support
@@ -99,9 +97,7 @@ class GmailService:
             # Original file-based authentication flow
             # Try to load existing tokens
             if os.path.exists(self.token_file):
-                self.creds = Credentials.from_authorized_user_file(
-                    str(self.token_file), self.SCOPES
-                )
+                self.creds = Credentials.from_authorized_user_file(str(self.token_file), self.SCOPES)
                 logger.debug("📁 Loaded existing tokens")
 
             # If no valid credentials, run OAuth flow
@@ -122,9 +118,7 @@ class GmailService:
                         )
                         return False
 
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        str(self.credentials_file), self.SCOPES
-                    )
+                    flow = InstalledAppFlow.from_client_secrets_file(str(self.credentials_file), self.SCOPES)
                     # Use specific redirect URI to match OAuth credentials
                     self.creds = flow.run_local_server(port=8080, open_browser=True)
 
@@ -156,9 +150,7 @@ class GmailService:
             List of email dictionaries with parsed content
         """
         if not self.is_authenticated():
-            logger.error(
-                "❌ Gmail service not authenticated. Call authenticate() first."
-            )
+            logger.error("❌ Gmail service not authenticated. Call authenticate() first.")
             return []
 
         try:
@@ -172,12 +164,7 @@ class GmailService:
 
             # Get message list
             assert self.service is not None
-            results = (
-                self.service.users()
-                .messages()
-                .list(userId="me", maxResults=max_results, q=query)
-                .execute()
-            )
+            results = self.service.users().messages().list(userId="me", maxResults=max_results, q=query).execute()
 
             messages = results.get("messages", [])
             if not messages:
@@ -192,10 +179,7 @@ class GmailService:
                 logger.debug(f"📖 Reading email {i}/{len(messages)}...")
 
                 full_message = (
-                    self.service.users()
-                    .messages()
-                    .get(userId="me", id=message["id"], format="full")
-                    .execute()
+                    self.service.users().messages().get(userId="me", id=message["id"], format="full").execute()
                 )
 
                 email_data = self._parse_email(full_message)
@@ -236,21 +220,11 @@ class GmailService:
         elif payload.get("parts"):
             # Multi-part email
             for part in payload["parts"]:
-                if part["mimeType"] == "text/plain" and part.get("body", {}).get(
-                    "data"
-                ):
-                    part_body = base64.urlsafe_b64decode(part["body"]["data"]).decode(
-                        "utf-8"
-                    )
+                if part["mimeType"] == "text/plain" and part.get("body", {}).get("data"):
+                    part_body = base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8")
                     body += part_body
-                elif (
-                    part["mimeType"] == "text/html"
-                    and not body
-                    and part.get("body", {}).get("data")
-                ):
+                elif part["mimeType"] == "text/html" and not body and part.get("body", {}).get("data"):
                     # Fallback to HTML if no plain text
-                    body = base64.urlsafe_b64decode(part["body"]["data"]).decode(
-                        "utf-8"
-                    )
+                    body = base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8")
 
         return body

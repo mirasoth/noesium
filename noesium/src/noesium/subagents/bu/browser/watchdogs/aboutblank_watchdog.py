@@ -66,9 +66,7 @@ class AboutBlankWatchdog(BaseWatchdog):
         # Don't attempt CDP operations if the WebSocket is dead — dispatching
         # NavigateToUrlEvent on a broken connection will hang until timeout
         if not self.browser_session.is_cdp_connected:
-            self.logger.debug(
-                "[AboutBlankWatchdog] CDP not connected, skipping tab recovery"
-            )
+            self.logger.debug("[AboutBlankWatchdog] CDP not connected, skipping tab recovery")
             return
 
         # Check if we're about to close the last tab (event happens BEFORE tab closes)
@@ -79,9 +77,7 @@ class AboutBlankWatchdog(BaseWatchdog):
                 "[AboutBlankWatchdog] Last tab closing, creating new about:blank tab to avoid closing entire browser"
             )
             # Create the animation tab since no tabs should remain
-            navigate_event = self.event_bus.dispatch(
-                NavigateToUrlEvent(url="about:blank", new_tab=True)
-            )
+            navigate_event = self.event_bus.dispatch(NavigateToUrlEvent(url="about:blank", new_tab=True))
             await navigate_event
             # Show DVD screensaver on the new tab
             await self._show_dvd_screensaver_on_about_blank_tabs()
@@ -104,21 +100,15 @@ class AboutBlankWatchdog(BaseWatchdog):
             # If no tabs exist at all, create one to keep browser alive
             if len(page_targets) == 0:
                 # Only create a new tab if there are no tabs at all
-                self.logger.debug(
-                    "[AboutBlankWatchdog] No tabs exist, creating new about:blank DVD screensaver tab"
-                )
-                navigate_event = self.event_bus.dispatch(
-                    NavigateToUrlEvent(url="about:blank", new_tab=True)
-                )
+                self.logger.debug("[AboutBlankWatchdog] No tabs exist, creating new about:blank DVD screensaver tab")
+                navigate_event = self.event_bus.dispatch(NavigateToUrlEvent(url="about:blank", new_tab=True))
                 await navigate_event
                 # Show DVD screensaver on the new tab
                 await self._show_dvd_screensaver_on_about_blank_tabs()
             # Otherwise there are tabs, don't create new ones to avoid interfering
 
         except Exception as e:
-            self.logger.error(
-                f"[AboutBlankWatchdog] Error ensuring about:blank tab: {e}"
-            )
+            self.logger.error(f"[AboutBlankWatchdog] Error ensuring about:blank tab: {e}")
 
     async def _show_dvd_screensaver_on_about_blank_tabs(self) -> None:
         """Show DVD screensaver on all about:blank pages only."""
@@ -133,14 +123,10 @@ class AboutBlankWatchdog(BaseWatchdog):
 
                 # Only target about:blank pages specifically
                 if url == "about:blank":
-                    await self._show_dvd_screensaver_loading_animation_cdp(
-                        target_id, browser_session_label
-                    )
+                    await self._show_dvd_screensaver_loading_animation_cdp(target_id, browser_session_label)
 
         except Exception as e:
-            self.logger.error(
-                f"[AboutBlankWatchdog] Error showing DVD screensaver: {e}"
-            )
+            self.logger.error(f"[AboutBlankWatchdog] Error showing DVD screensaver: {e}")
 
     async def _show_dvd_screensaver_loading_animation_cdp(
         self, target_id: TargetID, browser_session_label: str
@@ -151,9 +137,7 @@ class AboutBlankWatchdog(BaseWatchdog):
         """
         try:
             # Create temporary session for this target without switching focus
-            temp_session = await self.browser_session.get_or_create_cdp_session(
-                target_id, focus=False
-            )
+            temp_session = await self.browser_session.get_or_create_cdp_session(target_id, focus=False)
 
             # Inject the DVD screensaver script (from main branch with idempotency added)
             script = f"""
@@ -272,11 +256,7 @@ class AboutBlankWatchdog(BaseWatchdog):
             # No need to detach - session is cached
 
             # Dispatch event
-            self.event_bus.dispatch(
-                AboutBlankDVDScreensaverShownEvent(target_id=target_id)
-            )
+            self.event_bus.dispatch(AboutBlankDVDScreensaverShownEvent(target_id=target_id))
 
         except Exception as e:
-            self.logger.error(
-                f"[AboutBlankWatchdog] Error injecting DVD screensaver: {e}"
-            )
+            self.logger.error(f"[AboutBlankWatchdog] Error injecting DVD screensaver: {e}")

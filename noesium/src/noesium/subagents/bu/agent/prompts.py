@@ -28,12 +28,8 @@ def _is_anthropic_4_5_model(model_name: str | None) -> bool:
         return False
     model_lower = model_name.lower()
     # Check for Opus 4.5 or Haiku 4.5 variants
-    is_opus_4_5 = "opus" in model_lower and (
-        "4.5" in model_lower or "4-5" in model_lower
-    )
-    is_haiku_4_5 = "haiku" in model_lower and (
-        "4.5" in model_lower or "4-5" in model_lower
-    )
+    is_opus_4_5 = "opus" in model_lower and ("4.5" in model_lower or "4-5" in model_lower)
+    is_haiku_4_5 = "haiku" in model_lower and ("4.5" in model_lower or "4-5" in model_lower)
     return is_opus_4_5 or is_haiku_4_5
 
 
@@ -228,9 +224,7 @@ class AgentMessagePrompt:
         traverse_node(self.browser_state.dom_state._root)
         return stats
 
-    @observe_debug(
-        ignore_input=True, ignore_output=True, name="_get_browser_state_description"
-    )
+    @observe_debug(ignore_input=True, ignore_output=True, name="_get_browser_state_description")
     def _get_browser_state_description(self) -> str:
         # Extract page statistics first
         page_stats = self._extract_page_statistics()
@@ -248,15 +242,11 @@ class AgentMessagePrompt:
         stats_text += f', {page_stats["total_elements"]} total elements'
         stats_text += "</page_stats>\n"
 
-        elements_text = self.browser_state.dom_state.llm_representation(
-            include_attributes=self.include_attributes
-        )
+        elements_text = self.browser_state.dom_state.llm_representation(include_attributes=self.include_attributes)
 
         if len(elements_text) > self.max_clickable_elements_length:
             elements_text = elements_text[: self.max_clickable_elements_length]
-            truncated_text = (
-                f" (truncated to {self.max_clickable_elements_length} characters)"
-            )
+            truncated_text = f" (truncated to {self.max_clickable_elements_length} characters)"
         else:
             truncated_text = ""
 
@@ -267,12 +257,8 @@ class AgentMessagePrompt:
         if self.browser_state.page_info:
             pi = self.browser_state.page_info
             # Compute page statistics dynamically
-            pages_above = (
-                pi.pixels_above / pi.viewport_height if pi.viewport_height > 0 else 0
-            )
-            pages_below = (
-                pi.pixels_below / pi.viewport_height if pi.viewport_height > 0 else 0
-            )
+            pages_above = pi.pixels_above / pi.viewport_height if pi.viewport_height > 0 else 0
+            pages_below = pi.pixels_below / pi.viewport_height if pi.viewport_height > 0 else 0
             has_content_above = pages_above > 0
             has_content_below = pages_below > 0
             pi.page_height / pi.viewport_height if pi.viewport_height > 0 else 0
@@ -296,26 +282,17 @@ class AgentMessagePrompt:
 
         # Find tabs that match both URL and title to identify current tab more reliably
         for tab in self.browser_state.tabs:
-            if (
-                tab.url == self.browser_state.url
-                and tab.title == self.browser_state.title
-            ):
+            if tab.url == self.browser_state.url and tab.title == self.browser_state.title:
                 current_tab_candidates.append(tab.target_id)
 
         # If we have exactly one match, mark it as current
         # Otherwise, don't mark any tab as current to avoid confusion
-        current_target_id = (
-            current_tab_candidates[0] if len(current_tab_candidates) == 1 else None
-        )
+        current_target_id = current_tab_candidates[0] if len(current_tab_candidates) == 1 else None
 
         for tab in self.browser_state.tabs:
             tabs_text += f"Tab {tab.target_id[-4:]}: {tab.url} - {tab.title[:30]}\n"
 
-        current_tab_text = (
-            f"Current tab: {current_target_id[-4:]}"
-            if current_target_id is not None
-            else ""
-        )
+        current_tab_text = f"Current tab: {current_target_id[-4:]}" if current_target_id is not None else ""
 
         # Check if current page is a PDF viewer and add appropriate message
         pdf_message = ""
@@ -326,9 +303,7 @@ class AgentMessagePrompt:
         # Add recent events if available and requested
         recent_events_text = ""
         if self.include_recent_events and self.browser_state.recent_events:
-            recent_events_text = (
-                f"Recent browser events: {self.browser_state.recent_events}\n"
-            )
+            recent_events_text = f"Recent browser events: {self.browser_state.recent_events}\n"
 
         # Add closed popup messages if any
         closed_popups_text = ""
@@ -356,9 +331,7 @@ Available tabs:
         time_str = datetime.now().strftime("%Y-%m-%d")
         step_info_description += f"Today:{time_str}"
 
-        _todo_contents = (
-            self.file_system.get_todo_contents() if self.file_system else ""
-        )
+        _todo_contents = self.file_system.get_todo_contents() if self.file_system else ""
         if not len(_todo_contents):
             _todo_contents = "[empty todo.md, fill it when applicable]"
 
@@ -382,7 +355,9 @@ Available tabs:
         agent_state += f"<step_info>{step_info_description}</step_info>\n"
         if self.available_file_paths:
             available_file_paths_text = "\n".join(self.available_file_paths)
-            agent_state += f"<available_file_paths>{available_file_paths_text}\nUse with absolute paths</available_file_paths>\n"
+            agent_state += (
+                f"<available_file_paths>{available_file_paths_text}\nUse with absolute paths</available_file_paths>\n"
+            )
         return agent_state
 
     def _resize_screenshot(self, screenshot_b64: str) -> str:
@@ -410,9 +385,7 @@ Available tabs:
             img_resized.save(buffer, format="PNG")
             return base64.b64encode(buffer.getvalue()).decode("utf-8")
         except Exception as e:
-            logging.getLogger(__name__).warning(
-                f"Failed to resize screenshot: {e}, using original"
-            )
+            logging.getLogger(__name__).warning(f"Failed to resize screenshot: {e}, using original")
             return screenshot_b64
 
     @observe_debug(ignore_input=True, ignore_output=True, name="get_user_message")
@@ -430,33 +403,17 @@ Available tabs:
         # Build complete state description
         state_description = (
             "<agent_history>\n"
-            + (
-                self.agent_history_description.strip("\n")
-                if self.agent_history_description
-                else ""
-            )
+            + (self.agent_history_description.strip("\n") if self.agent_history_description else "")
             + "\n</agent_history>\n\n"
         )
+        state_description += "<agent_state>\n" + self._get_agent_state_description().strip("\n") + "\n</agent_state>\n"
         state_description += (
-            "<agent_state>\n"
-            + self._get_agent_state_description().strip("\n")
-            + "\n</agent_state>\n"
-        )
-        state_description += (
-            "<browser_state>\n"
-            + self._get_browser_state_description().strip("\n")
-            + "\n</browser_state>\n"
+            "<browser_state>\n" + self._get_browser_state_description().strip("\n") + "\n</browser_state>\n"
         )
         # Only add read_state if it has content
-        read_state_description = (
-            self.read_state_description.strip("\n").strip()
-            if self.read_state_description
-            else ""
-        )
+        read_state_description = self.read_state_description.strip("\n").strip() if self.read_state_description else ""
         if read_state_description:
-            state_description += (
-                "<read_state>\n" + read_state_description + "\n</read_state>\n"
-            )
+            state_description += "<read_state>\n" + read_state_description + "\n</read_state>\n"
 
         if self.page_filtered_actions:
             state_description += "<page_specific_actions>\n"
@@ -474,9 +431,7 @@ Available tabs:
         # 600k chars = ~150k tokens, leaving room for system prompt and output
         # Images are handled separately in the LLM adapter
         MAX_TOTAL_CHARS = 600000
-        logger.info(
-            f"state_description size before truncation check: {len(state_description)} chars"
-        )
+        logger.info(f"state_description size before truncation check: {len(state_description)} chars")
         if len(state_description) > MAX_TOTAL_CHARS:
             # Truncate browser_state first since it's usually the largest part
             browser_state_start = state_description.find("<browser_state>")
@@ -484,17 +439,13 @@ Available tabs:
 
             if browser_state_start >= 0 and browser_state_end >= 0:
                 before_browser = state_description[:browser_state_start]
-                after_browser = state_description[
-                    browser_state_end + len("</browser_state>") :
-                ]
+                after_browser = state_description[browser_state_end + len("</browser_state>") :]
                 browser_state_content = state_description[
                     browser_state_start : browser_state_end + len("</browser_state>")
                 ]
 
                 # Calculate how much we can keep
-                available_chars = (
-                    MAX_TOTAL_CHARS - len(before_browser) - len(after_browser)
-                )
+                available_chars = MAX_TOTAL_CHARS - len(before_browser) - len(after_browser)
 
                 if available_chars > 1000:  # Keep at least some browser state
                     # Truncate browser_state
@@ -503,24 +454,14 @@ Available tabs:
                     last_tag = browser_state_content.rfind(">")
                     if last_tag > 0:
                         browser_state_content = browser_state_content[: last_tag + 1]
-                    browser_state_content += (
-                        "\n... [Browser state truncated at 200k chars total]"
-                    )
+                    browser_state_content += "\n... [Browser state truncated at 200k chars total]"
 
-                    state_description = (
-                        before_browser + browser_state_content + after_browser
-                    )
+                    state_description = before_browser + browser_state_content + after_browser
                 else:
                     # Not enough space, just truncate everything
-                    state_description = (
-                        state_description[:MAX_TOTAL_CHARS]
-                        + "\n... [Content truncated at 200k chars]"
-                    )
+                    state_description = state_description[:MAX_TOTAL_CHARS] + "\n... [Content truncated at 200k chars]"
             else:
-                state_description = (
-                    state_description[:MAX_TOTAL_CHARS]
-                    + "\n... [Content truncated at 200k chars]"
-                )
+                state_description = state_description[:MAX_TOTAL_CHARS] + "\n... [Content truncated at 200k chars]"
 
             logger.warning(
                 f"Total state_description truncated from {len(state_description)} to {MAX_TOTAL_CHARS} chars"
@@ -578,9 +519,7 @@ Available tabs:
                     media_type = "image/jpeg"
 
                 # Add label
-                content_parts.append(
-                    ContentPartTextParam(text=f"Image from file: {img_name}")
-                )
+                content_parts.append(ContentPartTextParam(text=f"Image from file: {img_name}"))
 
                 # Add the image
                 content_parts.append(
@@ -600,38 +539,27 @@ Available tabs:
         if use_vision and self.screenshots:
             # Estimate screenshot size (base64 encoded)
             total_size += len(self.screenshots) * 500000  # Estimate 500k per screenshot
-        total_size += (
-            len(self.read_state_images) * 500000
-        )  # Estimate for read_state images
+        total_size += len(self.read_state_images) * 500000  # Estimate for read_state images
 
         # Apply a hard limit to prevent exceeding 73728 tokens (~295k chars)
         # Leave room for system prompt and schema
-        MAX_TOTAL_SIZE = (
-            250000  # ~62.5k tokens, leaving room for system prompt and schema
-        )
+        MAX_TOTAL_SIZE = 250000  # ~62.5k tokens, leaving room for system prompt and schema
         if total_size > MAX_TOTAL_SIZE:
             # Disable vision or reduce screenshot count
             if use_vision and len(self.screenshots) > 0:
-                logger.warning(
-                    f"Disabling vision to reduce message size from {total_size} to {MAX_TOTAL_SIZE} chars"
-                )
+                logger.warning(f"Disabling vision to reduce message size from {total_size} to {MAX_TOTAL_SIZE} chars")
                 return UserMessage(content=state_description, cache=True)
-            logger.warning(
-                f"Message size {total_size} chars exceeds limit {MAX_TOTAL_CHARS}, truncating"
-            )
+            logger.warning(f"Message size {total_size} chars exceeds limit {MAX_TOTAL_CHARS}, truncating")
             # Just return text-only message
             return UserMessage(
-                content=state_description[:MAX_TOTAL_SIZE]
-                + "\n... [Message truncated at 250k chars]",
+                content=state_description[:MAX_TOTAL_SIZE] + "\n... [Message truncated at 250k chars]",
                 cache=True,
             )
 
         return UserMessage(content=state_description, cache=True)
 
 
-def get_rerun_summary_prompt(
-    original_task: str, total_steps: int, success_count: int, error_count: int
-) -> str:
+def get_rerun_summary_prompt(original_task: str, total_steps: int, success_count: int, error_count: int) -> str:
     return f'''You are analyzing the completion of a rerun task. Based on the screenshot and execution info, provide a summary.
 
 Original task: {original_task}
@@ -652,9 +580,7 @@ Respond with:
 - completion_status: One of "complete", "partial", or "failed"'''
 
 
-def get_rerun_summary_message(
-    prompt: str, screenshot_b64: str | None = None
-) -> UserMessage:
+def get_rerun_summary_message(prompt: str, screenshot_b64: str | None = None) -> UserMessage:
     """
     Build a UserMessage for rerun summary generation.
 

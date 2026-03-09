@@ -29,9 +29,7 @@ except ImportError:
 class MCPToolWrapper:
     """Wrapper to integrate MCP tools as browser-use actions."""
 
-    def __init__(
-        self, registry: Registry, mcp_command: str, mcp_args: list[str] | None = None
-    ):
+    def __init__(self, registry: Registry, mcp_command: str, mcp_args: list[str] | None = None):
         """Initialize MCP tool wrapper.
 
         Args:
@@ -55,14 +53,10 @@ class MCPToolWrapper:
         if self.session:
             return  # Already connected
 
-        logger.info(
-            f'🔌 Connecting to MCP server: {self.mcp_command} {" ".join(self.mcp_args)}'
-        )
+        logger.info(f'🔌 Connecting to MCP server: {self.mcp_command} {" ".join(self.mcp_args)}')
 
         # Create server parameters
-        server_params = StdioServerParameters(
-            command=self.mcp_command, args=self.mcp_args, env=None
-        )
+        server_params = StdioServerParameters(command=self.mcp_command, args=self.mcp_args, env=None)
 
         # Connect to the MCP server
         async with stdio_client(server_params) as (read, write):
@@ -76,9 +70,7 @@ class MCPToolWrapper:
                 tools_response = await session.list_tools()
                 self._tools = {tool.name: tool for tool in tools_response.tools}
 
-                logger.info(
-                    f"📦 Discovered {len(self._tools)} MCP tools: {list(self._tools.keys())}"
-                )
+                logger.info(f"📦 Discovered {len(self._tools)} MCP tools: {list(self._tools.keys())}")
 
                 # Register all discovered tools as actions
                 for tool_name, tool in self._tools.items():
@@ -132,11 +124,7 @@ class MCPToolWrapper:
                 param_fields[param_name] = (param_type, Field(default, **field_kwargs))
 
         # Create Pydantic model for the tool parameters
-        param_model = (
-            create_model(f"{tool_name}_Params", **param_fields)
-            if param_fields
-            else None
-        )
+        param_model = create_model(f"{tool_name}_Params", **param_fields) if param_fields else None
 
         # Determine if this is a browser-specific tool
         tool_name.startswith("browser_")
@@ -206,9 +194,7 @@ class MCPToolWrapper:
         description = tool.description or f"MCP tool: {tool_name}"
 
         # Use the decorator to register the action
-        self.registry.action(
-            description=description, param_model=param_model, domains=domains
-        )(mcp_action_wrapper)
+        self.registry.action(description=description, param_model=param_model, domains=domains)(mcp_action_wrapper)
 
         self._registered_actions.add(tool_name)
         logger.info(f"✅ Registered MCP tool as action: {tool_name}")
@@ -250,9 +236,7 @@ class MCPToolWrapper:
 
 
 # Convenience function for easy integration
-async def register_mcp_tools(
-    registry: Registry, mcp_command: str, mcp_args: list[str] | None = None
-) -> MCPToolWrapper:
+async def register_mcp_tools(registry: Registry, mcp_command: str, mcp_args: list[str] | None = None) -> MCPToolWrapper:
     """Register MCP tools with a browser-use registry.
 
     Args:

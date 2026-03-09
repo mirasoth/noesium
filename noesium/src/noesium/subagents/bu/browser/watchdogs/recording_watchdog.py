@@ -47,15 +47,11 @@ class RecordingWatchdog(BaseWatchdog):
         # Dynamically determine video size
         size = profile.record_video_size
         if not size:
-            self.logger.debug(
-                "record_video_size not specified, detecting viewport size..."
-            )
+            self.logger.debug("record_video_size not specified, detecting viewport size...")
             size = await self._get_current_viewport_size()
 
         if not size:
-            self.logger.warning(
-                "Cannot start video recording: viewport size could not be determined."
-            )
+            self.logger.warning("Cannot start video recording: viewport size could not be determined.")
             return
 
         video_format = getattr(profile, "record_video_format", "mp4").strip(".")
@@ -71,9 +67,7 @@ class RecordingWatchdog(BaseWatchdog):
             self._recorder = None
             return
 
-        self.browser_session.cdp_client.register.Page.screencastFrame(
-            self.on_screencastFrame
-        )
+        self.browser_session.cdp_client.register.Page.screencastFrame(self.on_screencastFrame)
 
         self._screencast_params = {
             "format": "png",
@@ -90,9 +84,7 @@ class RecordingWatchdog(BaseWatchdog):
         Switches video recording to the new tab.
         """
         if self._recorder:
-            self.logger.debug(
-                f"Agent focus changed to {event.target_id}, switching screencast..."
-            )
+            self.logger.debug(f"Agent focus changed to {event.target_id}, switching screencast...")
             await self._start_screencast()
 
     async def _start_screencast(self) -> None:
@@ -112,14 +104,10 @@ class RecordingWatchdog(BaseWatchdog):
             if self._current_session_id:
                 try:
                     # Use the root client to stop screencast on the specific session
-                    await self.browser_session.cdp_client.send.Page.stopScreencast(
-                        session_id=self._current_session_id
-                    )
+                    await self.browser_session.cdp_client.send.Page.stopScreencast(session_id=self._current_session_id)
                 except Exception as e:
                     # It's possible the session is already closed
-                    self.logger.debug(
-                        f"Failed to stop screencast on old session {self._current_session_id}: {e}"
-                    )
+                    self.logger.debug(f"Failed to stop screencast on old session {self._current_session_id}: {e}")
 
             self._current_session_id = cdp_session.session_id
 
@@ -128,9 +116,7 @@ class RecordingWatchdog(BaseWatchdog):
                 params=self._screencast_params,  # type: ignore
                 session_id=cdp_session.session_id,
             )
-            self.logger.info(
-                f"📹 Started/Switched video recording to target {cdp_session.target_id}"
-            )
+            self.logger.info(f"📹 Started/Switched video recording to target {cdp_session.target_id}")
         except Exception as e:
             self.logger.error(f"Failed to switch screencast via CDP: {e}")
             # If we fail to start on the new tab, we reset current session id
@@ -140,9 +126,7 @@ class RecordingWatchdog(BaseWatchdog):
         """Gets the current viewport size directly from the browser via CDP."""
         try:
             cdp_session = await self.browser_session.get_or_create_cdp_session()
-            metrics = await cdp_session.cdp_client.send.Page.getLayoutMetrics(
-                session_id=cdp_session.session_id
-            )
+            metrics = await cdp_session.cdp_client.send.Page.getLayoutMetrics(session_id=cdp_session.session_id)
 
             # Use cssVisualViewport for the most accurate representation of the visible area
             viewport = metrics.get("cssVisualViewport", {})
@@ -157,9 +141,7 @@ class RecordingWatchdog(BaseWatchdog):
 
         return None
 
-    def on_screencastFrame(
-        self, event: ScreencastFrameEvent, session_id: str | None
-    ) -> None:
+    def on_screencastFrame(self, event: ScreencastFrameEvent, session_id: str | None) -> None:
         """
         Synchronous handler for incoming screencast frames.
         """
@@ -178,9 +160,7 @@ class RecordingWatchdog(BaseWatchdog):
             suppress_exceptions=True,
         )
 
-    async def _ack_screencast_frame(
-        self, event: ScreencastFrameEvent, session_id: str | None
-    ) -> None:
+    async def _ack_screencast_frame(self, event: ScreencastFrameEvent, session_id: str | None) -> None:
         """
         Asynchronously acknowledges a screencast frame.
         """

@@ -60,10 +60,7 @@ class ArxivToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         if not ARXIV_AVAILABLE:
-            raise ImportError(
-                "arxiv package is required for ArxivToolkit. "
-                "Install with: pip install arxiv"
-            )
+            raise ImportError("arxiv package is required for ArxivToolkit. " "Install with: pip install arxiv")
 
         # Initialize arXiv client
         self.client = arxiv.Client()
@@ -104,9 +101,7 @@ class ArxivToolkit(AsyncBaseToolkit):
             "SubmittedDate": arxiv.SortCriterion.SubmittedDate,
         }
 
-        sort_criterion = sort_mapping.get(
-            sort_by or self.default_sort_by, arxiv.SortCriterion.Relevance
-        )
+        sort_criterion = sort_mapping.get(sort_by or self.default_sort_by, arxiv.SortCriterion.Relevance)
 
         search_query = arxiv.Search(
             query=query,
@@ -161,9 +156,7 @@ class ArxivToolkit(AsyncBaseToolkit):
         self.logger.info(f"Searching arXiv for: {query}")
 
         try:
-            search_results = self._get_search_results(
-                query, paper_ids, max_results, sort_by
-            )
+            search_results = self._get_search_results(query, paper_ids, max_results, sort_by)
             papers_data = []
 
             for paper in search_results:
@@ -254,9 +247,7 @@ class ArxivToolkit(AsyncBaseToolkit):
                     self.logger.warning(error_msg)
 
             # Prepare result message
-            result_msg = (
-                f"Successfully downloaded {downloaded_count} papers to {output_dir}"
-            )
+            result_msg = f"Successfully downloaded {downloaded_count} papers to {output_dir}"
 
             if failed_downloads:
                 result_msg += f"\n\nFailed downloads ({len(failed_downloads)}):\n"
@@ -285,20 +276,14 @@ class ArxivToolkit(AsyncBaseToolkit):
             # Clean paper ID (remove arxiv: prefix if present)
             clean_id = paper_id.replace("arxiv:", "")
 
-            search_results = self._get_search_results(
-                "", paper_ids=[clean_id], max_results=1
-            )
+            search_results = self._get_search_results("", paper_ids=[clean_id], max_results=1)
 
             for paper in search_results:
                 return {
                     "title": paper.title.strip(),
                     "authors": [author.name for author in paper.authors],
-                    "published_date": (
-                        paper.published.isoformat() if paper.published else None
-                    ),
-                    "updated_date": (
-                        paper.updated.isoformat() if paper.updated else None
-                    ),
+                    "published_date": (paper.published.isoformat() if paper.published else None),
+                    "updated_date": (paper.updated.isoformat() if paper.updated else None),
                     "entry_id": paper.entry_id,
                     "summary": paper.summary.strip(),
                     "pdf_url": paper.pdf_url,
@@ -307,9 +292,7 @@ class ArxivToolkit(AsyncBaseToolkit):
                     "doi": paper.doi,
                     "journal_ref": paper.journal_ref,
                     "comment": paper.comment,
-                    "links": [
-                        {"href": link.href, "title": link.title} for link in paper.links
-                    ],
+                    "links": [{"href": link.href, "title": link.title} for link in paper.links],
                 }
 
             return {"error": f"Paper with ID '{paper_id}' not found"}

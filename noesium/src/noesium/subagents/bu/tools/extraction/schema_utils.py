@@ -36,9 +36,7 @@ _PRIMITIVE_MAP: dict[str, type] = {
 
 
 class _StrictBase(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid", validate_by_name=True, validate_by_alias=True
-    )
+    model_config = ConfigDict(extra="forbid", validate_by_name=True, validate_by_alias=True)
 
 
 def _check_unsupported(schema: dict) -> None:

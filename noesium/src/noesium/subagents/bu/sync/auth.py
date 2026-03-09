@@ -87,9 +87,7 @@ class CloudAuthConfig(BaseModel):
 class DeviceAuthClient:
     """Client for OAuth2 device authorization flow"""
 
-    def __init__(
-        self, base_url: str | None = None, http_client: httpx.AsyncClient | None = None
-    ):
+    def __init__(self, base_url: str | None = None, http_client: httpx.AsyncClient | None = None):
         # Backend API URL for OAuth requests - can be passed directly or defaults to env var
         self.base_url = base_url or CONFIG.BROWSER_USE_CLOUD_API_URL
         self.client_id = "library"
@@ -197,9 +195,7 @@ class DeviceAuthClient:
 
                         # Check for other errors
                         if "error" in data:
-                            print(
-                                f'Error: {data.get("error_description", data["error"])}'
-                            )
+                            print(f'Error: {data.get("error_description", data["error"])}')
                             return None
 
                         # Success! We have a token
@@ -213,9 +209,7 @@ class DeviceAuthClient:
                             "authorization_pending",
                             "slow_down",
                         ]:
-                            print(
-                                f'Error: {data.get("error_description", "Unknown error")}'
-                            )
+                            print(f'Error: {data.get("error_description", "Unknown error")}')
                             return None
 
                     else:
@@ -256,9 +250,7 @@ class DeviceAuthClient:
 
                             # Check for other errors
                             if "error" in data:
-                                print(
-                                    f'Error: {data.get("error_description", data["error"])}'
-                                )
+                                print(f'Error: {data.get("error_description", data["error"])}')
                                 return None
 
                             # Success! We have a token
@@ -272,9 +264,7 @@ class DeviceAuthClient:
                                 "authorization_pending",
                                 "slow_down",
                             ]:
-                                print(
-                                    f'Error: {data.get("error_description", "Unknown error")}'
-                                )
+                                print(f'Error: {data.get("error_description", "Unknown error")}')
                                 return None
 
                         else:
@@ -306,15 +296,11 @@ class DeviceAuthClient:
             device_auth = await self.start_device_authorization(agent_session_id)
 
             # Use frontend URL for user-facing links
-            frontend_url = CONFIG.BROWSER_USE_CLOUD_UI_URL or self.base_url.replace(
-                "//api.", "//cloud."
-            )
+            frontend_url = CONFIG.BROWSER_USE_CLOUD_UI_URL or self.base_url.replace("//api.", "//cloud.")
 
             # Replace backend URL with frontend URL in verification URIs
             device_auth["verification_uri"].replace(self.base_url, frontend_url)
-            verification_uri_complete = device_auth[
-                "verification_uri_complete"
-            ].replace(self.base_url, frontend_url)
+            verification_uri_complete = device_auth["verification_uri_complete"].replace(self.base_url, frontend_url)
 
             terminal_width, _terminal_height = shutil.get_terminal_size((80, 20))
             if show_instructions and CONFIG.BROWSER_USE_CLOUD_SYNC:
@@ -359,14 +345,10 @@ class DeviceAuthClient:
             pass
         except Exception as e:
             # Other unexpected errors
-            logger.warning(
-                f"❌ Unexpected error during cloud sync authentication: {type(e).__name__}: {e}"
-            )
+            logger.warning(f"❌ Unexpected error during cloud sync authentication: {type(e).__name__}: {e}")
 
         if show_instructions:
-            logger.debug(
-                f"❌ Sync authentication failed or timed out with {CONFIG.BROWSER_USE_CLOUD_API_URL}"
-            )
+            logger.debug(f"❌ Sync authentication failed or timed out with {CONFIG.BROWSER_USE_CLOUD_API_URL}")
 
         return False
 

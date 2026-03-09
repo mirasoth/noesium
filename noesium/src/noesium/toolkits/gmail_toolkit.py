@@ -68,9 +68,7 @@ class GmailService:
             access_token: Direct access token (skips file-based auth if provided)
         """
         if not GOOGLE_AVAILABLE:
-            raise ImportError(
-                "Google packages are not installed. Install them with: pip install 'noesium[google]'"
-            )
+            raise ImportError("Google packages are not installed. Install them with: pip install 'noesium[google]'")
 
         # Set up configuration directory
         if config_dir is None:
@@ -83,9 +81,7 @@ class GmailService:
             self.config_dir.mkdir(parents=True, exist_ok=True)
 
         # Set up credential paths
-        self.credentials_file = (
-            credentials_file or self.config_dir / "gmail_credentials.json"
-        )
+        self.credentials_file = credentials_file or self.config_dir / "gmail_credentials.json"
         self.token_file = token_file or self.config_dir / "gmail_token.json"
 
         # Direct access token support
@@ -122,9 +118,7 @@ class GmailService:
             # Original file-based authentication flow
             # Try to load existing tokens
             if os.path.exists(self.token_file):
-                self.creds = Credentials.from_authorized_user_file(
-                    str(self.token_file), self.SCOPES
-                )
+                self.creds = Credentials.from_authorized_user_file(str(self.token_file), self.SCOPES)
                 logger.debug("📁 Loaded existing tokens")
 
             # If no valid credentials, run OAuth flow
@@ -145,9 +139,7 @@ class GmailService:
                         )
                         return False
 
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        str(self.credentials_file), self.SCOPES
-                    )
+                    flow = InstalledAppFlow.from_client_secrets_file(str(self.credentials_file), self.SCOPES)
                     # Use specific redirect URI to match OAuth credentials
                     self.creds = flow.run_local_server(port=8080, open_browser=True)
 
@@ -179,9 +171,7 @@ class GmailService:
             List of email dictionaries with parsed content
         """
         if not self.is_authenticated():
-            logger.error(
-                "❌ Gmail service not authenticated. Call authenticate() first."
-            )
+            logger.error("❌ Gmail service not authenticated. Call authenticate() first.")
             return []
 
         try:
@@ -195,12 +185,7 @@ class GmailService:
 
             # Get message list
             assert self.service is not None
-            results = (
-                self.service.users()
-                .messages()
-                .list(userId="me", maxResults=max_results, q=query)
-                .execute()
-            )
+            results = self.service.users().messages().list(userId="me", maxResults=max_results, q=query).execute()
 
             messages = results.get("messages", [])
             if not messages:
@@ -215,10 +200,7 @@ class GmailService:
                 logger.debug(f"📖 Reading email {i}/{len(messages)}...")
 
                 full_message = (
-                    self.service.users()
-                    .messages()
-                    .get(userId="me", id=message["id"], format="full")
-                    .execute()
+                    self.service.users().messages().get(userId="me", id=message["id"], format="full").execute()
                 )
 
                 email_data = self._parse_email(full_message)
@@ -259,22 +241,12 @@ class GmailService:
         elif payload.get("parts"):
             # Multi-part email
             for part in payload["parts"]:
-                if part["mimeType"] == "text/plain" and part.get("body", {}).get(
-                    "data"
-                ):
-                    part_body = base64.urlsafe_b64decode(part["body"]["data"]).decode(
-                        "utf-8"
-                    )
+                if part["mimeType"] == "text/plain" and part.get("body", {}).get("data"):
+                    part_body = base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8")
                     body += part_body
-                elif (
-                    part["mimeType"] == "text/html"
-                    and not body
-                    and part.get("body", {}).get("data")
-                ):
+                elif part["mimeType"] == "text/html" and not body and part.get("body", {}).get("data"):
                     # Fallback to HTML if no plain text
-                    body = base64.urlsafe_b64decode(part["body"]["data"]).decode(
-                        "utf-8"
-                    )
+                    body = base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8")
 
         return body
 
@@ -311,15 +283,9 @@ class GmailToolkit(AsyncBaseToolkit):
         super().__init__(config)
 
         # Get configuration from environment or config
-        access_token = self.config.config.get("GMAIL_ACCESS_TOKEN") or os.getenv(
-            "GMAIL_ACCESS_TOKEN"
-        )
-        credentials_file = self.config.config.get(
-            "GMAIL_CREDENTIALS_FILE"
-        ) or os.getenv("GMAIL_CREDENTIALS_PATH")
-        token_file = self.config.config.get("GMAIL_TOKEN_FILE") or os.getenv(
-            "GMAIL_TOKEN_PATH"
-        )
+        access_token = self.config.config.get("GMAIL_ACCESS_TOKEN") or os.getenv("GMAIL_ACCESS_TOKEN")
+        credentials_file = self.config.config.get("GMAIL_CREDENTIALS_FILE") or os.getenv("GMAIL_CREDENTIALS_PATH")
+        token_file = self.config.config.get("GMAIL_TOKEN_FILE") or os.getenv("GMAIL_TOKEN_PATH")
 
         # Initialize Gmail service
         self.gmail_service = GmailService(
@@ -355,9 +321,7 @@ class GmailToolkit(AsyncBaseToolkit):
             self.logger.error(error_msg)
             return f"❌ {error_msg}"
 
-    async def get_recent_emails(
-        self, keyword: str = "", max_results: int = 10, time_filter: str = "1h"
-    ) -> str:
+    async def get_recent_emails(self, keyword: str = "", max_results: int = 10, time_filter: str = "1h") -> str:
         """
         Get recent emails from the mailbox with optional keyword filtering.
 
@@ -378,9 +342,7 @@ class GmailToolkit(AsyncBaseToolkit):
         try:
             # Ensure authentication
             if not self.gmail_service.is_authenticated():
-                self.logger.info(
-                    "📧 Gmail not authenticated, attempting authentication..."
-                )
+                self.logger.info("📧 Gmail not authenticated, attempting authentication...")
                 if not await self.gmail_service.authenticate():
                     return "❌ Failed to authenticate with Gmail. Please ensure Gmail credentials are set up properly."
 
@@ -405,7 +367,9 @@ class GmailToolkit(AsyncBaseToolkit):
                 return f"📭 No recent emails found from last {time_filter}{query_info}"
 
             # Format results
-            content = f'📧 Found {len(emails)} recent email{"s" if len(emails) > 1 else ""} from the last {time_filter}:\n\n'
+            content = (
+                f'📧 Found {len(emails)} recent email{"s" if len(emails) > 1 else ""} from the last {time_filter}:\n\n'
+            )
 
             for i, email in enumerate(emails, 1):
                 content += f"Email {i}:\n"
@@ -423,9 +387,7 @@ class GmailToolkit(AsyncBaseToolkit):
             self.logger.error(error_msg)
             return f"❌ {error_msg}"
 
-    async def search_emails(
-        self, query: str, max_results: int = 10, time_filter: Optional[str] = None
-    ) -> str:
+    async def search_emails(self, query: str, max_results: int = 10, time_filter: Optional[str] = None) -> str:
         """
         Search emails using Gmail search syntax.
 
@@ -463,11 +425,7 @@ class GmailToolkit(AsyncBaseToolkit):
 
             # Add time filter if provided
             full_query = query
-            if (
-                time_filter
-                and "newer_than:" not in query
-                and "older_than:" not in query
-            ):
+            if time_filter and "newer_than:" not in query and "older_than:" not in query:
                 full_query = f"newer_than:{time_filter} {query}".strip()
 
             self.logger.info(f"🔍 Gmail search query: {full_query}")
@@ -476,8 +434,7 @@ class GmailToolkit(AsyncBaseToolkit):
             emails = await self.gmail_service.get_recent_emails(
                 max_results=max_results,
                 query=full_query,
-                time_filter=time_filter
-                or "30d",  # Default to 30 days if no time filter
+                time_filter=time_filter or "30d",  # Default to 30 days if no time filter
             )
 
             if not emails:
@@ -502,9 +459,7 @@ class GmailToolkit(AsyncBaseToolkit):
             self.logger.error(error_msg)
             return f"❌ {error_msg}"
 
-    async def get_verification_codes(
-        self, sender_keyword: str = "", time_filter: str = "10m"
-    ) -> str:
+    async def get_verification_codes(self, sender_keyword: str = "", time_filter: str = "10m") -> str:
         """
         Extract verification codes, OTP tokens, and 2FA codes from recent emails.
 
@@ -594,7 +549,9 @@ class GmailToolkit(AsyncBaseToolkit):
                 return f"🔍 Found {len(emails)} verification emails but no codes could be extracted. Check emails manually."
 
             # Format results
-            content = f"🔐 Found {len(codes_found)} potential verification code{'s' if len(codes_found) > 1 else ''}:\n\n"
+            content = (
+                f"🔐 Found {len(codes_found)} potential verification code{'s' if len(codes_found) > 1 else ''}:\n\n"
+            )
 
             for i, code_info in enumerate(codes_found[:5], 1):  # Show top 5 codes
                 content += f"Code {i}: {code_info['code']}\n"

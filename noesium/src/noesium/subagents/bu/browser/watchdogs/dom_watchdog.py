@@ -112,9 +112,7 @@ class DOMWatchdog(BaseWatchdog):
 
         try:
             # get_or_create_cdp_session() now handles focus validation automatically
-            cdp_session = await self.browser_session.get_or_create_cdp_session(
-                focus=True
-            )
+            cdp_session = await self.browser_session.get_or_create_cdp_session(focus=True)
 
             # Use performance API to get pending requests
             js_code = """
@@ -221,9 +219,7 @@ class DOMWatchdog(BaseWatchdog):
 
                 # Get all domains that had recent activity (from JS)
                 all_domains = debug_info.get("all_domains", [])
-                all_domains_str = (
-                    ", ".join(sorted(all_domains)[:5]) if all_domains else "none"
-                )
+                all_domains_str = ", ".join(sorted(all_domains)[:5]) if all_domains else "none"
                 if len(all_domains) > 5:
                     all_domains_str += f" +{len(all_domains) - 5} more"
 
@@ -237,9 +233,7 @@ class DOMWatchdog(BaseWatchdog):
 
                 # Convert to NetworkRequest objects
                 network_requests = []
-                for req in pending[
-                    :20
-                ]:  # Limit to 20 to avoid overwhelming the context
+                for req in pending[:20]:  # Limit to 20 to avoid overwhelming the context
                     network_requests.append(
                         NetworkRequest(
                             url=req["url"],
@@ -256,12 +250,8 @@ class DOMWatchdog(BaseWatchdog):
 
         return []
 
-    @observe_debug(
-        ignore_input=True, ignore_output=True, name="browser_state_request_event"
-    )
-    async def on_BrowserStateRequestEvent(
-        self, event: BrowserStateRequestEvent
-    ) -> "BrowserStateSummary":
+    @observe_debug(ignore_input=True, ignore_output=True, name="browser_state_request_event")
+    async def on_BrowserStateRequestEvent(self, event: BrowserStateRequestEvent) -> "BrowserStateSummary":
         """Handle browser state request by coordinating DOM building and screenshot capture.
 
         This is the main entry point for getting the complete browser state.
@@ -274,19 +264,13 @@ class DOMWatchdog(BaseWatchdog):
         """
         from noesium.subagents.bu.browser.views import BrowserStateSummary, PageInfo
 
-        self.logger.debug(
-            "🔍 DOMWatchdog.on_BrowserStateRequestEvent: STARTING browser state request"
-        )
+        self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: STARTING browser state request")
         page_url = await self.browser_session.get_current_page_url()
-        self.logger.debug(
-            f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Got page URL: {page_url}"
-        )
+        self.logger.debug(f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Got page URL: {page_url}")
 
         # Get focused session for logging (validation already done by get_current_page_url)
         if self.browser_session.agent_focus_target_id:
-            self.logger.debug(
-                f"Current page URL: {page_url}, target_id: {self.browser_session.agent_focus_target_id}"
-            )
+            self.logger.debug(f"Current page URL: {page_url}, target_id: {self.browser_session.agent_focus_target_id}")
 
         # check if we should skip DOM tree build for pointless pages
         not_a_meaningful_website = page_url.lower().split(":", 1)[0] not in (
@@ -298,9 +282,7 @@ class DOMWatchdog(BaseWatchdog):
         pending_requests_before_wait = []
         if not not_a_meaningful_website:
             try:
-                pending_requests_before_wait = (
-                    await self._get_pending_network_requests()
-                )
+                pending_requests_before_wait = await self._get_pending_network_requests()
                 if pending_requests_before_wait:
                     self.logger.debug(
                         f"🔍 Found {len(pending_requests_before_wait)} pending requests before stability wait"
@@ -310,32 +292,22 @@ class DOMWatchdog(BaseWatchdog):
         pending_requests = pending_requests_before_wait
         # Wait for page stability using browser profile settings (main branch pattern)
         if not not_a_meaningful_website:
-            self.logger.debug(
-                "🔍 DOMWatchdog.on_BrowserStateRequestEvent: ⏳ Waiting for page stability..."
-            )
+            self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: ⏳ Waiting for page stability...")
             try:
                 if pending_requests_before_wait:
                     # Reduced from 1s to 0.3s for faster DOM builds while still allowing critical resources to load
                     await asyncio.sleep(0.3)
-                self.logger.debug(
-                    "🔍 DOMWatchdog.on_BrowserStateRequestEvent: ✅ Page stability complete"
-                )
+                self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: ✅ Page stability complete")
             except Exception as e:
                 self.logger.warning(
                     f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Network waiting failed: {e}, continuing anyway..."
                 )
 
         # Get tabs info once at the beginning for all paths
-        self.logger.debug(
-            "🔍 DOMWatchdog.on_BrowserStateRequestEvent: Getting tabs info..."
-        )
+        self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: Getting tabs info...")
         tabs_info = await self.browser_session.get_tabs()
-        self.logger.debug(
-            f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Got {len(tabs_info)} tabs"
-        )
-        self.logger.debug(
-            f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Tabs info: {tabs_info}"
-        )
+        self.logger.debug(f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Got {len(tabs_info)} tabs")
+        self.logger.debug(f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Tabs info: {tabs_info}")
 
         # Get viewport / scroll position info, remember changing scroll position should invalidate selector_map cache because it only includes visible elements
         # cdp_session = await self.browser_session.get_or_create_cdp_session(focus=True)
@@ -348,12 +320,8 @@ class DOMWatchdog(BaseWatchdog):
         try:
             # Fast path for empty pages
             if not_a_meaningful_website:
-                self.logger.debug(
-                    f"⚡ Skipping BuildDOMTree for empty target: {page_url}"
-                )
-                self.logger.debug(
-                    f"📸 Not taking screenshot for empty page: {page_url} (non-http/https URL)"
-                )
+                self.logger.debug(f"⚡ Skipping BuildDOMTree for empty target: {page_url}")
+                self.logger.debug(f"📸 Not taking screenshot for empty page: {page_url} (non-http/https URL)")
 
                 # Create minimal DOM state
                 content = SerializedDOMState(_root=None, selector_map={})
@@ -365,9 +333,7 @@ class DOMWatchdog(BaseWatchdog):
                 try:
                     page_info = await self._get_page_info()
                 except Exception as e:
-                    self.logger.debug(
-                        f"Failed to get page info from CDP for empty page: {e}, using fallback"
-                    )
+                    self.logger.debug(f"Failed to get page info from CDP for empty page: {e}, using fallback")
                     # Use default viewport dimensions
                     viewport = self.browser_session.browser_profile.viewport or {
                         "width": 1280,
@@ -397,11 +363,7 @@ class DOMWatchdog(BaseWatchdog):
                     pixels_below=0,
                     browser_errors=[],
                     is_pdf_viewer=False,
-                    recent_events=(
-                        self._get_recent_events_str()
-                        if event.include_recent_events
-                        else None
-                    ),
+                    recent_events=(self._get_recent_events_str() if event.include_recent_events else None),
                     pending_network_requests=[],  # Empty page has no pending requests
                     pagination_buttons=[],  # Empty page has no pagination
                     closed_popup_messages=self.browser_session._closed_popup_messages.copy(),
@@ -413,9 +375,7 @@ class DOMWatchdog(BaseWatchdog):
 
             # Start DOM building task if requested
             if event.include_dom:
-                self.logger.debug(
-                    "🔍 DOMWatchdog.on_BrowserStateRequestEvent: 🌳 Starting DOM tree build task..."
-                )
+                self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: 🌳 Starting DOM tree build task...")
 
                 previous_state = (
                     self.browser_session._cached_browser_state_summary.dom_state
@@ -432,9 +392,7 @@ class DOMWatchdog(BaseWatchdog):
 
             # Start clean screenshot task if requested (without JS highlights)
             if event.include_screenshot:
-                self.logger.debug(
-                    "🔍 DOMWatchdog.on_BrowserStateRequestEvent: 📸 Starting clean screenshot task..."
-                )
+                self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: 📸 Starting clean screenshot task...")
                 screenshot_task = create_task_with_error_handling(
                     self._capture_clean_screenshot(),
                     name="capture_screenshot",
@@ -449,9 +407,7 @@ class DOMWatchdog(BaseWatchdog):
             if dom_task:
                 try:
                     content = await dom_task
-                    self.logger.debug(
-                        "🔍 DOMWatchdog.on_BrowserStateRequestEvent: ✅ DOM tree build completed"
-                    )
+                    self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: ✅ DOM tree build completed")
                 except Exception as e:
                     self.logger.warning(
                         f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: DOM build failed: {e}, using minimal state"
@@ -463,21 +419,13 @@ class DOMWatchdog(BaseWatchdog):
             if screenshot_task:
                 try:
                     screenshot_b64 = await screenshot_task
-                    self.logger.debug(
-                        "🔍 DOMWatchdog.on_BrowserStateRequestEvent: ✅ Clean screenshot captured"
-                    )
+                    self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: ✅ Clean screenshot captured")
                 except Exception as e:
-                    self.logger.warning(
-                        f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Clean screenshot failed: {e}"
-                    )
+                    self.logger.warning(f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Clean screenshot failed: {e}")
                     screenshot_b64 = None
 
             # Add browser-side highlights for user visibility
-            if (
-                content
-                and content.selector_map
-                and self.browser_session.browser_profile.dom_highlight_elements
-            ):
+            if content and content.selector_map and self.browser_session.browser_profile.dom_highlight_elements:
                 try:
                     self.logger.debug(
                         "🔍 DOMWatchdog.on_BrowserStateRequestEvent: 🎨 Adding browser-side highlights..."
@@ -487,9 +435,7 @@ class DOMWatchdog(BaseWatchdog):
                         f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: ✅ Added browser highlights for {len(content.selector_map)} elements"
                     )
                 except Exception as e:
-                    self.logger.warning(
-                        f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Browser highlighting failed: {e}"
-                    )
+                    self.logger.warning(f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Browser highlighting failed: {e}")
 
             # Ensure we have valid content
             if not content:
@@ -499,30 +445,18 @@ class DOMWatchdog(BaseWatchdog):
 
             # Get target title safely
             try:
-                self.logger.debug(
-                    "🔍 DOMWatchdog.on_BrowserStateRequestEvent: Getting page title..."
-                )
-                title = await asyncio.wait_for(
-                    self.browser_session.get_current_page_title(), timeout=1.0
-                )
-                self.logger.debug(
-                    f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Got title: {title}"
-                )
+                self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: Getting page title...")
+                title = await asyncio.wait_for(self.browser_session.get_current_page_title(), timeout=1.0)
+                self.logger.debug(f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Got title: {title}")
             except Exception as e:
-                self.logger.debug(
-                    f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Failed to get title: {e}"
-                )
+                self.logger.debug(f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Failed to get title: {e}")
                 title = "Page"
 
             # Get comprehensive page info from CDP with timeout
             try:
-                self.logger.debug(
-                    "🔍 DOMWatchdog.on_BrowserStateRequestEvent: Getting page info from CDP..."
-                )
+                self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: Getting page info from CDP...")
                 page_info = await asyncio.wait_for(self._get_page_info(), timeout=1.0)
-                self.logger.debug(
-                    f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Got page info from CDP: {page_info}"
-                )
+                self.logger.debug(f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Got page info from CDP: {page_info}")
             except Exception as e:
                 self.logger.debug(
                     f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Failed to get page info from CDP: {e}, using fallback"
@@ -551,9 +485,7 @@ class DOMWatchdog(BaseWatchdog):
             # Detect pagination buttons from the DOM
             pagination_buttons_data = []
             if content and content.selector_map:
-                pagination_buttons_data = self._detect_pagination_buttons(
-                    content.selector_map
-                )
+                pagination_buttons_data = self._detect_pagination_buttons(content.selector_map)
 
             # Build and cache the browser state summary
             if screenshot_b64:
@@ -576,11 +508,7 @@ class DOMWatchdog(BaseWatchdog):
                 pixels_below=0,
                 browser_errors=[],
                 is_pdf_viewer=is_pdf_viewer,
-                recent_events=(
-                    self._get_recent_events_str()
-                    if event.include_recent_events
-                    else None
-                ),
+                recent_events=(self._get_recent_events_str() if event.include_recent_events else None),
                 pending_network_requests=pending_requests,
                 pagination_buttons=pagination_buttons_data,
                 closed_popup_messages=self.browser_session._closed_popup_messages.copy(),
@@ -596,9 +524,7 @@ class DOMWatchdog(BaseWatchdog):
                     page_info.viewport_height,
                 )
 
-            self.logger.debug(
-                "🔍 DOMWatchdog.on_BrowserStateRequestEvent: ✅ COMPLETED - Returning browser state"
-            )
+            self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: ✅ COMPLETED - Returning browser state")
             return browser_state
 
         except Exception as e:
@@ -632,24 +558,19 @@ class DOMWatchdog(BaseWatchdog):
                 pagination_buttons=[],  # Error state has no pagination
                 closed_popup_messages=(
                     self.browser_session._closed_popup_messages.copy()
-                    if hasattr(self, "browser_session")
-                    and self.browser_session is not None
+                    if hasattr(self, "browser_session") and self.browser_session is not None
                     else []
                 ),
             )
 
     @time_execution_async("build_dom_tree_without_highlights")
-    @observe_debug(
-        ignore_input=True, ignore_output=True, name="build_dom_tree_without_highlights"
-    )
+    @observe_debug(ignore_input=True, ignore_output=True, name="build_dom_tree_without_highlights")
     async def _build_dom_tree_without_highlights(
         self, previous_state: SerializedDOMState | None = None
     ) -> SerializedDOMState:
         """Build DOM tree without injecting JavaScript highlights (for parallel execution)."""
         try:
-            self.logger.debug(
-                "🔍 DOMWatchdog._build_dom_tree_without_highlights: STARTING DOM tree build"
-            )
+            self.logger.debug("🔍 DOMWatchdog._build_dom_tree_without_highlights: STARTING DOM tree build")
 
             # Create or reuse DOM service
             if self._dom_service is None:
@@ -692,17 +613,11 @@ class DOMWatchdog(BaseWatchdog):
                 cdp_parallel_ms = timing_info.get("cdp_parallel_calls_ms", 0)
                 snapshot_proc_ms = timing_info.get("snapshot_processing_ms", 0)
                 if iframe_scroll_ms > 0.01:
-                    timing_lines.append(
-                        f"  │  ├─ iframe_scroll_detection: {iframe_scroll_ms:.2f}ms"
-                    )
+                    timing_lines.append(f"  │  ├─ iframe_scroll_detection: {iframe_scroll_ms:.2f}ms")
                 if cdp_parallel_ms > 0.01:
-                    timing_lines.append(
-                        f"  │  ├─ cdp_parallel_calls: {cdp_parallel_ms:.2f}ms"
-                    )
+                    timing_lines.append(f"  │  ├─ cdp_parallel_calls: {cdp_parallel_ms:.2f}ms")
                 if snapshot_proc_ms > 0.01:
-                    timing_lines.append(
-                        f"  │  └─ snapshot_processing: {snapshot_proc_ms:.2f}ms"
-                    )
+                    timing_lines.append(f"  │  └─ snapshot_processing: {snapshot_proc_ms:.2f}ms")
 
             # build_ax_lookup
             build_ax_ms = timing_info.get("build_ax_lookup_ms", 0)
@@ -712,25 +627,17 @@ class DOMWatchdog(BaseWatchdog):
             # build_snapshot_lookup
             build_snapshot_ms = timing_info.get("build_snapshot_lookup_ms", 0)
             if build_snapshot_ms > 0.01:
-                timing_lines.append(
-                    f"  ├─ build_snapshot_lookup: {build_snapshot_ms:.2f}ms"
-                )
+                timing_lines.append(f"  ├─ build_snapshot_lookup: {build_snapshot_ms:.2f}ms")
 
             # construct_enhanced_tree
             construct_tree_ms = timing_info.get("construct_enhanced_tree_ms", 0)
             if construct_tree_ms > 0.01:
-                timing_lines.append(
-                    f"  ├─ construct_enhanced_tree: {construct_tree_ms:.2f}ms"
-                )
+                timing_lines.append(f"  ├─ construct_enhanced_tree: {construct_tree_ms:.2f}ms")
 
             # serialize_accessible_elements breakdown
-            serialize_total_ms = timing_info.get(
-                "serialize_accessible_elements_total_ms", 0
-            )
+            serialize_total_ms = timing_info.get("serialize_accessible_elements_total_ms", 0)
             if serialize_total_ms > 0.01:
-                timing_lines.append(
-                    f"  ├─ serialize_accessible_elements: {serialize_total_ms:.2f}ms"
-                )
+                timing_lines.append(f"  ├─ serialize_accessible_elements: {serialize_total_ms:.2f}ms")
                 create_simp_ms = timing_info.get("create_simplified_tree_ms", 0)
                 paint_order_ms = timing_info.get("calculate_paint_order_ms", 0)
                 optimize_ms = timing_info.get("optimize_tree_ms", 0)
@@ -739,45 +646,29 @@ class DOMWatchdog(BaseWatchdog):
                 clickable_ms = timing_info.get("clickable_detection_time_ms", 0)
 
                 if create_simp_ms > 0.01:
-                    timing_lines.append(
-                        f"  │  ├─ create_simplified_tree: {create_simp_ms:.2f}ms"
-                    )
+                    timing_lines.append(f"  │  ├─ create_simplified_tree: {create_simp_ms:.2f}ms")
                     if clickable_ms > 0.01:
-                        timing_lines.append(
-                            f"  │  │  └─ clickable_detection: {clickable_ms:.2f}ms"
-                        )
+                        timing_lines.append(f"  │  │  └─ clickable_detection: {clickable_ms:.2f}ms")
                 if paint_order_ms > 0.01:
-                    timing_lines.append(
-                        f"  │  ├─ calculate_paint_order: {paint_order_ms:.2f}ms"
-                    )
+                    timing_lines.append(f"  │  ├─ calculate_paint_order: {paint_order_ms:.2f}ms")
                 if optimize_ms > 0.01:
                     timing_lines.append(f"  │  ├─ optimize_tree: {optimize_ms:.2f}ms")
                 if bbox_ms > 0.01:
                     timing_lines.append(f"  │  ├─ bbox_filtering: {bbox_ms:.2f}ms")
                 if assign_idx_ms > 0.01:
-                    timing_lines.append(
-                        f"  │  └─ assign_interactive_indices: {assign_idx_ms:.2f}ms"
-                    )
+                    timing_lines.append(f"  │  └─ assign_interactive_indices: {assign_idx_ms:.2f}ms")
 
             # Overheads
             get_dom_overhead_ms = timing_info.get("get_dom_tree_overhead_ms", 0)
             serialize_overhead_ms = timing_info.get("serialization_overhead_ms", 0)
-            get_serialized_overhead_ms = timing_info.get(
-                "get_serialized_dom_tree_overhead_ms", 0
-            )
+            get_serialized_overhead_ms = timing_info.get("get_serialized_dom_tree_overhead_ms", 0)
 
             if get_dom_overhead_ms > 0.1:
-                timing_lines.append(
-                    f"  ├─ get_dom_tree_overhead: {get_dom_overhead_ms:.2f}ms"
-                )
+                timing_lines.append(f"  ├─ get_dom_tree_overhead: {get_dom_overhead_ms:.2f}ms")
             if serialize_overhead_ms > 0.1:
-                timing_lines.append(
-                    f"  ├─ serialization_overhead: {serialize_overhead_ms:.2f}ms"
-                )
+                timing_lines.append(f"  ├─ serialization_overhead: {serialize_overhead_ms:.2f}ms")
             if get_serialized_overhead_ms > 0.1:
-                timing_lines.append(
-                    f"  └─ get_serialized_dom_tree_overhead: {get_serialized_overhead_ms:.2f}ms"
-                )
+                timing_lines.append(f"  └─ get_serialized_dom_tree_overhead: {get_serialized_overhead_ms:.2f}ms")
 
             # Calculate total tracked time for validation
             main_operations_ms = (
@@ -799,9 +690,7 @@ class DOMWatchdog(BaseWatchdog):
             self.logger.debug("\n".join(timing_lines))
 
             # Update selector map for other watchdogs
-            self.logger.debug(
-                "🔍 DOMWatchdog._build_dom_tree_without_highlights: Updating selector maps..."
-            )
+            self.logger.debug("🔍 DOMWatchdog._build_dom_tree_without_highlights: Updating selector maps...")
             self.selector_map = self.current_dom_state.selector_map
             # Update BrowserSession's cached selector map
             if self.browser_session:
@@ -827,15 +716,11 @@ class DOMWatchdog(BaseWatchdog):
             raise
 
     @time_execution_async("capture_clean_screenshot")
-    @observe_debug(
-        ignore_input=True, ignore_output=True, name="capture_clean_screenshot"
-    )
+    @observe_debug(ignore_input=True, ignore_output=True, name="capture_clean_screenshot")
     async def _capture_clean_screenshot(self) -> str:
         """Capture a clean screenshot without JavaScript highlights."""
         try:
-            self.logger.debug(
-                "🔍 DOMWatchdog._capture_clean_screenshot: Capturing clean screenshot..."
-            )
+            self.logger.debug("🔍 DOMWatchdog._capture_clean_screenshot: Capturing clean screenshot...")
 
             await self.browser_session.get_or_create_cdp_session(
                 target_id=self.browser_session.agent_focus_target_id, focus=True
@@ -844,27 +729,19 @@ class DOMWatchdog(BaseWatchdog):
             # Check if handler is registered
             handlers = self.event_bus.handlers.get("ScreenshotEvent", [])
             handler_names = [getattr(h, "__name__", str(h)) for h in handlers]
-            self.logger.debug(
-                f"📸 ScreenshotEvent handlers registered: {len(handlers)} - {handler_names}"
-            )
+            self.logger.debug(f"📸 ScreenshotEvent handlers registered: {len(handlers)} - {handler_names}")
 
             screenshot_event = self.event_bus.dispatch(ScreenshotEvent(full_page=False))
-            self.logger.debug(
-                "📸 Dispatched ScreenshotEvent, waiting for event to complete..."
-            )
+            self.logger.debug("📸 Dispatched ScreenshotEvent, waiting for event to complete...")
 
             # Wait for the event itself to complete (this waits for all handlers)
             await screenshot_event
 
             # Get the single handler result
-            screenshot_b64 = await screenshot_event.event_result(
-                raise_if_any=True, raise_if_none=True
-            )
+            screenshot_b64 = await screenshot_event.event_result(raise_if_any=True, raise_if_none=True)
             if screenshot_b64 is None:
                 raise RuntimeError("Screenshot handler returned None")
-            self.logger.debug(
-                "🔍 DOMWatchdog._capture_clean_screenshot: ✅ Clean screenshot captured successfully"
-            )
+            self.logger.debug("🔍 DOMWatchdog._capture_clean_screenshot: ✅ Clean screenshot captured successfully")
             return str(screenshot_b64)
 
         except (TimeoutError, asyncio.CancelledError) as e:
@@ -877,9 +754,7 @@ class DOMWatchdog(BaseWatchdog):
             self.logger.warning(f"📸 Clean screenshot failed: {type(e).__name__}: {e}")
             raise
 
-    def _detect_pagination_buttons(
-        self, selector_map: dict[int, EnhancedDOMTreeNode]
-    ) -> list["PaginationButton"]:
+    def _detect_pagination_buttons(self, selector_map: dict[int, EnhancedDOMTreeNode]) -> list["PaginationButton"]:
         """Detect pagination buttons from the DOM selector map.
 
         Args:
@@ -892,9 +767,7 @@ class DOMWatchdog(BaseWatchdog):
 
         pagination_buttons_data = []
         try:
-            self.logger.debug(
-                "🔍 DOMWatchdog._detect_pagination_buttons: Detecting pagination buttons..."
-            )
+            self.logger.debug("🔍 DOMWatchdog._detect_pagination_buttons: Detecting pagination buttons...")
             pagination_buttons_raw = DomService.detect_pagination_buttons(selector_map)
             # Convert to PaginationButton instances
             pagination_buttons_data = [
@@ -912,9 +785,7 @@ class DOMWatchdog(BaseWatchdog):
                     f"🔍 DOMWatchdog._detect_pagination_buttons: Found {len(pagination_buttons_data)} pagination buttons"
                 )
         except Exception as e:
-            self.logger.warning(
-                f"🔍 DOMWatchdog._detect_pagination_buttons: Pagination detection failed: {e}"
-            )
+            self.logger.warning(f"🔍 DOMWatchdog._detect_pagination_buttons: Pagination detection failed: {e}")
 
         return pagination_buttons_data
 
@@ -936,9 +807,7 @@ class DOMWatchdog(BaseWatchdog):
 
         # Get layout metrics which includes all the information we need
         metrics = await asyncio.wait_for(
-            cdp_session.cdp_client.send.Page.getLayoutMetrics(
-                session_id=cdp_session.session_id
-            ),
+            cdp_session.cdp_client.send.Page.getLayoutMetrics(session_id=cdp_session.session_id),
             timeout=10.0,
         )
 
@@ -951,40 +820,26 @@ class DOMWatchdog(BaseWatchdog):
 
         # Calculate device pixel ratio to convert between device pixels and CSS pixels
         # This matches the approach in dom/service.py _get_viewport_ratio method
-        css_width = css_visual_viewport.get(
-            "clientWidth", css_layout_viewport.get("clientWidth", 1280.0)
-        )
+        css_width = css_visual_viewport.get("clientWidth", css_layout_viewport.get("clientWidth", 1280.0))
         device_width = visual_viewport.get("clientWidth", css_width)
         device_pixel_ratio = device_width / css_width if css_width > 0 else 1.0
 
         # For viewport dimensions, use CSS pixels (what JavaScript sees)
         # Prioritize CSS layout viewport, then fall back to layout viewport
-        viewport_width = int(
-            css_layout_viewport.get("clientWidth")
-            or layout_viewport.get("clientWidth", 1280)
-        )
-        viewport_height = int(
-            css_layout_viewport.get("clientHeight")
-            or layout_viewport.get("clientHeight", 720)
-        )
+        viewport_width = int(css_layout_viewport.get("clientWidth") or layout_viewport.get("clientWidth", 1280))
+        viewport_height = int(css_layout_viewport.get("clientHeight") or layout_viewport.get("clientHeight", 720))
 
         # For total page dimensions, content size is typically in device pixels, so convert to CSS pixels
         # by dividing by device pixel ratio
         raw_page_width = content_size.get("width", viewport_width * device_pixel_ratio)
-        raw_page_height = content_size.get(
-            "height", viewport_height * device_pixel_ratio
-        )
+        raw_page_height = content_size.get("height", viewport_height * device_pixel_ratio)
         page_width = int(raw_page_width / device_pixel_ratio)
         page_height = int(raw_page_height / device_pixel_ratio)
 
         # For scroll position, use CSS visual viewport if available, otherwise CSS layout viewport
         # These should already be in CSS pixels
-        scroll_x = int(
-            css_visual_viewport.get("pageX") or css_layout_viewport.get("pageX", 0)
-        )
-        scroll_y = int(
-            css_visual_viewport.get("pageY") or css_layout_viewport.get("pageY", 0)
-        )
+        scroll_x = int(css_visual_viewport.get("pageX") or css_layout_viewport.get("pageX", 0))
+        scroll_y = int(css_visual_viewport.get("pageY") or css_layout_viewport.get("pageY", 0))
 
         # Calculate scroll information - pixels that are above/below/left/right of current viewport
         pixels_above = scroll_y
@@ -1032,10 +887,7 @@ class DOMWatchdog(BaseWatchdog):
 
     def is_file_input(self, element: EnhancedDOMTreeNode) -> bool:
         """Check if element is a file input."""
-        return (
-            element.node_name.upper() == "INPUT"
-            and element.attributes.get("type", "").lower() == "file"
-        )
+        return element.node_name.upper() == "INPUT" and element.attributes.get("type", "").lower() == "file"
 
     @staticmethod
     def is_element_visible_according_to_all_parents(

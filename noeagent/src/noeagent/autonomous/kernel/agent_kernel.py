@@ -122,9 +122,7 @@ class AgentKernel:
             # Parse response into typed Decision
             decision = await self._parse_response_to_decision(goal, response)
 
-            logger.info(
-                f"AgentKernel decision: {decision.action} for goal {goal.id[:8]}"
-            )
+            logger.info(f"AgentKernel decision: {decision.action} for goal {goal.id[:8]}")
             return decision
 
         except Exception as e:

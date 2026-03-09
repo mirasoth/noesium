@@ -65,21 +65,14 @@ class WikipediaToolkit(AsyncBaseToolkit):
 
         if not WIKIPEDIA_API_AVAILABLE:
             raise ImportError(
-                "wikipedia-api package is required for WikipediaToolkit. "
-                "Install with: pip install wikipedia-api"
+                "wikipedia-api package is required for WikipediaToolkit. " "Install with: pip install wikipedia-api"
             )
 
         # Configuration
-        self.user_agent = self.config.config.get(
-            "user_agent", "noesium-wikipedia-toolkit"
-        )
+        self.user_agent = self.config.config.get("user_agent", "noesium-wikipedia-toolkit")
         self.language = self.config.config.get("language", "en")
-        self.content_type = self.config.config.get(
-            "content_type", "text"
-        )  # "text" or "summary"
-        self.extract_format = self.config.config.get(
-            "extract_format", "WIKI"
-        )  # "WIKI" or "HTML"
+        self.content_type = self.config.config.get("content_type", "text")  # "text" or "summary"
+        self.extract_format = self.config.config.get("extract_format", "WIKI")  # "WIKI" or "HTML"
 
         # Map string format to wikipediaapi.ExtractFormat
         extract_format_map = {
@@ -88,9 +81,7 @@ class WikipediaToolkit(AsyncBaseToolkit):
         }
 
         if self.extract_format not in extract_format_map:
-            self.logger.warning(
-                f"Invalid extract_format: {self.extract_format}, using WIKI"
-            )
+            self.logger.warning(f"Invalid extract_format: {self.extract_format}, using WIKI")
             self.extract_format = "WIKI"
 
         # Initialize Wikipedia API client
@@ -196,9 +187,7 @@ class WikipediaToolkit(AsyncBaseToolkit):
             self.logger.error(error_msg)
             return [{"error": error_msg}]
 
-    async def get_wikipedia_page(
-        self, title: str, content_type: Optional[str] = None
-    ) -> Dict:
+    async def get_wikipedia_page(self, title: str, content_type: Optional[str] = None) -> Dict:
         """
         Retrieve a Wikipedia page by title.
 
@@ -248,9 +237,7 @@ class WikipediaToolkit(AsyncBaseToolkit):
                 content = page.text
 
             # Get additional information
-            categories = (
-                list(page.categories.keys()) if hasattr(page, "categories") else []
-            )
+            categories = list(page.categories.keys()) if hasattr(page, "categories") else []
             links = list(page.links.keys()) if hasattr(page, "links") else []
 
             result = {
@@ -286,9 +273,7 @@ class WikipediaToolkit(AsyncBaseToolkit):
             except Exception:
                 result["references"] = []
 
-            self.logger.info(
-                f"Retrieved page: {page.title} ({len(content)} characters)"
-            )
+            self.logger.info(f"Retrieved page: {page.title} ({len(content)} characters)")
             return result
 
         except Exception as e:
@@ -437,9 +422,7 @@ class WikipediaToolkit(AsyncBaseToolkit):
                             "date_range": f"{start_str} to {end_str}",
                         }
                     else:
-                        return {
-                            "error": f"Failed to get page views: HTTP {response.status}"
-                        }
+                        return {"error": f"Failed to get page views: HTTP {response.status}"}
 
         except Exception as e:
             return {"error": f"Failed to get page views: {str(e)}"}

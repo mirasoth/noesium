@@ -21,9 +21,7 @@ class EventConfig:
     config_file: str = "config.py"
 
     # RAG configuration
-    context: str = (
-        "rag"  # "all" means put entire content in context, "rag" means use RAG search only
-    )
+    context: str = "rag"  # "all" means put entire content in context, "rag" means use RAG search only
     rag_length: int = 30  # RAG length, -1 means all, other values mean number of lines
 
 

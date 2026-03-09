@@ -49,9 +49,7 @@ class PGVectorStore(BaseVectorStore):
         self.use_diskann = diskann
         self.use_hnsw = hnsw
 
-        self.conn = psycopg2.connect(
-            dbname=dbname, user=user, password=password, host=host, port=port
-        )
+        self.conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port)
         self.cur = self.conn.cursor()
 
         collections = self.list_collections()
@@ -112,15 +110,10 @@ class PGVectorStore(BaseVectorStore):
         # Validate vector dimensions
         self._validate_vector_dimensions(vectors)
 
-        logger.info(
-            f"Inserting {len(vectors)} vectors into collection {self.collection_name}"
-        )
+        logger.info(f"Inserting {len(vectors)} vectors into collection {self.collection_name}")
         json_payloads = [json.dumps(payload) for payload in payloads]
 
-        data = [
-            (id, vector, payload)
-            for id, vector, payload in zip(ids, vectors, json_payloads)
-        ]
+        data = [(id, vector, payload) for id, vector, payload in zip(ids, vectors, json_payloads)]
         execute_values(
             self.cur,
             f"INSERT INTO {self.collection_name} (id, vector, payload) VALUES %s",
@@ -155,9 +148,7 @@ class PGVectorStore(BaseVectorStore):
                 filter_conditions.append("payload->>%s = %s")
                 filter_params.extend([k, str(v)])
 
-        filter_clause = (
-            "WHERE " + " AND ".join(filter_conditions) if filter_conditions else ""
-        )
+        filter_clause = "WHERE " + " AND ".join(filter_conditions) if filter_conditions else ""
 
         self.cur.execute(
             f"""
@@ -171,9 +162,7 @@ class PGVectorStore(BaseVectorStore):
         )
 
         results = self.cur.fetchall()
-        return [
-            OutputData(id=str(r[0]), score=float(r[1]), payload=r[2]) for r in results
-        ]
+        return [OutputData(id=str(r[0]), score=float(r[1]), payload=r[2]) for r in results]
 
     def delete(self, vector_id: str) -> None:
         """
@@ -182,9 +171,7 @@ class PGVectorStore(BaseVectorStore):
         Args:
             vector_id (str): ID of the vector to delete.
         """
-        self.cur.execute(
-            f"DELETE FROM {self.collection_name} WHERE id = %s", (vector_id,)
-        )
+        self.cur.execute(f"DELETE FROM {self.collection_name} WHERE id = %s", (vector_id,))
         self.conn.commit()
 
     def update(
@@ -239,9 +226,7 @@ class PGVectorStore(BaseVectorStore):
         Returns:
             List[str]: List of collection names.
         """
-        self.cur.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
-        )
+        self.cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
         return [row[0] for row in self.cur.fetchall()]
 
     def delete_collection(self) -> None:
@@ -270,9 +255,7 @@ class PGVectorStore(BaseVectorStore):
         result = self.cur.fetchone()
         return {"name": result[0], "count": result[1], "size": result[2]}
 
-    def list(
-        self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None
-    ) -> List[OutputData]:
+    def list(self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None) -> List[OutputData]:
         """
         List all vectors in a collection.
 
@@ -291,9 +274,7 @@ class PGVectorStore(BaseVectorStore):
                 filter_conditions.append("payload->>%s = %s")
                 filter_params.extend([k, str(v)])
 
-        filter_clause = (
-            "WHERE " + " AND ".join(filter_conditions) if filter_conditions else ""
-        )
+        filter_clause = "WHERE " + " AND ".join(filter_conditions) if filter_conditions else ""
 
         # Handle None limit by using a large default value
         if limit is None:

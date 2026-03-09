@@ -34,11 +34,7 @@ class TokenCostCalculated(BaseModel):
 
     @property
     def prompt_cost(self) -> float:
-        return (
-            self.new_prompt_cost
-            + (self.prompt_read_cached_cost or 0)
-            + (self.prompt_cache_creation_cost or 0)
-        )
+        return self.new_prompt_cost + (self.prompt_read_cached_cost or 0) + (self.prompt_cache_creation_cost or 0)
 
     @property
     def total_cost(self) -> float:

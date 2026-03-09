@@ -85,9 +85,7 @@ class VideoToolkit(AsyncBaseToolkit):
             except Exception as e:
                 self.logger.error(f"Failed to initialize Google client: {e}")
 
-    async def analyze_video(
-        self, video_path: str, question: str = "Describe this video"
-    ) -> str:
+    async def analyze_video(self, video_path: str, question: str = "Describe this video") -> str:
         """
         Analyze a video and answer questions about its content.
 

@@ -19,28 +19,16 @@ class NodeLoggingCallback(BaseCallbackHandler):
         return f"[{self.node_id}] " if self.node_id else ""
 
     def on_tool_end(self, output, run_id, parent_run_id, **kwargs):
-        logger.info(
-            color_text(f"{self._prefix()}[TOOL END] output={output}", "cyan", ["dim"])
-        )
+        logger.info(color_text(f"{self._prefix()}[TOOL END] output={output}", "cyan", ["dim"]))
 
     def on_chain_end(self, output, run_id, parent_run_id, **kwargs):
-        logger.info(
-            color_text(f"{self._prefix()}[CHAIN END] output={output}", "blue", ["dim"])
-        )
+        logger.info(color_text(f"{self._prefix()}[CHAIN END] output={output}", "blue", ["dim"]))
 
     def on_llm_end(self, response, run_id, parent_run_id, **kwargs):
-        logger.info(
-            color_text(
-                f"{self._prefix()}[LLM END] response={response}", "magenta", ["dim"]
-            )
-        )
+        logger.info(color_text(f"{self._prefix()}[LLM END] response={response}", "magenta", ["dim"]))
 
     def on_custom_event(self, event_name, payload, **kwargs):
-        logger.info(
-            color_text(
-                f"{self._prefix()}[EVENT] {event_name}: {payload}", "yellow", ["dim"]
-            )
-        )
+        logger.info(color_text(f"{self._prefix()}[EVENT] {event_name}: {payload}", "yellow", ["dim"]))
 
 
 class TokenUsageCallback(BaseCallbackHandler):
@@ -98,16 +86,12 @@ class TokenUsageCallback(BaseCallbackHandler):
 
         # Fallback to prompt estimation if no usage data available
         if not usage_data and run_id in self._pending_calls:
-            usage_data = self._estimate_token_usage(
-                self._pending_calls[run_id], response
-            )
+            usage_data = self._estimate_token_usage(self._pending_calls[run_id], response)
 
         if usage_data:
             prompt_tokens = usage_data.get("prompt_tokens", 0)
             completion_tokens = usage_data.get("completion_tokens", 0)
-            total_tokens = usage_data.get(
-                "total_tokens", prompt_tokens + completion_tokens
-            )
+            total_tokens = usage_data.get("total_tokens", prompt_tokens + completion_tokens)
 
             # Update totals
             self.total_prompt_tokens += prompt_tokens
@@ -125,9 +109,7 @@ class TokenUsageCallback(BaseCallbackHandler):
             self.token_usage_history.append(call_data)
 
             if self.verbose:
-                self._log_token_usage(
-                    prompt_tokens, completion_tokens, total_tokens, run_id
-                )
+                self._log_token_usage(prompt_tokens, completion_tokens, total_tokens, run_id)
             else:
                 # Even when not verbose, show basic token usage at info level
                 token_log = f"TOKENS: {total_tokens} | langchain | unknown | P:{prompt_tokens} C:{completion_tokens}"
@@ -166,9 +148,7 @@ class TokenUsageCallback(BaseCallbackHandler):
             self.token_usage_history.append(call_data)
 
             if self.verbose:
-                self._log_token_usage(
-                    prompt_tokens, completion_tokens, total_tokens, run_id
-                )
+                self._log_token_usage(prompt_tokens, completion_tokens, total_tokens, run_id)
             else:
                 # Even when not verbose, show basic token usage at info level
                 model_name = (
@@ -176,7 +156,9 @@ class TokenUsageCallback(BaseCallbackHandler):
                     if "/" in data.get("model", "unknown")
                     else data.get("model", "unknown")
                 )
-                token_log = f"TOKENS: {total_tokens} | custom_event | {model_name} | P:{prompt_tokens} C:{completion_tokens}"
+                token_log = (
+                    f"TOKENS: {total_tokens} | custom_event | {model_name} | P:{prompt_tokens} C:{completion_tokens}"
+                )
                 logger.info(color_text(token_log, "magenta"))
 
     def _extract_token_usage_from_response(self, response: LLMResult) -> Optional[Dict]:
@@ -185,31 +167,20 @@ class TokenUsageCallback(BaseCallbackHandler):
 
         # Method 1: LLMResult llm_output
         if hasattr(response, "llm_output") and response.llm_output:
-            usage = response.llm_output.get("token_usage") or response.llm_output.get(
-                "usage"
-            )
+            usage = response.llm_output.get("token_usage") or response.llm_output.get("usage")
 
         # Method 2: LLMResult response_metadata
-        if (
-            not usage
-            and hasattr(response, "response_metadata")
-            and response.response_metadata
-        ):
-            usage = response.response_metadata.get(
-                "token_usage"
-            ) or response.response_metadata.get("usage")
+        if not usage and hasattr(response, "response_metadata") and response.response_metadata:
+            usage = response.response_metadata.get("token_usage") or response.response_metadata.get("usage")
 
         # Method 3: Check generations for usage info
         if not usage and hasattr(response, "generations") and response.generations:
             for generation_list in response.generations:
                 for generation in generation_list:
-                    if (
-                        hasattr(generation, "generation_info")
-                        and generation.generation_info
-                    ):
-                        gen_usage = generation.generation_info.get(
-                            "token_usage"
-                        ) or generation.generation_info.get("usage")
+                    if hasattr(generation, "generation_info") and generation.generation_info:
+                        gen_usage = generation.generation_info.get("token_usage") or generation.generation_info.get(
+                            "usage"
+                        )
                         if gen_usage:
                             usage = gen_usage
                             break
@@ -263,20 +234,14 @@ class TokenUsageCallback(BaseCallbackHandler):
         run_info = f" (run_id: {run_id[:8]}...)" if run_id else ""
         model_info = f" [{self.model_name}]" if self.model_name else ""
 
-        logger.info(
-            color_text(f"[TOKEN USAGE]{model_info}{run_info}", "magenta", ["dim"])
-        )
+        logger.info(color_text(f"[TOKEN USAGE]{model_info}{run_info}", "magenta", ["dim"]))
         logger.info(color_text(f"  Prompt: {prompt_tokens:,} tokens", None, ["dim"]))
-        logger.info(
-            color_text(f"  Completion: {completion_tokens:,} tokens", None, ["dim"])
-        )
+        logger.info(color_text(f"  Completion: {completion_tokens:,} tokens", None, ["dim"]))
         logger.info(color_text(f"  Total: {total_tokens:,} tokens", None, ["dim"]))
 
         # Show session totals
         session_total = self.total_tokens()
-        logger.info(
-            color_text(f"  Session Total: {session_total:,} tokens", None, ["dim"])
-        )
+        logger.info(color_text(f"  Session Total: {session_total:,} tokens", None, ["dim"]))
 
     def total_tokens(self) -> int:
         """Get total tokens used in this session"""
@@ -290,12 +255,8 @@ class TokenUsageCallback(BaseCallbackHandler):
         tracker_stats = get_token_tracker().get_stats()
 
         # Combine callback and tracker statistics
-        combined_prompt_tokens = self.total_prompt_tokens + tracker_stats.get(
-            "total_prompt_tokens", 0
-        )
-        combined_completion_tokens = self.total_completion_tokens + tracker_stats.get(
-            "total_completion_tokens", 0
-        )
+        combined_prompt_tokens = self.total_prompt_tokens + tracker_stats.get("total_prompt_tokens", 0)
+        combined_completion_tokens = self.total_completion_tokens + tracker_stats.get("total_completion_tokens", 0)
         combined_total_tokens = combined_prompt_tokens + combined_completion_tokens
         combined_calls = self.llm_calls + tracker_stats.get("total_calls", 0)
 
@@ -332,9 +293,7 @@ class TokenUsageCallback(BaseCallbackHandler):
                 ["dim"],
             )
         )
-        logger.info(
-            color_text(f"Total LLM Calls: {summary['total_llm_calls']}", None, ["dim"])
-        )
+        logger.info(color_text(f"Total LLM Calls: {summary['total_llm_calls']}", None, ["dim"]))
         logger.info(
             color_text(
                 f"Total Prompt Tokens: {summary['total_prompt_tokens']:,}",
@@ -349,9 +308,7 @@ class TokenUsageCallback(BaseCallbackHandler):
                 ["dim"],
             )
         )
-        logger.info(
-            color_text(f"Total Tokens: {summary['total_tokens']:,}", None, ["dim"])
-        )
+        logger.info(color_text(f"Total Tokens: {summary['total_tokens']:,}", None, ["dim"]))
 
         # Show breakdown by source
         callback_stats = summary["callback_stats"]

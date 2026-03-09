@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-
 from noesium.core.context import CognitiveContext
 from noesium.core.event import ProgressEvent, ProgressEventType
 
