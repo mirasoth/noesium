@@ -10,13 +10,11 @@ import logging
 from typing import TYPE_CHECKING
 
 from bubus import EventBus
-from noeagent.autonomous import (
-    EventProcessor,
-    GoalEngine,
-    TimerEventSource,
-    Trigger,
-)
-from noeagent.kernel import AgentKernel
+from noeagent.autonomous.event_processor import EventProcessor
+from noeagent.autonomous.event_sources import TimerEventSource
+from noeagent.autonomous.goal_engine import GoalEngine
+from noeagent.autonomous.kernel.agent_kernel import AgentKernel
+from noeagent.autonomous.trigger import Trigger
 
 from noesium.core.event.store import InMemoryEventStore
 

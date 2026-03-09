@@ -10,18 +10,19 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
-from noeagent.autonomous import Goal, GoalEngine
 from noeagent.autonomous.decision_schema import (
+    CreateGoalDecision,
     Decision,
     DecisionAction,
     MemoryUpdateDecision,
     SubagentCallDecision,
     ToolCallDecision,
 )
-from noeagent.autonomous.models import GoalStatus
+from noeagent.autonomous.goal_engine import Goal, GoalEngine, GoalStatus
+from noeagent.autonomous.memory import MemoryProjector
 
 if TYPE_CHECKING:
-    from noeagent.kernel import AgentKernel
+    from noeagent.autonomous.kernel.agent_kernel import AgentKernel
 
     from noesium.core.capability.registry import CapabilityRegistry
     from noesium.core.memory.provider_manager import ProviderMemoryManager
@@ -78,6 +79,8 @@ class CognitiveLoop:
         self._running = False
         self._current_goal: Goal | None = None
 
+        self.projector = MemoryProjector(memory)
+
         logger.info(f"CognitiveLoop initialized with tick_interval={tick_interval}s")
 
     async def run(self) -> None:
@@ -104,7 +107,6 @@ class CognitiveLoop:
 
     async def _tick(self) -> None:
         """Single iteration of the cognitive loop."""
-        # 1. Get next goal
         goal = await self.goal_engine.next_goal()
         if not goal:
             logger.debug("No active goals - idle tick")
@@ -114,19 +116,14 @@ class CognitiveLoop:
         logger.info(f"🎯 Processing goal: {goal.description} (priority={goal.priority})")
 
         try:
-            # 2. Project memory context for this goal
-            context = await self._project_memory(goal)
+            context = await self.projector.project(goal)
 
-            # 3. Agent kernel reasoning step
             decision = await self._reason(goal, context)
 
-            # 4. Execute decision (tool/subagent call)
             observation = await self._execute_decision(decision)
 
-            # 5. Update memory
             await self._update_memory(goal, observation)
 
-            # 6. Update goal status based on observation
             await self._evaluate_goal_progress(goal, observation)
 
         except Exception as e:
@@ -135,75 +132,6 @@ class CognitiveLoop:
 
         finally:
             self._current_goal = None
-
-    async def _project_memory(self, goal: Goal) -> dict[str, Any]:
-        """Project memory context for goal (RFC-1002 projection model).
-
-        Retrieves relevant context from memory for reasoning.
-
-        Args:
-            goal: Goal to project context for
-
-        Returns:
-            Memory context dictionary
-        """
-        try:
-            # Get persistent memory provider
-            persistent_provider = self.memory.get_provider("persistent")
-
-            # Search for relevant memories related to the goal
-            # Use keywords from goal description for semantic search
-            keywords = goal.description.lower().split()[:5]  # Top 5 keywords
-
-            related_memories = []
-            try:
-                # Attempt semantic search if supported
-                search_results = await persistent_provider.search(
-                    query=" ".join(keywords),
-                    limit=10,
-                    content_types=["fact", "execution_trace", "goal"],
-                )
-                related_memories = [
-                    {
-                        "key": result.entry.key,
-                        "value": result.entry.value,
-                        "score": result.score,
-                        "content_type": result.entry.content_type,
-                    }
-                    for result in search_results[:5]  # Top 5 relevant memories
-                ]
-            except Exception as search_error:
-                logger.debug(f"Semantic search not available: {search_error}")
-
-            # Get goal history
-            goal_history = await persistent_provider.read(f"goal:{goal.id}")
-
-            # Get execution traces for this goal
-            execution_key = f"execution:{goal.id}"
-            execution_trace = await persistent_provider.read(execution_key)
-
-            context = {
-                "goal_id": goal.id,
-                "goal_description": goal.description,
-                "goal_priority": goal.priority,
-                "goal_status": goal.status,
-                "related_memories": related_memories,
-                "goal_history": goal_history.value if goal_history else None,
-                "previous_execution": execution_trace.value if execution_trace else None,
-            }
-
-            logger.debug(
-                f"Projected memory context for goal {goal.id[:8]} with {len(related_memories)} related memories"
-            )
-            return context
-
-        except Exception as e:
-            logger.error(f"Failed to project memory: {e}", exc_info=True)
-            return {
-                "goal_id": goal.id,
-                "goal_description": goal.description,
-                "goal_priority": goal.priority,
-            }
 
     async def _reason(self, goal: Goal, context: dict[str, Any]) -> Decision:
         """Agent kernel reasoning step.
@@ -318,6 +246,33 @@ class CognitiveLoop:
                 # Mark goal as completed
                 observation = {
                     "action": "finish_goal",
+                    "success": True,
+                }
+
+            elif decision.action == DecisionAction.CREATE_GOAL:
+                # Create new goal (self-generated or sub-goal)
+                if isinstance(decision, CreateGoalDecision):
+                    goal_description = decision.goal_description
+                    goal_priority = decision.goal_priority
+                    parent_goal_id = decision.parent_goal_id
+                else:
+                    goal_description = decision.goal_description or "New goal"
+                    goal_priority = decision.goal_priority or 50
+                    parent_goal_id = decision.parent_goal_id
+
+                # Create new goal with parent linkage if provided
+                new_goal = await self.goal_engine.create_goal(
+                    description=goal_description,
+                    priority=goal_priority,
+                    parent_goal_id=parent_goal_id or decision.goal_id,
+                )
+
+                observation = {
+                    "action": "create_goal",
+                    "new_goal_id": new_goal.id,
+                    "description": goal_description,
+                    "priority": goal_priority,
+                    "parent_id": parent_goal_id,
                     "success": True,
                 }
 

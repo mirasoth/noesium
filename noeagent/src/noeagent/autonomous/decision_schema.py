@@ -11,12 +11,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class DecisionAction(str, Enum):
-    """Decision action types (RFC-1005 Section 8).
+    """Decision action types (RFC-1005 Section 8, RFC-1006 Section 7.4).
 
     The Agent Kernel can produce these types of decisions:
     - tool_call: Execute a tool via Capability System
     - subagent_call: Delegate to a subagent
     - memory_update: Update memory with new information
+    - create_goal: Create a new sub-goal or independent goal (RFC-1006 §7.4)
     - goal_update: Update goal status or properties
     - finish_goal: Mark goal as completed
     """
@@ -24,6 +25,7 @@ class DecisionAction(str, Enum):
     TOOL_CALL = "tool_call"
     SUBAGENT_CALL = "subagent_call"
     MEMORY_UPDATE = "memory_update"
+    CREATE_GOAL = "create_goal"
     GOAL_UPDATE = "goal_update"
     FINISH_GOAL = "finish_goal"
 
@@ -100,3 +102,32 @@ class FinishGoalDecision(Decision):
     """Finish goal decision."""
 
     action: DecisionAction = DecisionAction.FINISH_GOAL
+
+
+class CreateGoalDecision(Decision):
+    """Create new goal decision (RFC-1006 Section 7.4).
+
+    Enables hierarchical planning where the kernel can spawn
+    new objectives during reasoning. Supports both sub-goals
+    (with parent_goal_id) and independent goals.
+
+    Example:
+        # Create sub-goal for hierarchical planning
+        CreateGoalDecision(
+            action=DecisionAction.CREATE_GOAL,
+            goal_id=current_goal.id,
+            goal_description="Search arxiv for recent papers",
+            goal_priority=60,
+            parent_goal_id=current_goal.id,  # Link to parent
+            reasoning="Need to gather sources before analysis"
+        )
+    """
+
+    action: DecisionAction = DecisionAction.CREATE_GOAL
+    goal_description: str = Field(description="Description of the new goal to create")
+    goal_priority: int = Field(
+        default=50, ge=0, le=100, description="Priority for the new goal (0-100, higher = more important)"
+    )
+    parent_goal_id: str | None = Field(
+        default=None, description="Parent goal ID if this is a sub-goal (for hierarchical planning)"
+    )

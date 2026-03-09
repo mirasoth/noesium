@@ -14,6 +14,7 @@ This module provides the autonomous execution layer for NoeAgent:
 
 from .cognitive_loop import CognitiveLoop
 from .decision_schema import (
+    CreateGoalDecision,
     Decision,
     DecisionAction,
     FinishGoalDecision,
@@ -27,10 +28,7 @@ from .event_queue import EventQueue
 from .event_sources import FileSystemEventSource, TimerEventSource, WebhookEventSource
 from .event_system import AutonomousEvent
 from .events import GoalCompleted, GoalCreated, GoalFailed, GoalUpdated
-from .goal_engine import GoalEngine
-
-# Import base modules first to avoid circular import (cognitive_loop imports Goal, GoalEngine)
-from .models import Goal, GoalStatus
+from .goal_engine import Goal, GoalEngine, GoalStatus
 from .runner import AutonomousRunner, run_autonomous_mode
 from .trigger import Trigger, TriggerRule
 
@@ -48,6 +46,7 @@ __all__ = [
     # Decision schema (Agent Kernel)
     "Decision",
     "DecisionAction",
+    "CreateGoalDecision",
     "ToolCallDecision",
     "SubagentCallDecision",
     "MemoryUpdateDecision",
