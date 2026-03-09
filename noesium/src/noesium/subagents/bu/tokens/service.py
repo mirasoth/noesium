@@ -349,7 +349,9 @@ class TokenCost:
                 logger.debug(f"Token cost service: {usage}")
 
                 create_task_with_error_handling(
-                    token_cost_service._log_usage(llm.model, usage), name="log_token_usage", suppress_exceptions=True
+                    token_cost_service._log_usage(llm.model, usage),
+                    name="log_token_usage",
+                    suppress_exceptions=True,
                 )
 
             # else:

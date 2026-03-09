@@ -33,7 +33,12 @@ class Goal(BaseModel):
 
     id: str = Field(default_factory=uuid7str, description="Unique goal identifier (UUID7)")
     description: str = Field(description="Human-readable goal description")
-    priority: int = Field(ge=0, le=100, default=50, description="Goal priority (0-100, higher = more important)")
+    priority: int = Field(
+        ge=0,
+        le=100,
+        default=50,
+        description="Goal priority (0-100, higher = more important)",
+    )
     status: GoalStatus = Field(default=GoalStatus.PENDING, description="Current goal lifecycle status")
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc),

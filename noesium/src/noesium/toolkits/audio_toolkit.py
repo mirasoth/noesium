@@ -285,7 +285,7 @@ class AudioToolkit(AsyncBaseToolkit):
                     model=self.audio_model,
                     file=audio_file,
                     response_format="verbose_json",
-                    timestamp_granularities=["segment"] if self.audio_model != "whisper-1" else None,
+                    timestamp_granularities=(["segment"] if self.audio_model != "whisper-1" else None),
                 )
 
             # Convert to dict and cache
@@ -383,7 +383,10 @@ class AudioToolkit(AsyncBaseToolkit):
                 self.logger.info(f"Aliyun poll response (attempt {attempt + 1}): {get_response_json}")
 
                 status_text = get_response_json[self.ALIYUN_KEY_STATUS_TEXT]
-                if status_text in (self.ALIYUN_STATUS_RUNNING, self.ALIYUN_STATUS_QUEUEING):
+                if status_text in (
+                    self.ALIYUN_STATUS_RUNNING,
+                    self.ALIYUN_STATUS_QUEUEING,
+                ):
                     await asyncio.sleep(10)
                     attempt += 1
                 else:
@@ -456,11 +459,19 @@ class AudioToolkit(AsyncBaseToolkit):
         try:
             aliyun_result = await self._transcribe_file_aliyun(audio_path)
             if aliyun_result is None:
-                return {"error": "Aliyun NLS transcription failed", "text": "", "provider": "aliyun"}
+                return {
+                    "error": "Aliyun NLS transcription failed",
+                    "text": "",
+                    "provider": "aliyun",
+                }
 
             transcription_text = self._extract_transcription_text_aliyun(aliyun_result)
             if transcription_text is None:
-                return {"error": "Failed to extract text from Aliyun NLS result", "text": "", "provider": "aliyun"}
+                return {
+                    "error": "Failed to extract text from Aliyun NLS result",
+                    "text": "",
+                    "provider": "aliyun",
+                }
 
             return {
                 "text": transcription_text,
@@ -669,7 +680,10 @@ Please provide a clear, detailed answer based on the audio content above. If the
             }
 
         except Exception as e:
-            return {"error": f"Failed to get audio info: {str(e)}", "provider": self.provider}
+            return {
+                "error": f"Failed to get audio info: {str(e)}",
+                "provider": self.provider,
+            }
 
     async def get_tools_map(self) -> Dict[str, Callable]:
         """

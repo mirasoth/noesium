@@ -101,7 +101,10 @@ class TestTokenUsageIntegration:
         # Make a structured completion
         messages = [{"role": "user", "content": "Reply with a simple greeting message"}]
         response = client.structured_completion(
-            messages=messages, response_model=SimpleResponse, temperature=0.1, max_tokens=50
+            messages=messages,
+            response_model=SimpleResponse,
+            temperature=0.1,
+            max_tokens=50,
         )
 
         # Verify response

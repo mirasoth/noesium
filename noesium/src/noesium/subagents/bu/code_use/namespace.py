@@ -329,7 +329,10 @@ def create_namespace(
 
     # Add custom evaluate function that returns values directly
     async def evaluate_wrapper(
-        code: str | None = None, variables: dict[str, Any] | None = None, *_args: Any, **kwargs: Any
+        code: str | None = None,
+        variables: dict[str, Any] | None = None,
+        *_args: Any,
+        **kwargs: Any,
     ) -> Any:
         # Handle both positional and keyword argument styles
         if code is None:

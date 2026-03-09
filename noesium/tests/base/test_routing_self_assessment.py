@@ -24,7 +24,12 @@ class TestSelfAssessmentStrategy:
     @pytest.fixture
     def default_config(self):
         """Provide default configuration for testing."""
-        return {"temperature": 0.1, "max_tokens": 5, "lite_threshold": 1, "fast_threshold": 3}
+        return {
+            "temperature": 0.1,
+            "max_tokens": 5,
+            "lite_threshold": 1,
+            "fast_threshold": 3,
+        }
 
     @pytest.fixture
     def strategy(self, mock_llm_client, default_config):
@@ -48,7 +53,12 @@ class TestSelfAssessmentStrategy:
 
     def test_init_with_custom_config(self, mock_llm_client):
         """Test initialization with custom configuration."""
-        custom_config = {"temperature": 0.3, "max_tokens": 10, "lite_threshold": 2, "fast_threshold": 4}
+        custom_config = {
+            "temperature": 0.3,
+            "max_tokens": 10,
+            "lite_threshold": 2,
+            "fast_threshold": 4,
+        }
 
         strategy = SelfAssessmentStrategy(lite_client=mock_llm_client, config=custom_config)
 

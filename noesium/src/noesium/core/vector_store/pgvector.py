@@ -122,7 +122,11 @@ class PGVectorStore(BaseVectorStore):
         self.conn.commit()
 
     def search(
-        self, query: str, vectors: List[float], limit: int = 5, filters: Optional[Dict[str, Any]] = None
+        self,
+        query: str,
+        vectors: List[float],
+        limit: int = 5,
+        filters: Optional[Dict[str, Any]] = None,
     ) -> List[OutputData]:
         """
         Search for similar vectors.
@@ -171,7 +175,10 @@ class PGVectorStore(BaseVectorStore):
         self.conn.commit()
 
     def update(
-        self, vector_id: str, vector: Optional[List[float]] = None, payload: Optional[Dict[str, Any]] = None
+        self,
+        vector_id: str,
+        vector: Optional[List[float]] = None,
+        payload: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Update a vector and its payload.

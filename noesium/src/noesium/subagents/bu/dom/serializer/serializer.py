@@ -27,8 +27,14 @@ class DOMTreeSerializer:
         {"tag": "div", "role": "combobox"},  # <div role="combobox"> - dropdowns/selects
         {"tag": "span", "role": "button"},  # <span role="button">
         {"tag": "span", "role": "combobox"},  # <span role="combobox">
-        {"tag": "input", "role": "combobox"},  # <input role="combobox"> - autocomplete inputs
-        {"tag": "input", "role": "combobox"},  # <input type="text"> - text inputs with suggestions
+        {
+            "tag": "input",
+            "role": "combobox",
+        },  # <input role="combobox"> - autocomplete inputs
+        {
+            "tag": "input",
+            "role": "combobox",
+        },  # <input type="text"> - text inputs with suggestions
         # {'tag': 'div', 'role': 'link'},     # <div role="link">
         # {'tag': 'span', 'role': 'link'},    # <span role="link">
     ]
@@ -53,7 +59,9 @@ class DOMTreeSerializer:
         self.enable_bbox_filtering = enable_bbox_filtering
         self.containment_threshold = containment_threshold or self.DEFAULT_CONTAINMENT_THRESHOLD
 
-    def serialize_accessible_elements(self) -> tuple[SerializedDOMState, dict[str, float]]:
+    def serialize_accessible_elements(
+        self,
+    ) -> tuple[SerializedDOMState, dict[str, float]]:
         import time
 
         start_total = time.time()
@@ -98,7 +106,10 @@ class DOMTreeSerializer:
         end_total = time.time()
         self.timing_info["serialize_accessible_elements_total"] = end_total - start_total
 
-        return SerializedDOMState(_root=filtered_tree, selector_map=self._selector_map), self.timing_info
+        return (
+            SerializedDOMState(_root=filtered_tree, selector_map=self._selector_map),
+            self.timing_info,
+        )
 
     def _is_interactive_cached(self, node: EnhancedDOMTreeNode) -> bool:
         """Cached version of clickable element detection to avoid redundant calls."""
@@ -271,7 +282,10 @@ class DOMTreeSerializer:
         return node
 
     def _filter_tree_recursive(
-        self, node: SimplifiedNode, active_bounds: PropagatingBounds | None = None, depth: int = 0
+        self,
+        node: SimplifiedNode,
+        active_bounds: PropagatingBounds | None = None,
+        depth: int = 0,
     ):
         """
         Recursively filter tree with bounding box propagation.
@@ -374,8 +388,14 @@ class DOMTreeSerializer:
                 threshold: Percentage (0.0-1.0) of child that must be within parent
         """
         # Calculate intersection
-        x_overlap = max(0, min(child.x + child.width, parent.x + parent.width) - max(child.x, parent.x))
-        y_overlap = max(0, min(child.y + child.height, parent.y + parent.height) - max(child.y, parent.y))
+        x_overlap = max(
+            0,
+            min(child.x + child.width, parent.x + parent.width) - max(child.x, parent.x),
+        )
+        y_overlap = max(
+            0,
+            min(child.y + child.height, parent.y + parent.height) - max(child.y, parent.y),
+        )
 
         intersection_area = x_overlap * y_overlap
         child_area = child.width * child.height

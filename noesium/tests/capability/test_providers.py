@@ -20,7 +20,10 @@ def _mock_tool(name: str = "run_bash", desc: str = "Execute bash") -> MagicMock:
     tool = MagicMock()
     tool.name = name
     tool.description = desc
-    tool.input_schema = {"properties": {"command": {"type": "string"}}, "required": ["command"]}
+    tool.input_schema = {
+        "properties": {"command": {"type": "string"}},
+        "required": ["command"],
+    }
     tool.output_schema = {}
     tool.determinism_class = "stochastic"
     tool.side_effect_class = "effectful"

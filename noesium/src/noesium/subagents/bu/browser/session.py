@@ -266,7 +266,10 @@ class BrowserSession(BaseModel):
         # Create browser profile from direct parameters or use provided one
         if browser_profile is not None:
             # Merge any direct kwargs into the provided browser_profile (direct kwargs take precedence)
-            merged_kwargs = {**browser_profile.model_dump(exclude_unset=True), **profile_kwargs}
+            merged_kwargs = {
+                **browser_profile.model_dump(exclude_unset=True),
+                **profile_kwargs,
+            }
             resolved_browser_profile = BrowserProfile(**merged_kwargs)
         else:
             resolved_browser_profile = BrowserProfile(**profile_kwargs)
@@ -278,7 +281,10 @@ class BrowserSession(BaseModel):
         )
 
     # Session configuration (session identity only)
-    id: str = Field(default_factory=lambda: str(uuid7str()), description="Unique identifier for this browser session")
+    id: str = Field(
+        default_factory=lambda: str(uuid7str()),
+        description="Unique identifier for this browser session",
+    )
 
     # Browser configuration (reusable profile)
     browser_profile: BrowserProfile = Field(
@@ -572,7 +578,8 @@ class BrowserSession(BaseModel):
 
                     # Get the CDP URL from LocalBrowserWatchdog handler result
                     launch_result: BrowserLaunchResult = cast(
-                        BrowserLaunchResult, await launch_event.event_result(raise_if_none=True, raise_if_any=True)
+                        BrowserLaunchResult,
+                        await launch_event.event_result(raise_if_none=True, raise_if_any=True),
                     )
                     self.browser_profile.cdp_url = launch_result.cdp_url
                 else:
@@ -931,7 +938,10 @@ class BrowserSession(BaseModel):
                 )
                 # Use the helper method with the new tab's target_id
                 await self._cdp_set_viewport(
-                    viewport_width, viewport_height, device_scale_factor, target_id=event.target_id
+                    viewport_width,
+                    viewport_height,
+                    device_scale_factor,
+                    target_id=event.target_id,
                 )
 
                 self.logger.debug(f"Applied viewport {viewport_width}x{viewport_height} to tab {event.target_id[-8:]}")
@@ -977,7 +987,10 @@ class BrowserSession(BaseModel):
 
                     # Use the helper method with the current tab's target_id
                     await self._cdp_set_viewport(
-                        viewport_width, viewport_height, device_scale_factor, target_id=event.target_id
+                        viewport_width,
+                        viewport_height,
+                        device_scale_factor,
+                        target_id=event.target_id,
                     )
 
                     self.logger.debug(
@@ -1344,20 +1357,42 @@ class BrowserSession(BaseModel):
             self.logger.debug("Watchdogs already attached, skipping duplicate attachment")
             return
 
-        from noesium.subagents.bu.browser.watchdogs.aboutblank_watchdog import AboutBlankWatchdog
+        from noesium.subagents.bu.browser.watchdogs.aboutblank_watchdog import (
+            AboutBlankWatchdog,
+        )
 
         # from noesium.subagents.bu.browser.crash_watchdog import CrashWatchdog
-        from noesium.subagents.bu.browser.watchdogs.default_action_watchdog import DefaultActionWatchdog
+        from noesium.subagents.bu.browser.watchdogs.default_action_watchdog import (
+            DefaultActionWatchdog,
+        )
         from noesium.subagents.bu.browser.watchdogs.dom_watchdog import DOMWatchdog
-        from noesium.subagents.bu.browser.watchdogs.downloads_watchdog import DownloadsWatchdog
-        from noesium.subagents.bu.browser.watchdogs.har_recording_watchdog import HarRecordingWatchdog
-        from noesium.subagents.bu.browser.watchdogs.local_browser_watchdog import LocalBrowserWatchdog
-        from noesium.subagents.bu.browser.watchdogs.permissions_watchdog import PermissionsWatchdog
-        from noesium.subagents.bu.browser.watchdogs.popups_watchdog import PopupsWatchdog
-        from noesium.subagents.bu.browser.watchdogs.recording_watchdog import RecordingWatchdog
-        from noesium.subagents.bu.browser.watchdogs.screenshot_watchdog import ScreenshotWatchdog
-        from noesium.subagents.bu.browser.watchdogs.security_watchdog import SecurityWatchdog
-        from noesium.subagents.bu.browser.watchdogs.storage_state_watchdog import StorageStateWatchdog
+        from noesium.subagents.bu.browser.watchdogs.downloads_watchdog import (
+            DownloadsWatchdog,
+        )
+        from noesium.subagents.bu.browser.watchdogs.har_recording_watchdog import (
+            HarRecordingWatchdog,
+        )
+        from noesium.subagents.bu.browser.watchdogs.local_browser_watchdog import (
+            LocalBrowserWatchdog,
+        )
+        from noesium.subagents.bu.browser.watchdogs.permissions_watchdog import (
+            PermissionsWatchdog,
+        )
+        from noesium.subagents.bu.browser.watchdogs.popups_watchdog import (
+            PopupsWatchdog,
+        )
+        from noesium.subagents.bu.browser.watchdogs.recording_watchdog import (
+            RecordingWatchdog,
+        )
+        from noesium.subagents.bu.browser.watchdogs.screenshot_watchdog import (
+            ScreenshotWatchdog,
+        )
+        from noesium.subagents.bu.browser.watchdogs.security_watchdog import (
+            SecurityWatchdog,
+        )
+        from noesium.subagents.bu.browser.watchdogs.storage_state_watchdog import (
+            StorageStateWatchdog,
+        )
 
         # Initialize CrashWatchdog
         # CrashWatchdog.model_rebuild()
@@ -1510,7 +1545,14 @@ class BrowserSession(BaseModel):
                 path = path + "/json/version"
 
             url = urlunparse(
-                (parsed_url.scheme, parsed_url.netloc, path, parsed_url.params, parsed_url.query, parsed_url.fragment)
+                (
+                    parsed_url.scheme,
+                    parsed_url.netloc,
+                    path,
+                    parsed_url.params,
+                    parsed_url.query,
+                    parsed_url.fragment,
+                )
             )
 
             # Run a tiny HTTP client to query for the WebSocket URL from the /json/version endpoint
@@ -1553,7 +1595,11 @@ class BrowserSession(BaseModel):
             # Enable auto-attach so Chrome automatically notifies us when NEW targets attach/detach
             # This is the foundation of event-driven session management
             await self._cdp_client_root.send.Target.setAutoAttach(
-                params={"autoAttach": True, "waitForDebuggerOnStart": False, "flatten": True}
+                params={
+                    "autoAttach": True,
+                    "waitForDebuggerOnStart": False,
+                    "flatten": True,
+                }
             )
             self.logger.debug("CDP client connected with auto-attach enabled")
 
@@ -1625,7 +1671,10 @@ class BrowserSession(BaseModel):
             if page_targets_from_manager:
                 initial_url = page_targets_from_manager[0].url
                 self.event_bus.dispatch(
-                    AgentFocusChangedEvent(target_id=page_targets_from_manager[0].target_id, url=initial_url)
+                    AgentFocusChangedEvent(
+                        target_id=page_targets_from_manager[0].target_id,
+                        url=initial_url,
+                    )
                 )
                 self.logger.debug(f"Initial agent focus set to tab 0: {initial_url}")
 
@@ -1724,7 +1773,10 @@ class BrowserSession(BaseModel):
 
                     # schedule
                     create_task_with_error_handling(
-                        _respond(), name="auth_respond", logger_instance=self.logger, suppress_exceptions=True
+                        _respond(),
+                        name="auth_respond",
+                        logger_instance=self.logger,
+                        suppress_exceptions=True,
                     )
                 else:
                     # Default behaviour for non-proxy challenges: let browser handle
@@ -1732,7 +1784,10 @@ class BrowserSession(BaseModel):
                         assert self._cdp_client_root
                         try:
                             await self._cdp_client_root.send.Fetch.continueWithAuth(
-                                params={"requestId": request_id, "authChallengeResponse": {"response": "Default"}},
+                                params={
+                                    "requestId": request_id,
+                                    "authChallengeResponse": {"response": "Default"},
+                                },
                                 session_id=session_id,
                             )
                         except Exception as e:
@@ -1740,7 +1795,10 @@ class BrowserSession(BaseModel):
 
                     if request_id:
                         create_task_with_error_handling(
-                            _default(), name="auth_default", logger_instance=self.logger, suppress_exceptions=True
+                            _default(),
+                            name="auth_default",
+                            logger_instance=self.logger,
+                            suppress_exceptions=True,
                         )
 
             def _on_request_paused(event: RequestPausedEvent, session_id: SessionID | None = None):
@@ -1760,7 +1818,10 @@ class BrowserSession(BaseModel):
                         pass
 
                 create_task_with_error_handling(
-                    _continue(), name="request_continue", logger_instance=self.logger, suppress_exceptions=True
+                    _continue(),
+                    name="request_continue",
+                    logger_instance=self.logger,
+                    suppress_exceptions=True,
                 )
 
             # Register event handler on root client
@@ -1793,7 +1854,10 @@ class BrowserSession(BaseModel):
                         self.logger.debug(f"Fetch.enable on attached session failed: {type(e).__name__}: {e}")
 
                 create_task_with_error_handling(
-                    _enable(), name="fetch_enable_attached", logger_instance=self.logger, suppress_exceptions=True
+                    _enable(),
+                    name="fetch_enable_attached",
+                    logger_instance=self.logger,
+                    suppress_exceptions=True,
                 )
 
             try:
@@ -1808,7 +1872,10 @@ class BrowserSession(BaseModel):
                     # Use safe API with focus=False to avoid changing focus
                     cdp_session = await self.get_or_create_cdp_session(self.agent_focus_target_id, focus=False)
                     await cdp_session.cdp_client.send.Fetch.enable(
-                        params={"handleAuthRequests": True, "patterns": [{"urlPattern": "*"}]},
+                        params={
+                            "handleAuthRequests": True,
+                            "patterns": [{"urlPattern": "*"}],
+                        },
                         session_id=cdp_session.session_id,
                     )
             except Exception as e:
@@ -2210,7 +2277,8 @@ class BrowserSession(BaseModel):
 			})();
 			"""
             result = await cdp_session.cdp_client.send.Runtime.evaluate(
-                params={"expression": script, "returnByValue": True}, session_id=cdp_session.session_id
+                params={"expression": script, "returnByValue": True},
+                session_id=cdp_session.session_id,
             )
 
             # Log the result for debugging
@@ -2310,7 +2378,10 @@ class BrowserSession(BaseModel):
                         rect_data = js_result["result"]["value"]
                         if rect_data["width"] > 0 and rect_data["height"] > 0:
                             return DOMRect(
-                                x=rect_data["x"], y=rect_data["y"], width=rect_data["width"], height=rect_data["height"]
+                                x=rect_data["x"],
+                                y=rect_data["y"],
+                                width=rect_data["width"],
+                                height=rect_data["height"],
                             )
             except Exception as e:
                 self.logger.debug(f"JavaScript getBoundingClientRect failed: {e}")
@@ -2468,7 +2539,8 @@ class BrowserSession(BaseModel):
             # Fire and forget - don't wait for completion
 
             await cdp_session.cdp_client.send.Runtime.evaluate(
-                params={"expression": script, "returnByValue": True}, session_id=cdp_session.session_id
+                params={"expression": script, "returnByValue": True},
+                session_id=cdp_session.session_id,
             )
 
         except Exception as e:
@@ -2577,7 +2649,8 @@ class BrowserSession(BaseModel):
 
             # Fire and forget - don't wait for completion
             await cdp_session.cdp_client.send.Runtime.evaluate(
-                params={"expression": script, "returnByValue": True}, session_id=cdp_session.session_id
+                params={"expression": script, "returnByValue": True},
+                session_id=cdp_session.session_id,
             )
 
         except Exception as e:
@@ -2599,7 +2672,12 @@ class BrowserSession(BaseModel):
                 if node.absolute_position:
                     # Use absolute position which includes iframe coordinate translations
                     rect = node.absolute_position
-                    bbox = {"x": rect.x, "y": rect.y, "width": rect.width, "height": rect.height}
+                    bbox = {
+                        "x": rect.x,
+                        "y": rect.y,
+                        "width": rect.width,
+                        "height": rect.height,
+                    }
 
                     # Only include elements with valid bounding boxes
                     if bbox and bbox.get("width", 0) > 0 and bbox.get("height", 0) > 0:
@@ -2609,7 +2687,7 @@ class BrowserSession(BaseModel):
                             "width": bbox["width"],
                             "height": bbox["height"],
                             "element_name": node.node_name,
-                            "is_clickable": node.snapshot_node.is_clickable if node.snapshot_node else True,
+                            "is_clickable": (node.snapshot_node.is_clickable if node.snapshot_node else True),
                             "is_scrollable": getattr(node, "is_scrollable", False),
                             "attributes": node.attributes or {},
                             "frame_id": getattr(node, "frame_id", None),
@@ -2755,7 +2833,8 @@ class BrowserSession(BaseModel):
 
             # Execute the script
             result = await cdp_session.cdp_client.send.Runtime.evaluate(
-                params={"expression": script, "returnByValue": True}, session_id=cdp_session.session_id
+                params={"expression": script, "returnByValue": True},
+                session_id=cdp_session.session_id,
             )
 
             # Log the result
@@ -2867,7 +2946,10 @@ class BrowserSession(BaseModel):
         return result
 
     async def _cdp_create_new_page(
-        self, url: str = "about:blank", background: bool = False, new_window: bool = False
+        self,
+        url: str = "about:blank",
+        background: bool = False,
+        new_window: bool = False,
     ) -> str:
         """Create a new page/tab using CDP Target.createTarget. Returns target ID."""
         # Use the root CDP client to create tabs at the browser level
@@ -2890,7 +2972,8 @@ class BrowserSession(BaseModel):
         """Get cookies using CDP Network.getCookies."""
         cdp_session = await self.get_or_create_cdp_session(target_id=None)
         result = await asyncio.wait_for(
-            cdp_session.cdp_client.send.Storage.getCookies(session_id=cdp_session.session_id), timeout=8.0
+            cdp_session.cdp_client.send.Storage.getCookies(session_id=cdp_session.session_id),
+            timeout=8.0,
         )
         return result.get("cookies", [])
 
@@ -2935,7 +3018,8 @@ class BrowserSession(BaseModel):
         cdp_session = await self.get_or_create_cdp_session()
 
         result = await cdp_session.cdp_client.send.Page.addScriptToEvaluateOnNewDocument(
-            params={"source": script, "runImmediately": True}, session_id=cdp_session.session_id
+            params={"source": script, "runImmediately": True},
+            session_id=cdp_session.session_id,
         )
         return result["identifier"]
 
@@ -2978,7 +3062,12 @@ class BrowserSession(BaseModel):
             return
 
         await cdp_session.cdp_client.send.Emulation.setDeviceMetricsOverride(
-            params={"width": width, "height": height, "deviceScaleFactor": device_scale_factor, "mobile": mobile},
+            params={
+                "width": width,
+                "height": height,
+                "deviceScaleFactor": device_scale_factor,
+                "mobile": mobile,
+            },
             session_id=cdp_session.session_id,
         )
 
@@ -3014,7 +3103,12 @@ class BrowserSession(BaseModel):
                     storage_type = "localStorage" if is_local_storage else "sessionStorage"
                     try:
                         result = await cdp_session.cdp_client.send.DOMStorage.getDOMStorageItems(
-                            params={"storageId": {"securityOrigin": origin, "isLocalStorage": is_local_storage}},
+                            params={
+                                "storageId": {
+                                    "securityOrigin": origin,
+                                    "isLocalStorage": is_local_storage,
+                                }
+                            },
                             session_id=cdp_session.session_id,
                         )
 
@@ -3309,7 +3403,8 @@ class BrowserSession(BaseModel):
 
                         # Get frame owner info to find backend node ID
                         frame_owner = await self.cdp_client.send.DOM.getFrameOwner(
-                            params={"frameId": frame_id_iter}, session_id=parent_session_id
+                            params={"frameId": frame_id_iter},
+                            session_id=parent_session_id,
                         )
 
                         if frame_owner:
@@ -3539,7 +3634,8 @@ class BrowserSession(BaseModel):
 
         # Query selector
         node_result = await cdp_session.cdp_client.send.DOM.querySelector(
-            params={"nodeId": doc["root"]["nodeId"], "selector": selector}, session_id=cdp_session.session_id
+            params={"nodeId": doc["root"]["nodeId"], "selector": selector},
+            session_id=cdp_session.session_id,
         )
 
         node_id = node_result.get("nodeId")

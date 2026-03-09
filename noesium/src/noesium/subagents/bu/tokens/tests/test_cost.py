@@ -7,7 +7,11 @@ Tests ChatOpenAI and ChatGoogle by iteratively generating countries.
 import asyncio
 import logging
 
-from noesium.subagents.bu.adapters.llm_adapter import AssistantMessage, SystemMessage, UserMessage
+from noesium.subagents.bu.adapters.llm_adapter import (
+    AssistantMessage,
+    SystemMessage,
+    UserMessage,
+)
 from noesium.subagents.bu.tokens.service import TokenCost
 
 # Note: ChatGoogle and ChatOpenAI are not available in noesium's llm_adapter
@@ -89,7 +93,10 @@ Only output the country name, no numbers, no punctuation, just the name."""
         tc.register_llm(llm)
 
         # Initialize conversation
-        messages = [SystemMessage(content=system_prompt), UserMessage(content="Give me a country name")]
+        messages = [
+            SystemMessage(content=system_prompt),
+            UserMessage(content="Give me a country name"),
+        ]
 
         countries = []
 

@@ -308,7 +308,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         else:
             # Exclude screenshot tool when use_vision is not auto
             exclude_actions = ["screenshot"] if use_vision != "auto" else []
-            self.tools = Tools(exclude_actions=exclude_actions, display_files_in_done_text=display_files_in_done_text)
+            self.tools = Tools(
+                exclude_actions=exclude_actions,
+                display_files_in_done_text=display_files_in_done_text,
+            )
 
         # Enforce screenshot exclusion when use_vision != 'auto', even if user passed custom tools
         if use_vision != "auto":
@@ -317,7 +320,13 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         # Enable coordinate clicking for models that support it
         model_name = getattr(llm, "model", "").lower()
         supports_coordinate_clicking = any(
-            pattern in model_name for pattern in ["claude-sonnet-4", "claude-opus-4", "gemini-3-pro", "browser-use/"]
+            pattern in model_name
+            for pattern in [
+                "claude-sonnet-4",
+                "claude-opus-4",
+                "gemini-3-pro",
+                "browser-use/",
+            ]
         )
         if supports_coordinate_clicking:
             self.tools.set_coordinate_clicking(True)
@@ -891,7 +900,7 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             result=self.state.last_result,
             step_info=step_info,
             use_vision=self.settings.use_vision,
-            page_filtered_actions=page_filtered_actions if page_filtered_actions else None,
+            page_filtered_actions=(page_filtered_actions if page_filtered_actions else None),
             sensitive_data=self.sensitive_data,
             available_file_paths=self.available_file_paths,  # Always pass current available_file_paths
             # unavailable_skills_info=unavailable_skills_info,  # Not supported in current MessageManager
@@ -931,12 +940,15 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         try:
             model_output = await asyncio.wait_for(
-                self._get_model_output_with_retry(input_messages), timeout=self.settings.llm_timeout
+                self._get_model_output_with_retry(input_messages),
+                timeout=self.settings.llm_timeout,
             )
         except TimeoutError:
 
             @observe(name="_llm_call_timed_out_with_input")
-            async def _log_model_input_to_lmnr(input_messages: list[BaseMessage]) -> None:
+            async def _log_model_input_to_lmnr(
+                input_messages: list[BaseMessage],
+            ) -> None:
                 """Log the model input"""
 
             await _log_model_input_to_lmnr(input_messages)
@@ -1146,7 +1158,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
             # Mark steps between old and new as done
             for i in range(old_idx, new_idx):
-                if i < len(self.state.plan) and self.state.plan[i].status in ("current", "pending"):
+                if i < len(self.state.plan) and self.state.plan[i].status in (
+                    "current",
+                    "pending",
+                ):
                     self.state.plan[i].status = "done"
 
             # Mark the new step as current
@@ -1553,7 +1568,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         returns:
                 tuple[filtered_input_messages, urls we replaced {shorter_url: original_url}]
         """
-        from noesium.subagents.bu.adapters.llm_adapter import AssistantMessage, UserMessage
+        from noesium.subagents.bu.adapters.llm_adapter import (
+            AssistantMessage,
+            UserMessage,
+        )
 
         urls_replaced: dict[str, str] = {}
 
@@ -1889,7 +1907,14 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             final_result_str = str(final_result).lower() if final_result else ""
 
             # Check for captcha/cloudflare related failures
-            captcha_keywords = ["captcha", "cloudflare", "recaptcha", "challenge", "bot detection", "access denied"]
+            captcha_keywords = [
+                "captcha",
+                "cloudflare",
+                "recaptcha",
+                "challenge",
+                "bot detection",
+                "access denied",
+            ]
             has_captcha_issue = any(keyword in final_result_str for keyword in captcha_keywords)
 
             if has_captcha_issue:
@@ -2272,7 +2297,11 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     # Agent has marked the task as done
                     if self._demo_mode_enabled and self.history.history:
                         final_result_text = self.history.final_result() or "Task completed"
-                        await self._demo_mode_log(f"Final Result: {final_result_text}", "success", {"tag": "task"})
+                        await self._demo_mode_log(
+                            f"Final Result: {final_result_text}",
+                            "success",
+                            {"tag": "task"},
+                        )
 
                     should_delay_close = True
                     break
@@ -2541,7 +2570,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             if plain_param_parts:
                 panel_message = f'{panel_message} {", ".join(plain_param_parts)}'
             await self._demo_mode_log(
-                panel_message.strip(), "action", {"action": action_name, "step": self.state.n_steps}
+                panel_message.strip(),
+                "action",
+                {"action": action_name, "step": self.state.n_steps},
             )
 
     async def log_completion(self) -> None:
@@ -2553,7 +2584,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             await self._demo_mode_log("Task completed successfully", "success", {"tag": "task"})
 
     async def _generate_rerun_summary(
-        self, original_task: str, results: list[ActionResult], summary_llm: BaseChatModel | None = None
+        self,
+        original_task: str,
+        results: list[ActionResult],
+        summary_llm: BaseChatModel | None = None,
     ) -> ActionResult:
         """Generate AI summary of rerun completion using screenshot and last step info"""
         from noesium.subagents.bu.agent.views import RerunSummaryAction
@@ -2573,7 +2607,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         error_count = sum(1 for r in results if r.error)
         success_count = len(results) - error_count
 
-        from noesium.subagents.bu.agent.prompts import get_rerun_summary_message, get_rerun_summary_prompt
+        from noesium.subagents.bu.agent.prompts import (
+            get_rerun_summary_message,
+            get_rerun_summary_prompt,
+        )
 
         prompt = get_rerun_summary_prompt(
             original_task=original_task,
@@ -2617,7 +2654,7 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
                 # Use the text response directly as the summary
                 summary = RerunSummaryAction(
-                    summary=response_text if isinstance(response_text, str) else str(response_text),
+                    summary=(response_text if isinstance(response_text, str) else str(response_text)),
                     success=error_count == 0,
                     completion_status=(
                         "complete" if error_count == 0 else ("partial" if success_count > 0 else "failed")
@@ -2679,7 +2716,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         # Extract clean markdown
         try:
-            from noesium.subagents.bu.dom.markdown_extractor import extract_clean_markdown
+            from noesium.subagents.bu.dom.markdown_extractor import (
+                extract_clean_markdown,
+            )
 
             content, content_stats = await extract_clean_markdown(
                 browser_session=self.browser_session, extract_links=extract_links
@@ -2727,7 +2766,8 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             import asyncio
 
             response = await asyncio.wait_for(
-                llm.ainvoke([SystemMessage(content=system_prompt), user_message]), timeout=120.0
+                llm.ainvoke([SystemMessage(content=system_prompt), user_message]),
+                timeout=120.0,
             )
 
             current_url = await self.browser_session.get_current_page_url()
@@ -2921,7 +2961,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                             # With skip_failures=True, continue to next step
                         else:
                             # Exponential backoff: 5s, 10s, 20s, ... capped at 30s
-                            retry_delay = min(base_retry_delay * (2 ** (retry_count - 1)), max_retry_delay)
+                            retry_delay = min(
+                                base_retry_delay * (2 ** (retry_count - 1)),
+                                max_retry_delay,
+                            )
                             self.logger.warning(
                                 f"{step_name} failed (attempt {retry_count}/{max_retries}), retrying in {retry_delay}s..."
                             )
@@ -2971,7 +3014,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 )
 
             metadata = StepMetadata(
-                step_number=0, step_start_time=time.time(), step_end_time=time.time(), step_interval=None
+                step_number=0,
+                step_start_time=time.time(),
+                step_end_time=time.time(),
+                step_interval=None,
             )
 
             # Create minimal browser state history for initial actions
@@ -3091,7 +3137,13 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                     action_data = action.model_dump(exclude_unset=True)
                     action_name = next(iter(action_data.keys()), None)
                     # Actions that need element matching
-                    if action_name in ("click", "input", "hover", "select_option", "drag_and_drop"):
+                    if action_name in (
+                        "click",
+                        "input",
+                        "hover",
+                        "select_option",
+                        "drag_and_drop",
+                    ):
                         historical_elem = (
                             history_item.state.interacted_element[i]
                             if i < len(history_item.state.interacted_element)
@@ -3226,7 +3278,11 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         if historical_element.node_name:
             hist_name = historical_element.node_name.lower()
             matching_nodes = [
-                (idx, elem.node_name, elem.attributes.get("name") if elem.attributes else None)
+                (
+                    idx,
+                    elem.node_name,
+                    elem.attributes.get("name") if elem.attributes else None,
+                )
                 for idx, elem in selector_map.items()
                 if elem.node_name.lower() == hist_name
             ]
@@ -3322,7 +3378,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
                 tried_attrs = [k for k in ["name", "id", "aria-label"] if k in hist_attrs and hist_attrs[k]]
                 # Log what was tried and what's available on the page for debugging
                 same_node_elements = [
-                    (idx, elem.attributes.get("aria-label") or elem.attributes.get("id") or elem.attributes.get("name"))
+                    (
+                        idx,
+                        elem.attributes.get("aria-label") or elem.attributes.get("id") or elem.attributes.get("name"),
+                    )
                     for idx, elem in selector_map.items()
                     if elem.node_name.lower() == hist_name and elem.attributes
                 ]
@@ -3468,9 +3527,15 @@ class Agent(Generic[Context, AgentStructuredOutput]):
             return True
         if "expand-button" in attrs.get("class", ""):
             return True
-        if attrs.get("role") == "menuitem" and attrs.get("aria-expanded") in ("false", "true"):
+        if attrs.get("role") == "menuitem" and attrs.get("aria-expanded") in (
+            "false",
+            "true",
+        ):
             return True
-        if attrs.get("role") == "button" and attrs.get("aria-expanded") in ("false", "true"):
+        if attrs.get("role") == "button" and attrs.get("aria-expanded") in (
+            "false",
+            "true",
+        ):
             return True
 
         return False
@@ -3493,7 +3558,13 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
         # Check for menu item roles
         role = attrs.get("role", "")
-        if role in ("menuitem", "option", "menuitemcheckbox", "menuitemradio", "treeitem"):
+        if role in (
+            "menuitem",
+            "option",
+            "menuitemcheckbox",
+            "menuitemradio",
+            "treeitem",
+        ):
             return True
 
         # Elements in Guidewire menus have these patterns
@@ -3727,11 +3798,19 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         """Synchronous wrapper around the async run method for easier usage without asyncio."""
         import asyncio
 
-        return asyncio.run(self.run(max_steps=max_steps, on_step_start=on_step_start, on_step_end=on_step_end))
+        return asyncio.run(
+            self.run(
+                max_steps=max_steps,
+                on_step_start=on_step_start,
+                on_step_end=on_step_end,
+            )
+        )
 
     def detect_variables(self) -> dict[str, DetectedVariable]:
         """Detect reusable variables in agent history"""
-        from noesium.subagents.bu.agent.variable_detector import detect_variables_in_history
+        from noesium.subagents.bu.agent.variable_detector import (
+            detect_variables_in_history,
+        )
 
         return detect_variables_in_history(self.history)
 
@@ -3739,7 +3818,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
         self, history: AgentHistoryList, variables: dict[str, str]
     ) -> AgentHistoryList:
         """Substitute variables in history with new values for rerunning with different data"""
-        from noesium.subagents.bu.agent.variable_detector import detect_variables_in_history
+        from noesium.subagents.bu.agent.variable_detector import (
+            detect_variables_in_history,
+        )
 
         # Detect variables in the history
         detected_vars = detect_variables_in_history(history)

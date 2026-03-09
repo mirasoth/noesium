@@ -1,7 +1,8 @@
 from noesium.core.consts import set_noesium_home
+from noesium.core.context import CognitiveContext
 from noesium.core.utils.logging import setup_logging
 
 # Enable colorful logging by default for noesium
 setup_logging(level="INFO", enable_colors=True)
 
-__all__ = ["set_noesium_home"]
+__all__ = ["set_noesium_home", "CognitiveContext"]

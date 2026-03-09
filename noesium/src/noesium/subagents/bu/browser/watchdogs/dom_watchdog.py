@@ -18,10 +18,18 @@ from noesium.subagents.bu.dom.views import (
     SerializedDOMState,
 )
 from noesium.subagents.bu.observability import observe_debug
-from noesium.subagents.bu.utils import create_task_with_error_handling, time_execution_async
+from noesium.subagents.bu.utils import (
+    create_task_with_error_handling,
+    time_execution_async,
+)
 
 if TYPE_CHECKING:
-    from noesium.subagents.bu.browser.views import BrowserStateSummary, NetworkRequest, PageInfo, PaginationButton
+    from noesium.subagents.bu.browser.views import (
+        BrowserStateSummary,
+        NetworkRequest,
+        PageInfo,
+        PaginationButton,
+    )
 
 
 class DOMWatchdog(BaseWatchdog):
@@ -198,7 +206,8 @@ class DOMWatchdog(BaseWatchdog):
 """
 
             result = await cdp_session.cdp_client.send.Runtime.evaluate(
-                params={"expression": js_code, "returnByValue": True}, session_id=cdp_session.session_id
+                params={"expression": js_code, "returnByValue": True},
+                session_id=cdp_session.session_id,
             )
 
             if result.get("result", {}).get("type") == "object":
@@ -264,7 +273,10 @@ class DOMWatchdog(BaseWatchdog):
             self.logger.debug(f"Current page URL: {page_url}, target_id: {self.browser_session.agent_focus_target_id}")
 
         # check if we should skip DOM tree build for pointless pages
-        not_a_meaningful_website = page_url.lower().split(":", 1)[0] not in ("http", "https")
+        not_a_meaningful_website = page_url.lower().split(":", 1)[0] not in (
+            "http",
+            "https",
+        )
 
         # Check for pending network requests BEFORE waiting (so we can see what's loading)
         pending_requests_before_wait = []
@@ -323,7 +335,10 @@ class DOMWatchdog(BaseWatchdog):
                 except Exception as e:
                     self.logger.debug(f"Failed to get page info from CDP for empty page: {e}, using fallback")
                     # Use default viewport dimensions
-                    viewport = self.browser_session.browser_profile.viewport or {"width": 1280, "height": 720}
+                    viewport = self.browser_session.browser_profile.viewport or {
+                        "width": 1280,
+                        "height": 720,
+                    }
                     page_info = PageInfo(
                         viewport_width=viewport["width"],
                         viewport_height=viewport["height"],
@@ -348,7 +363,7 @@ class DOMWatchdog(BaseWatchdog):
                     pixels_below=0,
                     browser_errors=[],
                     is_pdf_viewer=False,
-                    recent_events=self._get_recent_events_str() if event.include_recent_events else None,
+                    recent_events=(self._get_recent_events_str() if event.include_recent_events else None),
                     pending_network_requests=[],  # Empty page has no pending requests
                     pagination_buttons=[],  # Empty page has no pagination
                     closed_popup_messages=self.browser_session._closed_popup_messages.copy(),
@@ -447,7 +462,10 @@ class DOMWatchdog(BaseWatchdog):
                     f"🔍 DOMWatchdog.on_BrowserStateRequestEvent: Failed to get page info from CDP: {e}, using fallback"
                 )
                 # Fallback to default viewport dimensions
-                viewport = self.browser_session.browser_profile.viewport or {"width": 1280, "height": 720}
+                viewport = self.browser_session.browser_profile.viewport or {
+                    "width": 1280,
+                    "height": 720,
+                }
                 page_info = PageInfo(
                     viewport_width=viewport["width"],
                     viewport_height=viewport["height"],
@@ -490,7 +508,7 @@ class DOMWatchdog(BaseWatchdog):
                 pixels_below=0,
                 browser_errors=[],
                 is_pdf_viewer=is_pdf_viewer,
-                recent_events=self._get_recent_events_str() if event.include_recent_events else None,
+                recent_events=(self._get_recent_events_str() if event.include_recent_events else None),
                 pending_network_requests=pending_requests,
                 pagination_buttons=pagination_buttons_data,
                 closed_popup_messages=self.browser_session._closed_popup_messages.copy(),
@@ -501,7 +519,10 @@ class DOMWatchdog(BaseWatchdog):
 
             # Cache viewport size for coordinate conversion (if llm_screenshot_size is enabled)
             if page_info:
-                self.browser_session._original_viewport_size = (page_info.viewport_width, page_info.viewport_height)
+                self.browser_session._original_viewport_size = (
+                    page_info.viewport_width,
+                    page_info.viewport_height,
+                )
 
             self.logger.debug("🔍 DOMWatchdog.on_BrowserStateRequestEvent: ✅ COMPLETED - Returning browser state")
             return browser_state
@@ -579,7 +600,10 @@ class DOMWatchdog(BaseWatchdog):
             )
 
             # Build hierarchical timing breakdown as single multi-line string
-            timing_lines = [f"⏱️ Total DOM tree time: {total_time_ms:.2f}ms", "📊 Timing breakdown:"]
+            timing_lines = [
+                f"⏱️ Total DOM tree time: {total_time_ms:.2f}ms",
+                "📊 Timing breakdown:",
+            ]
 
             # get_all_trees breakdown
             get_all_trees_ms = timing_info.get("get_all_trees_total_ms", 0)
@@ -783,7 +807,8 @@ class DOMWatchdog(BaseWatchdog):
 
         # Get layout metrics which includes all the information we need
         metrics = await asyncio.wait_for(
-            cdp_session.cdp_client.send.Page.getLayoutMetrics(session_id=cdp_session.session_id), timeout=10.0
+            cdp_session.cdp_client.send.Page.getLayoutMetrics(session_id=cdp_session.session_id),
+            timeout=10.0,
         )
 
         # Extract different viewport types

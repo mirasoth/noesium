@@ -102,7 +102,9 @@ class TestGmailService:
         from noesium.toolkits.gmail_toolkit import GmailService
 
         service = GmailService(
-            credentials_file="/custom/creds.json", token_file="/custom/token.json", config_dir="/custom/config"
+            credentials_file="/custom/creds.json",
+            token_file="/custom/token.json",
+            config_dir="/custom/config",
         )
 
         assert str(service.credentials_file) == "/custom/creds.json"
@@ -244,7 +246,10 @@ class TestGmailService:
 
         payload = {
             "parts": [
-                {"mimeType": "text/plain", "body": {"data": "VGVzdCBwbGFpbiB0ZXh0"}},  # "Test plain text" in base64
+                {
+                    "mimeType": "text/plain",
+                    "body": {"data": "VGVzdCBwbGFpbiB0ZXh0"},
+                },  # "Test plain text" in base64
                 {
                     "mimeType": "text/html",
                     "body": {"data": "PGgxPlRlc3QgSFRNTDwvaDE+"},  # "<h1>Test HTML</h1>" in base64
@@ -271,7 +276,13 @@ class TestGmailToolkit:
     @pytest.mark.asyncio
     async def test_toolkit_initialization_with_env_vars(self):
         """Test initialization with environment variables."""
-        with patch.dict(os.environ, {"GMAIL_ACCESS_TOKEN": "env_token", "GMAIL_CREDENTIALS_PATH": "/env/creds.json"}):
+        with patch.dict(
+            os.environ,
+            {
+                "GMAIL_ACCESS_TOKEN": "env_token",
+                "GMAIL_CREDENTIALS_PATH": "/env/creds.json",
+            },
+        ):
             toolkit = get_toolkit("gmail", ToolkitConfig(name="gmail"))
             assert toolkit.gmail_service.access_token == "env_token"
 
@@ -280,7 +291,12 @@ class TestGmailToolkit:
         """Test that tools map is correctly defined."""
         tools_map = await gmail_toolkit.get_tools_map()
 
-        expected_tools = ["authenticate_gmail", "get_recent_emails", "search_emails", "get_verification_codes"]
+        expected_tools = [
+            "authenticate_gmail",
+            "get_recent_emails",
+            "search_emails",
+            "get_verification_codes",
+        ]
         for tool_name in expected_tools:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
@@ -511,7 +527,11 @@ class TestGmailToolkit:
     @pytest.mark.asyncio
     async def test_toolkit_error_handling(self, gmail_toolkit):
         """Test error handling in toolkit methods."""
-        with patch.object(gmail_toolkit.gmail_service, "authenticate", side_effect=Exception("Network error")):
+        with patch.object(
+            gmail_toolkit.gmail_service,
+            "authenticate",
+            side_effect=Exception("Network error"),
+        ):
             result = await gmail_toolkit.get_recent_emails()
             assert "❌ Error getting recent emails" in result
             assert "Network error" in result

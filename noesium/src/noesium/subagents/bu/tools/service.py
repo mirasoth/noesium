@@ -117,7 +117,10 @@ class Tools(Generic[Context]):
                 for i, tab in enumerate(tabs):
                     logger.debug(f'Tab {i}: url="{tab.url}", title="{tab.title}"')
                     # Check if tab is on Google domain
-                    if tab.url and tab.url.strip("/").lower() in ("https://www.google.com", "https://google.com"):
+                    if tab.url and tab.url.strip("/").lower() in (
+                        "https://www.google.com",
+                        "https://google.com",
+                    ):
                         # Found existing Google tab, navigate in it
                         logger.debug(f"Found existing Google tab at index {i}: {tab.url}, reusing it")
 
@@ -301,13 +304,14 @@ class Tools(Generic[Context]):
                 # Include click coordinates in metadata if available
                 return ActionResult(
                     long_term_memory=memory,
-                    metadata=click_metadata if isinstance(click_metadata, dict) else None,
+                    metadata=(click_metadata if isinstance(click_metadata, dict) else None),
                 )
             except BrowserError as e:
                 if "Cannot click on <select> elements." in str(e):
                     try:
                         return await get_dropdown_options(
-                            params=GetDropdownOptionsAction(index=params.index), browser_session=browser_session
+                            params=GetDropdownOptionsAction(index=params.index),
+                            browser_session=browser_session,
                         )
                     except Exception as dropdown_error:
                         logger.error(
@@ -324,7 +328,9 @@ class Tools(Generic[Context]):
             param_model=InputTextAction,
         )
         async def input_text(
-            params: InputTextAction, browser_session: BrowserSession, has_sensitive_data: bool = False
+            params: InputTextAction,
+            browser_session: BrowserSession,
+            has_sensitive_data: bool = False,
         ):
             # Look up the node from the selector map
             node = await browser_session.get_element_by_index(params.index)
@@ -334,7 +340,11 @@ class Tools(Generic[Context]):
             # Dispatch type text event with node
             try:
                 event = browser_session.event_bus.dispatch(
-                    TypeTextEvent(node=node, text=params.text, clear_existing=params.clear_existing)
+                    TypeTextEvent(
+                        node=node,
+                        text=params.text,
+                        clear_existing=params.clear_existing,
+                    )
                 )
                 await event
                 input_metadata = await event.event_result(raise_if_any=True, raise_if_none=False)
@@ -345,7 +355,7 @@ class Tools(Generic[Context]):
                 return ActionResult(
                     extracted_content=msg,
                     long_term_memory=f"Input '{params.text}' into element {params.index}.",
-                    metadata=input_metadata if isinstance(input_metadata, dict) else None,
+                    metadata=(input_metadata if isinstance(input_metadata, dict) else None),
                 )
             except BrowserError as e:
                 return handle_browser_error(e)
@@ -355,7 +365,10 @@ class Tools(Generic[Context]):
                 error_msg = f"Failed to input text into element {params.index}: {e}"
                 return ActionResult(error=error_msg)
 
-        @self.registry.action("Upload file to interactive element with file path", param_model=UploadFileAction)
+        @self.registry.action(
+            "Upload file to interactive element with file path",
+            param_model=UploadFileAction,
+        )
         async def upload_file_to_element(
             params: UploadFileAction,
             browser_session: BrowserSession,
@@ -409,7 +422,9 @@ class Tools(Generic[Context]):
 
             # Helper function to find file input near the selected element
             def find_file_input_near_element(
-                node: EnhancedDOMTreeNode, max_height: int = 3, max_descendant_depth: int = 3
+                node: EnhancedDOMTreeNode,
+                max_height: int = 3,
+                max_descendant_depth: int = 3,
             ) -> EnhancedDOMTreeNode | None:
                 """Find the closest file input to the selected element."""
 
@@ -657,7 +672,12 @@ You will be given a query and the markdown of a webpage that has been filtered t
 
             try:
                 response = await asyncio.wait_for(
-                    page_extraction_llm.ainvoke([SystemMessage(content=system_prompt), UserMessage(content=prompt)]),
+                    page_extraction_llm.ainvoke(
+                        [
+                            SystemMessage(content=system_prompt),
+                            UserMessage(content=prompt),
+                        ]
+                    ),
                     timeout=120.0,
                 )
 
@@ -709,7 +729,11 @@ You will be given a query and the markdown of a webpage that has been filtered t
                 # Convert pages to pixels (assuming 1000px per page as standard viewport height)
                 pixels = int(params.num_pages * 1000)
                 event = browser_session.event_bus.dispatch(
-                    ScrollEvent(direction="down" if params.down else "up", amount=pixels, node=node)
+                    ScrollEvent(
+                        direction="down" if params.down else "up",
+                        amount=pixels,
+                        node=node,
+                    )
                 )
                 await event
                 await event.event_result(raise_if_any=True, raise_if_none=False)
@@ -928,7 +952,8 @@ You will be given a query and the markdown of a webpage that has been filtered t
         try:
             body_id = await cdp_session.cdp_client.send.DOM.getDocument(session_id=cdp_session.session_id)
             page_html_result = await cdp_session.cdp_client.send.DOM.getOuterHTML(
-                params={"backendNodeId": body_id["root"]["backendNodeId"]}, session_id=cdp_session.session_id
+                params={"backendNodeId": body_id["root"]["backendNodeId"]},
+                session_id=cdp_session.session_id,
             )
             page_html = page_html_result["outerHTML"]
             current_url = await browser_session.get_current_page_url()

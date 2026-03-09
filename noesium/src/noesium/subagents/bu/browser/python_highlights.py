@@ -396,7 +396,14 @@ def process_element_highlight(
 
         # Draw enhanced bounding box with bigger index
         draw_enhanced_bounding_box_with_text(
-            draw, (x1, y1, x2, y2), color, index_text, font, tag_name, image_size, device_pixel_ratio
+            draw,
+            (x1, y1, x2, y2),
+            color,
+            index_text,
+            font,
+            tag_name,
+            image_size,
+            device_pixel_ratio,
         )
 
     except Exception as e:
@@ -441,7 +448,13 @@ async def create_highlighted_screenshot(
         # PIL ImageDraw is not thread-safe, so we process elements one by one
         for element_id, element in selector_map.items():
             process_element_highlight(
-                element_id, element, draw, device_pixel_ratio, font, filter_highlight_ids, image.size
+                element_id,
+                element,
+                draw,
+                device_pixel_ratio,
+                font,
+                filter_highlight_ids,
+                image.size,
             )
 
         # Convert back to base64
@@ -501,7 +514,10 @@ async def get_viewport_info_from_cdp(cdp_session) -> tuple[float, int, int]:
 
 @time_execution_async("create_highlighted_screenshot_async")
 async def create_highlighted_screenshot_async(
-    screenshot_b64: str, selector_map: DOMSelectorMap, cdp_session=None, filter_highlight_ids: bool = True
+    screenshot_b64: str,
+    selector_map: DOMSelectorMap,
+    cdp_session=None,
+    filter_highlight_ids: bool = True,
 ) -> str:
     """Async wrapper for creating highlighted screenshots.
 
@@ -527,7 +543,12 @@ async def create_highlighted_screenshot_async(
 
     # Create highlighted screenshot with async processing
     final_screenshot = await create_highlighted_screenshot(
-        screenshot_b64, selector_map, device_pixel_ratio, viewport_offset_x, viewport_offset_y, filter_highlight_ids
+        screenshot_b64,
+        selector_map,
+        device_pixel_ratio,
+        viewport_offset_x,
+        viewport_offset_y,
+        filter_highlight_ids,
     )
 
     filename = os.getenv("BROWSER_USE_SCREENSHOT_FILE")
@@ -546,4 +567,8 @@ async def create_highlighted_screenshot_async(
 
 
 # Export the cleanup function for external use in long-running applications
-__all__ = ["create_highlighted_screenshot", "create_highlighted_screenshot_async", "cleanup_font_cache"]
+__all__ = [
+    "create_highlighted_screenshot",
+    "create_highlighted_screenshot_async",
+    "cleanup_font_cache",
+]

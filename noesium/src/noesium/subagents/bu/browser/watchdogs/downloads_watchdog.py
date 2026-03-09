@@ -594,7 +594,10 @@ class DownloadsWatchdog(BaseWatchdog):
                             # Parse filename from Content-Disposition header
                             import re
 
-                            filename_match = re.search(r'filename[^;=\n]*=(([\'"]).*?\2|[^;\n]*)', content_disposition)
+                            filename_match = re.search(
+                                r'filename[^;=\n]*=(([\'"]).*?\2|[^;\n]*)',
+                                content_disposition,
+                            )
                             if filename_match:
                                 suggested_filename = filename_match.group(1).strip("'\"")
 
@@ -663,7 +666,11 @@ class DownloadsWatchdog(BaseWatchdog):
             self.logger.warning(f"[DownloadsWatchdog] Failed to set up network monitoring for target {target_id}: {e}")
 
     async def download_file_from_url(
-        self, url: str, target_id: TargetID, content_type: str | None = None, suggested_filename: str | None = None
+        self,
+        url: str,
+        target_id: TargetID,
+        content_type: str | None = None,
+        suggested_filename: str | None = None,
     ) -> str | None:
         """Generic method to download any file from a URL.
 
@@ -864,7 +871,10 @@ class DownloadsWatchdog(BaseWatchdog):
             self.logger.error(f"[DownloadsWatchdog] Error tracking download: {e}")
 
     async def _handle_cdp_download(
-        self, event: DownloadWillBeginEvent, target_id: TargetID, session_id: SessionID | None
+        self,
+        event: DownloadWillBeginEvent,
+        target_id: TargetID,
+        session_id: SessionID | None,
     ) -> None:
         """Handle a CDP Page.downloadWillBegin event."""
         downloads_dir = (
@@ -1180,7 +1190,8 @@ class DownloadsWatchdog(BaseWatchdog):
 
             # Get navigation history to find the main resource
             history = await asyncio.wait_for(
-                temp_session.cdp_client.send.Page.getNavigationHistory(session_id=temp_session.session_id), timeout=3.0
+                temp_session.cdp_client.send.Page.getNavigationHistory(session_id=temp_session.session_id),
+                timeout=3.0,
             )
 
             current_entry = history.get("entries", [])

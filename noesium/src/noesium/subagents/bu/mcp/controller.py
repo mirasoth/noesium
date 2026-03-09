@@ -181,7 +181,10 @@ class MCPToolWrapper:
 
             except Exception as e:
                 logger.error(f"❌ MCP tool {tool_name} failed: {e}")
-                return ActionResult(extracted_content=f"MCP tool {tool_name} failed: {str(e)}", error=str(e))
+                return ActionResult(
+                    extracted_content=f"MCP tool {tool_name} failed: {str(e)}",
+                    error=str(e),
+                )
 
         # Set function name for better debugging
         mcp_action_wrapper.__name__ = tool_name

@@ -88,7 +88,11 @@ async def demo_pgvector_store():
 
     try:
         # Initialize PGVector
-        vector_store = PGVectorStore(collection_name=collection_name, embedding_model_dims=embedding_dims, **pg_config)
+        vector_store = PGVectorStore(
+            collection_name=collection_name,
+            embedding_model_dims=embedding_dims,
+            **pg_config,
+        )
         print("✅ PGVector store connected successfully")
 
         # Initialize embedding generator

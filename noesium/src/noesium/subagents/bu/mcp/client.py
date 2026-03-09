@@ -274,7 +274,10 @@ class MCPClient:
             async def mcp_action_wrapper(params: param_model) -> ActionResult:  # type: ignore[no-redef]
                 """Wrapper function that calls the MCP tool."""
                 if not self.session or not self._connected:
-                    return ActionResult(error=f"MCP server '{self.server_name}' not connected", success=False)
+                    return ActionResult(
+                        error=f"MCP server '{self.server_name}' not connected",
+                        success=False,
+                    )
 
                 # Convert pydantic model to dict for MCP call
                 tool_params = params.model_dump(exclude_none=True)
@@ -306,7 +309,10 @@ class MCPClient:
             async def mcp_action_wrapper() -> ActionResult:  # type: ignore[no-redef]
                 """Wrapper function that calls the MCP tool."""
                 if not self.session or not self._connected:
-                    return ActionResult(error=f"MCP server '{self.server_name}' not connected", success=False)
+                    return ActionResult(
+                        error=f"MCP server '{self.server_name}' not connected",
+                        success=False,
+                    )
 
                 logger.debug(f"🔧 Calling MCP tool '{tool.name}' with no params")
 
@@ -434,7 +440,10 @@ class MCPClient:
                     if "description" in prop_schema:
                         field_kwargs["description"] = prop_schema["description"]
 
-                    nested_fields[prop_name] = (prop_type, Field(default, **field_kwargs))
+                    nested_fields[prop_name] = (
+                        prop_type,
+                        Field(default, **field_kwargs),
+                    )
 
                 # Create a BaseModel class with proper configuration
                 class ConfiguredBaseModel(BaseModel):

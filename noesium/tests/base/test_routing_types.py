@@ -43,7 +43,13 @@ class TestComplexityScore:
 
     def test_valid_complexity_score_creation(self):
         """Test creating ComplexityScore with valid data."""
-        score = ComplexityScore(total=0.5, linguistic=0.4, reasoning=0.6, uncertainty=0.3, metadata={"test": "value"})
+        score = ComplexityScore(
+            total=0.5,
+            linguistic=0.4,
+            reasoning=0.6,
+            uncertainty=0.3,
+            metadata={"test": "value"},
+        )
 
         assert score.total == 0.5
         assert score.linguistic == 0.4
@@ -96,7 +102,13 @@ class TestComplexityScore:
 
     def test_complexity_score_serialization(self):
         """Test ComplexityScore serialization."""
-        score = ComplexityScore(total=0.7, linguistic=0.6, reasoning=0.8, uncertainty=0.4, metadata={"source": "test"})
+        score = ComplexityScore(
+            total=0.7,
+            linguistic=0.6,
+            reasoning=0.8,
+            uncertainty=0.4,
+            metadata={"source": "test"},
+        )
 
         data = score.model_dump()
         expected = {
@@ -146,7 +158,10 @@ class TestRoutingResult:
     def test_routing_result_with_minimal_data(self, sample_complexity_score):
         """Test creating RoutingResult with only required fields."""
         result = RoutingResult(
-            tier=ModelTier.LITE, confidence=0.9, complexity_score=sample_complexity_score, strategy="minimal_strategy"
+            tier=ModelTier.LITE,
+            confidence=0.9,
+            complexity_score=sample_complexity_score,
+            strategy="minimal_strategy",
         )
 
         assert result.tier == ModelTier.LITE
@@ -158,26 +173,47 @@ class TestRoutingResult:
     def test_routing_result_confidence_validation(self, sample_complexity_score):
         """Test that confidence must be in range 0.0-1.0."""
         # Valid boundary values
-        RoutingResult(tier=ModelTier.FAST, confidence=0.0, complexity_score=sample_complexity_score, strategy="test")
+        RoutingResult(
+            tier=ModelTier.FAST,
+            confidence=0.0,
+            complexity_score=sample_complexity_score,
+            strategy="test",
+        )
 
-        RoutingResult(tier=ModelTier.FAST, confidence=1.0, complexity_score=sample_complexity_score, strategy="test")
+        RoutingResult(
+            tier=ModelTier.FAST,
+            confidence=1.0,
+            complexity_score=sample_complexity_score,
+            strategy="test",
+        )
 
         # Invalid values
         with pytest.raises(ValidationError):
             RoutingResult(
-                tier=ModelTier.FAST, confidence=-0.1, complexity_score=sample_complexity_score, strategy="test"
+                tier=ModelTier.FAST,
+                confidence=-0.1,
+                complexity_score=sample_complexity_score,
+                strategy="test",
             )
 
         with pytest.raises(ValidationError):
             RoutingResult(
-                tier=ModelTier.FAST, confidence=1.1, complexity_score=sample_complexity_score, strategy="test"
+                tier=ModelTier.FAST,
+                confidence=1.1,
+                complexity_score=sample_complexity_score,
+                strategy="test",
             )
 
     def test_routing_result_tier_validation(self, sample_complexity_score):
         """Test that tier must be a valid ModelTier."""
         # Valid ModelTier values
         for tier in ModelTier:
-            RoutingResult(tier=tier, confidence=0.8, complexity_score=sample_complexity_score, strategy="test")
+            RoutingResult(
+                tier=tier,
+                confidence=0.8,
+                complexity_score=sample_complexity_score,
+                strategy="test",
+            )
 
     def test_routing_result_serialization(self, sample_complexity_score):
         """Test RoutingResult serialization."""

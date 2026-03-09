@@ -151,10 +151,12 @@ class BaseWatchdog(BaseModel):
                             )
                             del browser_session._cdp_session_pool[browser_session.agent_focus_target_id]
                             _ = await browser_session.get_or_create_cdp_session(
-                                target_id=browser_session.agent_focus_target_id, new_socket=True
+                                target_id=browser_session.agent_focus_target_id,
+                                new_socket=True,
                             )
                             cdp_session = await browser_session.get_or_create_cdp_session(
-                                target_id=browser_session.agent_focus_target_id, new_socket=True
+                                target_id=browser_session.agent_focus_target_id,
+                                new_socket=True,
                             )
                             await cdp_session.cdp_client.send.Target.activateTarget(
                                 params={"targetId": browser_session.agent_focus_target_id}

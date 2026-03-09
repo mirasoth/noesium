@@ -109,7 +109,12 @@ class EventSourcedProvider(MemoryProvider):
             if query_lower in val.lower():
                 results.append(
                     RecallResult(
-                        entry=MemoryEntry(key=key, value=raw["value"], content_type=ct, provider_id="event_sourced"),
+                        entry=MemoryEntry(
+                            key=key,
+                            value=raw["value"],
+                            content_type=ct,
+                            provider_id="event_sourced",
+                        ),
                         score=0.5,
                         provider_id="event_sourced",
                         tier=MemoryTier.PERSISTENT,

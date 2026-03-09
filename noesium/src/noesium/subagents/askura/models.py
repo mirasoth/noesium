@@ -88,7 +88,8 @@ class KnowledgeGapAnalysis(BaseModel):
     )
     suggested_next_topics: List[str] = Field(description="3-5 specific topics to explore next", default_factory=list)
     readiness_to_proceed: float = Field(
-        description="Confidence (0.0-1.0) that we can proceed with current information", default=0.0
+        description="Confidence (0.0-1.0) that we can proceed with current information",
+        default=0.0,
     )
     reasoning: str = Field(description="Analysis reasoning and recommendations")
 
@@ -171,10 +172,12 @@ class AskuraState(BaseModel):
     # Information slots (dynamic based on configuration)
     extracted_info: Dict[str, Any] = Field(default_factory=dict)
     missing_info: Dict[str, str] = Field(
-        default_factory=dict, description="Information slot name -> description of what's missing"
+        default_factory=dict,
+        description="Information slot name -> description of what's missing",
     )
     knowledge_gap: str = Field(
-        default="", description="Summary of knowledge gap between conversation purpose and current status"
+        default="",
+        description="Summary of knowledge gap between conversation purpose and current status",
     )
     suggested_next_topics: List[str] = Field(default_factory=list)
 

@@ -30,9 +30,19 @@ from noesium.core.llm import BaseLLMClient
 from noesium.core.utils.logging import get_logger
 from noesium.core.utils.typing import override
 
-from .prompts import answer_instructions, query_writer_instructions, reflection_instructions
+from .prompts import (
+    answer_instructions,
+    query_writer_instructions,
+    reflection_instructions,
+)
 from .schemas import Reflection, SearchQueryList
-from .state import QueryState, ReflectionState, ResearchOutput, ResearchState, WebSearchState
+from .state import (
+    QueryState,
+    ReflectionState,
+    ResearchOutput,
+    ResearchState,
+    WebSearchState,
+)
 
 # Configure logging
 logger = get_logger(__name__)
@@ -423,7 +433,10 @@ class TacitusAgent(BaseGraphicAgent):
             return [
                 Send(
                     "web_research",
-                    WebSearchState(search_query=follow_up_query, id=str(state["number_of_ran_queries"] + int(idx))),
+                    WebSearchState(
+                        search_query=follow_up_query,
+                        id=str(state["number_of_ran_queries"] + int(idx)),
+                    ),
                 )
                 for idx, follow_up_query in enumerate(state["follow_up_queries"])
             ]
@@ -548,7 +561,10 @@ class TacitusAgent(BaseGraphicAgent):
                             summary=f"Generated {queries_generated} search queries",
                             plan_snapshot={
                                 "steps": [
-                                    {"description": f"Search: {q['query'][:50]}", "status": "pending"}
+                                    {
+                                        "description": f"Search: {q['query'][:50]}",
+                                        "status": "pending",
+                                    }
                                     for q in query_list
                                 ],
                                 "goal": user_message,
@@ -620,7 +636,10 @@ class TacitusAgent(BaseGraphicAgent):
                                     detail=knowledge_gap,
                                     plan_snapshot={
                                         "steps": [
-                                            {"description": f"Search: {q[:50]}", "status": "pending"}
+                                            {
+                                                "description": f"Search: {q[:50]}",
+                                                "status": "pending",
+                                            }
                                             for q in follow_up_queries
                                         ],
                                         "goal": user_message,
@@ -679,7 +698,10 @@ class TacitusAgent(BaseGraphicAgent):
             )
 
     async def run(
-        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+        self,
+        user_message: str,
+        context: Dict[str, Any] = None,
+        config: Optional[RunnableConfig] = None,
     ) -> str:
         """
         Default implementation of run() for researchers.
@@ -689,7 +711,10 @@ class TacitusAgent(BaseGraphicAgent):
         return result.content if result else "Research failed to produce results."
 
     async def arun(
-        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+        self,
+        user_message: str,
+        context: Dict[str, Any] = None,
+        config: Optional[RunnableConfig] = None,
     ) -> str:
         """Async alias for run()."""
         return await self.run(user_message, context, config)

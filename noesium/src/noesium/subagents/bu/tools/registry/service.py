@@ -14,7 +14,11 @@ from ...adapters.llm_adapter import BaseChatModel
 from ...browser import BrowserSession
 from ...filesystem.file_system import FileSystem
 from ...observability import observe_debug
-from ...utils import is_new_tab_page, match_url_with_domain_pattern, time_execution_async
+from ...utils import (
+    is_new_tab_page,
+    match_url_with_domain_pattern,
+    time_execution_async,
+)
 from .views import (
     ActionModel,
     ActionRegistry,
@@ -241,11 +245,25 @@ class Registry(Generic[Context]):
                 return await asyncio.to_thread(func, *call_args)
 
         # Update wrapper signature to be kwargs-only
-        new_params = [Parameter("params", Parameter.KEYWORD_ONLY, default=None, annotation=Optional[param_model])]
+        new_params = [
+            Parameter(
+                "params",
+                Parameter.KEYWORD_ONLY,
+                default=None,
+                annotation=Optional[param_model],
+            )
+        ]
 
         # Add special params as keyword-only
         for sp in special_params:
-            new_params.append(Parameter(sp.name, Parameter.KEYWORD_ONLY, default=sp.default, annotation=sp.annotation))
+            new_params.append(
+                Parameter(
+                    sp.name,
+                    Parameter.KEYWORD_ONLY,
+                    default=sp.default,
+                    annotation=sp.annotation,
+                )
+            )
 
         # Add **kwargs to accept and ignore extra params
         new_params.append(Parameter("kwargs", Parameter.VAR_KEYWORD))
@@ -260,7 +278,10 @@ class Registry(Generic[Context]):
         sig = signature(function)
         special_param_names = set(SpecialActionParameters.model_fields.keys())
         params = {
-            name: (param.annotation, ... if param.default == param.empty else param.default)
+            name: (
+                param.annotation,
+                ... if param.default == param.empty else param.default,
+            )
             for name, param in sig.parameters.items()
             if name not in special_param_names
         }
@@ -399,7 +420,10 @@ class Registry(Generic[Context]):
             logger.info(f'🔒 Using sensitive data placeholders: {", ".join(sorted(placeholders_used))}{url_info}')
 
     def _replace_sensitive_data(
-        self, params: BaseModel, sensitive_data: dict[str, Any], current_url: str | None = None
+        self,
+        params: BaseModel,
+        sensitive_data: dict[str, Any],
+        current_url: str | None = None,
     ) -> BaseModel:
         """
         Replaces sensitive data placeholders in params with actual values.
@@ -444,7 +468,10 @@ class Registry(Generic[Context]):
 
                 for placeholder in matches:
                     if placeholder in applicable_secrets:
-                        value = value.replace(f"<secret>{placeholder}</secret>", applicable_secrets[placeholder])
+                        value = value.replace(
+                            f"<secret>{placeholder}</secret>",
+                            applicable_secrets[placeholder],
+                        )
                         replaced_placeholders.add(placeholder)
                     else:
                         # Keep track of missing placeholders

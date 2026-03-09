@@ -67,8 +67,14 @@ def demo_basic_completion(client: LLMClient):
     print("=" * 60)
 
     messages = [
-        {"role": "system", "content": "You are a helpful assistant that gives concise answers."},
-        {"role": "user", "content": "What is the capital of France? Answer in one sentence."},
+        {
+            "role": "system",
+            "content": "You are a helpful assistant that gives concise answers.",
+        },
+        {
+            "role": "user",
+            "content": "What is the capital of France? Answer in one sentence.",
+        },
     ]
 
     print("💬 Messages:")
@@ -91,7 +97,10 @@ def demo_conversation(client: LLMClient):
 
     # Initialize conversation history
     conversation = [
-        {"role": "system", "content": "You are a knowledgeable assistant. Keep responses concise."},
+        {
+            "role": "system",
+            "content": "You are a knowledgeable assistant. Keep responses concise.",
+        },
     ]
 
     # Conversation turns
@@ -136,7 +145,10 @@ def demo_structured_output(client: LLMClient):
         # Create a client with instructor enabled for structured output
         try:
             structured_client = LLMClient(
-                model_path=client.model_path, instructor=True, n_ctx=2048, n_gpu_layers=client.llama.params.n_gpu_layers
+                model_path=client.model_path,
+                instructor=True,
+                n_ctx=2048,
+                n_gpu_layers=client.llama.params.n_gpu_layers,
             )
         except Exception:
             print("⚠️ Could not create instructor-enabled client, using fallback approach...")
@@ -151,7 +163,10 @@ def demo_structured_output(client: LLMClient):
 
         if hasattr(structured_client, "structured_completion") and structured_client.instructor_enabled:
             response = structured_client.structured_completion(
-                messages=messages, response_model=BookRecommendation, temperature=0.7, max_tokens=200
+                messages=messages,
+                response_model=BookRecommendation,
+                temperature=0.7,
+                max_tokens=200,
             )
             print("✅ Structured Response:")
             print(f"   📖 Title: {response.title}")

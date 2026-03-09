@@ -414,7 +414,10 @@ class PromptManager:
             raise ValueError("Either file_path or content must be provided")
 
     def render_prompt(
-        self, template: Union[PromptTemplate, str, Path], variables: Optional[Dict[str, Any]] = None, **kwargs
+        self,
+        template: Union[PromptTemplate, str, Path],
+        variables: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> List[BaseMessage]:
         """Render a prompt template to messages"""
 
@@ -463,7 +466,11 @@ class PromptManager:
 
             # Create message object
             if msg_template.role == "system":
-                message = SystemMessage(content=rendered_content, name=msg_template.name, cache=msg_template.cache)
+                message = SystemMessage(
+                    content=rendered_content,
+                    name=msg_template.name,
+                    cache=msg_template.cache,
+                )
             elif msg_template.role == "user":
                 message = UserMessage(content=rendered_content, name=msg_template.name)
             elif msg_template.role == "assistant":
@@ -484,7 +491,12 @@ class PromptManager:
                 continue
 
             for file_path in template_dir.rglob("*"):
-                if file_path.is_file() and file_path.suffix.lower() in [".md", ".yaml", ".yml", ".json"]:
+                if file_path.is_file() and file_path.suffix.lower() in [
+                    ".md",
+                    ".yaml",
+                    ".yml",
+                    ".json",
+                ]:
                     try:
                         template = self.load_prompt(file_path)
                         if not tag or tag in template.metadata.tags:

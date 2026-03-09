@@ -176,7 +176,11 @@ class TestPGVectorStoreIntegration:
     def test_search(self):
         """Test vector search functionality."""
         # Insert test data
-        test_vectors = [[0.1, 0.2, 0.3] * 256, [0.4, 0.5, 0.6] * 256, [0.7, 0.8, 0.9] * 256]
+        test_vectors = [
+            [0.1, 0.2, 0.3] * 256,
+            [0.4, 0.5, 0.6] * 256,
+            [0.7, 0.8, 0.9] * 256,
+        ]
         test_payloads = [
             {"data": "first object", "category": "A"},
             {"data": "second object", "category": "B"},
@@ -263,7 +267,10 @@ class TestPGVectorStoreIntegration:
         """Test listing all vectors."""
         # Insert multiple vectors
         test_vectors = [[0.1, 0.2, 0.3] * 256, [0.4, 0.5, 0.6] * 256]
-        test_payloads = [{"data": "first", "category": "A"}, {"data": "second", "category": "B"}]
+        test_payloads = [
+            {"data": "first", "category": "A"},
+            {"data": "second", "category": "B"},
+        ]
         test_ids = [str(uuid.uuid4()) for _ in range(2)]
 
         self.vectorstore.insert(test_vectors, test_payloads, test_ids)
@@ -310,7 +317,12 @@ class TestPGVectorStoreIntegration:
     def test_batch_operations(self):
         """Test batch insert operations."""
         # Insert multiple vectors in batch
-        test_vectors = [[0.1, 0.2, 0.3] * 256, [0.4, 0.5, 0.6] * 256, [0.7, 0.8, 0.9] * 256, [0.1, 0.1, 0.1] * 256]
+        test_vectors = [
+            [0.1, 0.2, 0.3] * 256,
+            [0.4, 0.5, 0.6] * 256,
+            [0.7, 0.8, 0.9] * 256,
+            [0.1, 0.1, 0.1] * 256,
+        ]
         test_payloads = [{"data": f"object_{i}", "batch": "test"} for i in range(4)]
         test_ids = [str(uuid.uuid4()) for _ in range(4)]
 

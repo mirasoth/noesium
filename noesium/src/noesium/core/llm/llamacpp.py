@@ -274,7 +274,10 @@ class LLMClient(BaseLLMClient):
             try:
                 # Get raw text response
                 raw_response = self.completion(
-                    modified_messages, temperature=temperature, max_tokens=max_tokens, **kwargs
+                    modified_messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    **kwargs,
                 )
 
                 # Try to parse as JSON

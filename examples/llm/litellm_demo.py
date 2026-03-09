@@ -73,7 +73,10 @@ def demo_basic_completion(client: LLMClient, logger):
 
     messages = [
         {"role": "system", "content": "You are a helpful and creative assistant."},
-        {"role": "user", "content": "Write a short poem about artificial intelligence and creativity."},
+        {
+            "role": "user",
+            "content": "Write a short poem about artificial intelligence and creativity.",
+        },
     ]
 
     try:
@@ -110,7 +113,10 @@ def demo_structured_completion(client: LLMClient, logger):
 
     try:
         analysis = client.structured_completion(
-            messages=messages, response_model=PersonalityAnalysis, temperature=0.7, max_tokens=500
+            messages=messages,
+            response_model=PersonalityAnalysis,
+            temperature=0.7,
+            max_tokens=500,
         )
 
         logger.info("✅ Structured completion successful!")
@@ -152,7 +158,10 @@ def demo_travel_recommendation(client: LLMClient, logger):
 
     try:
         recommendation = client.structured_completion(
-            messages=messages, response_model=TravelRecommendation, temperature=0.6, max_tokens=600
+            messages=messages,
+            response_model=TravelRecommendation,
+            temperature=0.6,
+            max_tokens=600,
         )
 
         logger.info("✅ Travel recommendation successful!")
@@ -242,8 +251,14 @@ def demo_streaming_completion(client: LLMClient, logger):
     logger.info("🌊 Testing streaming completion...")
 
     messages = [
-        {"role": "system", "content": "You are a storyteller who creates engaging short stories."},
-        {"role": "user", "content": "Tell me a short story about a robot who discovers emotions."},
+        {
+            "role": "system",
+            "content": "You are a storyteller who creates engaging short stories.",
+        },
+        {
+            "role": "user",
+            "content": "Tell me a short story about a robot who discovers emotions.",
+        },
     ]
 
     try:
@@ -281,7 +296,9 @@ def demo_error_handling(client: LLMClient, logger):
 
     try:
         response = client.completion(
-            messages=messages, temperature=0.7, max_tokens=50  # Very small limit to potentially trigger errors
+            messages=messages,
+            temperature=0.7,
+            max_tokens=50,  # Very small limit to potentially trigger errors
         )
 
         logger.info("✅ Error handling test completed (no error occurred)")
@@ -338,7 +355,12 @@ def main():
             "vision_model": "gpt-4-vision-preview",
             "instructor": True,
         },
-        {"name": "OpenAI GPT-4", "chat_model": "gpt-4", "vision_model": "gpt-4-vision-preview", "instructor": True},
+        {
+            "name": "OpenAI GPT-4",
+            "chat_model": "gpt-4",
+            "vision_model": "gpt-4-vision-preview",
+            "instructor": True,
+        },
         {
             "name": "Anthropic Claude",
             "chat_model": "claude-3-sonnet-20240229",
@@ -359,7 +381,9 @@ def main():
 
         try:
             client = LLMClient(
-                chat_model=config["chat_model"], vision_model=config["vision_model"], instructor=config["instructor"]
+                chat_model=config["chat_model"],
+                vision_model=config["vision_model"],
+                instructor=config["instructor"],
             )
 
             # Run demos

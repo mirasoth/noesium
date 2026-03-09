@@ -11,7 +11,10 @@ logger = get_logger(__name__)
 
 class Summarizer:
     def __init__(
-        self, config: AskuraConfig, llm_client: Optional[BaseLLMClient] = None, reflection: Optional[Reflection] = None
+        self,
+        config: AskuraConfig,
+        llm_client: Optional[BaseLLMClient] = None,
+        reflection: Optional[Reflection] = None,
     ):
         self.config = config
         self.llm = llm_client

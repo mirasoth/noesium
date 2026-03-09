@@ -1,4 +1,3 @@
-
 from huggingface_hub import snapshot_download
 
 # Download all files from repo to a local folder

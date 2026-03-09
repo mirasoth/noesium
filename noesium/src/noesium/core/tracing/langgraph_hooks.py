@@ -48,22 +48,39 @@ class TokenUsageCallback(BaseCallbackHandler):
         self._pending_calls: Dict[str, Dict] = {}
 
     def on_llm_start(
-        self, serialized: Dict, prompts: List[str], run_id: str, parent_run_id: Optional[str] = None, **kwargs
+        self,
+        serialized: Dict,
+        prompts: List[str],
+        run_id: str,
+        parent_run_id: Optional[str] = None,
+        **kwargs,
     ):
         """Track when LLM calls start"""
         self.llm_calls += 1
 
         # Store prompt info for token counting
-        self._pending_calls[run_id] = {"prompts": prompts, "start_time": time.time(), "call_number": self.llm_calls}
+        self._pending_calls[run_id] = {
+            "prompts": prompts,
+            "start_time": time.time(),
+            "call_number": self.llm_calls,
+        }
 
         if self.verbose:
             logger.info(
                 color_text(
-                    f"[TOKEN CALLBACK] LLM call #{self.llm_calls} started (run_id: {run_id[:8]}...)", "magenta", ["dim"]
+                    f"[TOKEN CALLBACK] LLM call #{self.llm_calls} started (run_id: {run_id[:8]}...)",
+                    "magenta",
+                    ["dim"],
                 )
             )
 
-    def on_llm_end(self, response: LLMResult, run_id: str, parent_run_id: Optional[str] = None, **kwargs):
+    def on_llm_end(
+        self,
+        response: LLMResult,
+        run_id: str,
+        parent_run_id: Optional[str] = None,
+        **kwargs,
+    ):
         """Enhanced token usage tracking with multiple extraction methods"""
         usage_data = self._extract_token_usage_from_response(response)
 
@@ -198,10 +215,20 @@ class TokenUsageCallback(BaseCallbackHandler):
             }
         except Exception as e:
             logger.warning(f"Failed to estimate token usage: {e}")
-            return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "estimated": True, "error": str(e)}
+            return {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "estimated": True,
+                "error": str(e),
+            }
 
     def _log_token_usage(
-        self, prompt_tokens: int, completion_tokens: int, total_tokens: int, run_id: Optional[str] = None
+        self,
+        prompt_tokens: int,
+        completion_tokens: int,
+        total_tokens: int,
+        run_id: Optional[str] = None,
     ):
         """Log token usage with detailed information"""
         run_info = f" (run_id: {run_id[:8]}...)" if run_id else ""
@@ -259,10 +286,28 @@ class TokenUsageCallback(BaseCallbackHandler):
         logger.info(color_text("\n" + "=" * 50, "blue", ["dim"]))
         logger.info(color_text("TOKEN USAGE SESSION SUMMARY", "blue", ["dim"]))
         logger.info(color_text("=" * 50, "blue", ["dim"]))
-        logger.info(color_text(f"Session Duration: {summary['session_duration_seconds']:.2f} seconds", None, ["dim"]))
+        logger.info(
+            color_text(
+                f"Session Duration: {summary['session_duration_seconds']:.2f} seconds",
+                None,
+                ["dim"],
+            )
+        )
         logger.info(color_text(f"Total LLM Calls: {summary['total_llm_calls']}", None, ["dim"]))
-        logger.info(color_text(f"Total Prompt Tokens: {summary['total_prompt_tokens']:,}", None, ["dim"]))
-        logger.info(color_text(f"Total Completion Tokens: {summary['total_completion_tokens']:,}", None, ["dim"]))
+        logger.info(
+            color_text(
+                f"Total Prompt Tokens: {summary['total_prompt_tokens']:,}",
+                None,
+                ["dim"],
+            )
+        )
+        logger.info(
+            color_text(
+                f"Total Completion Tokens: {summary['total_completion_tokens']:,}",
+                None,
+                ["dim"],
+            )
+        )
         logger.info(color_text(f"Total Tokens: {summary['total_tokens']:,}", None, ["dim"]))
 
         # Show breakdown by source
@@ -305,4 +350,10 @@ class TokenUsageCallback(BaseCallbackHandler):
         get_token_tracker().reset()
 
         if self.verbose:
-            logger.info(color_text("[TOKEN CALLBACK] Session reset (including custom clients)", "magenta", ["dim"]))
+            logger.info(
+                color_text(
+                    "[TOKEN CALLBACK] Session reset (including custom clients)",
+                    "magenta",
+                    ["dim"],
+                )
+            )

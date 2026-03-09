@@ -99,8 +99,14 @@ class TestFileEditToolkitFilenameSanitization:
             ("file@#$%^&*()+=.txt", "file_.txt"),
             ('file/\\:*?"<>|.txt', "file_.txt"),
             ("multiple___underscores.txt", "multiple_underscores.txt"),
-            ("_leading_trailing_.txt", "leading_trailing_.txt"),  # Extension prevents trailing underscore removal
-            ("_leading_trailing_", "leading_trailing"),  # No extension, so trailing underscore is removed
+            (
+                "_leading_trailing_.txt",
+                "leading_trailing_.txt",
+            ),  # Extension prevents trailing underscore removal
+            (
+                "_leading_trailing_",
+                "leading_trailing",
+            ),  # No extension, so trailing underscore is removed
             ("", "unnamed_file"),
             ("...", "unnamed_file"),
             ("___", "unnamed_file"),

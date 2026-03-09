@@ -7,7 +7,12 @@ events, ensuring the session pool always reflects the current browser state.
 import asyncio
 from typing import TYPE_CHECKING
 
-from cdp_use.cdp.target import AttachedToTargetEvent, DetachedFromTargetEvent, SessionID, TargetID
+from cdp_use.cdp.target import (
+    AttachedToTargetEvent,
+    DetachedFromTargetEvent,
+    SessionID,
+    TargetID,
+)
 
 from noesium.subagents.bu.utils import create_task_with_error_handling
 
@@ -393,7 +398,12 @@ class SessionManager:
         # Enable auto-attach for this session's children (do this FIRST, outside lock)
         try:
             await self.browser_session._cdp_client_root.send.Target.setAutoAttach(
-                params={"autoAttach": True, "waitForDebuggerOnStart": False, "flatten": True}, session_id=session_id
+                params={
+                    "autoAttach": True,
+                    "waitForDebuggerOnStart": False,
+                    "flatten": True,
+                },
+                session_id=session_id,
             )
         except Exception as e:
             error_str = str(e)
@@ -718,7 +728,10 @@ class SessionManager:
                         f"[SessionManager] ⚠️ Agent focus set to emergency fallback: {fallback_target_id[:8]}..."
                     )
 
-                    from noesium.subagents.bu.browser.events import AgentFocusChangedEvent, TabCreatedEvent
+                    from noesium.subagents.bu.browser.events import (
+                        AgentFocusChangedEvent,
+                        TabCreatedEvent,
+                    )
 
                     self.browser_session.event_bus.dispatch(
                         TabCreatedEvent(url="about:blank", target_id=fallback_target_id)
@@ -809,7 +822,9 @@ class SessionManager:
 
         # Start checking in background
         check_task = create_task_with_error_handling(
-            check_all_ready(), name="check_all_targets_ready", logger_instance=self.logger
+            check_all_ready(),
+            name="check_all_targets_ready",
+            logger_instance=self.logger,
         )
 
         try:

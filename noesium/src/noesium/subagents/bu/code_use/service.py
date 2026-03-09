@@ -33,7 +33,12 @@ from noesium.subagents.bu.utils import get_browser_use_version
 
 from .formatting import format_browser_state_for_llm
 from .namespace import EvaluateError, create_namespace
-from .utils import detect_token_limit_issue, extract_code_blocks, extract_url_from_task, truncate_message_content
+from .utils import (
+    detect_token_limit_issue,
+    extract_code_blocks,
+    extract_url_from_task,
+    truncate_message_content,
+)
 from .views import (
     CellType,
     CodeAgentHistory,
@@ -994,7 +999,10 @@ __code_exec_coro__ = __code_exec__()
                     # Check if code contains f-strings with potential JSON/JS content
                     has_fstring = bool(re.search(r'\bf["\']', code))
                     has_json_pattern = bool(
-                        re.search(r'json\.dumps|"[^"]*\{[^"]*\}[^"]*"|\'[^\']*\{[^\']*\}[^\']*\'', code)
+                        re.search(
+                            r'json\.dumps|"[^"]*\{[^"]*\}[^"]*"|\'[^\']*\{[^\']*\}[^\']*\'',
+                            code,
+                        )
                     )
                     has_js_pattern = bool(re.search(r"evaluate\(|await evaluate", code))
 
@@ -1099,7 +1107,9 @@ __code_exec_coro__ = __code_exec__()
 
             # Format browser state with namespace context
             browser_state_text = await format_browser_state_for_llm(
-                state=state, namespace=self.namespace, browser_session=self.browser_session
+                state=state,
+                namespace=self.namespace,
+                browser_session=self.browser_session,
             )
 
             screenshot = state.screenshot if include_screenshot else None
@@ -1110,7 +1120,11 @@ __code_exec_coro__ = __code_exec__()
             return f"Error getting browser state: {e}", None
 
     def _format_execution_result(
-        self, code: str, output: str | None, error: str | None, current_step: int | None = None
+        self,
+        code: str,
+        output: str | None,
+        error: str | None,
+        current_step: int | None = None,
     ) -> str:
         """Format the execution result for the LLM (without browser state)."""
         result = []
@@ -1204,8 +1218,8 @@ __code_exec_coro__ = __code_exec__()
         # Create metadata entry using typed model
         step_end_time = datetime.datetime.now().timestamp()
         metadata_entry = CodeAgentStepMetadata(
-            input_tokens=self._last_llm_usage.prompt_tokens if self._last_llm_usage else None,
-            output_tokens=self._last_llm_usage.completion_tokens if self._last_llm_usage else None,
+            input_tokens=(self._last_llm_usage.prompt_tokens if self._last_llm_usage else None),
+            output_tokens=(self._last_llm_usage.completion_tokens if self._last_llm_usage else None),
             step_start_time=self._step_start_time,
             step_end_time=step_end_time,
         )
@@ -1262,7 +1276,10 @@ __code_exec_coro__ = __code_exec__()
         await self._demo_mode_log(
             " ".join(message_parts).strip(),
             level,
-            {"step": step_number, "url": history_entry.state.url if history_entry.state else None},
+            {
+                "step": step_number,
+                "url": history_entry.state.url if history_entry.state else None,
+            },
         )
 
     def _add_sample_output_cell(self, final_result: Any | None) -> None:
@@ -1363,6 +1380,11 @@ __code_exec_coro__ = __code_exec__()
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         """Async context manager exit."""
         await self.close()

@@ -218,7 +218,7 @@ class MCPToolkit(AsyncBaseToolkit):
             info = {
                 "name": tool.name,
                 "description": tool.description,
-                "input_schema": tool.inputSchema if hasattr(tool, "inputSchema") else {},
+                "input_schema": (tool.inputSchema if hasattr(tool, "inputSchema") else {}),
             }
             tools_info.append(info)
 

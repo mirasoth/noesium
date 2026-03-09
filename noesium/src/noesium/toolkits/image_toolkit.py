@@ -220,7 +220,10 @@ class ImageToolkit(AsyncBaseToolkit):
         return base64_image
 
     async def analyze_image(
-        self, image_path: str, prompt: str = "Describe this image in detail.", max_tokens: int = 500
+        self,
+        image_path: str,
+        prompt: str = "Describe this image in detail.",
+        max_tokens: int = 500,
     ) -> str:
         """
         Analyze an image using OpenAI's vision model.
@@ -266,7 +269,10 @@ class ImageToolkit(AsyncBaseToolkit):
                     "role": "user",
                     "content": [
                         {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                        },
                     ],
                 }
             ]
@@ -367,7 +373,9 @@ class ImageToolkit(AsyncBaseToolkit):
         - Overall relationship between the images"""
 
         response = await self.llm_client.completion(
-            messages=[{"role": "user", "content": comparison_prompt}], max_tokens=400, temperature=0.1
+            messages=[{"role": "user", "content": comparison_prompt}],
+            max_tokens=400,
+            temperature=0.1,
         )
 
         return response.strip()

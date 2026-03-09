@@ -294,7 +294,10 @@ def _activity_line(event: ProgressEvent, thinking_gen: DynamicThinkingText | Non
         # Use display name for tool
         display_tool = _get_tool_display_name(tool_name)
         brief = (event.tool_result or "")[:100].replace("\n", " ")
-        parts: list[tuple[str, str] | str] = [("  > ", "dim green"), (f"{display_tool}", "green")]
+        parts: list[tuple[str, str] | str] = [
+            ("  > ", "dim green"),
+            (f"{display_tool}", "green"),
+        ]
         if brief:
             parts.append(("  ", ""))
             parts.append((brief[:80], "dim"))
@@ -342,7 +345,11 @@ def _activity_line(event: ProgressEvent, thinking_gen: DynamicThinkingText | Non
         tag = event.subagent_id or "subagent"
         # Use display name for subagent
         display_tag = _get_subagent_display_tag(tag)
-        return Text.assemble(("  ", ""), (f"[{display_tag}] ", "green"), (event.summary or "done", "green"))
+        return Text.assemble(
+            ("  ", ""),
+            (f"[{display_tag}] ", "green"),
+            (event.summary or "done", "green"),
+        )
 
     if etype == ProgressEventType.THINKING:
         return Text.assemble(("  . ", "dim"), (event.summary or "Thinking...", "dim italic"))
@@ -565,7 +572,11 @@ def handle_slash_command(
             try:
                 stats = loop.run_until_complete(agent._memory_manager.stats())
                 console.print(
-                    Panel(json.dumps(stats, indent=2, default=str), title="Memory Stats", border_style="cyan")
+                    Panel(
+                        json.dumps(stats, indent=2, default=str),
+                        title="Memory Stats",
+                        border_style="cyan",
+                    )
                 )
             except Exception as exc:
                 console.print(f"[red]Memory stats error: {exc}[/red]")
@@ -839,7 +850,12 @@ async def _process_query(
                     current_plan = TaskPlan(**event.plan_snapshot)
                 thinking_gen.set_phase("executing")
                 if current_plan and not plan_created_appended:
-                    step_details.append(Text(f"Plan created with {len(current_plan.steps)} steps", style="dim"))
+                    step_details.append(
+                        Text(
+                            f"Plan created with {len(current_plan.steps)} steps",
+                            style="dim",
+                        )
+                    )
                     plan_created_appended = True
 
             elif etype == ProgressEventType.PLAN_REVISED:
@@ -920,7 +936,12 @@ async def _process_query(
                     activity_lines.append(line)
 
                 if etype == ProgressEventType.TOOL_START and event.tool_name:
-                    step_details.append(Text.assemble(("    → ", "dim"), (f"Using tool: {event.tool_name}", "blue")))
+                    step_details.append(
+                        Text.assemble(
+                            ("    → ", "dim"),
+                            (f"Using tool: {event.tool_name}", "blue"),
+                        )
+                    )
                 elif etype == ProgressEventType.SUBAGENT_PROGRESS:
                     child_type = (event.metadata or {}).get("child_event_type", "")
                     if child_type in ("plan.created", "plan.revised") and event.plan_snapshot:
@@ -934,7 +955,11 @@ async def _process_query(
                         if child_type == "plan.created" and tag not in subagent_plan_created_shown:
                             subagent_plan_created_shown.add(tag)
                             step_details.append(
-                                Text.assemble(("    ", ""), (f"[{tag}] ", "magenta"), ("Plan created", "dim"))
+                                Text.assemble(
+                                    ("    ", ""),
+                                    (f"[{tag}] ", "magenta"),
+                                    ("Plan created", "dim"),
+                                )
                             )
                     elif child_type == "step.start" and event.subagent_id is not None and event.step_index is not None:
                         sid = event.subagent_id
@@ -957,7 +982,11 @@ async def _process_query(
                     elif child_type == "tool.start" and event.tool_name:
                         tag = event.subagent_id or "subagent"
                         step_details.append(
-                            Text.assemble(("    ", ""), (f"[{tag}] ", "magenta"), (f"→ {event.tool_name}", "blue"))
+                            Text.assemble(
+                                ("    ", ""),
+                                (f"[{tag}] ", "magenta"),
+                                (f"→ {event.tool_name}", "blue"),
+                            )
                         )
                 elif etype == ProgressEventType.SUBAGENT_END:
                     tag = event.subagent_id or "subagent"

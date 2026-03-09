@@ -61,7 +61,13 @@ def addLoggingLevel(levelName, levelNum, methodName=None):
     setattr(logging, methodName, logToRoot)
 
 
-def setup_logging(stream=None, log_level=None, force_setup=False, debug_log_file=None, info_log_file=None):
+def setup_logging(
+    stream=None,
+    log_level=None,
+    force_setup=False,
+    debug_log_file=None,
+    info_log_file=None,
+):
     """Setup logging configuration for browser-use.
 
     Args:
@@ -193,7 +199,7 @@ def setup_logging(stream=None, log_level=None, force_setup=False, debug_log_file
         setup_cdp_logging(
             level=cdp_level,
             stream=stream or sys.stdout,
-            format_string="%(levelname)-8s [%(name)s] %(message)s" if log_type != "result" else "%(message)s",
+            format_string=("%(levelname)-8s [%(name)s] %(message)s" if log_type != "result" else "%(message)s"),
         )
     except ImportError:
         # If cdp_use doesn't have the new logging module, fall back to manual config

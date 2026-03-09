@@ -29,7 +29,12 @@ class RecallAgent:
     3. retrieve_relevant_memories: Get top-k memories using embedding search
     """
 
-    def __init__(self, memory_dir: str = "memu/server/memory", agent_id: str = None, user_id: str = None):
+    def __init__(
+        self,
+        memory_dir: str = "memu/server/memory",
+        agent_id: str = None,
+        user_id: str = None,
+    ):
         """
         Initialize Recall Agent
 

@@ -263,7 +263,10 @@ class TestConfigLoading:
             # Create a config file
             config_data = {
                 "version": "1.0",
-                "llm": {"provider": "ollama", "providers": {"ollama": {"chat_model": "llama3.2"}}},
+                "llm": {
+                    "provider": "ollama",
+                    "providers": {"ollama": {"chat_model": "llama3.2"}},
+                },
                 "agent": {"max_iterations": 50},
             }
             with open(config_path, "w") as f:
@@ -335,7 +338,10 @@ class TestConfigLoading:
                 json.dump(config_data, f)
 
             # Override with environment variable
-            with patch.dict(os.environ, {"NOESIUM_LLM_PROVIDER": "openai", "OPENAI_API_KEY": "test-key"}):
+            with patch.dict(
+                os.environ,
+                {"NOESIUM_LLM_PROVIDER": "openai", "OPENAI_API_KEY": "test-key"},
+            ):
                 config = load_config(config_path)
                 assert config.llm.provider == "openai"
                 # Note: API key from env should be in providers config

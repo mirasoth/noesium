@@ -57,7 +57,13 @@ class TestDynamicComplexityStrategy:
 
     def test_init_custom_config(self, mock_llm_client):
         """Test initialization with custom configuration."""
-        config = {"alpha": 0.5, "beta": 0.3, "gamma": 0.2, "lite_threshold": 0.2, "fast_threshold": 0.7}
+        config = {
+            "alpha": 0.5,
+            "beta": 0.3,
+            "gamma": 0.2,
+            "lite_threshold": 0.2,
+            "fast_threshold": 0.7,
+        }
 
         strategy = DynamicComplexityStrategy(lite_client=mock_llm_client, config=config)
 
@@ -69,7 +75,11 @@ class TestDynamicComplexityStrategy:
 
     def test_weight_normalization_warning(self, mock_llm_client):
         """Test that weights are normalized if they don't sum to 1.0."""
-        config = {"alpha": 0.6, "beta": 0.4, "gamma": 0.2}  # These sum to 1.2, should be normalized
+        config = {
+            "alpha": 0.6,
+            "beta": 0.4,
+            "gamma": 0.2,
+        }  # These sum to 1.2, should be normalized
 
         with patch("noesium.core.utils.logging.get_logger"):
             strategy = DynamicComplexityStrategy(lite_client=mock_llm_client, config=config)
@@ -270,7 +280,10 @@ class TestDynamicComplexityStrategy:
 
     def test_route_detailed_complexity_breakdown(self, strategy_with_client):
         """Test that routing provides detailed complexity breakdown."""
-        strategy_with_client.lite_client.completion.side_effect = ["1", "normal response"]
+        strategy_with_client.lite_client.completion.side_effect = [
+            "1",
+            "normal response",
+        ]
 
         result = strategy_with_client.route("Analyze this complex problem")
 
@@ -312,7 +325,11 @@ class TestDynamicComplexityStrategy:
     def test_route_exception_handling(self, mock_logger, strategy_with_client):
         """Test route method exception handling."""
         # Make linguistic score calculation fail
-        with patch.object(strategy_with_client, "_calculate_linguistic_score", side_effect=Exception("Test error")):
+        with patch.object(
+            strategy_with_client,
+            "_calculate_linguistic_score",
+            side_effect=Exception("Test error"),
+        ):
             result = strategy_with_client.route("test query")
 
             # Should fallback to FAST tier

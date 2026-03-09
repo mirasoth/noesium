@@ -421,7 +421,12 @@ class BaseMemoryManager(ABC):
 
     @abstractmethod
     async def get_relevant_context(
-        self, query: str, user_id: Optional[str] = None, agent_id: Optional[str] = None, max_items: int = 5, **kwargs
+        self,
+        query: str,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        max_items: int = 5,
+        **kwargs,
     ) -> List[SearchResult]:
         """
         Get relevant memory context for a query.

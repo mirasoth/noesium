@@ -27,7 +27,10 @@ class TabInfo(BaseModel):
     # Original fields
     url: str
     title: str
-    target_id: TargetID = Field(serialization_alias="tab_id", validation_alias=AliasChoices("tab_id", "target_id"))
+    target_id: TargetID = Field(
+        serialization_alias="tab_id",
+        validation_alias=AliasChoices("tab_id", "target_id"),
+    )
     parent_target_id: TargetID | None = Field(
         default=None,
         serialization_alias="parent_tab_id",

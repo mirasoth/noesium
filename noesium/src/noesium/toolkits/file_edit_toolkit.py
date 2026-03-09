@@ -188,7 +188,11 @@ class FileEditToolkit(AsyncBaseToolkit):
             return None
 
     async def create_file(
-        self, file_path: str, content: str = "", encoding: Optional[str] = None, overwrite: bool = False
+        self,
+        file_path: str,
+        content: str = "",
+        encoding: Optional[str] = None,
+        overwrite: bool = False,
     ) -> str:
         """
         Create a new file with the specified content.
@@ -290,7 +294,11 @@ class FileEditToolkit(AsyncBaseToolkit):
             return error_msg
 
     async def write_file(
-        self, file_path: str, content: str, encoding: Optional[str] = None, append: bool = False
+        self,
+        file_path: str,
+        content: str,
+        encoding: Optional[str] = None,
+        append: bool = False,
     ) -> str:
         """
         Write content to a file.

@@ -57,7 +57,12 @@ class TestLlamaCppIntegration:
             client = LLMClient()
 
             # Test simple completion
-            messages = [{"role": "user", "content": "What is 2 + 2? Answer with just the number."}]
+            messages = [
+                {
+                    "role": "user",
+                    "content": "What is 2 + 2? Answer with just the number.",
+                }
+            ]
 
             response = client.completion(messages, temperature=0.1, max_tokens=10)
 

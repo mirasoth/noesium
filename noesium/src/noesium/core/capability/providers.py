@@ -402,7 +402,10 @@ class BuiltInAgentCapabilityProvider:
             final_result = ""
             async for event in self._agent_instance.astream_progress(message, **kwargs):
                 # Skip SESSION_START/SESSION_END for wrapped events
-                if event.type in (ProgressEventType.SESSION_START, ProgressEventType.SESSION_END):
+                if event.type in (
+                    ProgressEventType.SESSION_START,
+                    ProgressEventType.SESSION_END,
+                ):
                     continue
 
                 # Wrap as SUBAGENT_PROGRESS

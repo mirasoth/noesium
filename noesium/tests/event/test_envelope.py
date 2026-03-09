@@ -19,7 +19,12 @@ class TestAgentRef:
         assert ref.instance_id  # auto-generated
 
     def test_custom_fields(self):
-        ref = AgentRef(agent_id="a1", agent_type="search", runtime_id="cloud", instance_id="custom-id")
+        ref = AgentRef(
+            agent_id="a1",
+            agent_type="search",
+            runtime_id="cloud",
+            instance_id="custom-id",
+        )
         assert ref.runtime_id == "cloud"
         assert ref.instance_id == "custom-id"
 

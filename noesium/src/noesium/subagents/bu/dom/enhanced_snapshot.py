@@ -6,7 +6,11 @@ to extract visibility, clickability, cursor styles, and other layout information
 """
 
 from cdp_use.cdp.domsnapshot.commands import CaptureSnapshotReturns
-from cdp_use.cdp.domsnapshot.types import LayoutTreeSnapshot, NodeTreeSnapshot, RareBooleanData
+from cdp_use.cdp.domsnapshot.types import (
+    LayoutTreeSnapshot,
+    NodeTreeSnapshot,
+    RareBooleanData,
+)
 
 from .views import DOMRect, EnhancedSnapshotNode
 
@@ -100,7 +104,12 @@ def build_snapshot_lookup(
                     if len(bounds) >= 4:
                         # IMPORTANT: CDP coordinates are in device pixels, convert to CSS pixels
                         # by dividing by the device pixel ratio
-                        raw_x, raw_y, raw_width, raw_height = bounds[0], bounds[1], bounds[2], bounds[3]
+                        raw_x, raw_y, raw_width, raw_height = (
+                            bounds[0],
+                            bounds[1],
+                            bounds[2],
+                            bounds[3],
+                        )
 
                         # Apply device pixel ratio scaling to convert device pixels to CSS pixels
                         bounding_box = DOMRect(

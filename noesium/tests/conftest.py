@@ -182,7 +182,11 @@ def sample_document_chunks():
 @pytest.fixture
 def test_vectors():
     """Sample vectors for testing."""
-    return [[0.1, 0.2, 0.3] * 256, [0.4, 0.5, 0.6] * 256, [0.7, 0.8, 0.9] * 256]  # 768 dimensions
+    return [
+        [0.1, 0.2, 0.3] * 256,
+        [0.4, 0.5, 0.6] * 256,
+        [0.7, 0.8, 0.9] * 256,
+    ]  # 768 dimensions
 
 
 @pytest.fixture
@@ -246,7 +250,12 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_slow)
 
     # Skip LLM-dependent tests if no LLM API key is available
-    llm_keys = ["OPENAI_API_KEY", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "OLLAMA_BASE_URL"]
+    llm_keys = [
+        "OPENAI_API_KEY",
+        "OPENROUTER_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "OLLAMA_BASE_URL",
+    ]
     has_llm_key = any(os.getenv(key) for key in llm_keys)
     if not has_llm_key:
         skip_llm = pytest.mark.skip(
@@ -275,7 +284,12 @@ def pytest_collection_modifyitems(config, items):
 
         # Special handling for LiteLLM - needs at least one provider API key
         if "test_litellm_integration.py" in module_file:
-            litellm_keys = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "COHERE_API_KEY"]
+            litellm_keys = [
+                "OPENAI_API_KEY",
+                "ANTHROPIC_API_KEY",
+                "ANTHROPIC_AUTH_TOKEN",
+                "COHERE_API_KEY",
+            ]
             if not any(os.getenv(key) for key in litellm_keys):
                 item.add_marker(
                     pytest.mark.skip(reason="No LiteLLM provider API keys set (OPENAI, ANTHROPIC, or COHERE)")
@@ -297,11 +311,26 @@ def pytest_collection_modifyitems(config, items):
 
 def pytest_addoption(parser):
     """Add custom command line options."""
-    parser.addoption("--runintegration", action="store_true", default=False, help="run integration tests")
+    parser.addoption(
+        "--runintegration",
+        action="store_true",
+        default=False,
+        help="run integration tests",
+    )
     parser.addoption("--runslow", action="store_true", default=False, help="run slow tests")
     parser.addoption("--llm", action="store_true", default=False, help="run LLM-dependent tests")
-    parser.addoption("--vectorstore", action="store_true", default=False, help="run vectorstore-dependent tests")
-    parser.addoption("--websearch", action="store_true", default=False, help="run web search-dependent tests")
+    parser.addoption(
+        "--vectorstore",
+        action="store_true",
+        default=False,
+        help="run vectorstore-dependent tests",
+    )
+    parser.addoption(
+        "--websearch",
+        action="store_true",
+        default=False,
+        help="run web search-dependent tests",
+    )
 
 
 def pytest_sessionstart(session):

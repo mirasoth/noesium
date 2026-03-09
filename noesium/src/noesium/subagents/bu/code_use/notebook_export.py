@@ -34,7 +34,11 @@ def export_to_ipynb(agent: CodeAgent, output_path: str | Path) -> Path:
     # Create notebook structure
     notebook = NotebookExport(
         metadata={
-            "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
+            "kernelspec": {
+                "display_name": "Python 3",
+                "language": "python",
+                "name": "python3",
+            },
             "language_info": {
                 "name": "python",
                 "version": "3.11.0",
@@ -113,7 +117,10 @@ print("Available functions: navigate, click, input, evaluate, search, extract, d
                     js_cell = {
                         "cell_type": "code",
                         "metadata": {},
-                        "source": [f"# JavaScript Code Block: {var_name}\n", f'{var_name} = """{var_value}"""'],
+                        "source": [
+                            f"# JavaScript Code Block: {var_name}\n",
+                            f'{var_name} = """{var_value}"""',
+                        ],
                         "execution_count": None,
                         "outputs": [],
                     }

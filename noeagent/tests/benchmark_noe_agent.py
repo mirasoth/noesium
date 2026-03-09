@@ -589,7 +589,12 @@ class TestBenchmarkReport:
 
         loaded_tools = registry.list_tools()
         loaded_names = {t.name for t in loaded_tools}
-        logger.info("Loaded %d tools from %d toolkits: %s", len(loaded_tools), len(all_toolkits), loaded_names)
+        logger.info(
+            "Loaded %d tools from %d toolkits: %s",
+            len(loaded_tools),
+            len(all_toolkits),
+            loaded_names,
+        )
 
         assert len(loaded_tools) > 0, "At least some tools should be loaded"
 

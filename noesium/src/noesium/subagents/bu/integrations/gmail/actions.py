@@ -23,12 +23,17 @@ class GetRecentEmailsParams(BaseModel):
 
     keyword: str = Field(default="", description="A single keyword for search, e.g. github, airbnb, etc.")
     max_results: int = Field(
-        default=3, ge=1, le=50, description="Maximum number of emails to retrieve (1-50, default: 3)"
+        default=3,
+        ge=1,
+        le=50,
+        description="Maximum number of emails to retrieve (1-50, default: 3)",
     )
 
 
 def register_gmail_actions(
-    tools: Tools, gmail_service: GmailService | None = None, access_token: str | None = None
+    tools: Tools,
+    gmail_service: GmailService | None = None,
+    access_token: str | None = None,
 ) -> Tools:
     """
     Register Gmail actions with the provided tools

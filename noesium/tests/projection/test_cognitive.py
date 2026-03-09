@@ -45,7 +45,10 @@ class TestCognitiveProjection:
 
     def test_error_recorded_in_reasoning_traces(self, proj):
         events = [
-            _env("system.error.occurred", {"error_type": "ValueError", "message": "bad input"}),
+            _env(
+                "system.error.occurred",
+                {"error_type": "ValueError", "message": "bad input"},
+            ),
         ]
         state = proj.fold(events)
         assert len(state["reasoning_traces"]) == 1

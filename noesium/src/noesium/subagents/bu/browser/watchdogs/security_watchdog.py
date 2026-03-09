@@ -168,7 +168,12 @@ class SecurityWatchdog(BaseWatchdog):
         """
 
         # Always allow internal browser targets (before any other checks)
-        if url in ["about:blank", "chrome://new-tab-page/", "chrome://new-tab-page", "chrome://newtab/"]:
+        if url in [
+            "about:blank",
+            "chrome://new-tab-page/",
+            "chrome://new-tab-page",
+            "chrome://newtab/",
+        ]:
             return True
 
         # Parse the URL to extract components

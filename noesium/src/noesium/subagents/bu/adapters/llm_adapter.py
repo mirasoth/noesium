@@ -219,7 +219,13 @@ class BaseChatModel:
                         content_text = str(msg)
 
                     total_chars += len(content_text)
-                    noesium_messages.append({"role": msg.role, "content": content_text, "has_images": has_images})
+                    noesium_messages.append(
+                        {
+                            "role": msg.role,
+                            "content": content_text,
+                            "has_images": has_images,
+                        }
+                    )
                 elif isinstance(msg, dict):
                     # Already in the right format
                     if "content" in msg:

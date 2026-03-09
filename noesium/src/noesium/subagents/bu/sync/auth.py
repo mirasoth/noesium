@@ -205,7 +205,10 @@ class DeviceAuthClient:
                     elif response.status_code == 400:
                         # Error response
                         data = response.json()
-                        if data.get("error") not in ["authorization_pending", "slow_down"]:
+                        if data.get("error") not in [
+                            "authorization_pending",
+                            "slow_down",
+                        ]:
                             print(f'Error: {data.get("error_description", "Unknown error")}')
                             return None
 
@@ -257,7 +260,10 @@ class DeviceAuthClient:
                         elif response.status_code == 400:
                             # Error response
                             data = response.json()
-                            if data.get("error") not in ["authorization_pending", "slow_down"]:
+                            if data.get("error") not in [
+                                "authorization_pending",
+                                "slow_down",
+                            ]:
                                 print(f'Error: {data.get("error_description", "Unknown error")}')
                                 return None
 

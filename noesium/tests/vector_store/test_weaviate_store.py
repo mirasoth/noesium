@@ -86,7 +86,9 @@ class TestWeaviateVectorStoreUnit:
 
         # Should be able to create instance
         vectorstore = WeaviateVectorStore(
-            collection_name="test_collection", embedding_model_dims=768, cluster_url="http://localhost:8080"
+            collection_name="test_collection",
+            embedding_model_dims=768,
+            cluster_url="http://localhost:8080",
         )
 
         assert vectorstore.collection_name == "test_collection"
@@ -116,7 +118,9 @@ class TestWeaviateVectorStoreIntegration:
         self.cluster_url = weaviate_config["cluster_url"]
 
         self.vectorstore = WeaviateVectorStore(
-            collection_name=self.collection_name, embedding_model_dims=self.embedding_dims, cluster_url=self.cluster_url
+            collection_name=self.collection_name,
+            embedding_model_dims=self.embedding_dims,
+            cluster_url=self.cluster_url,
         )
 
         yield
@@ -159,7 +163,10 @@ class TestWeaviateVectorStoreIntegration:
     def test_search_with_filters(self, test_vectors, test_payloads, test_ids):
         """Test search with filters."""
         # Insert test data with user_id
-        payloads_with_user = [{**test_payloads[0], "user_id": "user1"}, {**test_payloads[1], "user_id": "user2"}]
+        payloads_with_user = [
+            {**test_payloads[0], "user_id": "user1"},
+            {**test_payloads[1], "user_id": "user2"},
+        ]
         self.vectorstore.insert(test_vectors[:2], payloads_with_user, test_ids[:2])
 
         # Search with filter
@@ -217,7 +224,10 @@ class TestWeaviateVectorStoreIntegration:
         """Test listing all vectors."""
         # Insert multiple vectors
         test_vectors = [[0.1, 0.2, 0.3] * 256, [0.4, 0.5, 0.6] * 256]
-        test_payloads = [{"data": "first", "category": "A"}, {"data": "second", "category": "B"}]
+        test_payloads = [
+            {"data": "first", "category": "A"},
+            {"data": "second", "category": "B"},
+        ]
         test_ids = [str(uuid.uuid4()) for _ in range(2)]
 
         self.vectorstore.insert(test_vectors, test_payloads, test_ids)

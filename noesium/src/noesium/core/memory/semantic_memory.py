@@ -42,7 +42,7 @@ class SemanticMemory:
             return []
         results = await self._vector_store.similarity_search(query, k=k)
         return [
-            {"content": r.page_content, "metadata": r.metadata} if hasattr(r, "page_content") else r for r in results
+            ({"content": r.page_content, "metadata": r.metadata} if hasattr(r, "page_content") else r) for r in results
         ]
 
     async def rebuild_index(self) -> None:

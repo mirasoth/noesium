@@ -6,7 +6,9 @@ from noesium.subagents.bu.agent.views import AgentHistoryList, DetectedVariable
 from noesium.subagents.bu.dom.views import DOMInteractedElement
 
 
-def detect_variables_in_history(history: AgentHistoryList) -> dict[str, DetectedVariable]:
+def detect_variables_in_history(
+    history: AgentHistoryList,
+) -> dict[str, DetectedVariable]:
     """
     Analyze agent history and detect reusable variables.
 
@@ -120,7 +122,9 @@ def _detect_variable_type(
     return _detect_from_value_pattern(value)
 
 
-def _detect_from_attributes(attributes: dict[str, str]) -> tuple[str, str | None] | None:
+def _detect_from_attributes(
+    attributes: dict[str, str],
+) -> tuple[str, str | None] | None:
     """
     Detect variable from element attributes.
 

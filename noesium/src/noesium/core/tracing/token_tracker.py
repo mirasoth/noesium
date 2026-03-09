@@ -148,7 +148,10 @@ def extract_token_usage_from_openai_response(
 
 
 def estimate_token_usage(
-    prompt_text: str, completion_text: str, model_name: str, call_type: str = "completion"
+    prompt_text: str,
+    completion_text: str,
+    model_name: str,
+    call_type: str = "completion",
 ) -> TokenUsage:
     """Estimate token usage when actual usage is not available."""
     # Simple estimation: ~4 characters per token for English text

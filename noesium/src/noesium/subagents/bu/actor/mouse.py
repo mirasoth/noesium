@@ -3,7 +3,10 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cdp_use.cdp.input.commands import DispatchMouseEventParameters, SynthesizeScrollGestureParameters
+    from cdp_use.cdp.input.commands import (
+        DispatchMouseEventParameters,
+        SynthesizeScrollGestureParameters,
+    )
     from cdp_use.cdp.input.types import MouseButton
 
     from noesium.subagents.bu.browser.session import BrowserSession
@@ -12,7 +15,12 @@ if TYPE_CHECKING:
 class Mouse:
     """Mouse operations for a target."""
 
-    def __init__(self, browser_session: "BrowserSession", session_id: str | None = None, target_id: str | None = None):
+    def __init__(
+        self,
+        browser_session: "BrowserSession",
+        session_id: str | None = None,
+        target_id: str | None = None,
+    ):
         self._browser_session = browser_session
         self._client = browser_session.cdp_client
         self._session_id = session_id
@@ -82,7 +90,13 @@ class Mouse:
         params: "DispatchMouseEventParameters" = {"type": "mouseMoved", "x": x, "y": y}
         await self._client.send.Input.dispatchMouseEvent(params, session_id=self._session_id)
 
-    async def scroll(self, x: int = 0, y: int = 0, delta_x: int | None = None, delta_y: int | None = None) -> None:
+    async def scroll(
+        self,
+        x: int = 0,
+        y: int = 0,
+        delta_x: int | None = None,
+        delta_y: int | None = None,
+    ) -> None:
         """Scroll the page using robust CDP methods."""
         if not self._session_id:
             raise RuntimeError("Session ID is required for scroll operations")

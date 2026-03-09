@@ -145,7 +145,10 @@ class TestBashToolkitBuildAndCleanup:
     @pytest.mark.asyncio
     async def test_async_context_manager(self):
         """Test async context manager functionality."""
-        with patch.object(BashToolkit, "_initialize_shell"), patch.object(BashToolkit, "_setup_workspace"):
+        with (
+            patch.object(BashToolkit, "_initialize_shell"),
+            patch.object(BashToolkit, "_setup_workspace"),
+        ):
             toolkit = BashToolkit()
 
             async with toolkit as t:
@@ -245,7 +248,11 @@ class TestBashToolkitShellOperations:
         mock_spawn.assert_called_once_with("/bin/bash", encoding="utf-8", echo=False, timeout=toolkit.timeout)
 
         # Verify shell setup commands were sent
-        expected_calls = ["stty -onlcr", "unset PROMPT_COMMAND", f"PS1='{toolkit.custom_prompt}'"]
+        expected_calls = [
+            "stty -onlcr",
+            "unset PROMPT_COMMAND",
+            f"PS1='{toolkit.custom_prompt}'",
+        ]
 
         for call in expected_calls:
             mock_child.sendline.assert_any_call(call)
@@ -448,7 +455,11 @@ class TestBashToolkitCommandExecution:
 
         with (
             patch.object(toolkit, "_validate_command", return_value=None),
-            patch.object(toolkit, "_run_command_internal", side_effect=Exception("Execution failed")),
+            patch.object(
+                toolkit,
+                "_run_command_internal",
+                side_effect=Exception("Execution failed"),
+            ),
             patch.object(toolkit, "_recover_shell") as mock_recover,
         ):
             toolkit._shell_initialized = True

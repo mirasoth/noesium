@@ -288,7 +288,7 @@ class AgentKernel:
         return Decision(
             action=DecisionAction.FINISH_GOAL,
             goal_id=goal.id,
-            reasoning=str(last_message.content) if hasattr(last_message, "content") else "Step completed",
+            reasoning=(str(last_message.content) if hasattr(last_message, "content") else "Step completed"),
         )
 
     @property

@@ -9,7 +9,11 @@ from cdp_use.cdp.page.events import ScreencastFrameEvent
 from pydantic import PrivateAttr
 from uuid_extensions import uuid7str
 
-from noesium.subagents.bu.browser.events import AgentFocusChangedEvent, BrowserConnectedEvent, BrowserStopEvent
+from noesium.subagents.bu.browser.events import (
+    AgentFocusChangedEvent,
+    BrowserConnectedEvent,
+    BrowserStopEvent,
+)
 from noesium.subagents.bu.browser.profile import ViewportSize
 from noesium.subagents.bu.browser.video_recorder import VideoRecorderService
 from noesium.subagents.bu.browser.watchdog_base import BaseWatchdog
@@ -21,7 +25,11 @@ class RecordingWatchdog(BaseWatchdog):
     Manages video recording of a browser session using CDP screencasting.
     """
 
-    LISTENS_TO: ClassVar[list[type[BaseEvent]]] = [BrowserConnectedEvent, BrowserStopEvent, AgentFocusChangedEvent]
+    LISTENS_TO: ClassVar[list[type[BaseEvent]]] = [
+        BrowserConnectedEvent,
+        BrowserStopEvent,
+        AgentFocusChangedEvent,
+    ]
     EMITS: ClassVar[list[type[BaseEvent]]] = []
 
     _recorder: VideoRecorderService | None = PrivateAttr(default=None)

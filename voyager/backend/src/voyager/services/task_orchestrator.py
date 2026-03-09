@@ -228,7 +228,7 @@ class TaskOrchestrator:
                     {
                         "tool": event.tool_name,
                         "args": event.tool_args,
-                        "result": event.tool_result[:500] if event.tool_result else None,
+                        "result": (event.tool_result[:500] if event.tool_result else None),
                         "timestamp": datetime.utcnow().isoformat(),
                     }
                 )

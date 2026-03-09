@@ -312,7 +312,7 @@ class LLMClient(BaseLLMClient):
                     messages=structured_messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    response_format={"type": "json_object"} if "gpt" in self.chat_model.lower() else None,
+                    response_format=({"type": "json_object"} if "gpt" in self.chat_model.lower() else None),
                     **kwargs,
                 )
 
@@ -392,7 +392,10 @@ class LLMClient(BaseLLMClient):
                     "role": "user",
                     "content": [
                         {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": f"data:image/{image_format};base64,{image_base64}"}},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/{image_format};base64,{image_base64}"},
+                        },
                     ],
                 }
             ]

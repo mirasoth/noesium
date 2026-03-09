@@ -11,7 +11,13 @@ from pathlib import Path
 from typing import Any, Dict
 
 # Import prompt module
-from noesium.core.llm.prompt import PromptLoader, PromptManager, PromptTemplate, TemplateEngine, create_simple_prompt
+from noesium.core.llm.prompt import (
+    PromptLoader,
+    PromptManager,
+    PromptTemplate,
+    TemplateEngine,
+    create_simple_prompt,
+)
 
 
 class PromptExamples:
@@ -23,7 +29,9 @@ class PromptExamples:
 
         # Initialize prompt manager with examples directory
         self.manager = PromptManager(
-            template_dirs=[str(self.examples_dir)], default_engine=TemplateEngine.JINJA2, enable_cache=True
+            template_dirs=[str(self.examples_dir)],
+            default_engine=TemplateEngine.JINJA2,
+            enable_cache=True,
         )
 
     def basic_usage_examples(self) -> Dict[str, Any]:
@@ -90,7 +98,11 @@ class PromptExamples:
         try:
             form_messages = self.manager.render_prompt(
                 "form_filling.json",
-                form_data={"name": "John Doe", "email": "john@example.com", "phone": "+1-555-0123"},
+                form_data={
+                    "name": "John Doe",
+                    "email": "john@example.com",
+                    "phone": "+1-555-0123",
+                },
                 validation_mode="strict",
                 submit_form=False,
             )
@@ -317,7 +329,11 @@ You are processing user data:
         results = {}
 
         # Validate existing templates
-        templates_to_validate = ["web_search.md", "data_extraction.yaml", "form_filling.json"]
+        templates_to_validate = [
+            "web_search.md",
+            "data_extraction.yaml",
+            "form_filling.json",
+        ]
 
         for template_name in templates_to_validate:
             try:
@@ -342,14 +358,21 @@ You are processing user data:
 
         # Test invalid template
         print("\nInvalid Template Test:")
-        PromptLoader.from_string("Hello {{ name }}, your balance is {{ invalid_syntax", name="invalid_example")
+        PromptLoader.from_string(
+            "Hello {{ name }}, your balance is {{ invalid_syntax",
+            name="invalid_example",
+        )
 
         # Create temporary file for validation
         temp_file = self.examples_dir / "temp_invalid.json"
         try:
             with open(temp_file, "w") as f:
                 json.dump(
-                    {"metadata": {"name": "invalid"}, "messages": [{"role": "system", "content": "{{ unclosed_tag"}]}, f
+                    {
+                        "metadata": {"name": "invalid"},
+                        "messages": [{"role": "system", "content": "{{ unclosed_tag"}],
+                    },
+                    f,
                 )
 
             invalid_result = self.manager.validate_template(temp_file)
@@ -498,7 +521,9 @@ Please analyze the following data: {{ data | truncate(100) }}
 
         global_template = PromptLoader.from_markdown_string(global_vars_template)
         global_messages = self.manager.render_prompt(
-            global_template, report_type="sales", data=["Q1: $50k", "Q2: $75k", "Q3: $60k", "Q4: $90k"]
+            global_template,
+            report_type="sales",
+            data=["Q1: $50k", "Q2: $75k", "Q3: $60k", "Q4: $90k"],
         )
 
         print(f"   Report template result: {len(global_messages)} messages")
@@ -562,7 +587,8 @@ Please analyze the following data: {{ data | truncate(100) }}
         print("\n3. Template Syntax Error Handling:")
         try:
             broken_template = PromptLoader.from_string(
-                "Hello {{ name }, your balance is {{ amount", name="broken_example"  # Broken syntax
+                "Hello {{ name }, your balance is {{ amount",
+                name="broken_example",  # Broken syntax
             )
             self.manager.render_prompt(broken_template, name="test", amount=100)
             print("   Unexpected success!")
@@ -575,7 +601,8 @@ Please analyze the following data: {{ data | truncate(100) }}
         try:
             # Template with optional variables
             fallback_template = PromptLoader.from_string(
-                "Hello {{ name }}{% if title %}, {{ title }}{% endif %}!", name="fallback_example"
+                "Hello {{ name }}{% if title %}, {{ title }}{% endif %}!",
+                name="fallback_example",
             )
             fallback_messages = self.manager.render_prompt(
                 fallback_template, name="User"  # title is optional and missing
@@ -640,7 +667,10 @@ Provide straightforward creative suggestions.
         print(f"   Analysis template: {len(analysis_messages)} messages")
         print(f"   Creative template: {len(creative_messages)} messages")
 
-        results["dynamic_templates"] = {"analysis": analysis_messages, "creative": creative_messages}
+        results["dynamic_templates"] = {
+            "analysis": analysis_messages,
+            "creative": creative_messages,
+        }
 
         # 2. Message serialization
         print("\n2. Message Serialization:")
@@ -649,7 +679,14 @@ Provide straightforward creative suggestions.
         # Convert to dict for JSON serialization
         serialized = []
         for msg in messages:
-            serialized.append({"role": msg.role, "content": msg.text, "name": msg.name, "cache": msg.cache})
+            serialized.append(
+                {
+                    "role": msg.role,
+                    "content": msg.text,
+                    "name": msg.name,
+                    "cache": msg.cache,
+                }
+            )
 
         json_str = json.dumps(serialized, indent=2)
         print(f"   Serialized messages:\n{json_str}")

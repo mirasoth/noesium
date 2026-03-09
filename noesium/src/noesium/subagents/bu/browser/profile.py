@@ -8,7 +8,15 @@ from pathlib import Path
 from typing import Annotated, Any, Literal, Self
 from urllib.parse import urlparse
 
-from pydantic import AfterValidator, AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from noesium.subagents.bu.config import CONFIG
 from noesium.subagents.bu.utils import _log_pretty_path, logger
@@ -309,7 +317,10 @@ class BrowserContextArgs(BaseModel):
     """
 
     model_config = ConfigDict(
-        extra="ignore", validate_assignment=False, revalidate_instances="always", populate_by_name=True
+        extra="ignore",
+        validate_assignment=False,
+        revalidate_instances="always",
+        populate_by_name=True,
     )
 
     # Browser context parameters
@@ -341,7 +352,8 @@ class BrowserContextArgs(BaseModel):
         default=None, validation_alias=AliasChoices("save_har_path", "record_har_path")
     )
     record_video_dir: str | Path | None = Field(
-        default=None, validation_alias=AliasChoices("save_recording_path", "record_video_dir")
+        default=None,
+        validation_alias=AliasChoices("save_recording_path", "record_video_dir"),
     )
 
 
@@ -355,11 +367,15 @@ class BrowserConnectArgs(BaseModel):
     """
 
     model_config = ConfigDict(
-        extra="ignore", validate_assignment=True, revalidate_instances="always", populate_by_name=True
+        extra="ignore",
+        validate_assignment=True,
+        revalidate_instances="always",
+        populate_by_name=True,
     )
 
     headers: dict[str, str] | None = Field(
-        default=None, description="Additional HTTP headers to be sent with connect request"
+        default=None,
+        description="Additional HTTP headers to be sent with connect request",
     )
 
 
@@ -390,9 +406,13 @@ class BrowserLaunchArgs(BaseModel):
         validation_alias=AliasChoices("browser_binary_path", "chrome_binary_path"),
         description="Path to the chromium-based browser executable to use.",
     )
-    headless: bool | None = Field(default=None, description="Whether to run the browser in headless or windowed mode.")
+    headless: bool | None = Field(
+        default=None,
+        description="Whether to run the browser in headless or windowed mode.",
+    )
     args: list[CliArgStr] = Field(
-        default_factory=list, description="List of *extra* CLI args to pass to the browser when launching."
+        default_factory=list,
+        description="List of *extra* CLI args to pass to the browser when launching.",
     )
     ignore_default_args: list[CliArgStr] | Literal[True] = Field(
         default_factory=lambda: [
@@ -481,7 +501,10 @@ class BrowserNewContextArgs(BrowserContextArgs):
     """
 
     model_config = ConfigDict(
-        extra="ignore", validate_assignment=False, revalidate_instances="always", populate_by_name=True
+        extra="ignore",
+        validate_assignment=False,
+        revalidate_instances="always",
+        populate_by_name=True,
     )
 
     # storage_state is not supported in launch_persistent_context()
@@ -538,9 +561,13 @@ class ProxySettings(BaseModel):
     - username/password: Optional credentials for authenticated proxies
     """
 
-    server: str | None = Field(default=None, description="Proxy URL, e.g. http://host:8080 or socks5://host:1080")
+    server: str | None = Field(
+        default=None,
+        description="Proxy URL, e.g. http://host:8080 or socks5://host:1080",
+    )
     bypass: str | None = Field(
-        default=None, description="Comma-separated hosts to bypass, e.g. localhost,127.0.0.1,*.internal"
+        default=None,
+        description="Comma-separated hosts to bypass, e.g. localhost,127.0.0.1,*.internal",
     )
     username: str | None = Field(default=None, description="Proxy auth username")
     password: str | None = Field(default=None, description="Proxy auth password")
@@ -549,7 +576,12 @@ class ProxySettings(BaseModel):
         return getattr(self, key)
 
 
-class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, BrowserLaunchArgs, BrowserNewContextArgs):
+class BrowserProfile(
+    BrowserConnectArgs,
+    BrowserLaunchPersistentContextArgs,
+    BrowserLaunchArgs,
+    BrowserNewContextArgs,
+):
     """
     A BrowserProfile is a static template collection of kwargs that can be passed to:
             - BrowserType.launch(**BrowserLaunchArgs)
@@ -631,10 +663,14 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
         description="Browser window size to use when headless=False.",
     )
     window_height: int | None = Field(
-        default=None, description='DEPRECATED, use window_size["height"] instead', exclude=True
+        default=None,
+        description='DEPRECATED, use window_size["height"] instead',
+        exclude=True,
     )
     window_width: int | None = Field(
-        default=None, description='DEPRECATED, use window_size["width"] instead', exclude=True
+        default=None,
+        description='DEPRECATED, use window_size["width"] instead',
+        exclude=True,
     )
     window_position: ViewportSize | None = Field(
         default=ViewportSize(width=0, height=0),
@@ -666,7 +702,8 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
     # --- UI/viewport/DOM ---
     highlight_elements: bool = Field(default=True, description="Highlight interactive elements on the page.")
     dom_highlight_elements: bool = Field(
-        default=False, description="Highlight interactive elements in the DOM (only for debugging purposes)."
+        default=False,
+        description="Highlight interactive elements in the DOM (only for debugging purposes).",
     )
     filter_highlight_ids: bool = Field(
         default=True,
@@ -685,7 +722,8 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
 
     # --- Downloads ---
     auto_download_pdfs: bool = Field(
-        default=True, description="Automatically download PDFs when navigating to PDF viewer pages."
+        default=True,
+        description="Automatically download PDFs when navigating to PDF viewer pages.",
     )
 
     profile_directory: str = "Default"  # e.g. 'Profile 1', 'Profile 2', 'Custom Profile', etc.
@@ -703,7 +741,8 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
         validation_alias=AliasChoices("save_recording_path", "record_video_dir"),
     )
     record_video_size: ViewportSize | None = Field(
-        default=None, description="Video frame size. If not set, it will use the viewport size."
+        default=None,
+        description="Video frame size. If not set, it will use the viewport size.",
     )
     record_video_framerate: int = Field(default=30, description="The framerate to use for the video recording.")
 
@@ -776,7 +815,10 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
         to avoid corrupting the default data dir created with a different channel.
         """
 
-        is_not_using_default_chromium = self.executable_path or self.channel not in (BROWSERUSE_DEFAULT_CHANNEL, None)
+        is_not_using_default_chromium = self.executable_path or self.channel not in (
+            BROWSERUSE_DEFAULT_CHANNEL,
+            None,
+        )
         if self.user_data_dir == CONFIG.BROWSER_USE_DEFAULT_USER_DATA_DIR and is_not_using_default_chromium:
             alternate_name = (
                 Path(self.executable_path).name.lower().replace(" ", "-")

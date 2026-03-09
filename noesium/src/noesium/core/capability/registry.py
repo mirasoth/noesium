@@ -384,7 +384,7 @@ class CapabilityRegistry:
                         capability_id=p.get("capability_id", ""),
                         version=p.get("version", "1.0.0"),
                         capability_type=p.get("capability_type", "tool"),
-                        timestamp=env.timestamp.timestamp() if env.timestamp else time.time(),
+                        timestamp=(env.timestamp.timestamp() if env.timestamp else time.time()),
                         detail={k: v for k, v in p.items() if k not in ("capability_id", "version")},
                     )
                 )
@@ -397,7 +397,7 @@ class CapabilityRegistry:
                         capability_id=p.get("capability_id", ""),
                         version=p.get("version", "1.0.0"),
                         capability_type="unknown",
-                        timestamp=env.timestamp.timestamp() if env.timestamp else time.time(),
+                        timestamp=(env.timestamp.timestamp() if env.timestamp else time.time()),
                     )
                 )
                 count += 1

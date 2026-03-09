@@ -15,7 +15,12 @@ from typing import Any, Dict, List, Optional
 
 from noesium.core.llm import BaseLLMClient
 from noesium.core.memory.base import BaseMemoryStore
-from noesium.core.memory.models import MemoryFilter, MemoryItem, MemoryStats, SearchResult
+from noesium.core.memory.models import (
+    MemoryFilter,
+    MemoryItem,
+    MemoryStats,
+    SearchResult,
+)
 
 from .memory import MemoryAgent
 
@@ -94,7 +99,7 @@ class MemuMemoryStore(BaseMemoryStore):
                 {
                     "character_name": memory_item.user_id or "User",
                     "content": conversation_content,
-                    "session_date": memory_item.created_at.strftime("%Y-%m-%d") if memory_item.created_at else None,
+                    "session_date": (memory_item.created_at.strftime("%Y-%m-%d") if memory_item.created_at else None),
                 },
             )
 
@@ -343,7 +348,11 @@ class MemuMemoryStore(BaseMemoryStore):
 
             # Perform search using the content of the reference item
             return await self.search(
-                query=primary_item.content, limit=limit, threshold=threshold, filters=filters, **kwargs
+                query=primary_item.content,
+                limit=limit,
+                threshold=threshold,
+                filters=filters,
+                **kwargs,
             )
 
         except Exception as e:
@@ -360,7 +369,12 @@ class MemuMemoryStore(BaseMemoryStore):
             items = await self.get_all(filters=filters)
 
             if not items:
-                return MemoryStats(total_items=0, items_by_type={}, items_by_user={}, average_importance=0.0)
+                return MemoryStats(
+                    total_items=0,
+                    items_by_type={},
+                    items_by_user={},
+                    average_importance=0.0,
+                )
 
             # Calculate statistics
             items_by_type = {}
@@ -401,7 +415,12 @@ class MemuMemoryStore(BaseMemoryStore):
 
         except Exception as e:
             logger.error(f"Error getting memory stats: {e}")
-            return MemoryStats(total_items=0, items_by_type={}, items_by_user={}, average_importance=0.0)
+            return MemoryStats(
+                total_items=0,
+                items_by_type={},
+                items_by_user={},
+                average_importance=0.0,
+            )
 
     async def cleanup_old_memories(
         self,
@@ -488,7 +507,7 @@ class MemuMemoryStore(BaseMemoryStore):
             "metadata": memory_item.metadata,
             "tags": memory_item.tags,
             "created_at": memory_item.created_at.isoformat(),
-            "updated_at": memory_item.updated_at.isoformat() if memory_item.updated_at else None,
+            "updated_at": (memory_item.updated_at.isoformat() if memory_item.updated_at else None),
             "version": memory_item.version,
             "memory_items": memory_items,  # MemU-specific data
         }
@@ -569,7 +588,7 @@ class MemuMemoryStore(BaseMemoryStore):
                 metadata=mapping.get("metadata", {}),
                 tags=mapping.get("tags", []),
                 created_at=datetime.fromisoformat(mapping["created_at"]),
-                updated_at=datetime.fromisoformat(mapping["updated_at"]) if mapping.get("updated_at") else None,
+                updated_at=(datetime.fromisoformat(mapping["updated_at"]) if mapping.get("updated_at") else None),
                 version=mapping.get("version", 1),
             )
         except Exception as e:

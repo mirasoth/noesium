@@ -8,7 +8,13 @@ types of toolkits including built-in tools and MCP integration.
 import asyncio
 import os
 
-from noesium.core.toolify import MCP_AVAILABLE, ToolkitConfig, ToolkitRegistry, get_toolkit, get_toolkits_map
+from noesium.core.toolify import (
+    MCP_AVAILABLE,
+    ToolkitConfig,
+    ToolkitRegistry,
+    get_toolkit,
+    get_toolkits_map,
+)
 from noesium.core.utils.logging import get_logger, setup_logging
 
 # Set up logging
@@ -21,7 +27,10 @@ async def demo_python_executor():
     logger.info("=== Python Executor Toolkit Demo ===")
 
     # Create toolkit with custom configuration
-    config = ToolkitConfig(name="python_demo", config={"default_workdir": "./demo_workdir", "default_timeout": 10})
+    config = ToolkitConfig(
+        name="python_demo",
+        config={"default_workdir": "./demo_workdir", "default_timeout": 10},
+    )
 
     toolkit = get_toolkit("python_executor", config)
 

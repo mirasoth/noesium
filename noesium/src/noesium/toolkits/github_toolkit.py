@@ -267,7 +267,12 @@ class GitHubToolkit(AsyncBaseToolkit):
                         }
                     )
 
-                return {"type": "directory", "path": path, "items": items, "count": len(items)}
+                return {
+                    "type": "directory",
+                    "path": path,
+                    "items": items,
+                    "count": len(items),
+                }
             else:
                 # Single file
                 return {
@@ -349,7 +354,12 @@ class GitHubToolkit(AsyncBaseToolkit):
         self.logger.info(f"Searching repositories for: {query}")
 
         endpoint = "search/repositories"
-        params = {"q": query, "sort": sort, "order": "desc", "per_page": min(limit, 100)}
+        params = {
+            "q": query,
+            "sort": sort,
+            "order": "desc",
+            "per_page": min(limit, 100),
+        }
 
         search_data = await self._make_api_request(endpoint, params)
 

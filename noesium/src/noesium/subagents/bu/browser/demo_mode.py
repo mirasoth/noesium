@@ -878,7 +878,8 @@ class DemoMode:
 
         try:
             await session.cdp_client.send.Runtime.evaluate(
-                params={"expression": script, "awaitPromise": False}, session_id=session.session_id
+                params={"expression": script, "awaitPromise": False},
+                session_id=session.session_id,
             )
         except Exception as exc:
             self.logger.debug(f"Failed to send demo log: {exc}")

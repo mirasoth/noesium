@@ -96,8 +96,14 @@ def demo_basic_completion(client: LLMClient, logger):
     logger.info("🚀 Testing basic chat completion...")
 
     messages = [
-        {"role": "system", "content": "You are a helpful coding assistant with expertise in Python."},
-        {"role": "user", "content": "Explain the difference between lists and tuples in Python in simple terms."},
+        {
+            "role": "system",
+            "content": "You are a helpful coding assistant with expertise in Python.",
+        },
+        {
+            "role": "user",
+            "content": "Explain the difference between lists and tuples in Python in simple terms.",
+        },
     ]
 
     try:
@@ -138,7 +144,10 @@ if __name__ == "__main__":
 
     try:
         analysis = client.structured_completion(
-            messages=messages, response_model=CodeAnalysis, temperature=0.5, max_tokens=2000
+            messages=messages,
+            response_model=CodeAnalysis,
+            temperature=0.5,
+            max_tokens=2000,
         )
 
         logger.info("✅ Structured completion successful!")
@@ -163,7 +172,10 @@ def demo_creative_structured_completion(client: LLMClient, logger):
     logger.info("✨ Testing creative structured completion...")
 
     messages = [
-        {"role": "system", "content": "You are a creative writing assistant and story planner."},
+        {
+            "role": "system",
+            "content": "You are a creative writing assistant and story planner.",
+        },
         {
             "role": "user",
             "content": """
@@ -178,7 +190,10 @@ def demo_creative_structured_completion(client: LLMClient, logger):
 
     try:
         outline = client.structured_completion(
-            messages=messages, response_model=StoryOutline, temperature=0.8, max_tokens=3000
+            messages=messages,
+            response_model=StoryOutline,
+            temperature=0.8,
+            max_tokens=3000,
         )
 
         logger.info("✅ Creative structured completion successful!")
@@ -220,7 +235,11 @@ def demo_image_understanding(client: LLMClient, logger):
             # Draw some shapes
             draw.rectangle([50, 50, 150, 150], fill="red", outline="black", width=3)
             draw.ellipse([200, 50, 350, 200], fill="green", outline="black", width=3)
-            draw.polygon([(100, 200), (150, 250), (200, 200), (175, 170), (125, 170)], fill="yellow", outline="black")
+            draw.polygon(
+                [(100, 200), (150, 250), (200, 200), (175, 170), (125, 170)],
+                fill="yellow",
+                outline="black",
+            )
 
             # Add text
             try:
@@ -309,7 +328,10 @@ def demo_streaming_completion(client: LLMClient, logger):
     logger.info("🌊 Testing streaming completion...")
 
     messages = [
-        {"role": "system", "content": "You are a technical writer who explains complex concepts clearly."},
+        {
+            "role": "system",
+            "content": "You are a technical writer who explains complex concepts clearly.",
+        },
         {
             "role": "user",
             "content": "Explain how neural networks work, using simple analogies that a beginner could understand.",
@@ -349,7 +371,12 @@ def demo_model_performance(client: LLMClient, logger):
     """Demonstrate model performance characteristics."""
     logger.info("⚡ Testing model performance...")
 
-    messages = [{"role": "user", "content": "Count from 1 to 10 and explain what each number represents in binary."}]
+    messages = [
+        {
+            "role": "user",
+            "content": "Count from 1 to 10 and explain what each number represents in binary.",
+        }
+    ]
 
     try:
         start_time = time.time()
@@ -377,7 +404,12 @@ def demo_error_handling(client: LLMClient, logger):
     logger.info("⚠️ Testing error handling...")
 
     # Test with a very short max_tokens to see how it handles truncation
-    messages = [{"role": "user", "content": "Write a detailed essay about the history of computer science."}]
+    messages = [
+        {
+            "role": "user",
+            "content": "Write a detailed essay about the history of computer science.",
+        }
+    ]
 
     try:
         response = client.completion(messages=messages, temperature=0.7, max_tokens=20)  # Very small limit

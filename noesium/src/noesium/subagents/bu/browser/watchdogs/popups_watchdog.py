@@ -108,7 +108,8 @@ class PopupsWatchdog(BaseWatchdog):
                         try:
                             # Use public API with focus=False to avoid changing focus during popup dismissal
                             cdp_session = await self.browser_session.get_or_create_cdp_session(
-                                self.browser_session.agent_focus_target_id, focus=False
+                                self.browser_session.agent_focus_target_id,
+                                focus=False,
                             )
                             self.logger.debug(f"🔄 Approach 2: Using agent focus session {cdp_session.session_id[-8:]}")
                             await asyncio.wait_for(

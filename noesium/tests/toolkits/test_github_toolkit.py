@@ -37,7 +37,12 @@ class TestGitHubToolkit:
         """Test that tools map is correctly defined."""
         tools_map = await github_toolkit.get_tools_map()
 
-        expected_tools = ["get_repo_info", "get_repo_contents", "get_repo_releases", "search_repositories"]
+        expected_tools = [
+            "get_repo_info",
+            "get_repo_contents",
+            "get_repo_releases",
+            "search_repositories",
+        ]
         for tool_name in expected_tools:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
@@ -490,7 +495,11 @@ class TestGitHubToolkitIntegration:
     async def test_real_search_repositories_specific_treelib(self, github_toolkit_integration):
         """Test real repository search specifically for treelib."""
         # Try multiple search queries to increase chances of finding results
-        search_queries = ["treelib caesar0301", "treelib python", "python tree data structure"]
+        search_queries = [
+            "treelib caesar0301",
+            "treelib python",
+            "python tree data structure",
+        ]
 
         found_results = False
         treelib_repo = None
@@ -707,7 +716,14 @@ class TestGitHubToolkitIntegrationErrorHandling:
             # Accept various error messages for invalid URLs
             error_msg = result["error"].lower()
             assert any(
-                keyword in error_msg for keyword in ["invalid", "url", "not found", "not accessible", "repository"]
+                keyword in error_msg
+                for keyword in [
+                    "invalid",
+                    "url",
+                    "not found",
+                    "not accessible",
+                    "repository",
+                ]
             )
 
     @pytest.mark.asyncio

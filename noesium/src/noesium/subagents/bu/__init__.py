@@ -49,7 +49,11 @@ if TYPE_CHECKING:
     from noesium.subagents.bu.agent import BrowserUseAgent
     from noesium.subagents.bu.agent.prompts import SystemPrompt
     from noesium.subagents.bu.agent.service import Agent
-    from noesium.subagents.bu.agent.views import ActionModel, ActionResult, AgentHistoryList
+    from noesium.subagents.bu.agent.views import (
+        ActionModel,
+        ActionResult,
+        AgentHistoryList,
+    )
     from noesium.subagents.bu.browser import BrowserProfile
     from noesium.subagents.bu.browser import BrowserSession
     from noesium.subagents.bu.browser import BrowserSession as Browser
@@ -72,7 +76,10 @@ _LAZY_IMPORTS = {
     "ActionResult": ("noesium.subagents.bu.agent.views", "ActionResult"),
     "AgentHistoryList": ("noesium.subagents.bu.agent.views", "AgentHistoryList"),
     "BrowserSession": ("noesium.subagents.bu.browser", "BrowserSession"),
-    "Browser": ("noesium.subagents.bu.browser", "BrowserSession"),  # Alias for BrowserSession
+    "Browser": (
+        "noesium.subagents.bu.browser",
+        "BrowserSession",
+    ),  # Alias for BrowserSession
     "BrowserProfile": ("noesium.subagents.bu.browser", "BrowserProfile"),
     # Tools (moderate weight)
     "Tools": ("noesium.subagents.bu.tools.service", "Tools"),

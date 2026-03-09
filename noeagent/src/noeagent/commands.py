@@ -297,10 +297,16 @@ async def execute_subagent_command(
                 False,
                 f"Subagent '{get_subagent_display_name(subagent_name)}' is not enabled. Enable it in your config.",
             )
-        return False, f"Subagent '{get_subagent_display_name(subagent_name)}' not found in SubagentManager."
+        return (
+            False,
+            f"Subagent '{get_subagent_display_name(subagent_name)}' not found in SubagentManager.",
+        )
 
     try:
         result = await agent.invoke_subagent(subagent_name, message)
         return True, str(result)
     except Exception as exc:
-        return False, f"Error executing {get_subagent_display_name(subagent_name)}: {exc}"
+        return (
+            False,
+            f"Error executing {get_subagent_display_name(subagent_name)}: {exc}",
+        )

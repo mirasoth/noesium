@@ -620,7 +620,10 @@ class NoeAgent(BaseGraphicAgent):
         initial = self._build_initial_state()
         initial["messages"] = [HumanMessage(content=user_message)]
 
-        start_evt = _evt(ProgressEventType.SESSION_START, summary=f"Session started: {user_message[:80]}")
+        start_evt = _evt(
+            ProgressEventType.SESSION_START,
+            summary=f"Session started: {user_message[:80]}",
+        )
         await _emit(start_evt)
         yield start_evt
 
@@ -741,7 +744,7 @@ class NoeAgent(BaseGraphicAgent):
                                 node=node_name,
                                 tool_name=tname,
                                 tool_result=first_line,
-                                summary=f"{tname}: {first_line}" if first_line else f"{tname}: done",
+                                summary=(f"{tname}: {first_line}" if first_line else f"{tname}: done"),
                                 detail=raw_result[:5000],
                             )
                             await _emit(evt)
@@ -769,7 +772,7 @@ class NoeAgent(BaseGraphicAgent):
                                         node=node_name,
                                         tool_name=cname,
                                         tool_args=cargs,
-                                        summary=f"Using {cname}({brief_args})" if brief_args else f"Using {cname}",
+                                        summary=(f"Using {cname}({brief_args})" if brief_args else f"Using {cname}"),
                                         detail=str(cargs)[:2000],
                                     )
                                     await _emit(evt)
@@ -784,7 +787,7 @@ class NoeAgent(BaseGraphicAgent):
                                         ProgressEventType.SUBAGENT_START,
                                         node=node_name,
                                         subagent_id=sa_name,
-                                        summary=f"[{sa_name}] {sa_msg}" if sa_msg else f"[{sa_name}] spawned",
+                                        summary=(f"[{sa_name}] {sa_msg}" if sa_msg else f"[{sa_name}] spawned"),
                                         detail=str(sa),
                                     )
                                     await _emit(evt)
@@ -1030,10 +1033,10 @@ class NoeAgent(BaseGraphicAgent):
             subagent_id=subagent_id,
             summary=event.summary,
             detail=event.detail,
-            error=event.error_message if event.event_type == SubagentEventType.SUBAGENT_ERROR else None,
+            error=(event.error_message if event.event_type == SubagentEventType.SUBAGENT_ERROR else None),
             tool_name=event.tool_name,
             tool_args=event.tool_args,
-            tool_result=str(event.tool_result) if event.tool_result is not None else None,
+            tool_result=(str(event.tool_result) if event.tool_result is not None else None),
             step_index=step_index,
             step_desc=step_desc,
             plan_snapshot=plan_snapshot,

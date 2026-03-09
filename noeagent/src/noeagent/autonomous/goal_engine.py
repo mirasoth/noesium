@@ -80,7 +80,11 @@ class GoalEngine:
                 if entry and entry.value:
                     goal = Goal(**entry.value)
                     self._goals_by_id[goal.id] = goal
-                    if goal.status in (GoalStatus.PENDING, GoalStatus.ACTIVE, GoalStatus.BLOCKED):
+                    if goal.status in (
+                        GoalStatus.PENDING,
+                        GoalStatus.ACTIVE,
+                        GoalStatus.BLOCKED,
+                    ):
                         self._queue.append(goal)
 
             self._sort_queue()
@@ -260,7 +264,7 @@ class GoalEngine:
         await self._emit_event(
             GoalUpdated(
                 goal_id=goal_id,
-                old_status=old_status.value if isinstance(old_status, GoalStatus) else old_status,
+                old_status=(old_status.value if isinstance(old_status, GoalStatus) else old_status),
                 new_status=status.value if isinstance(status, GoalStatus) else status,
             )
         )

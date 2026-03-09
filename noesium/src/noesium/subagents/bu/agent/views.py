@@ -9,14 +9,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    create_model,
+    model_validator,
+)
 from typing_extensions import TypeVar
 from uuid_extensions import uuid7str
 
 from noesium.subagents.bu.adapters.llm_adapter import BaseChatModel
 from noesium.subagents.bu.agent.message_manager.views import MessageManagerState
 from noesium.subagents.bu.browser.views import BrowserStateHistory
-from noesium.subagents.bu.dom.views import DEFAULT_INCLUDE_ATTRIBUTES, DOMInteractedElement, DOMSelectorMap
+from noesium.subagents.bu.dom.views import (
+    DEFAULT_INCLUDE_ATTRIBUTES,
+    DOMInteractedElement,
+    DOMSelectorMap,
+)
 
 # from noesium.subagents.bu.dom.history_tree_processor.service import (
 # 	DOMElementNode,
@@ -409,7 +420,12 @@ class AgentOutput(BaseModel):
     @classmethod
     def model_json_schema(cls, **kwargs):
         schema = super().model_json_schema(**kwargs)
-        schema["required"] = ["evaluation_previous_goal", "memory", "next_goal", "action"]
+        schema["required"] = [
+            "evaluation_previous_goal",
+            "memory",
+            "next_goal",
+            "action",
+        ]
         return schema
 
     @property
@@ -417,13 +433,15 @@ class AgentOutput(BaseModel):
         """For backward compatibility - returns an AgentBrain with the flattened properties"""
         return AgentBrain(
             thinking=self.thinking,
-            evaluation_previous_goal=self.evaluation_previous_goal if self.evaluation_previous_goal else "",
+            evaluation_previous_goal=(self.evaluation_previous_goal if self.evaluation_previous_goal else ""),
             memory=self.memory if self.memory else "",
             next_goal=self.next_goal if self.next_goal else "",
         )
 
     @staticmethod
-    def type_with_custom_actions(custom_actions: type[ActionModel]) -> type[AgentOutput]:
+    def type_with_custom_actions(
+        custom_actions: type[ActionModel],
+    ) -> type[AgentOutput]:
         """Extend actions with custom actions"""
 
         model_ = create_model(
@@ -431,14 +449,20 @@ class AgentOutput(BaseModel):
             __base__=AgentOutput,
             action=(
                 list[custom_actions],  # type: ignore
-                Field(..., description="List of actions to execute", json_schema_extra={"min_items": 1}),
+                Field(
+                    ...,
+                    description="List of actions to execute",
+                    json_schema_extra={"min_items": 1},
+                ),
             ),
             __module__=AgentOutput.__module__,
         )
         return model_
 
     @staticmethod
-    def type_with_custom_actions_no_thinking(custom_actions: type[ActionModel]) -> type[AgentOutput]:
+    def type_with_custom_actions_no_thinking(
+        custom_actions: type[ActionModel],
+    ) -> type[AgentOutput]:
         """Extend actions with custom actions and exclude thinking field"""
 
         class AgentOutputNoThinking(AgentOutput):
@@ -446,7 +470,12 @@ class AgentOutput(BaseModel):
             def model_json_schema(cls, **kwargs):
                 schema = super().model_json_schema(**kwargs)
                 del schema["properties"]["thinking"]
-                schema["required"] = ["evaluation_previous_goal", "memory", "next_goal", "action"]
+                schema["required"] = [
+                    "evaluation_previous_goal",
+                    "memory",
+                    "next_goal",
+                    "action",
+                ]
                 return schema
 
         model = create_model(
@@ -462,7 +491,9 @@ class AgentOutput(BaseModel):
         return model
 
     @staticmethod
-    def type_with_custom_actions_flash_mode(custom_actions: type[ActionModel]) -> type[AgentOutput]:
+    def type_with_custom_actions_flash_mode(
+        custom_actions: type[ActionModel],
+    ) -> type[AgentOutput]:
         """Extend actions with custom actions for flash mode - memory and action fields only"""
 
         class AgentOutputFlashMode(AgentOutput):
@@ -549,7 +580,9 @@ class AgentHistory(BaseModel):
         return value
 
     def _filter_sensitive_data_from_dict(
-        self, data: dict[str, Any], sensitive_data: dict[str, str | dict[str, str]] | None
+        self,
+        data: dict[str, Any],
+        sensitive_data: dict[str, str | dict[str, str]] | None,
     ) -> dict[str, Any]:
         """Recursively filter sensitive data from a dictionary"""
         if not sensitive_data:
@@ -589,7 +622,7 @@ class AgentHistory(BaseModel):
             # Filter sensitive data only from input action parameters if sensitive_data is provided
             if sensitive_data:
                 action_dump = [
-                    self._filter_sensitive_data_from_dict(action, sensitive_data) if "input" in action else action
+                    (self._filter_sensitive_data_from_dict(action, sensitive_data) if "input" in action else action)
                     for action in action_dump
                 ]
 
@@ -655,7 +688,11 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
         """Representation of the AgentHistoryList object"""
         return self.__str__()
 
-    def save_to_file(self, filepath: str | Path, sensitive_data: dict[str, str | dict[str, str]] | None = None) -> None:
+    def save_to_file(
+        self,
+        filepath: str | Path,
+        sensitive_data: dict[str, str | dict[str, str]] | None = None,
+    ) -> None:
         """Save history to JSON file with proper serialization and optional sensitive data filtering"""
         try:
             Path(filepath).parent.mkdir(parents=True, exist_ok=True)
@@ -801,13 +838,15 @@ class AgentHistoryList(BaseModel, Generic[AgentStructuredOutput]):
             return []
         if n_last is None:
             if return_none_if_not_screenshot:
-                return [h.state.screenshot_path if h.state.screenshot_path is not None else None for h in self.history]
+                return [
+                    (h.state.screenshot_path if h.state.screenshot_path is not None else None) for h in self.history
+                ]
             else:
                 return [h.state.screenshot_path for h in self.history if h.state.screenshot_path is not None]
         else:
             if return_none_if_not_screenshot:
                 return [
-                    h.state.screenshot_path if h.state.screenshot_path is not None else None
+                    (h.state.screenshot_path if h.state.screenshot_path is not None else None)
                     for h in self.history[-n_last:]
                 ]
             else:

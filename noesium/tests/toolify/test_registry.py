@@ -6,7 +6,12 @@ import pytest
 
 from noesium.core.toolify.base import AsyncBaseToolkit, BaseToolkit
 from noesium.core.toolify.config import ToolkitConfig
-from noesium.core.toolify.registry import ToolkitRegistry, get_toolkit, get_toolkits_map, register_toolkit
+from noesium.core.toolify.registry import (
+    ToolkitRegistry,
+    get_toolkit,
+    get_toolkits_map,
+    register_toolkit,
+)
 
 
 class MockSyncToolkit(BaseToolkit):
@@ -173,7 +178,10 @@ class TestConvenienceFunctions:
 
     def test_get_toolkits_map(self):
         """Test get_toolkits_map convenience function."""
-        configs = {"mock_sync": ToolkitConfig(name="sync_config"), "mock_async": ToolkitConfig(name="async_config")}
+        configs = {
+            "mock_sync": ToolkitConfig(name="sync_config"),
+            "mock_async": ToolkitConfig(name="async_config"),
+        }
 
         toolkits = get_toolkits_map(["mock_sync", "mock_async"], configs)
 

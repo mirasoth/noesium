@@ -121,7 +121,12 @@ class ContentPolicyError(LLMError):
         original_error: The original exception from the provider
     """
 
-    def __init__(self, message: str, provider: str = "unknown", original_error: Exception | None = None):
+    def __init__(
+        self,
+        message: str,
+        provider: str = "unknown",
+        original_error: Exception | None = None,
+    ):
         super().__init__(message)
         self.provider = provider
         self.original_error = original_error

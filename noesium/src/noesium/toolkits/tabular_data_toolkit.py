@@ -258,7 +258,12 @@ class TabularDataToolkit(AsyncBaseToolkit):
             except Exception as e:
                 self.logger.warning(f"Error processing column '{col}': {e}")
                 column_info.append(
-                    {"column_name": str(col), "type": "unknown", "sample": "Error reading sample", "error": str(e)}
+                    {
+                        "column_name": str(col),
+                        "type": "unknown",
+                        "sample": "Error reading sample",
+                        "error": str(e),
+                    }
                 )
 
         return column_info
@@ -281,7 +286,13 @@ class TabularDataToolkit(AsyncBaseToolkit):
             return column_info[0]["error"]
 
         lines = []
-        default_features = ["column_name", "type", "sample", "null_percentage", "unique_count"]
+        default_features = [
+            "column_name",
+            "type",
+            "sample",
+            "null_percentage",
+            "unique_count",
+        ]
         features_to_show = return_features if return_features else default_features
 
         for i, col in enumerate(column_info):

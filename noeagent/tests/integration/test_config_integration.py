@@ -409,6 +409,12 @@ class TestProviderConfiguration:
 
             # Test switching to different providers
             for provider in ["openai", "ollama", "openrouter"]:
-                with patch.dict(os.environ, {"NOESIUM_CONFIG": str(config_path), "NOESIUM_LLM_PROVIDER": provider}):
+                with patch.dict(
+                    os.environ,
+                    {
+                        "NOESIUM_CONFIG": str(config_path),
+                        "NOESIUM_LLM_PROVIDER": provider,
+                    },
+                ):
                     loaded = load_config()
                     assert loaded.llm.provider == provider

@@ -127,8 +127,14 @@ def demo_basic_tracing(client, client_name: str, logger):
     logger.info(f"🚀 Testing basic tracing with {client_name}...")
 
     messages = [
-        {"role": "system", "content": "You are a helpful assistant that provides clear and concise answers."},
-        {"role": "user", "content": "Explain the concept of machine learning in simple terms."},
+        {
+            "role": "system",
+            "content": "You are a helpful assistant that provides clear and concise answers.",
+        },
+        {
+            "role": "user",
+            "content": "Explain the concept of machine learning in simple terms.",
+        },
     ]
 
     try:
@@ -148,7 +154,10 @@ def demo_structured_tracing(client, client_name: str, logger):
     logger.info(f"🔧 Testing structured tracing with {client_name}...")
 
     messages = [
-        {"role": "system", "content": "You are a project management expert who analyzes tasks."},
+        {
+            "role": "system",
+            "content": "You are a project management expert who analyzes tasks.",
+        },
         {
             "role": "user",
             "content": """
@@ -161,7 +170,10 @@ def demo_structured_tracing(client, client_name: str, logger):
 
     try:
         analysis = client.structured_completion(
-            messages=messages, response_model=TaskAnalysis, temperature=0.6, max_tokens=400
+            messages=messages,
+            response_model=TaskAnalysis,
+            temperature=0.6,
+            max_tokens=400,
         )
 
         logger.info(f"✅ {client_name} structured tracing successful!")
@@ -189,8 +201,14 @@ def demo_multiple_calls_tracing(client, client_name: str, logger):
     try:
         for topic in topics:
             messages = [
-                {"role": "system", "content": "You are a technology expert who explains complex topics simply."},
-                {"role": "user", "content": f"Give me a one-sentence summary of {topic}."},
+                {
+                    "role": "system",
+                    "content": "You are a technology expert who explains complex topics simply.",
+                },
+                {
+                    "role": "user",
+                    "content": f"Give me a one-sentence summary of {topic}.",
+                },
             ]
 
             response = client.completion(messages=messages, temperature=0.5, max_tokens=100)

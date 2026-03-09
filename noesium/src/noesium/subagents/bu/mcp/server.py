@@ -78,7 +78,12 @@ _configure_mcp_server_logging()
 from .. import ActionModel, Agent  # noqa: E402
 from ..adapters.llm_adapter import BaseChatModel  # noqa: E402
 from ..browser import BrowserProfile, BrowserSession  # noqa: E402
-from ..config import DEFAULT_HEADLESS, get_default_llm, get_default_profile, load_browser_use_config  # noqa: E402
+from ..config import (  # noqa: E402
+    DEFAULT_HEADLESS,
+    get_default_llm,
+    get_default_profile,
+    load_browser_use_config,
+)
 from ..filesystem.file_system import FileSystem  # noqa: E402
 from ..tools.service import Tools  # noqa: E402
 
@@ -206,7 +211,10 @@ class BrowserUseServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "url": {"type": "string", "description": "The URL to navigate to"},
+                            "url": {
+                                "type": "string",
+                                "description": "The URL to navigate to",
+                            },
                             "new_tab": {
                                 "type": "boolean",
                                 "description": "Whether to open in a new tab",
@@ -245,7 +253,10 @@ class BrowserUseServer:
                                 "type": "integer",
                                 "description": "The index of the input element (from browser_get_state)",
                             },
-                            "text": {"type": "string", "description": "The text to type"},
+                            "text": {
+                                "type": "string",
+                                "description": "The text to type",
+                            },
                         },
                         "required": ["index", "text"],
                     },
@@ -270,7 +281,10 @@ class BrowserUseServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "query": {"type": "string", "description": "What information to extract from the page"},
+                            "query": {
+                                "type": "string",
+                                "description": "What information to extract from the page",
+                            },
                             "extract_links": {
                                 "type": "boolean",
                                 "description": "Whether to include links in the extraction",
@@ -312,7 +326,10 @@ class BrowserUseServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "tab_id": {"type": "string", "description": "4 Character Tab ID of the tab to switch to"}
+                            "tab_id": {
+                                "type": "string",
+                                "description": "4 Character Tab ID of the tab to switch to",
+                            }
                         },
                         "required": ["tab_id"],
                     },
@@ -323,7 +340,10 @@ class BrowserUseServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "tab_id": {"type": "string", "description": "4 Character Tab ID of the tab to close"}
+                            "tab_id": {
+                                "type": "string",
+                                "description": "4 Character Tab ID of the tab to close",
+                            }
                         },
                         "required": ["tab_id"],
                     },
@@ -701,7 +721,10 @@ class BrowserUseServer:
         ExtractAction = create_model(
             "ExtractAction",
             __base__=ActionModel,
-            extract_structured_data=(dict[str, Any], {"query": query, "extract_links": extract_links}),
+            extract_structured_data=(
+                dict[str, Any],
+                {"query": query, "extract_links": extract_links},
+            ),
         )
 
         action = ExtractAction()
@@ -857,7 +880,11 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--http", action="store_true", help="Run in Streamable HTTP mode instead of stdio")
+    parser.add_argument(
+        "--http",
+        action="store_true",
+        help="Run in Streamable HTTP mode instead of stdio",
+    )
     parser.add_argument("--port", type=int, default=3000, help="HTTP port (only in HTTP mode)")
     parser.add_argument("--json-response", action="store_true", help="Use JSON responses instead of SSE")
     args = parser.parse_args()

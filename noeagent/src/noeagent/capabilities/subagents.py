@@ -227,7 +227,10 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
                             subagent_id=self._subagent_id,
                             tool_name=event.tool_name or "browser_action",
                             tool_args=event.tool_args or {},
-                            payload={"child_event_type": "tool.start", "agent_type": self._subagent_id},
+                            payload={
+                                "child_event_type": "tool.start",
+                                "agent_type": self._subagent_id,
+                            },
                         )
                     elif etype == ProgressEventType.TOOL_END:
                         yield SubagentProgressEvent.create_tool_result(
@@ -235,7 +238,10 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
                             subagent_id=self._subagent_id,
                             tool_name=event.tool_name or "browser_action",
                             result=event.tool_result or "",
-                            payload={"child_event_type": "tool.end", "agent_type": self._subagent_id},
+                            payload={
+                                "child_event_type": "tool.end",
+                                "agent_type": self._subagent_id,
+                            },
                         )
                     elif etype == ProgressEventType.PLAN_CREATED:
                         yield SubagentProgressEvent.progress(

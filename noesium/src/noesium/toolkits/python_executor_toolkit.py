@@ -100,7 +100,10 @@ def _execute_python_code_sync(code: str, workdir: str) -> Dict[str, Any]:
         error_output = io.StringIO()
 
         # Execute the code with output redirection
-        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(error_output):
+        with (
+            contextlib.redirect_stdout(output),
+            contextlib.redirect_stderr(error_output),
+        ):
             result = shell.run_cell(code_clean)
 
             # Handle matplotlib plots

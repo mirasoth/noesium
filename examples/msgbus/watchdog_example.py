@@ -130,7 +130,10 @@ async def main():
     """Main example function."""
     try:
         # Set up logging
-        logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        )
 
         # Create event bus
         event_bus = EventBus()
@@ -190,7 +193,10 @@ async def main():
 
                 # Wait briefly for cancellation
                 try:
-                    await asyncio.wait_for(asyncio.gather(*remaining_tasks, return_exceptions=True), timeout=1.0)
+                    await asyncio.wait_for(
+                        asyncio.gather(*remaining_tasks, return_exceptions=True),
+                        timeout=1.0,
+                    )
                 except asyncio.TimeoutError:
                     pass  # Some tasks may still be running, but we tried
 

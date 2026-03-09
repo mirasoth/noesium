@@ -17,7 +17,11 @@ def get_click_description(node: EnhancedDOMTreeNode) -> str:
 
         # For checkboxes, include checked state
         if input_type == "checkbox":
-            is_checked = node.attributes.get("checked", "false").lower() in ["true", "checked", ""]
+            is_checked = node.attributes.get("checked", "false").lower() in [
+                "true",
+                "checked",
+                "",
+            ]
             # Also check AX node
             if node.ax_node and node.ax_node.properties:
                 for prop in node.ax_node.properties:
@@ -58,7 +62,11 @@ def get_click_description(node: EnhancedDOMTreeNode) -> str:
 
                 if is_hidden or not child.is_visible:
                     # Get checkbox state
-                    is_checked = child.attributes.get("checked", "false").lower() in ["true", "checked", ""]
+                    is_checked = child.attributes.get("checked", "false").lower() in [
+                        "true",
+                        "checked",
+                        "",
+                    ]
                     if child.ax_node and child.ax_node.properties:
                         for prop in child.ax_node.properties:
                             if prop.name == "checked":

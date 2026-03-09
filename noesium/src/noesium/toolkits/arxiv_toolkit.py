@@ -282,8 +282,8 @@ class ArxivToolkit(AsyncBaseToolkit):
                 return {
                     "title": paper.title.strip(),
                     "authors": [author.name for author in paper.authors],
-                    "published_date": paper.published.isoformat() if paper.published else None,
-                    "updated_date": paper.updated.isoformat() if paper.updated else None,
+                    "published_date": (paper.published.isoformat() if paper.published else None),
+                    "updated_date": (paper.updated.isoformat() if paper.updated else None),
                     "entry_id": paper.entry_id,
                     "summary": paper.summary.strip(),
                     "pdf_url": paper.pdf_url,

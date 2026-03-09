@@ -60,7 +60,10 @@ def demo_basic_token_tracking():
         client_instructor = get_llm_client(provider="openrouter", instructor=True)
         messages = [{"role": "user", "content": "Give me a simple greeting in English"}]
         structured_response = client_instructor.structured_completion(
-            messages=messages, response_model=SimpleGreeting, temperature=0.1, max_tokens=50
+            messages=messages,
+            response_model=SimpleGreeting,
+            temperature=0.1,
+            max_tokens=50,
         )
 
         print(f"Structured response: {structured_response}")
@@ -100,11 +103,17 @@ def demo_callback_integration():
 
     print("🔄 Simulating custom client calls...")
     record_token_usage(
-        prompt_tokens=45, completion_tokens=30, model_name="openrouter/google/gemini-flash-1.5", call_type="completion"
+        prompt_tokens=45,
+        completion_tokens=30,
+        model_name="openrouter/google/gemini-flash-1.5",
+        call_type="completion",
     )
 
     record_token_usage(
-        prompt_tokens=60, completion_tokens=40, model_name="openrouter/google/gemini-flash-1.5", call_type="structured"
+        prompt_tokens=60,
+        completion_tokens=40,
+        model_name="openrouter/google/gemini-flash-1.5",
+        call_type="structured",
     )
 
     # Simulate some LangChain callback usage

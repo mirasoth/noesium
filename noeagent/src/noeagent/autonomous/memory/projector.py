@@ -72,7 +72,7 @@ class MemoryProjector:
                 "goal_status": goal.status,
                 "related_memories": related,
                 "goal_history": goal_history.value if goal_history else None,
-                "previous_execution": execution_trace.value if execution_trace else None,
+                "previous_execution": (execution_trace.value if execution_trace else None),
             }
 
             logger.debug(f"Projected memory context for goal {goal.id[:8]} with {len(related)} related memories")
@@ -100,7 +100,19 @@ class MemoryProjector:
         Returns:
             List of keywords
         """
-        stopwords = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for"}
+        stopwords = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+        }
         words = text.lower().split()
         keywords = [w.strip(".,!?;:") for w in words if len(w) > 3 and w.lower() not in stopwords]
         return keywords[:max_keywords]

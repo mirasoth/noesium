@@ -99,7 +99,12 @@ class OldConfig:
         """Create directories if they don't exist (only once)"""
         if not self._dirs_created:
             config_dir = (
-                Path(os.getenv("BROWSER_USE_CONFIG_DIR", str(self.XDG_CONFIG_HOME / "browseruse")))
+                Path(
+                    os.getenv(
+                        "BROWSER_USE_CONFIG_DIR",
+                        str(self.XDG_CONFIG_HOME / "browseruse"),
+                    )
+                )
                 .expanduser()
                 .resolve()
             )

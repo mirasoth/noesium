@@ -24,20 +24,29 @@ def detect_token_limit_issue(
     """
     # Check 1: Stop reason indicates max_tokens
     if stop_reason == "max_tokens":
-        return True, f"Response terminated due to max_tokens limit (stop_reason: {stop_reason})"
+        return (
+            True,
+            f"Response terminated due to max_tokens limit (stop_reason: {stop_reason})",
+        )
 
     # Check 2: Used 90%+ of max_tokens (if we have both values)
     if completion_tokens is not None and max_tokens is not None and max_tokens > 0:
         usage_ratio = completion_tokens / max_tokens
         if usage_ratio >= 0.9:
-            return True, f"Response used {usage_ratio:.1%} of max_tokens ({completion_tokens}/{max_tokens})"
+            return (
+                True,
+                f"Response used {usage_ratio:.1%} of max_tokens ({completion_tokens}/{max_tokens})",
+            )
 
     # Check 3: Last 6 characters repeat 40+ times (repetitive garbage)
     if len(completion) >= 6:
         last_6 = completion[-6:]
         repetition_count = completion.count(last_6)
         if repetition_count >= 40:
-            return True, f'Repetitive output detected: last 6 chars "{last_6}" appears {repetition_count} times'
+            return (
+                True,
+                f'Repetitive output detected: last 6 chars "{last_6}" appears {repetition_count} times',
+            )
 
     return False, None
 

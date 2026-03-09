@@ -306,7 +306,12 @@ class TestLiteLLMIntegration:
         if len(providers_to_test) < 2:
             pytest.skip("Need at least 2 provider API keys to test multiple providers")
 
-        messages = [{"role": "user", "content": "Say 'Hello from' followed by your provider name."}]
+        messages = [
+            {
+                "role": "user",
+                "content": "Say 'Hello from' followed by your provider name.",
+            }
+        ]
 
         for provider_name, model in providers_to_test:
             try:

@@ -63,7 +63,7 @@ class ToolConverter:
         return mcp_types.Tool(
             name=langchain_tool.name,
             description=langchain_tool.description,
-            inputSchema=langchain_tool.args_schema.model_json_schema() if langchain_tool.args_schema else {},
+            inputSchema=(langchain_tool.args_schema.model_json_schema() if langchain_tool.args_schema else {}),
         )
 
     @staticmethod

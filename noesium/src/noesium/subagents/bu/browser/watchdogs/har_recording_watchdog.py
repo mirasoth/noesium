@@ -144,7 +144,10 @@ def _generate_har_filename(content: bytes, mime_type: str | None) -> str:
 class HarRecordingWatchdog(BaseWatchdog):
     """Collects HTTPS requests/responses and writes a HAR 1.2 file on stop."""
 
-    LISTENS_TO: ClassVar[list[type[BaseEvent]]] = [BrowserConnectedEvent, BrowserStopEvent]
+    LISTENS_TO: ClassVar[list[type[BaseEvent]]] = [
+        BrowserConnectedEvent,
+        BrowserStopEvent,
+    ]
     EMITS: ClassVar[list[type[BaseEvent]]] = []
 
     def __init__(self, *args, **kwargs) -> None:
@@ -583,7 +586,10 @@ class HarRecordingWatchdog(BaseWatchdog):
             request_post_data = None
             if e.post_data and self._content_mode != "omit":
                 if self._content_mode == "embed":
-                    request_post_data = {"mimeType": e.request_headers.get("content-type", ""), "text": e.post_data}
+                    request_post_data = {
+                        "mimeType": e.request_headers.get("content-type", ""),
+                        "text": e.post_data,
+                    }
                 elif self._content_mode == "attach" and sidecar_dir is not None:
                     post_data_bytes = e.post_data.encode("utf-8")
                     req_mime_type = e.request_headers.get("content-type", "text/plain")
@@ -668,7 +674,10 @@ class HarRecordingWatchdog(BaseWatchdog):
             "log": {
                 "version": "1.2",
                 "creator": {"name": "browser-use", "version": bu_version},
-                "browser": {"name": self._browser_name, "version": self._browser_version},
+                "browser": {
+                    "name": self._browser_name,
+                    "version": self._browser_version,
+                },
                 "pages": [
                     {
                         "id": f"page@{pid}",  # Use Playwright format: "page@{frame_id}"
@@ -677,7 +686,14 @@ class HarRecordingWatchdog(BaseWatchdog):
                         "pageTimings": (
                             (
                                 lambda _ocl, _ol: (
-                                    {k: v for k, v in (("onContentLoad", _ocl), ("onLoad", _ol)) if v is not None}
+                                    {
+                                        k: v
+                                        for k, v in (
+                                            ("onContentLoad", _ocl),
+                                            ("onLoad", _ol),
+                                        )
+                                        if v is not None
+                                    }
                                 )
                             )(
                                 (page_info.get("onContentLoad") if page_info.get("onContentLoad", -1) >= 0 else None),

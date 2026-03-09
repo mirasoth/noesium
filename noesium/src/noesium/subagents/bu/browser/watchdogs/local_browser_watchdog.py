@@ -57,7 +57,10 @@ class LocalBrowserWatchdog(BaseWatchdog):
 
             return BrowserLaunchResult(cdp_url=cdp_url)
         except Exception as e:
-            self.logger.error(f"[LocalBrowserWatchdog] Exception in on_BrowserLaunchEvent: {e}", exc_info=True)
+            self.logger.error(
+                f"[LocalBrowserWatchdog] Exception in on_BrowserLaunchEvent: {e}",
+                exc_info=True,
+            )
             raise
 
     async def on_BrowserKillEvent(self, event: BrowserKillEvent) -> None:
@@ -189,7 +192,12 @@ class LocalBrowserWatchdog(BaseWatchdog):
                 # Check if this is a user_data_dir related error
                 if any(
                     err in error_str
-                    for err in ["singletonlock", "user data directory", "cannot create", "already in use"]
+                    for err in [
+                        "singletonlock",
+                        "user data directory",
+                        "cannot create",
+                        "already in use",
+                    ]
                 ):
                     self.logger.warning(f"Browser launch failed (attempt {attempt + 1}/{max_retries}): {e}")
 
@@ -304,7 +312,11 @@ class LocalBrowserWatchdog(BaseWatchdog):
             # Handle Windows environment variables
             if system == "Windows":
                 pattern_str = str(expanded_pattern)
-                for env_var in ["%LOCALAPPDATA%", "%PROGRAMFILES%", "%PROGRAMFILES(X86)%"]:
+                for env_var in [
+                    "%LOCALAPPDATA%",
+                    "%PROGRAMFILES%",
+                    "%PROGRAMFILES(X86)%",
+                ]:
                     if env_var in pattern_str:
                         env_key = env_var.strip("%").replace("(X86)", " (x86)")
                         env_value = os.environ.get(env_key, "")

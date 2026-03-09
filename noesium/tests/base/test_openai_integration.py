@@ -102,7 +102,12 @@ class TestOpenAIIntegration:
 
     def test_max_tokens_limiting(self):
         """Test that max_tokens parameter limits response length."""
-        messages = [{"role": "user", "content": "Write a story about a cat and a dog becoming friends."}]
+        messages = [
+            {
+                "role": "user",
+                "content": "Write a story about a cat and a dog becoming friends.",
+            }
+        ]
 
         # Test with very limited tokens
         short_response = self.client.completion(messages, max_tokens=10, temperature=0.7)
@@ -126,13 +131,19 @@ class TestOpenAIIntegration:
 
         # Test with formal system message
         formal_messages = [
-            {"role": "system", "content": "You are a formal physics professor. Use scientific terminology."},
+            {
+                "role": "system",
+                "content": "You are a formal physics professor. Use scientific terminology.",
+            },
             {"role": "user", "content": user_query},
         ]
 
         # Test with casual system message
         casual_messages = [
-            {"role": "system", "content": "You are a friendly teacher who explains things simply."},
+            {
+                "role": "system",
+                "content": "You are a friendly teacher who explains things simply.",
+            },
             {"role": "user", "content": user_query},
         ]
 

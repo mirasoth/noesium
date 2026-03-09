@@ -43,7 +43,11 @@ class ClusterMemoriesAction(BaseAction):
                         "description": "List of new memory items from the conversation",
                     },
                 },
-                "required": ["character_name", "conversation_content", "new_memory_items"],
+                "required": [
+                    "character_name",
+                    "conversation_content",
+                    "new_memory_items",
+                ],
             },
         }
 

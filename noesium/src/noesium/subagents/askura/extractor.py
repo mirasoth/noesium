@@ -24,7 +24,10 @@ class InformationExtractor:
     """Handles extraction of information from user messages."""
 
     def __init__(
-        self, config: AskuraConfig, extraction_tools: Dict[str, Any], llm_client: Optional[BaseLLMClient] = None
+        self,
+        config: AskuraConfig,
+        extraction_tools: Dict[str, Any],
+        llm_client: Optional[BaseLLMClient] = None,
     ):
         """Initialize the information extractor."""
         self.config = config
@@ -72,7 +75,10 @@ class InformationExtractor:
         return merged
 
     def _extract_slot_information_with_tools(
-        self, user_message: str, slot: InformationSlot, current_extractions: Dict[str, Any]
+        self,
+        user_message: str,
+        slot: InformationSlot,
+        current_extractions: Dict[str, Any],
     ) -> Optional[Any]:
         """Extract information for a specific slot with context from current extractions."""
         valid_tools = [tool_name for tool_name in slot.extraction_tools if tool_name in self.extraction_tools]

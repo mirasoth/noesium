@@ -69,7 +69,12 @@ class TestWebSearchToolkit:
         """Test that tools map is correctly defined."""
         tools_map = await web_search_toolkit.get_tools_map()
 
-        expected_tools = ["web_search", "tavily_search", "google_ai_search", "crawl_page"]
+        expected_tools = [
+            "web_search",
+            "tavily_search",
+            "google_ai_search",
+            "crawl_page",
+        ]
         for tool_name in expected_tools:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
@@ -231,7 +236,13 @@ class TestWebSearchToolkit:
         """Test successful Google AI search."""
         from wizsearch import SearchResult, SourceItem
 
-        mock_sources = [SourceItem(title="AI Paper", url="https://arxiv.org/paper1", content="Research content")]
+        mock_sources = [
+            SourceItem(
+                title="AI Paper",
+                url="https://arxiv.org/paper1",
+                content="Research content",
+            )
+        ]
         mock_result = SearchResult(
             query="AI research",
             sources=mock_sources,

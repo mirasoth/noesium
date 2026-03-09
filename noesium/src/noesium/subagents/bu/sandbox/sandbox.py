@@ -10,7 +10,17 @@ import sys
 import textwrap
 from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, Union, cast, get_args, get_origin
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    ParamSpec,
+    TypeVar,
+    Union,
+    cast,
+    get_args,
+    get_origin,
+)
 
 import cloudpickle
 import httpx
@@ -230,7 +240,8 @@ def sandbox(
     on_error: Callable[[ErrorData], None] | Callable[[ErrorData], Coroutine[Any, Any, None]] | None = None,
     **env_vars: str,
 ) -> Callable[
-    [Callable[Concatenate["BrowserSession", P], Coroutine[Any, Any, T]]], Callable[P, Coroutine[Any, Any, T]]
+    [Callable[Concatenate["BrowserSession", P], Coroutine[Any, Any, T]]],
+    Callable[P, Coroutine[Any, Any, T]],
 ]:
     """Decorator to execute browser automation code in a sandbox environment.
 
@@ -435,7 +446,11 @@ async def run(browser):
                                                 print("⚡ Runtime Output")
                                                 print("─" * width)
                                                 execution_started = True
-                                            print(f"⚠️  {message}", end="", file=sys.stderr)
+                                            print(
+                                                f"⚠️  {message}",
+                                                end="",
+                                                file=sys.stderr,
+                                            )
                                     elif level == "info":
                                         if not quiet:
                                             if "credit" in message.lower():
@@ -497,7 +512,11 @@ async def run(browser):
                             except (json.JSONDecodeError, ValueError):
                                 continue
 
-                    except (httpx.RemoteProtocolError, httpx.ReadError, httpx.StreamClosed) as e:
+                    except (
+                        httpx.RemoteProtocolError,
+                        httpx.ReadError,
+                        httpx.StreamClosed,
+                    ) as e:
                         # With deterministic handshake, these should never happen
                         # If they do, it's a real error
                         raise SandboxError(

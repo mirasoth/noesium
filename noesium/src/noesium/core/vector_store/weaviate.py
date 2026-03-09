@@ -231,7 +231,10 @@ class WeaviateVectorStore(BaseVectorStore):
         collection.data.delete_by_id(vector_id)
 
     def update(
-        self, vector_id: str, vector: Optional[List[float]] = None, payload: Optional[Dict[str, Any]] = None
+        self,
+        vector_id: str,
+        vector: Optional[List[float]] = None,
+        payload: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Update a vector and its payload.

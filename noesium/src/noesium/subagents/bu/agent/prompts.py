@@ -552,7 +552,8 @@ Available tabs:
             logger.warning(f"Message size {total_size} chars exceeds limit {MAX_TOTAL_CHARS}, truncating")
             # Just return text-only message
             return UserMessage(
-                content=state_description[:MAX_TOTAL_SIZE] + "\n... [Message truncated at 250k chars]", cache=True
+                content=state_description[:MAX_TOTAL_SIZE] + "\n... [Message truncated at 250k chars]",
+                cache=True,
             )
 
         return UserMessage(content=state_description, cache=True)

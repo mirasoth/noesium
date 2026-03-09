@@ -432,10 +432,15 @@ class FileSystem:
         """Get serializable state of the file system"""
         files_data = {}
         for full_filename, file_obj in self.files.items():
-            files_data[full_filename] = {"type": file_obj.__class__.__name__, "data": file_obj.model_dump()}
+            files_data[full_filename] = {
+                "type": file_obj.__class__.__name__,
+                "data": file_obj.model_dump(),
+            }
 
         return FileSystemState(
-            files=files_data, base_dir=str(self.base_dir), extracted_content_count=self.extracted_content_count
+            files=files_data,
+            base_dir=str(self.base_dir),
+            extracted_content_count=self.extracted_content_count,
         )
 
     def nuke(self) -> None:

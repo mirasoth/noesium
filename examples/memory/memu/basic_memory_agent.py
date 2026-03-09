@@ -57,7 +57,8 @@ USER: I usually go to the mountains near my city. The views are amazing!"""
 
         print("   Adding activity memory...")
         activity_result = memory_agent.call_function(
-            "add_activity_memory", {"character_name": "Sarah", "content": activity_content}
+            "add_activity_memory",
+            {"character_name": "Sarah", "content": activity_content},
         )
 
         if activity_result.get("success"):
@@ -74,7 +75,8 @@ USER: I usually go to the mountains near my city. The views are amazing!"""
             memory_items = activity_result.get("memory_items", [])
 
             suggestions_result = memory_agent.call_function(
-                "generate_memory_suggestions", {"character_name": "Sarah", "new_memory_items": memory_items}
+                "generate_memory_suggestions",
+                {"character_name": "Sarah", "new_memory_items": memory_items},
             )
 
             if suggestions_result.get("success"):

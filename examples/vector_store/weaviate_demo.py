@@ -80,7 +80,9 @@ async def demo_weaviate_vector_store():
     try:
         # Initialize Weaviate
         vector_store = WeaviateVectorStore(
-            collection_name=collection_name, embedding_model_dims=embedding_dims, **weaviate_config
+            collection_name=collection_name,
+            embedding_model_dims=embedding_dims,
+            **weaviate_config,
         )
         print("✅ Weaviate vector store connected successfully")
 

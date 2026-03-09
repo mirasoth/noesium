@@ -55,7 +55,9 @@ class SelfAssessmentStrategy(BaseRoutingStrategy):
 
             # Get assessment from lite model
             response = self.lite_client.completion(
-                messages=messages, temperature=self.temperature, max_tokens=self.max_tokens
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
             )
 
             # Parse complexity score
@@ -71,7 +73,10 @@ class SelfAssessmentStrategy(BaseRoutingStrategy):
             )
 
             return self._create_result(
-                tier=tier, confidence=confidence, complexity_score=score_obj, metadata={"raw_assessment": response}
+                tier=tier,
+                confidence=confidence,
+                complexity_score=score_obj,
+                metadata={"raw_assessment": response},
             )
 
         except Exception as e:

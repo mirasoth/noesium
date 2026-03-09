@@ -41,7 +41,10 @@ class BaseAgent(ABC):
 
     @abstractmethod
     async def run(
-        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+        self,
+        user_message: str,
+        context: Dict[str, Any] = None,
+        config: Optional[RunnableConfig] = None,
     ) -> Any:
         """Run the agent with a user message and context."""
 
@@ -146,7 +149,12 @@ class BaseGraphicAgent(BaseAgent):
     def _create_error_response(self, error_message: str, **kwargs) -> Dict[str, Any]:
         """Create a standardized error response."""
         self.logger.error(f"Agent error: {error_message}")
-        return {"error": error_message, "success": False, "timestamp": self._now_iso(), **kwargs}
+        return {
+            "error": error_message,
+            "success": False,
+            "timestamp": self._now_iso(),
+            **kwargs,
+        }
 
     def _now_iso(self) -> str:
         """Get current time in ISO format."""

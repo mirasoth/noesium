@@ -118,7 +118,10 @@ class ToolkitConfig(BaseModel):
 
 
 def create_toolkit_config(
-    name: str, mode: Literal["builtin", "mcp"] = "builtin", activated_tools: Optional[List[str]] = None, **config_params
+    name: str,
+    mode: Literal["builtin", "mcp"] = "builtin",
+    activated_tools: Optional[List[str]] = None,
+    **config_params,
 ) -> ToolkitConfig:
     """
     Convenience function to create a ToolkitConfig.

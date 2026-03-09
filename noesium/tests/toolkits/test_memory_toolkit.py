@@ -21,7 +21,12 @@ def file_memory_config():
     """Create a test configuration for file-based MemoryToolkit."""
     with tempfile.TemporaryDirectory() as temp_dir:
         yield ToolkitConfig(
-            name="memory", config={"storage_type": "file", "storage_dir": temp_dir, "max_memory_size": 1000}
+            name="memory",
+            config={
+                "storage_type": "file",
+                "storage_dir": temp_dir,
+                "max_memory_size": 1000,
+            },
         )
 
 

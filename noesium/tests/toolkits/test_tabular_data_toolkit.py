@@ -68,7 +68,12 @@ class TestTabularDataToolkit:
         """Test that tools map is correctly defined."""
         tools_map = await tabular_toolkit.get_tools_map()
 
-        expected_tools = ["get_tabular_columns", "get_column_info", "get_data_summary", "validate_data_quality"]
+        expected_tools = [
+            "get_tabular_columns",
+            "get_column_info",
+            "get_data_summary",
+            "validate_data_quality",
+        ]
         for tool_name in expected_tools:
             assert tool_name in tools_map
             assert callable(tools_map[tool_name])
@@ -87,7 +92,13 @@ class TestTabularDataToolkit:
         """Test loading Excel data."""
         # Create a sample Excel file
         with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f:
-            df = pd.DataFrame({"name": ["Alice", "Bob"], "age": [25, 30], "city": ["New York", "San Francisco"]})
+            df = pd.DataFrame(
+                {
+                    "name": ["Alice", "Bob"],
+                    "age": [25, 30],
+                    "city": ["New York", "San Francisco"],
+                }
+            )
             df.to_excel(f.name, index=False)
 
             try:

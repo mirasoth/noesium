@@ -86,7 +86,9 @@ class WikipediaToolkit(AsyncBaseToolkit):
 
         # Initialize Wikipedia API client
         self.wiki_client = wikipediaapi.Wikipedia(
-            user_agent=self.user_agent, language=self.language, extract_format=extract_format_map[self.extract_format]
+            user_agent=self.user_agent,
+            language=self.language,
+            extract_format=extract_format_map[self.extract_format],
         )
 
         # MediaWiki API configuration
@@ -222,7 +224,11 @@ class WikipediaToolkit(AsyncBaseToolkit):
             page = self.wiki_client.page(title)
 
             if not page.exists():
-                return {"title": title, "exists": False, "error": f"Wikipedia page '{title}' does not exist"}
+                return {
+                    "title": title,
+                    "exists": False,
+                    "error": f"Wikipedia page '{title}' does not exist",
+                }
 
             # Extract content based on type
             if content_type == "summary":
@@ -249,7 +255,12 @@ class WikipediaToolkit(AsyncBaseToolkit):
 
             # Get references using API
             try:
-                refs_params = {"action": "query", "prop": "extlinks", "titles": title, "ellimit": 20}
+                refs_params = {
+                    "action": "query",
+                    "prop": "extlinks",
+                    "titles": title,
+                    "ellimit": 20,
+                }
                 refs_response = await self._make_api_request(refs_params)
 
                 pages = refs_response.get("query", {}).get("pages", [])
@@ -310,7 +321,12 @@ class WikipediaToolkit(AsyncBaseToolkit):
         self.logger.info("Getting random Wikipedia page")
 
         try:
-            params = {"action": "query", "list": "random", "rnnamespace": 0, "rnlimit": 1}  # Main namespace only
+            params = {
+                "action": "query",
+                "list": "random",
+                "rnnamespace": 0,
+                "rnlimit": 1,
+            }  # Main namespace only
 
             response = await self._make_api_request(params)
 
@@ -343,7 +359,12 @@ class WikipediaToolkit(AsyncBaseToolkit):
             List of category names
         """
         try:
-            params = {"action": "query", "prop": "categories", "titles": title, "cllimit": 50}
+            params = {
+                "action": "query",
+                "prop": "categories",
+                "titles": title,
+                "cllimit": 50,
+            }
 
             response = await self._make_api_request(params)
 

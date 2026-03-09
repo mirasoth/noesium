@@ -61,7 +61,10 @@ class Page:
     async def _ensure_session(self) -> str:
         """Ensure we have a session ID for this target."""
         if not self._session_id:
-            params: "AttachToTargetParameters" = {"targetId": self._target_id, "flatten": True}
+            params: "AttachToTargetParameters" = {
+                "targetId": self._target_id,
+                "flatten": True,
+            }
             result = await self._client.send.Target.attachToTarget(params)
             self._session_id = result["sessionId"]
 
@@ -141,7 +144,11 @@ class Page:
         # Debug: log the actual expression being evaluated
         logger.debug(f"Evaluating JavaScript: {repr(expression)}")
 
-        params: "EvaluateParameters" = {"expression": expression, "returnByValue": True, "awaitPromise": True}
+        params: "EvaluateParameters" = {
+            "expression": expression,
+            "returnByValue": True,
+            "awaitPromise": True,
+        }
         result = await self._client.send.Runtime.evaluate(
             params,
             session_id=session_id,
@@ -237,7 +244,11 @@ class Page:
             # Press modifier keys
             for mod in modifiers:
                 code, vk_code = get_key_info(mod)
-                params: "DispatchKeyEventParameters" = {"type": "keyDown", "key": mod, "code": code}
+                params: "DispatchKeyEventParameters" = {
+                    "type": "keyDown",
+                    "key": mod,
+                    "code": code,
+                }
                 if vk_code is not None:
                     params["windowsVirtualKeyCode"] = vk_code
                 await self._client.send.Input.dispatchKeyEvent(params, session_id=session_id)
@@ -267,19 +278,31 @@ class Page:
             # Release modifier keys
             for mod in reversed(modifiers):
                 code, vk_code = get_key_info(mod)
-                release_params: "DispatchKeyEventParameters" = {"type": "keyUp", "key": mod, "code": code}
+                release_params: "DispatchKeyEventParameters" = {
+                    "type": "keyUp",
+                    "key": mod,
+                    "code": code,
+                }
                 if vk_code is not None:
                     release_params["windowsVirtualKeyCode"] = vk_code
                 await self._client.send.Input.dispatchKeyEvent(release_params, session_id=session_id)
         else:
             # Simple key press
             code, vk_code = get_key_info(key)
-            key_down_params: "DispatchKeyEventParameters" = {"type": "keyDown", "key": key, "code": code}
+            key_down_params: "DispatchKeyEventParameters" = {
+                "type": "keyDown",
+                "key": key,
+                "code": code,
+            }
             if vk_code is not None:
                 key_down_params["windowsVirtualKeyCode"] = vk_code
             await self._client.send.Input.dispatchKeyEvent(key_down_params, session_id=session_id)
 
-            key_up_params: "DispatchKeyEventParameters" = {"type": "keyUp", "key": key, "code": code}
+            key_up_params: "DispatchKeyEventParameters" = {
+                "type": "keyUp",
+                "key": key,
+                "code": code,
+            }
             if vk_code is not None:
                 key_up_params["windowsVirtualKeyCode"] = vk_code
             await self._client.send.Input.dispatchKeyEvent(key_up_params, session_id=session_id)
@@ -381,7 +404,10 @@ class Page:
         document_node_id = doc_result["root"]["nodeId"]
 
         # Query selector all
-        query_params: "QuerySelectorAllParameters" = {"nodeId": document_node_id, "selector": selector}
+        query_params: "QuerySelectorAllParameters" = {
+            "nodeId": document_node_id,
+            "selector": selector,
+        }
         result = await self._client.send.DOM.querySelectorAll(query_params, session_id=session_id)
 
         elements = []
@@ -492,7 +518,12 @@ Before you return the element index, reason about the state and elements for a s
 
         return element
 
-    async def extract_content(self, prompt: str, structured_output: type[T], llm: "BaseChatModel | None" = None) -> T:
+    async def extract_content(
+        self,
+        prompt: str,
+        structured_output: type[T],
+        llm: "BaseChatModel | None" = None,
+    ) -> T:
         """Extract structured content from the current page using LLM.
 
         Extracts clean markdown from the page and sends it to LLM for structured data extraction.
@@ -547,7 +578,10 @@ You will be given a query and the markdown of a webpage that has been filtered t
         try:
             response = await asyncio.wait_for(
                 llm.ainvoke(
-                    [SystemMessage(content=system_prompt), UserMessage(content=prompt_content)],
+                    [
+                        SystemMessage(content=system_prompt),
+                        UserMessage(content=prompt_content),
+                    ],
                     output_format=structured_output,
                 ),
                 timeout=120.0,
@@ -567,5 +601,7 @@ You will be given a query and the markdown of a webpage that has been filtered t
 
         dom_service = self.dom_service
         return await extract_clean_markdown(
-            dom_service=dom_service, target_id=self._target_id, extract_links=extract_links
+            dom_service=dom_service,
+            target_id=self._target_id,
+            extract_links=extract_links,
         )

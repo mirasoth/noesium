@@ -30,17 +30,29 @@ def trace():
 EVENT_CASES = [
     (AgentStarted, {"agent_id": "a1", "agent_type": "test"}, "agent.started"),
     (AgentStopped, {"agent_id": "a1"}, "agent.stopped"),
-    (CapabilityRegistered, {"capability_id": "c1", "version": "1.0", "agent_id": "a1"}, "capability.registered"),
+    (
+        CapabilityRegistered,
+        {"capability_id": "c1", "version": "1.0", "agent_id": "a1"},
+        "capability.registered",
+    ),
     (
         CapabilityInvoked,
         {"caller_agent_id": "a1", "target_agent_id": "a2", "capability_id": "c1"},
         "capability.invoked",
     ),
-    (CapabilityCompleted, {"capability_id": "c1", "caller_agent_id": "a1"}, "capability.completed"),
+    (
+        CapabilityCompleted,
+        {"capability_id": "c1", "caller_agent_id": "a1"},
+        "capability.completed",
+    ),
     (MemoryWritten, {"key": "k", "value_type": "str"}, "memory.written"),
     (TaskRequested, {"task_id": "t1", "capability_id": "c1"}, "task.requested"),
     (TaskCompleted, {"task_id": "t1"}, "task.completed"),
-    (ErrorOccurred, {"error_type": "ValueError", "message": "boom"}, "system.error.occurred"),
+    (
+        ErrorOccurred,
+        {"error_type": "ValueError", "message": "boom"},
+        "system.error.occurred",
+    ),
 ]
 
 

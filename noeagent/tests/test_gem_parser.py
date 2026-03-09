@@ -145,7 +145,12 @@ data_models:
         assert isinstance(instance.datetime_field, datetime)
 
         # Test with None optional field
-        instance2 = ComplexModel(optional_field=None, dict_field={}, union_field=42, datetime_field=datetime.now())
+        instance2 = ComplexModel(
+            optional_field=None,
+            dict_field={},
+            union_field=42,
+            datetime_field=datetime.now(),
+        )
 
         assert instance2.optional_field is None
         assert instance2.union_field == 42
@@ -207,7 +212,10 @@ metadata:
 
         parser = GemParser()
 
-        with pytest.raises(GemParserError, match="YAML must contain either 'data_models' or 'output_models' key"):
+        with pytest.raises(
+            GemParserError,
+            match="YAML must contain either 'data_models' or 'output_models' key",
+        ):
             parser.parse_from_yaml_string(yaml_content)
 
     def test_invalid_yaml(self):
@@ -585,7 +593,11 @@ data_models:
         UtilityModel = models["UtilityModel"]
 
         test_uuid = uuid4()
-        instance = UtilityModel(decimal_field=Decimal("123.45"), uuid_field=test_uuid, path_field=Path("/tmp/test"))
+        instance = UtilityModel(
+            decimal_field=Decimal("123.45"),
+            uuid_field=test_uuid,
+            path_field=Path("/tmp/test"),
+        )
 
         assert isinstance(instance.decimal_field, Decimal)
         assert instance.decimal_field == Decimal("123.45")
@@ -664,7 +676,12 @@ data_models:
         assert instance.union_types == "string_value"
 
         # Test with different union type
-        instance2 = NestedModel(list_of_dicts=[], dict_of_lists={}, optional_list=None, union_types=[True, False])
+        instance2 = NestedModel(
+            list_of_dicts=[],
+            dict_of_lists={},
+            optional_list=None,
+            union_types=[True, False],
+        )
 
         assert instance2.optional_list is None
         assert instance2.union_types == [True, False]
@@ -920,7 +937,10 @@ output_model: NonExistentModel
 
         parser = GemParser()
 
-        with pytest.raises(GemParserError, match="Specified output_model 'NonExistentModel' not found in data_models"):
+        with pytest.raises(
+            GemParserError,
+            match="Specified output_model 'NonExistentModel' not found in data_models",
+        ):
             parser.parse_from_yaml_string(yaml_content)
 
     def test_no_output_model(self):
@@ -1235,7 +1255,12 @@ output_model: StockKeyMetricsAll
         StockKeyMetricsAll = models["StockKeyMetricsAll"]
 
         # Create a test instance
-        metric = StockMetric(metric_name="营业收入", report_time="2024中报", value="100亿", yoy_growth="10%")
+        metric = StockMetric(
+            metric_name="营业收入",
+            report_time="2024中报",
+            value="100亿",
+            yoy_growth="10%",
+        )
 
         stock_metrics = StockKeyMetricsAll(
             stock_name="雪人股份",
@@ -1436,7 +1461,10 @@ data_models:
         start_time = time.time()
 
         # This should raise CircularReferenceError quickly (not hang in infinite loop)
-        with pytest.raises(CircularReferenceError, match="Circular reference detected involving model 'TreeNode'"):
+        with pytest.raises(
+            CircularReferenceError,
+            match="Circular reference detected involving model 'TreeNode'",
+        ):
             parser.parse_from_yaml_string(yaml_content)
 
         end_time = time.time()

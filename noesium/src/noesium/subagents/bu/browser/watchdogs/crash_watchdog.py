@@ -27,7 +27,14 @@ if TYPE_CHECKING:
 class NetworkRequestTracker:
     """Tracks ongoing network requests."""
 
-    def __init__(self, request_id: str, start_time: float, url: str, method: str, resource_type: str | None = None):
+    def __init__(
+        self,
+        request_id: str,
+        start_time: float,
+        url: str,
+        method: str,
+        resource_type: str | None = None,
+    ):
         self.request_id = request_id
         self.start_time = start_time
         self.url = url
@@ -204,7 +211,10 @@ class CrashWatchdog(BaseWatchdog):
             return
 
         self._monitoring_task = create_task_with_error_handling(
-            self._monitoring_loop(), name="crash_monitoring_loop", logger_instance=self.logger, suppress_exceptions=True
+            self._monitoring_loop(),
+            name="crash_monitoring_loop",
+            logger_instance=self.logger,
+            suppress_exceptions=True,
         )
         # logger.debug('[CrashWatchdog] Monitoring loop created and started')
 

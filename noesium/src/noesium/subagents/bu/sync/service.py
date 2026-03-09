@@ -52,7 +52,10 @@ class CloudSync:
                 logger.debug(f"Skipping event {event.event_type} - user not authenticated")
 
         except Exception as e:
-            logger.error(f"Failed to handle {event.event_type} event: {type(e).__name__}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to handle {event.event_type} event: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
 
     async def _send_event(self, event: BaseEvent) -> None:
         """Send event to cloud API"""

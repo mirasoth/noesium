@@ -28,7 +28,12 @@ class MemoryFileManager:
     # Default file extension for all categories
     DEFAULT_EXTENSION = ".md"
 
-    def __init__(self, memory_dir: str = "memu/server/memory", agent_id: str = None, user_id: str = None):
+    def __init__(
+        self,
+        memory_dir: str = "memu/server/memory",
+        agent_id: str = None,
+        user_id: str = None,
+    ):
         """
         Initialize File Manager
 

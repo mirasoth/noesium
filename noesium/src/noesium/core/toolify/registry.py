@@ -172,7 +172,8 @@ def get_toolkit(name: str, config: Optional[Union[ToolkitConfig, Dict]] = None) 
 
 
 def get_toolkits_map(
-    names: Optional[List[str]] = None, configs: Optional[Dict[str, Union[ToolkitConfig, Dict]]] = None
+    names: Optional[List[str]] = None,
+    configs: Optional[Dict[str, Union[ToolkitConfig, Dict]]] = None,
 ) -> Dict[str, Union[BaseToolkit, AsyncBaseToolkit]]:
     """
     Get multiple toolkit instances as a mapping.

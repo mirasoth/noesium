@@ -103,12 +103,19 @@ class VideoRecorderService:
                 # 1. Resize if needed to target viewport size
                 if img.size != (self.size["width"], self.size["height"]):
                     # Use BICUBIC as it's faster than LANCZOS and good enough for screen recordings
-                    img = img.resize((self.size["width"], self.size["height"]), Image.Resampling.BICUBIC)
+                    img = img.resize(
+                        (self.size["width"], self.size["height"]),
+                        Image.Resampling.BICUBIC,
+                    )
 
                 # 2. Handle Padding (Macro block alignment for codecs)
                 # Check if padding is actually needed
                 if self.padded_size["width"] != self.size["width"] or self.padded_size["height"] != self.size["height"]:
-                    new_img = Image.new("RGB", (self.padded_size["width"], self.padded_size["height"]), (0, 0, 0))
+                    new_img = Image.new(
+                        "RGB",
+                        (self.padded_size["width"], self.padded_size["height"]),
+                        (0, 0, 0),
+                    )
                     # Center the image
                     x_offset = (self.padded_size["width"] - self.size["width"]) // 2
                     y_offset = (self.padded_size["height"] - self.size["height"]) // 2

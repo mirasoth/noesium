@@ -77,7 +77,10 @@ class VideoToolkit(AsyncBaseToolkit):
         self.client = None
         if GOOGLE_GENAI_AVAILABLE and self.google_api_key:
             try:
-                self.client = genai.Client(api_key=self.google_api_key, http_options=HttpOptions(api_version="v1alpha"))
+                self.client = genai.Client(
+                    api_key=self.google_api_key,
+                    http_options=HttpOptions(api_version="v1alpha"),
+                )
                 self.logger.info("Google Gemini client initialized for video analysis")
             except Exception as e:
                 self.logger.error(f"Failed to initialize Google client: {e}")

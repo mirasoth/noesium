@@ -303,7 +303,11 @@ class LinkRelatedMemoriesAction(BaseAction):
             return 0.0
 
     def _append_links_to_memory(
-        self, character_name: str, category: str, memory_id: str, related_memories: List[str]
+        self,
+        character_name: str,
+        category: str,
+        memory_id: str,
+        related_memories: List[str],
     ) -> Optional[str]:
         """Append links to the original memory content"""
         try:

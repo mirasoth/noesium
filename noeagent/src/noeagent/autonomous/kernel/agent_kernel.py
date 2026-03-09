@@ -239,7 +239,14 @@ class AgentKernel:
             )
 
         # Detect finish intent
-        finish_indicators = ["finish_goal", "goal complete", "task finished", "done", "completed", "accomplished"]
+        finish_indicators = [
+            "finish_goal",
+            "goal complete",
+            "task finished",
+            "done",
+            "completed",
+            "accomplished",
+        ]
 
         if any(ind in content_lower for ind in finish_indicators):
             logger.debug("Detected finish_goal decision")

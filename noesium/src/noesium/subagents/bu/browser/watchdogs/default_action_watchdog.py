@@ -63,7 +63,12 @@ class DefaultActionWatchdog(BaseWatchdog):
         download_started = asyncio.Event()
         download_completed = asyncio.Event()
         download_info: dict = {}
-        progress_info: dict = {"last_update": 0.0, "received_bytes": 0, "total_bytes": 0, "state": ""}
+        progress_info: dict = {
+            "last_update": 0.0,
+            "received_bytes": 0,
+            "total_bytes": 0,
+            "state": "",
+        }
 
         def on_download_start(info: dict) -> None:
             """Direct callback when download starts (called from CDP handler)."""
@@ -720,7 +725,12 @@ class DefaultActionWatchdog(BaseWatchdog):
             quads = []
             if element_rect:
                 # Convert DOMRect to quad format
-                x, y, w, h = element_rect.x, element_rect.y, element_rect.width, element_rect.height
+                x, y, w, h = (
+                    element_rect.x,
+                    element_rect.y,
+                    element_rect.width,
+                    element_rect.height,
+                )
                 quads = [
                     [
                         x,
@@ -931,7 +941,8 @@ class DefaultActionWatchdog(BaseWatchdog):
                 # Use timeout to prevent hanging if dialog is blocking
                 try:
                     cdp_session = await asyncio.wait_for(
-                        self.browser_session.get_or_create_cdp_session(focus=True), timeout=3.0
+                        self.browser_session.get_or_create_cdp_session(focus=True),
+                        timeout=3.0,
                     )
                     await asyncio.wait_for(
                         cdp_session.cdp_client.send.Runtime.runIfWaitingForDebugger(session_id=cdp_session.session_id),
@@ -1440,7 +1451,11 @@ class DefaultActionWatchdog(BaseWatchdog):
             return False
 
     async def _focus_element_simple(
-        self, backend_node_id: int, object_id: str, cdp_session, input_coordinates: dict | None = None
+        self,
+        backend_node_id: int,
+        object_id: str,
+        cdp_session,
+        input_coordinates: dict | None = None,
     ) -> bool:
         """Simple focus strategy: CDP first, then click if failed."""
 
@@ -1529,7 +1544,15 @@ class DefaultActionWatchdog(BaseWatchdog):
             input_type = element_node.attributes.get("type", "").lower()
 
             # Native HTML5 inputs with compound components or strict formats
-            if input_type in {"date", "time", "datetime-local", "month", "week", "color", "range"}:
+            if input_type in {
+                "date",
+                "time",
+                "datetime-local",
+                "month",
+                "week",
+                "color",
+                "range",
+            }:
                 return True
 
             # Detect jQuery/Bootstrap datepickers (text inputs with datepicker plugins)
@@ -1538,7 +1561,12 @@ class DefaultActionWatchdog(BaseWatchdog):
                 class_attr = element_node.attributes.get("class", "").lower()
                 if any(
                     indicator in class_attr
-                    for indicator in ["datepicker", "daterangepicker", "datetimepicker", "bootstrap-datepicker"]
+                    for indicator in [
+                        "datepicker",
+                        "daterangepicker",
+                        "datetimepicker",
+                        "bootstrap-datepicker",
+                    ]
                 ):
                     return True
 
@@ -1640,7 +1668,11 @@ class DefaultActionWatchdog(BaseWatchdog):
             raise
 
     async def _input_text_element_node_impl(
-        self, element_node: EnhancedDOMTreeNode, text: str, clear: bool = True, is_sensitive: bool = False
+        self,
+        element_node: EnhancedDOMTreeNode,
+        text: str,
+        clear: bool = True,
+        is_sensitive: bool = False,
     ) -> dict | None:
         """
         Input text into an element using pure CDP with improved focus fallbacks.
@@ -1667,7 +1699,8 @@ class DefaultActionWatchdog(BaseWatchdog):
             # Scroll element into view
             try:
                 await cdp_session.cdp_client.send.DOM.scrollIntoViewIfNeeded(
-                    params={"backendNodeId": backend_node_id}, session_id=cdp_session.session_id
+                    params={"backendNodeId": backend_node_id},
+                    session_id=cdp_session.session_id,
                 )
                 await asyncio.sleep(0.01)
             except Exception as e:
@@ -1868,7 +1901,11 @@ class DefaultActionWatchdog(BaseWatchdog):
                         )
                         await asyncio.sleep(0.005)
                         await cdp_session.cdp_client.send.Input.dispatchKeyEvent(
-                            params={"type": "char", "text": _first_char, "key": _first_char},
+                            params={
+                                "type": "char",
+                                "text": _first_char,
+                                "key": _first_char,
+                            },
                             session_id=cdp_session.session_id,
                         )
                         await cdp_session.cdp_client.send.Input.dispatchKeyEvent(
@@ -2206,7 +2243,8 @@ class DefaultActionWatchdog(BaseWatchdog):
             # Get element bounds to know where to scroll
             backend_node_id = element_node.backend_node_id
             box_model = await cdp_session.cdp_client.send.DOM.getBoxModel(
-                params={"backendNodeId": backend_node_id}, session_id=cdp_session.session_id
+                params={"backendNodeId": backend_node_id},
+                session_id=cdp_session.session_id,
             )
             content_quad = box_model["model"]["content"]
 
@@ -2709,7 +2747,8 @@ class DefaultActionWatchdog(BaseWatchdog):
             # Convert node to object ID for CDP operations
             try:
                 object_result = await cdp_session.cdp_client.send.DOM.resolveNode(
-                    params={"backendNodeId": element_node.backend_node_id}, session_id=cdp_session.session_id
+                    params={"backendNodeId": element_node.backend_node_id},
+                    session_id=cdp_session.session_id,
                 )
                 remote_object = object_result.get("object", {})
                 object_id = remote_object.get("objectId")
@@ -2890,7 +2929,10 @@ class DefaultActionWatchdog(BaseWatchdog):
             dropdown_data = result.get("result", {}).get("value", {})
 
             if dropdown_data.get("error"):
-                raise BrowserError(message=dropdown_data["error"], long_term_memory=dropdown_data["error"])
+                raise BrowserError(
+                    message=dropdown_data["error"],
+                    long_term_memory=dropdown_data["error"],
+                )
 
             if not dropdown_data.get("options"):
                 msg = f"No options found in dropdown at index {index_for_logging}"
@@ -2961,7 +3003,8 @@ class DefaultActionWatchdog(BaseWatchdog):
             error_msg = f"{msg}: {str(e)}"
             self.logger.error(error_msg)
             raise BrowserError(
-                message=error_msg, long_term_memory=f"Failed to get dropdown options for index {index_for_logging}."
+                message=error_msg,
+                long_term_memory=f"Failed to get dropdown options for index {index_for_logging}.",
             )
 
     async def _handle_aria_combobox_options(
@@ -3183,7 +3226,8 @@ class DefaultActionWatchdog(BaseWatchdog):
             # Convert node to object ID for CDP operations
             try:
                 object_result = await cdp_session.cdp_client.send.DOM.resolveNode(
-                    params={"backendNodeId": element_node.backend_node_id}, session_id=cdp_session.session_id
+                    params={"backendNodeId": element_node.backend_node_id},
+                    session_id=cdp_session.session_id,
                 )
                 remote_object = object_result.get("object", {})
                 object_id = remote_object.get("objectId")

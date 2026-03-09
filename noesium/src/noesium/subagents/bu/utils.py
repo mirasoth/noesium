@@ -20,7 +20,8 @@ load_dotenv()
 
 # Pre-compiled regex for URL detection - used in URL shortening
 URL_PATTERN = re.compile(
-    r'https?://[^\s<>"\']+|www\.[^\s<>"\']+|[^\s<>"\']+\.[a-z]{2,}(?:/[^\s<>"\']*)?', re.IGNORECASE
+    r'https?://[^\s<>"\']+|www\.[^\s<>"\']+|[^\s<>"\']+\.[a-z]{2,}(?:/[^\s<>"\']*)?',
+    re.IGNORECASE,
 )
 
 
@@ -107,7 +108,11 @@ class SignalHandler:
         self.resume_callback = resume_callback
         self.custom_exit_callback = custom_exit_callback
         self.exit_on_second_int = exit_on_second_int
-        self.interruptible_task_patterns = interruptible_task_patterns or ["step", "multi_act", "get_next_action"]
+        self.interruptible_task_patterns = interruptible_task_patterns or [
+            "step",
+            "multi_act",
+            "get_next_action",
+        ]
         self.is_windows = platform.system() == "Windows"
 
         # Initialize loop state attributes
@@ -128,7 +133,10 @@ class SignalHandler:
             if self.is_windows:
                 # On Windows, use simple signal handling with immediate exit on Ctrl+C
                 def windows_handler(sig, frame):
-                    print("\n\n🛑 Got Ctrl+C. Exiting immediately on Windows...\n", file=stderr)
+                    print(
+                        "\n\n🛑 Got Ctrl+C. Exiting immediately on Windows...\n",
+                        file=stderr,
+                    )
                     # Run the custom exit callback if provided
                     if self.custom_exit_callback:
                         self.custom_exit_callback()
@@ -216,7 +224,10 @@ class SignalHandler:
 
         # these ^^ attempts dont work as far as we can tell
         # we still dont know what causes the broken input, if you know how to fix it, please let us know
-        print("(tip: press [Enter] once to fix escape codes appearing after chrome exit)", file=stderr)
+        print(
+            "(tip: press [Enter] once to fix escape codes appearing after chrome exit)",
+            file=stderr,
+        )
 
         os._exit(0)
 
@@ -254,7 +265,10 @@ class SignalHandler:
                 logger.error(f"Error in pause callback: {e}")
 
         # Log pause message after pause_callback is called (not before)
-        print("----------------------------------------------------------------------", file=stderr)
+        print(
+            "----------------------------------------------------------------------",
+            file=stderr,
+        )
 
     def sigterm_handler(self) -> None:
         """
@@ -352,7 +366,9 @@ class SignalHandler:
             setattr(self.loop, "waiting_for_input", False)
 
 
-def time_execution_sync(additional_text: str = "") -> Callable[[Callable[P, R]], Callable[P, R]]:
+def time_execution_sync(
+    additional_text: str = "",
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
@@ -381,7 +397,9 @@ def time_execution_sync(additional_text: str = "") -> Callable[[Callable[P, R]],
 def time_execution_async(
     additional_text: str = "",
 ) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
-    def decorator(func: Callable[P, Coroutine[Any, Any, R]]) -> Callable[P, Coroutine[Any, Any, R]]:
+    def decorator(
+        func: Callable[P, Coroutine[Any, Any, R]],
+    ) -> Callable[P, Coroutine[Any, Any, R]]:
         @wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             start_time = time.time()
@@ -643,7 +661,11 @@ def get_git_info() -> dict[str, str] | None:
 
         # Get git commit hash
         commit_hash = (
-            subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=package_root, stderr=subprocess.DEVNULL)
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"],
+                cwd=package_root,
+                stderr=subprocess.DEVNULL,
+            )
             .decode()
             .strip()
         )
@@ -651,7 +673,9 @@ def get_git_info() -> dict[str, str] | None:
         # Get git branch
         branch = (
             subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=package_root, stderr=subprocess.DEVNULL
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                cwd=package_root,
+                stderr=subprocess.DEVNULL,
             )
             .decode()
             .strip()
@@ -660,7 +684,9 @@ def get_git_info() -> dict[str, str] | None:
         # Get remote URL
         remote_url = (
             subprocess.check_output(
-                ["git", "config", "--get", "remote.origin.url"], cwd=package_root, stderr=subprocess.DEVNULL
+                ["git", "config", "--get", "remote.origin.url"],
+                cwd=package_root,
+                stderr=subprocess.DEVNULL,
             )
             .decode()
             .strip()
@@ -669,7 +695,9 @@ def get_git_info() -> dict[str, str] | None:
         # Get commit timestamp
         commit_timestamp = (
             subprocess.check_output(
-                ["git", "show", "-s", "--format=%ci", "HEAD"], cwd=package_root, stderr=subprocess.DEVNULL
+                ["git", "show", "-s", "--format=%ci", "HEAD"],
+                cwd=package_root,
+                stderr=subprocess.DEVNULL,
             )
             .decode()
             .strip()
@@ -757,7 +785,10 @@ def create_task_with_error_handling(
             if exc is not None:
                 task_name = t.get_name() if hasattr(t, "get_name") else "unnamed"
                 if suppress_exceptions:
-                    log.error(f"Exception in background task [{task_name}]: {type(exc).__name__}: {exc}", exc_info=exc)
+                    log.error(
+                        f"Exception in background task [{task_name}]: {type(exc).__name__}: {exc}",
+                        exc_info=exc,
+                    )
                 else:
                     # Log at warning level then mark for re-raising
                     log.warning(

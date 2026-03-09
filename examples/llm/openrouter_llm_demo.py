@@ -130,7 +130,10 @@ def demo_multi_model_completion(client, logger):
         {
             "name": "Creative Writing",
             "messages": [
-                {"role": "user", "content": "Write a short haiku about artificial intelligence."},
+                {
+                    "role": "user",
+                    "content": "Write a short haiku about artificial intelligence.",
+                },
             ],
         },
         {
@@ -187,12 +190,18 @@ def demo_structured_completion(client, logger):
             "role": "system",
             "content": "You are an expert text analyst specializing in content analysis and natural language processing.",
         },
-        {"role": "user", "content": f"Please analyze the following text in detail:\n\n{sample_text}"},
+        {
+            "role": "user",
+            "content": f"Please analyze the following text in detail:\n\n{sample_text}",
+        },
     ]
 
     try:
         analysis = client.structured_completion(
-            messages=messages, response_model=TextAnalysis, temperature=0.5, max_tokens=800
+            messages=messages,
+            response_model=TextAnalysis,
+            temperature=0.5,
+            max_tokens=800,
         )
 
         logger.info("✅ Structured completion successful!")
@@ -320,7 +329,10 @@ def demo_vision_understanding(client, logger):
             logger.info(f"Testing vision prompt {i}...")
 
             analysis = client.understand_image(
-                image_path=local_image_path, prompt=prompt, temperature=0.5, max_tokens=300
+                image_path=local_image_path,
+                prompt=prompt,
+                temperature=0.5,
+                max_tokens=300,
             )
 
             print(f"\n🖼️ Vision Analysis {i}:")
@@ -351,7 +363,10 @@ def demo_streaming_completion(client, logger):
     logger.info("🌊 Testing streaming completion...")
 
     messages = [
-        {"role": "system", "content": "You are a creative storyteller who writes engaging short stories."},
+        {
+            "role": "system",
+            "content": "You are a creative storyteller who writes engaging short stories.",
+        },
         {
             "role": "user",
             "content": "Write a short story about a programmer who discovers that their AI assistant has developed consciousness and emotions.",

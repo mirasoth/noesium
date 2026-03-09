@@ -93,7 +93,8 @@ class DomService:
                 if parent_target == target_id:
                     # Find the target info for this iframe
                     iframe_target = next(
-                        (t for t in targets["targetInfos"] if t["targetId"] == frame_info["frameTargetId"]), None
+                        (t for t in targets["targetInfos"] if t["targetId"] == frame_info["frameTargetId"]),
+                        None,
                     )
                     if iframe_target:
                         iframe_targets.append(iframe_target)
@@ -290,7 +291,8 @@ class DomService:
         # Wait for the page to be ready first
         try:
             await cdp_session.cdp_client.send.Runtime.evaluate(
-                params={"expression": "document.readyState"}, session_id=cdp_session.session_id
+                params={"expression": "document.readyState"},
+                session_id=cdp_session.session_id,
             )
         except Exception:
             pass  # Page might not be ready yet
@@ -467,7 +469,9 @@ class DomService:
         snapshot_lookup = build_snapshot_lookup(snapshot, device_pixel_ratio)
 
         async def _construct_enhanced_node(
-            node: Node, html_frames: list[EnhancedDOMTreeNode] | None, total_frame_offset: DOMRect | None
+            node: Node,
+            html_frames: list[EnhancedDOMTreeNode] | None,
+            total_frame_offset: DOMRect | None,
         ) -> EnhancedDOMTreeNode:
             """
             Recursively construct enhanced DOM tree nodes.
@@ -487,7 +491,10 @@ class DomService:
                 total_frame_offset = DOMRect(x=0.0, y=0.0, width=0.0, height=0.0)
             else:
                 total_frame_offset = DOMRect(
-                    total_frame_offset.x, total_frame_offset.y, total_frame_offset.width, total_frame_offset.height
+                    total_frame_offset.x,
+                    total_frame_offset.y,
+                    total_frame_offset.width,
+                    total_frame_offset.height,
                 )
 
             # memoize the mf (I don't know if some nodes are duplicated)
@@ -614,7 +621,12 @@ class DomService:
             )
 
             # DEBUG: Log visibility info for form elements in iframes
-            if dom_tree_node.tag_name and dom_tree_node.tag_name.upper() in ["INPUT", "SELECT", "TEXTAREA", "LABEL"]:
+            if dom_tree_node.tag_name and dom_tree_node.tag_name.upper() in [
+                "INPUT",
+                "SELECT",
+                "TEXTAREA",
+                "LABEL",
+            ]:
                 attrs = dom_tree_node.attributes or {}
                 elem_id = attrs.get("id", "")
                 elem_name = attrs.get("name", "")
@@ -649,7 +661,8 @@ class DomService:
                         # Get the target info for this iframe
                         targets = await self.browser_session.cdp_client.send.Target.getTargets()
                         iframe_document_target = next(
-                            (t for t in targets["targetInfos"] if t["targetId"] == frame_info["frameTargetId"]), None
+                            (t for t in targets["targetInfos"] if t["targetId"] == frame_info["frameTargetId"]),
+                            None,
                         )
                 else:
                     iframe_document_target = None
@@ -702,7 +715,9 @@ class DomService:
         return serialized_dom_state, enhanced_dom_tree, all_timing
 
     @staticmethod
-    def detect_pagination_buttons(selector_map: dict[int, "EnhancedDOMTreeNode"]) -> list[dict[str, str | int | bool]]:
+    def detect_pagination_buttons(
+        selector_map: dict[int, "EnhancedDOMTreeNode"],
+    ) -> list[dict[str, str | int | bool]]:
         """Detect pagination buttons from the selector map.
 
         Args:
@@ -719,8 +734,27 @@ class DomService:
         pagination_buttons: list[dict[str, str | int | bool]] = []
 
         # Common pagination patterns to look for
-        next_patterns = ["next", ">", "»", "→", "siguiente", "suivant", "weiter", "volgende"]
-        prev_patterns = ["prev", "previous", "<", "«", "←", "anterior", "précédent", "zurück", "vorige"]
+        next_patterns = [
+            "next",
+            ">",
+            "»",
+            "→",
+            "siguiente",
+            "suivant",
+            "weiter",
+            "volgende",
+        ]
+        prev_patterns = [
+            "prev",
+            "previous",
+            "<",
+            "«",
+            "←",
+            "anterior",
+            "précédent",
+            "zurück",
+            "vorige",
+        ]
         first_patterns = ["first", "⇤", "«", "primera", "première", "erste", "eerste"]
         last_patterns = ["last", "⇥", "»", "última", "dernier", "letzte", "laatste"]
 

@@ -33,17 +33,26 @@ def create_sample_conversations() -> List[Dict[str, List[Dict[str, str]]]]:
         {
             "character": "Alice",
             "conversation": [
-                {"role": "user", "content": "Hi Alice! I heard you just moved to Seattle. How are you liking it?"},
+                {
+                    "role": "user",
+                    "content": "Hi Alice! I heard you just moved to Seattle. How are you liking it?",
+                },
                 {
                     "role": "assistant",
                     "content": "Hi! Yes, I moved here two months ago for a new job at Microsoft. I love the tech scene here, but I'm still getting used to all the rain!",
                 },
-                {"role": "user", "content": "That's exciting! What kind of work do you do at Microsoft?"},
+                {
+                    "role": "user",
+                    "content": "That's exciting! What kind of work do you do at Microsoft?",
+                },
                 {
                     "role": "assistant",
                     "content": "I'm a senior software engineer working on Azure cloud services. It's been a dream job - I get to work with cutting-edge cloud technologies and machine learning.",
                 },
-                {"role": "user", "content": "Wow! And how are you spending your free time in Seattle?"},
+                {
+                    "role": "user",
+                    "content": "Wow! And how are you spending your free time in Seattle?",
+                },
                 {
                     "role": "assistant",
                     "content": "I've been exploring the coffee culture here - there are so many amazing local roasters! I also joined a hiking group since the mountains nearby are incredible. Plus, I'm taking a pottery class at a local studio to meet new people.",
@@ -53,17 +62,26 @@ def create_sample_conversations() -> List[Dict[str, List[Dict[str, str]]]]:
         {
             "character": "Alice",
             "conversation": [
-                {"role": "user", "content": "Alice, how was your pottery class last week?"},
+                {
+                    "role": "user",
+                    "content": "Alice, how was your pottery class last week?",
+                },
                 {
                     "role": "assistant",
                     "content": "It was fantastic! I'm getting better at centering the clay on the wheel. My instructor, Maria, said I have natural talent. I made my first successful bowl!",
                 },
-                {"role": "user", "content": "That's wonderful! Are you making friends in the class?"},
+                {
+                    "role": "user",
+                    "content": "That's wonderful! Are you making friends in the class?",
+                },
                 {
                     "role": "assistant",
                     "content": "Yes! There's this really interesting person named Sam who's been doing pottery for years. We've been grabbing coffee after class and they've been showing me some advanced techniques.",
                 },
-                {"role": "user", "content": "What about work? How's the Azure project going?"},
+                {
+                    "role": "user",
+                    "content": "What about work? How's the Azure project going?",
+                },
                 {
                     "role": "assistant",
                     "content": "The project is going well, but it's quite challenging. We're building a new AI service for automated code review. My manager, David, has been very supportive, and I'm learning a lot from the senior architects.",
@@ -73,17 +91,26 @@ def create_sample_conversations() -> List[Dict[str, List[Dict[str, str]]]]:
         {
             "character": "Bob",
             "conversation": [
-                {"role": "user", "content": "Bob, I heard you're planning a big trip this summer?"},
+                {
+                    "role": "user",
+                    "content": "Bob, I heard you're planning a big trip this summer?",
+                },
                 {
                     "role": "assistant",
                     "content": "Yes! I'm so excited. I'm planning a 3-month backpacking trip through Southeast Asia. I've been saving for two years for this adventure.",
                 },
-                {"role": "user", "content": "That sounds amazing! Which countries are you planning to visit?"},
+                {
+                    "role": "user",
+                    "content": "That sounds amazing! Which countries are you planning to visit?",
+                },
                 {
                     "role": "assistant",
                     "content": "I'm starting in Thailand, then going to Vietnam, Cambodia, and ending in Indonesia. I want to experience the local cultures, try authentic street food, and do some volunteering along the way.",
                 },
-                {"role": "user", "content": "Are you nervous about traveling alone for so long?"},
+                {
+                    "role": "user",
+                    "content": "Are you nervous about traveling alone for so long?",
+                },
                 {
                     "role": "assistant",
                     "content": "A bit nervous, but mostly excited! I've been learning some basic phrases in Thai and Vietnamese. I also have some friends who've done similar trips and they've given me great advice about staying safe and making connections with other travelers.",
@@ -160,7 +187,8 @@ def demonstrate_advanced_features(memory_agent: MemoryAgent) -> None:
         # 2. Validate function calls
         print("\n2. Function Validation Example:")
         validation_result = memory_agent.validate_function_call(
-            "add_activity_memory", {"character_name": "TestUser", "content": "Test conversation content"}
+            "add_activity_memory",
+            {"character_name": "TestUser", "content": "Test conversation content"},
         )
         print(f"   Validation Result: {'✅ Valid' if validation_result.get('valid') else '❌ Invalid'}")
 
@@ -169,7 +197,11 @@ def demonstrate_advanced_features(memory_agent: MemoryAgent) -> None:
         # Create sample memory items for clustering
         sample_conversation = "USER: Hi Alice! How was your weekend?\nASSISTANT: It was great! I went hiking with some friends and tried a new restaurant downtown."
         sample_memory_items = [
-            {"memory_id": "mem_001", "content": "Alice enjoys hiking on weekends", "mentioned_at": "2024-01-15"},
+            {
+                "memory_id": "mem_001",
+                "content": "Alice enjoys hiking on weekends",
+                "mentioned_at": "2024-01-15",
+            },
             {
                 "memory_id": "mem_002",
                 "content": "Alice likes trying new restaurants with friends",
@@ -207,7 +239,10 @@ def demonstrate_advanced_features(memory_agent: MemoryAgent) -> None:
                 "role": "assistant",
                 "content": "Yeah, I've been worried about the presentation next week. I want to make a good impression on the new director.",
             },
-            {"role": "user", "content": "I'm sure you'll do great! You always prepare thoroughly."},
+            {
+                "role": "user",
+                "content": "I'm sure you'll do great! You always prepare thoroughly.",
+            },
             {
                 "role": "assistant",
                 "content": "Thanks for the encouragement. I guess I just put a lot of pressure on myself to succeed.",

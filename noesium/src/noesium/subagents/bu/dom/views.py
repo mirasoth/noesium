@@ -518,7 +518,8 @@ class EnhancedDOMTreeNode:
 
     def _get_element_position(self, element: "EnhancedDOMTreeNode") -> int:
         """Get the position of an element among its siblings with the same tag name.
-        Returns 0 if it's the only element of its type, otherwise returns 1-based index."""
+        Returns 0 if it's the only element of its type, otherwise returns 1-based index.
+        """
         if not element.parent_node or not element.parent_node.children_nodes:
             return 0
 
@@ -552,13 +553,13 @@ class EnhancedDOMTreeNode:
             "session_id": self.session_id,
             "target_id": self.target_id,
             "frame_id": self.frame_id,
-            "content_document": self.content_document.__json__() if self.content_document else None,
+            "content_document": (self.content_document.__json__() if self.content_document else None),
             "shadow_root_type": self.shadow_root_type,
             "ax_node": asdict(self.ax_node) if self.ax_node else None,
             "snapshot_node": asdict(self.snapshot_node) if self.snapshot_node else None,
             # these two in the end, so it's easier to read json
-            "shadow_roots": [r.__json__() for r in self.shadow_roots] if self.shadow_roots else [],
-            "children_nodes": [c.__json__() for c in self.children_nodes] if self.children_nodes else [],
+            "shadow_roots": ([r.__json__() for r in self.shadow_roots] if self.shadow_roots else []),
+            "children_nodes": ([c.__json__() for c in self.children_nodes] if self.children_nodes else []),
         }
 
     def get_all_children_text(self, max_depth: int = -1) -> str:
@@ -667,7 +668,15 @@ class EnhancedDOMTreeNode:
                 else:
                     # No CSS info, but content overflows - be more conservative
                     # Only consider it scrollable if it's a common scrollable container element
-                    scrollable_tags = {"div", "main", "section", "article", "aside", "body", "html"}
+                    scrollable_tags = {
+                        "div",
+                        "main",
+                        "section",
+                        "article",
+                        "aside",
+                        "body",
+                        "html",
+                    }
                     return self.tag_name.lower() in scrollable_tags
 
         return False
@@ -965,7 +974,9 @@ class SerializedDOMState:
         - More attribute information is helpful
         - Text content is important for understanding page structure
         """
-        from noesium.subagents.bu.dom.serializer.eval_serializer import DOMEvalSerializer
+        from noesium.subagents.bu.dom.serializer.eval_serializer import (
+            DOMEvalSerializer,
+        )
 
         if not self._root:
             return "Empty DOM tree (you might have to wait for the page to load)"
@@ -1036,7 +1047,7 @@ class DOMInteractedElement:
             node_value=enhanced_dom_tree.node_value,
             node_name=enhanced_dom_tree.node_name,
             attributes=enhanced_dom_tree.attributes,
-            bounds=enhanced_dom_tree.snapshot_node.bounds if enhanced_dom_tree.snapshot_node else None,
+            bounds=(enhanced_dom_tree.snapshot_node.bounds if enhanced_dom_tree.snapshot_node else None),
             x_path=enhanced_dom_tree.xpath,
             element_hash=hash(enhanced_dom_tree),
             stable_hash=enhanced_dom_tree.compute_stable_hash(),  # Compute from source for single source of truth

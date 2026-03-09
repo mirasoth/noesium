@@ -519,7 +519,12 @@ class GemParser:
             # Handle nested types like 'List[Metric]' or 'Dict[str, Stock]'
             parts = [part.strip() for part in match.split(",")]
             for part in parts:
-                if part not in self.type_map and part not in ["str", "int", "float", "bool"]:
+                if part not in self.type_map and part not in [
+                    "str",
+                    "int",
+                    "float",
+                    "bool",
+                ]:
                     dependencies.add(part)
 
         # Also check if the type itself is a custom model (not wrapped in brackets)
@@ -624,7 +629,14 @@ class GemParser:
                 # Standard library types that are usually fine
                 if hasattr(field_type, "__module__"):
                     module = field_type.__module__
-                    if module in ["builtins", "datetime", "decimal", "uuid", "pathlib", "typing"]:
+                    if module in [
+                        "builtins",
+                        "datetime",
+                        "decimal",
+                        "uuid",
+                        "pathlib",
+                        "typing",
+                    ]:
                         return False
 
                 # Dynamic models don't need arbitrary types
@@ -725,7 +737,13 @@ class GemParser:
                 return Optional[args[0]]
             elif base_type == Union:
                 return Union[tuple(args)] if len(args) > 1 else args[0]
-            elif base_type in [Sequence, MutableSequence, Iterable, Collection, Container]:
+            elif base_type in [
+                Sequence,
+                MutableSequence,
+                Iterable,
+                Collection,
+                Container,
+            ]:
                 return base_type[args[0]] if len(args) == 1 else base_type[Union[tuple(args)]]
             elif base_type in [Mapping, MutableMapping]:
                 if len(args) != 2:
@@ -829,7 +847,10 @@ def parse_yaml_models(yaml_content: str, custom_types: Optional[Dict[str, type]]
     instruction = parser.get_instruction()
 
     return GemParserResult(
-        models=models, target_model=target_model, target_model_name=target_model_name, instruction=instruction
+        models=models,
+        target_model=target_model,
+        target_model_name=target_model_name,
+        instruction=instruction,
     )
 
 
@@ -855,5 +876,8 @@ def parse_yaml_file(file_path: Union[str, Path], custom_types: Optional[Dict[str
     instruction = parser.get_instruction()
 
     return GemParserResult(
-        models=models, target_model=target_model, target_model_name=target_model_name, instruction=instruction
+        models=models,
+        target_model=target_model,
+        target_model_name=target_model_name,
+        instruction=instruction,
     )

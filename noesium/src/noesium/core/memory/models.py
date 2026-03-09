@@ -20,11 +20,22 @@ class BaseMemoryItem(BaseModel):
     consistent metadata and identification across different memory types.
     """
 
-    model_config = ConfigDict(from_attributes=True, validate_default=True, arbitrary_types_allowed=True, extra="allow")
+    model_config = ConfigDict(
+        from_attributes=True,
+        validate_default=True,
+        arbitrary_types_allowed=True,
+        extra="allow",
+    )
 
-    id: str = Field(default_factory=lambda: str(uuid4()), description="Unique identifier for the memory item")
+    id: str = Field(
+        default_factory=lambda: str(uuid4()),
+        description="Unique identifier for the memory item",
+    )
 
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp when the memory was created")
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Timestamp when the memory was created",
+    )
 
     updated_at: Optional[datetime] = Field(default=None, description="Timestamp when the memory was last updated")
 
@@ -32,7 +43,10 @@ class BaseMemoryItem(BaseModel):
 
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the memory item")
 
-    tags: List[str] = Field(default_factory=list, description="Tags for categorizing and filtering memory items")
+    tags: List[str] = Field(
+        default_factory=list,
+        description="Tags for categorizing and filtering memory items",
+    )
 
     def add_tag(self, tag: str) -> None:
         """Add a tag to the memory item if it doesn't already exist."""
@@ -68,14 +82,21 @@ class MemoryItem(BaseMemoryItem):
 
     agent_id: Optional[str] = Field(default=None, description="ID of the agent associated with this memory")
 
-    session_id: Optional[str] = Field(default=None, description="ID of the session/conversation this memory belongs to")
+    session_id: Optional[str] = Field(
+        default=None,
+        description="ID of the session/conversation this memory belongs to",
+    )
 
     importance: float = Field(
-        default=0.5, description="Importance score of the memory item (0.0 to 1.0)", ge=0.0, le=1.0
+        default=0.5,
+        description="Importance score of the memory item (0.0 to 1.0)",
+        ge=0.0,
+        le=1.0,
     )
 
     context: Optional[Dict[str, Any]] = Field(
-        default_factory=dict, description="Additional context information for the memory"
+        default_factory=dict,
+        description="Additional context information for the memory",
     )
 
 
@@ -102,7 +123,10 @@ class MemoryFilter(BaseModel):
     date_to: Optional[datetime] = Field(default=None, description="Filter items created before this date")
 
     min_importance: Optional[float] = Field(
-        default=None, description="Filter items with importance above this threshold", ge=0.0, le=1.0
+        default=None,
+        description="Filter items with importance above this threshold",
+        ge=0.0,
+        le=1.0,
     )
 
     metadata_filters: Dict[str, Any] = Field(default_factory=dict, description="Filter by metadata key-value pairs")

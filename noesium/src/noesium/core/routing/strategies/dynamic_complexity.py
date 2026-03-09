@@ -94,7 +94,11 @@ class DynamicComplexityStrategy(BaseRoutingStrategy):
                 reasoning=reasoning_score,
                 uncertainty=uncertainty_score,
                 metadata={
-                    "weights": {"alpha": self.alpha, "beta": self.beta, "gamma": self.gamma},
+                    "weights": {
+                        "alpha": self.alpha,
+                        "beta": self.beta,
+                        "gamma": self.gamma,
+                    },
                     "components": {
                         "linguistic": linguistic_score,
                         "reasoning": reasoning_score,
@@ -107,7 +111,12 @@ class DynamicComplexityStrategy(BaseRoutingStrategy):
                 tier=tier,
                 confidence=confidence,
                 complexity_score=complexity_score_obj,
-                metadata={"thresholds": {"lite": self.lite_threshold, "fast": self.fast_threshold}},
+                metadata={
+                    "thresholds": {
+                        "lite": self.lite_threshold,
+                        "fast": self.fast_threshold,
+                    }
+                },
             )
 
         except Exception as e:
@@ -202,7 +211,9 @@ Output: number only"""
 
             messages = [{"role": "user", "content": prompt}]
             response = self.lite_client.completion(
-                messages=messages, temperature=self.temperature, max_tokens=self.reasoning_max_tokens
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=self.reasoning_max_tokens,
             )
 
             # Parse response
@@ -285,7 +296,14 @@ Output: number only"""
                 uncertainty = 0.3  # Normal length suggests confidence
 
             # Adjust based on hedging words
-            hedging_words = ["maybe", "perhaps", "possibly", "might", "could", "uncertain"]
+            hedging_words = [
+                "maybe",
+                "perhaps",
+                "possibly",
+                "might",
+                "could",
+                "uncertain",
+            ]
             hedging_count = sum(1 for word in hedging_words if word in response.lower())
             uncertainty += min(0.3, hedging_count * 0.1)
 

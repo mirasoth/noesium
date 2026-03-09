@@ -104,7 +104,10 @@ class TestCreateToolkitConfig:
     def test_basic_creation(self):
         """Test basic toolkit config creation."""
         config = create_toolkit_config(
-            name="test_toolkit", mode="builtin", activated_tools=["tool1", "tool2"], api_key="test_key"
+            name="test_toolkit",
+            mode="builtin",
+            activated_tools=["tool1", "tool2"],
+            api_key="test_key",
         )
 
         assert config.name == "test_toolkit"

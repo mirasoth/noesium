@@ -96,7 +96,8 @@ def setup_logging(
     if log_file:
         Path(log_file).parent.mkdir(parents=True, exist_ok=True)
         file_formatter = logging.Formatter(
-            "%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+            "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(file_formatter)
@@ -153,25 +154,49 @@ def color_text(message: str, color: Optional[str] = None, attrs: Optional[List[s
     return f"{''.join(parts)}{message}{_ANSI_RESET}"
 
 
-def info_color(logger_obj: logging.Logger, message: str, color: Optional[str] = None, *, bold: bool = False) -> None:
+def info_color(
+    logger_obj: logging.Logger,
+    message: str,
+    color: Optional[str] = None,
+    *,
+    bold: bool = False,
+) -> None:
     """Log INFO with optional per-message color and bold attribute."""
     attrs = ["bold"] if bold else None
     logger_obj.info(color_text(message, color=color, attrs=attrs))
 
 
-def debug_color(logger_obj: logging.Logger, message: str, color: Optional[str] = None, *, bold: bool = False) -> None:
+def debug_color(
+    logger_obj: logging.Logger,
+    message: str,
+    color: Optional[str] = None,
+    *,
+    bold: bool = False,
+) -> None:
     """Log DEBUG with optional per-message color and bold attribute."""
     attrs = ["bold"] if bold else None
     logger_obj.debug(color_text(message, color=color, attrs=attrs))
 
 
-def warning_color(logger_obj: logging.Logger, message: str, color: Optional[str] = None, *, bold: bool = False) -> None:
+def warning_color(
+    logger_obj: logging.Logger,
+    message: str,
+    color: Optional[str] = None,
+    *,
+    bold: bool = False,
+) -> None:
     """Log WARNING with optional per-message color and bold attribute."""
     attrs = ["bold"] if bold else None
     logger_obj.warning(color_text(message, color=color, attrs=attrs))
 
 
-def error_color(logger_obj: logging.Logger, message: str, color: Optional[str] = None, *, bold: bool = False) -> None:
+def error_color(
+    logger_obj: logging.Logger,
+    message: str,
+    color: Optional[str] = None,
+    *,
+    bold: bool = False,
+) -> None:
     """Log ERROR with optional per-message color and bold attribute."""
     attrs = ["bold"] if bold else None
     logger_obj.error(color_text(message, color=color, attrs=attrs))

@@ -11,7 +11,11 @@ from .types import ComplexityScore, ModelTier, RoutingResult
 class BaseRoutingStrategy(ABC):
     """Abstract base class for routing strategies."""
 
-    def __init__(self, lite_client: Optional[BaseLLMClient] = None, config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        lite_client: Optional[BaseLLMClient] = None,
+        config: Optional[Dict[str, Any]] = None,
+    ):
         """
         Initialize the routing strategy.
 

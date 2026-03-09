@@ -65,7 +65,10 @@ class ConversationManager:
 
             # Use structured completion with retry for reliable analysis
             context = self.llm.structured_completion(
-                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
                 response_model=ConversationContext,
                 temperature=0.3,
                 max_tokens=500,
@@ -109,16 +112,19 @@ class ConversationManager:
         system_prompt, user_prompt = get_response_generation_prompts(
             conversation_purpose=conversation_purpose,
             missing_required_slots=missing_required_slots,
-            intent_type=state.next_action_plan.intent_type if state.next_action_plan else "casual conversation",
+            intent_type=(state.next_action_plan.intent_type if state.next_action_plan else "casual conversation"),
             next_action_reasoning=(
                 state.next_action_plan.reasoning
                 if state.next_action_plan
                 else "Building rapport and guiding conversation naturally toward the purpose"
             ),
-            known_slots=str(state.extracted_info) if state.extracted_info else "Nothing specific collected yet",
+            known_slots=(str(state.extracted_info) if state.extracted_info else "Nothing specific collected yet"),
         )
         utterance = self.llm.completion(
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
             temperature=0.7,
             max_tokens=200,
         )

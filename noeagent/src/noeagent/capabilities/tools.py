@@ -172,7 +172,10 @@ async def _setup_mcp_servers(
             # for tool in mcp_tools:
             #     provider = MCPCapabilityProvider(tool, tool_executor, tool_context)
             #     registry.register(provider)
-            logger.info("MCP server loading not yet implemented for %s", mcp_config.get("name", "unknown"))
+            logger.info(
+                "MCP server loading not yet implemented for %s",
+                mcp_config.get("name", "unknown"),
+            )
         except Exception as exc:
             logger.warning("Failed to load MCP server: %s", exc)
 

@@ -85,8 +85,16 @@ class TestSerperToolkit:
         mock_response.status = 200
         mock_response.json.return_value = {
             "organic": [
-                {"title": "Test Result 1", "link": "https://example1.com", "snippet": "This is test result 1"},
-                {"title": "Test Result 2", "link": "https://example2.com", "snippet": "This is test result 2"},
+                {
+                    "title": "Test Result 1",
+                    "link": "https://example1.com",
+                    "snippet": "This is test result 1",
+                },
+                {
+                    "title": "Test Result 2",
+                    "link": "https://example2.com",
+                    "snippet": "This is test result 2",
+                },
             ],
             "searchParameters": {"q": "test query", "gl": "us", "hl": "en"},
         }
@@ -108,7 +116,13 @@ class TestSerperToolkit:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.json.return_value = {
-            "organic": [{"title": "Recent Result", "link": "https://example.com", "snippet": "Recent content"}],
+            "organic": [
+                {
+                    "title": "Recent Result",
+                    "link": "https://example.com",
+                    "snippet": "Recent content",
+                }
+            ],
             "searchParameters": {"q": "test", "tbs": "qdr:d"},
         }
         mock_post.return_value.__aenter__.return_value = mock_response
@@ -143,8 +157,16 @@ class TestSerperToolkit:
         mock_response.status = 200
         mock_response.json.return_value = {
             "images": [
-                {"title": "Test Image 1", "imageUrl": "https://example.com/image1.jpg", "source": "example.com"},
-                {"title": "Test Image 2", "imageUrl": "https://example.com/image2.jpg", "source": "example.com"},
+                {
+                    "title": "Test Image 1",
+                    "imageUrl": "https://example.com/image1.jpg",
+                    "source": "example.com",
+                },
+                {
+                    "title": "Test Image 2",
+                    "imageUrl": "https://example.com/image2.jpg",
+                    "source": "example.com",
+                },
             ]
         }
         mock_post.return_value.__aenter__.return_value = mock_response
@@ -217,7 +239,14 @@ class TestSerperToolkit:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.json.return_value = {
-            "places": [{"title": "Test Restaurant", "address": "123 Main St, Test City", "rating": 4.5, "reviews": 100}]
+            "places": [
+                {
+                    "title": "Test Restaurant",
+                    "address": "123 Main St, Test City",
+                    "rating": 4.5,
+                    "reviews": 100,
+                }
+            ]
         }
         mock_post.return_value.__aenter__.return_value = mock_response
 
@@ -321,7 +350,14 @@ class TestSerperToolkit:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.json.return_value = {
-            "places": [{"title": "Test Place", "address": "123 Test St", "rating": 4.2, "type": "restaurant"}]
+            "places": [
+                {
+                    "title": "Test Place",
+                    "address": "123 Test St",
+                    "rating": 4.2,
+                    "type": "restaurant",
+                }
+            ]
         }
         mock_post.return_value.__aenter__.return_value = mock_response
 
@@ -386,7 +422,12 @@ class TestSerperToolkit:
         with patch("aiohttp.ClientSession.post") as mock_post:
             mock_response = AsyncMock()
             mock_response.status = 200
-            mock_response.json.return_value = {"organic": [], "images": [], "news": [], "videos": []}
+            mock_response.json.return_value = {
+                "organic": [],
+                "images": [],
+                "news": [],
+                "videos": [],
+            }
             mock_post.return_value.__aenter__.return_value = mock_response
 
             method = getattr(serper_toolkit, search_method)
@@ -449,7 +490,11 @@ class TestSerperToolkitErrorHandling:
     @patch("aiohttp.ClientSession.post")
     async def test_api_error_responses(self, mock_post, serper_toolkit):
         """Test various API error responses."""
-        error_scenarios = [(401, "Invalid API key"), (400, "Bad request"), (500, "Internal server error")]
+        error_scenarios = [
+            (401, "Invalid API key"),
+            (400, "Bad request"),
+            (500, "Internal server error"),
+        ]
 
         for status_code, expected_error in error_scenarios:
             mock_response = AsyncMock()
@@ -663,7 +708,11 @@ class TestSerperToolkitIntegration:
     @pytest.mark.asyncio
     async def test_real_search_with_different_locations(self, serper_toolkit_integration):
         """Test search with different geographic locations."""
-        locations = [("United States", "us"), ("United Kingdom", "uk"), ("Canada", "ca")]
+        locations = [
+            ("United States", "us"),
+            ("United Kingdom", "uk"),
+            ("Canada", "ca"),
+        ]
 
         for location, gl in locations:
             result = await serper_toolkit_integration.google_search("local news", location=location, gl=gl, num=2)

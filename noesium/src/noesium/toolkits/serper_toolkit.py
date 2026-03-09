@@ -110,7 +110,10 @@ class SerperToolkit(AsyncBaseToolkit):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    url, headers=self.headers, json=payload, timeout=aiohttp.ClientTimeout(total=self.timeout)
+                    url,
+                    headers=self.headers,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=self.timeout),
                 ) as response:
                     if response.status == 200:
                         return await response.json()
@@ -481,7 +484,11 @@ class SerperToolkit(AsyncBaseToolkit):
         }
 
     async def autocomplete(
-        self, query: str, location: Optional[str] = None, gl: Optional[str] = None, hl: Optional[str] = None
+        self,
+        query: str,
+        location: Optional[str] = None,
+        gl: Optional[str] = None,
+        hl: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Get autocomplete suggestions for a search query.
@@ -520,7 +527,11 @@ class SerperToolkit(AsyncBaseToolkit):
         }
 
     async def google_lens(
-        self, url: str, gl: Optional[str] = None, hl: Optional[str] = None, num: int = 10
+        self,
+        url: str,
+        gl: Optional[str] = None,
+        hl: Optional[str] = None,
+        num: int = 10,
     ) -> Dict[str, Any]:
         """
         Analyze an image using Google Lens.

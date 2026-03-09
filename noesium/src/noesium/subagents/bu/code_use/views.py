@@ -176,7 +176,7 @@ class CodeAgentHistory(BaseModel):
     def model_dump(self, **kwargs) -> dict[str, Any]:
         """Custom serialization for CodeAgentHistory."""
         return {
-            "model_output": self.model_output.model_dump() if self.model_output else None,
+            "model_output": (self.model_output.model_dump() if self.model_output else None),
             "result": [r.model_dump() for r in self.result],
             "state": self.state.model_dump(),
             "metadata": self.metadata.model_dump() if self.metadata else None,
@@ -187,7 +187,11 @@ class CodeAgentHistory(BaseModel):
 class CodeAgentHistoryList:
     """Compatibility wrapper for CodeAgentHistory that provides AgentHistoryList-like API."""
 
-    def __init__(self, complete_history: list[CodeAgentHistory], usage_summary: UsageSummary | None) -> None:
+    def __init__(
+        self,
+        complete_history: list[CodeAgentHistory],
+        usage_summary: UsageSummary | None,
+    ) -> None:
         """Initialize with CodeAgent history data."""
         self._complete_history = complete_history
         self._usage_summary = usage_summary
@@ -261,7 +265,7 @@ class CodeAgentHistoryList:
         if n_last is None:
             if return_none_if_not_screenshot:
                 return [
-                    h.state.screenshot_path if h.state.screenshot_path is not None else None
+                    (h.state.screenshot_path if h.state.screenshot_path is not None else None)
                     for h in self._complete_history
                 ]
             else:
@@ -269,7 +273,7 @@ class CodeAgentHistoryList:
         else:
             if return_none_if_not_screenshot:
                 return [
-                    h.state.screenshot_path if h.state.screenshot_path is not None else None
+                    (h.state.screenshot_path if h.state.screenshot_path is not None else None)
                     for h in self._complete_history[-n_last:]
                 ]
             else:
@@ -401,7 +405,11 @@ class CodeAgentHistoryList:
             "usage": self._usage_summary.model_dump() if self._usage_summary else None,
         }
 
-    def save_to_file(self, filepath: str | Path, sensitive_data: dict[str, str | dict[str, str]] | None = None) -> None:
+    def save_to_file(
+        self,
+        filepath: str | Path,
+        sensitive_data: dict[str, str | dict[str, str]] | None = None,
+    ) -> None:
         """Save history to JSON file."""
         try:
             Path(filepath).parent.mkdir(parents=True, exist_ok=True)

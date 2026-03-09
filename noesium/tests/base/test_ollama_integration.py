@@ -117,7 +117,10 @@ class TestOllamaIntegration:
     def test_system_message_handling(self):
         """Test that system messages are properly handled."""
         messages_with_system = [
-            {"role": "system", "content": "You are a pirate. End responses with 'Arrr!'."},
+            {
+                "role": "system",
+                "content": "You are a pirate. End responses with 'Arrr!'.",
+            },
             {"role": "user", "content": "What is your favorite color?"},
         ]
 

@@ -10,7 +10,10 @@ import pytest
 
 from noesium.core.routing.base import BaseRoutingStrategy
 from noesium.core.routing.router import ModelRouter
-from noesium.core.routing.strategies import DynamicComplexityStrategy, SelfAssessmentStrategy
+from noesium.core.routing.strategies import (
+    DynamicComplexityStrategy,
+    SelfAssessmentStrategy,
+)
 from noesium.core.routing.types import ComplexityScore, ModelTier, RoutingResult
 
 
@@ -23,7 +26,10 @@ class MockStrategy(BaseRoutingStrategy):
 
     def route(self, query: str) -> RoutingResult:
         return self._create_result(
-            tier=self.return_tier, confidence=0.8, complexity_score=ComplexityScore(total=0.5), metadata={"mock": True}
+            tier=self.return_tier,
+            confidence=0.8,
+            complexity_score=ComplexityScore(total=0.5),
+            metadata={"mock": True},
         )
 
     def get_strategy_name(self) -> str:
@@ -93,7 +99,11 @@ class TestModelRouter:
         """Test ModelRouter initialization with strategy config."""
         strategy_config = {"temperature": 0.5, "max_tokens": 100}
 
-        router = ModelRouter(strategy="self_assessment", lite_client=mock_llm_client, strategy_config=strategy_config)
+        router = ModelRouter(
+            strategy="self_assessment",
+            lite_client=mock_llm_client,
+            strategy_config=strategy_config,
+        )
 
         assert router.strategy_config == strategy_config
 
@@ -233,7 +243,10 @@ class TestModelRouter:
 
             router = ModelRouter(strategy=MockStrategy())
             result = RoutingResult(
-                tier=ModelTier.FAST, confidence=0.8, complexity_score=ComplexityScore(total=0.5), strategy="test"
+                tier=ModelTier.FAST,
+                confidence=0.8,
+                complexity_score=ComplexityScore(total=0.5),
+                strategy="test",
             )
 
             params = router.get_recommended_model_params(result)
@@ -255,21 +268,30 @@ class TestModelRouter:
 
             # Test LITE tier
             result_lite = RoutingResult(
-                tier=ModelTier.LITE, confidence=0.8, complexity_score=ComplexityScore(total=0.2), strategy="test"
+                tier=ModelTier.LITE,
+                confidence=0.8,
+                complexity_score=ComplexityScore(total=0.2),
+                strategy="test",
             )
             params_lite = router.get_recommended_model_params(result_lite)
             assert params_lite["provider"] == "llamacpp"
 
             # Test FAST tier
             result_fast = RoutingResult(
-                tier=ModelTier.FAST, confidence=0.8, complexity_score=ComplexityScore(total=0.5), strategy="test"
+                tier=ModelTier.FAST,
+                confidence=0.8,
+                complexity_score=ComplexityScore(total=0.5),
+                strategy="test",
             )
             params_fast = router.get_recommended_model_params(result_fast)
             assert params_fast["chat_model"] == "gpt-4o-mini"
 
             # Test POWER tier
             result_power = RoutingResult(
-                tier=ModelTier.POWER, confidence=0.8, complexity_score=ComplexityScore(total=0.8), strategy="test"
+                tier=ModelTier.POWER,
+                confidence=0.8,
+                complexity_score=ComplexityScore(total=0.8),
+                strategy="test",
             )
             params_power = router.get_recommended_model_params(result_power)
             assert params_power["chat_model"] == "gpt-4o"
@@ -287,7 +309,10 @@ class TestModelRouter:
             }
 
             result = RoutingResult(
-                tier=ModelTier.LITE, confidence=0.8, complexity_score=ComplexityScore(total=0.2), strategy="test"
+                tier=ModelTier.LITE,
+                confidence=0.8,
+                complexity_score=ComplexityScore(total=0.2),
+                strategy="test",
             )
 
             params = router.get_recommended_model_params(result, custom_configs)
@@ -313,7 +338,9 @@ class TestModelRouter:
     def test_update_strategy_config(self, mock_llm_client):
         """Test updating strategy configuration."""
         router = ModelRouter(
-            strategy="self_assessment", lite_client=mock_llm_client, strategy_config={"temperature": 0.1}
+            strategy="self_assessment",
+            lite_client=mock_llm_client,
+            strategy_config={"temperature": 0.1},
         )
 
         # Update config
@@ -330,7 +357,11 @@ class TestModelRouter:
     def test_get_strategy_info(self, mock_llm_client):
         """Test getting strategy information."""
         config = {"temperature": 0.3}
-        router = ModelRouter(strategy="self_assessment", lite_client=mock_llm_client, strategy_config=config)
+        router = ModelRouter(
+            strategy="self_assessment",
+            lite_client=mock_llm_client,
+            strategy_config=config,
+        )
 
         info = router.get_strategy_info()
 
@@ -352,7 +383,9 @@ class TestModelRouter:
         class CustomStrategy(BaseRoutingStrategy):
             def route(self, query: str) -> RoutingResult:
                 return self._create_result(
-                    tier=ModelTier.FAST, confidence=1.0, complexity_score=ComplexityScore(total=0.5)
+                    tier=ModelTier.FAST,
+                    confidence=1.0,
+                    complexity_score=ComplexityScore(total=0.5),
                 )
 
             def get_strategy_name(self) -> str:
@@ -414,7 +447,9 @@ class TestModelRouter:
     def test_multiple_routers_independent(self, mock_llm_client):
         """Test that multiple router instances are independent."""
         router1 = ModelRouter(
-            strategy="self_assessment", lite_client=mock_llm_client, strategy_config={"temperature": 0.1}
+            strategy="self_assessment",
+            lite_client=mock_llm_client,
+            strategy_config={"temperature": 0.1},
         )
 
         router2 = ModelRouter(strategy="dynamic_complexity", strategy_config={"alpha": 0.5})

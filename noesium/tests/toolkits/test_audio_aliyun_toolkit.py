@@ -372,12 +372,22 @@ class TestAudioToolkitAliyunIntegration:
             {
                 "StatusText": "SUCCESS",
                 "Result": {
-                    "Sentences": [{"Text": "这是测试音频转录结果。", "BeginTime": 0, "EndTime": 2000, "ChannelId": 0}]
+                    "Sentences": [
+                        {
+                            "Text": "这是测试音频转录结果。",
+                            "BeginTime": 0,
+                            "EndTime": 2000,
+                            "ChannelId": 0,
+                        }
+                    ]
                 },
             }
         )
 
-        mock_client_instance.do_action_with_exception.side_effect = [submit_response, get_response]
+        mock_client_instance.do_action_with_exception.side_effect = [
+            submit_response,
+            get_response,
+        ]
 
         aliyun_toolkit.aliyun_client = mock_client_instance
 

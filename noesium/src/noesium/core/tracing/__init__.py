@@ -8,7 +8,12 @@ This package provides:
 """
 
 from .langgraph_hooks import NodeLoggingCallback, TokenUsageCallback
-from .opik_tracing import configure_opik, create_opik_trace, get_opik_project, is_opik_enabled
+from .opik_tracing import (
+    configure_opik,
+    create_opik_trace,
+    get_opik_project,
+    is_opik_enabled,
+)
 from .token_tracker import (
     TokenUsage,
     TokenUsageTracker,

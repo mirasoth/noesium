@@ -1629,7 +1629,12 @@ class TestTacitusAgentProgressStreaming:
                     "knowledge_gap": "Need more sources",
                 }
             }
-            yield {"web_research": {"search_query": ["q2"], "sources_gathered": [{"url": "http://test.com"}]}}
+            yield {
+                "web_research": {
+                    "search_query": ["q2"],
+                    "sources_gathered": [{"url": "http://test.com"}],
+                }
+            }
             yield {"reflection": {"is_sufficient": True, "research_loop_count": 2}}
             yield {"finalize_answer": {"messages": [MagicMock(content="Done")]}}
 
@@ -1761,13 +1766,19 @@ class TestEndToEndStreamingIntegration:
                 type=ProgressEventType.SUBAGENT_PROGRESS,
                 subagent_id="browser_use",
                 summary="[browser_use] Navigating...",
-                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
+                metadata={
+                    "child_event_type": "tool.start",
+                    "agent_type": "browser_use",
+                },
             ),
             ProgressEvent(
                 type=ProgressEventType.SUBAGENT_PROGRESS,
                 subagent_id="browser_use",
                 summary="[browser_use] Clicking...",
-                metadata={"child_event_type": "tool.start", "agent_type": "browser_use"},
+                metadata={
+                    "child_event_type": "tool.start",
+                    "agent_type": "browser_use",
+                },
             ),
             ProgressEvent(
                 type=ProgressEventType.SUBAGENT_END,

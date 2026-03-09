@@ -250,7 +250,7 @@ class AskuraAgent(BaseGraphicAgent):
             session_id=state.session_id,
             is_complete=state.is_complete,
             confidence=self._calculate_confidence(state),
-            next_actions=[state.next_action_plan.next_action] if state.next_action_plan else [],
+            next_actions=([state.next_action_plan.next_action] if state.next_action_plan else []),
             requires_user_input=state.requires_user_input,
             metadata={
                 "turns": state.turns,
@@ -327,7 +327,10 @@ class AskuraAgent(BaseGraphicAgent):
 
             # Use LLM to make routing decision
             routing_decision = self.llm.structured_completion(
-                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
                 response_model=MessageRoutingDecision,
                 temperature=0.2,
                 max_tokens=300,
@@ -419,7 +422,10 @@ class AskuraAgent(BaseGraphicAgent):
             logger.warning("InformationExtractor: No messages to extract information from")
             return {"pending_extraction": False}
 
-        last_user_msg = next((msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)), None)
+        last_user_msg = next(
+            (msg for msg in reversed(state.messages) if isinstance(msg, HumanMessage)),
+            None,
+        )
         if not last_user_msg:
             logger.warning("InformationExtractor: No last user message to extract information from")
             return {"pending_extraction": False}
@@ -503,7 +509,10 @@ class AskuraAgent(BaseGraphicAgent):
         self.logger.info(f"Cleared {session_count} sessions")
 
     async def run(
-        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+        self,
+        user_message: str,
+        context: Dict[str, Any] = None,
+        config: Optional[RunnableConfig] = None,
     ) -> str:
         """Run the agent with a user message and context. Required by BaseAgent."""
         # Create a temporary user ID for standalone run
@@ -511,7 +520,10 @@ class AskuraAgent(BaseGraphicAgent):
         return response.message
 
     async def arun(
-        self, user_message: str, context: Dict[str, Any] = None, config: Optional[RunnableConfig] = None
+        self,
+        user_message: str,
+        context: Dict[str, Any] = None,
+        config: Optional[RunnableConfig] = None,
     ) -> str:
         """Async alias for run()."""
         return await self.run(user_message, context, config)

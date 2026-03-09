@@ -18,7 +18,10 @@ class ConcreteRoutingStrategy(BaseRoutingStrategy):
     def route(self, query: str) -> RoutingResult:
         """Mock implementation."""
         return self._create_result(
-            tier=ModelTier.FAST, confidence=0.8, complexity_score=ComplexityScore(total=0.5), metadata={"test": "mock"}
+            tier=ModelTier.FAST,
+            confidence=0.8,
+            complexity_score=ComplexityScore(total=0.5),
+            metadata={"test": "mock"},
         )
 
     def get_strategy_name(self) -> str:
@@ -100,7 +103,10 @@ class TestBaseRoutingStrategy:
         metadata = {"test": "data"}
 
         result = strategy._create_result(
-            tier=ModelTier.POWER, confidence=0.9, complexity_score=complexity_score, metadata=metadata
+            tier=ModelTier.POWER,
+            confidence=0.9,
+            complexity_score=complexity_score,
+            metadata=metadata,
         )
 
         assert isinstance(result, RoutingResult)
@@ -141,7 +147,9 @@ class TestBaseRoutingStrategy:
 
             def route(self, query: str) -> RoutingResult:
                 return self._create_result(
-                    tier=ModelTier.FAST, confidence=0.5, complexity_score=ComplexityScore(total=0.5)
+                    tier=ModelTier.FAST,
+                    confidence=0.5,
+                    complexity_score=ComplexityScore(total=0.5),
                 )
 
             # Missing get_strategy_name implementation

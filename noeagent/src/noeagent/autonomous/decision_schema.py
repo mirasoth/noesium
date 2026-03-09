@@ -126,8 +126,12 @@ class CreateGoalDecision(Decision):
     action: DecisionAction = DecisionAction.CREATE_GOAL
     goal_description: str = Field(description="Description of the new goal to create")
     goal_priority: int = Field(
-        default=50, ge=0, le=100, description="Priority for the new goal (0-100, higher = more important)"
+        default=50,
+        ge=0,
+        le=100,
+        description="Priority for the new goal (0-100, higher = more important)",
     )
     parent_goal_id: str | None = Field(
-        default=None, description="Parent goal ID if this is a sub-goal (for hierarchical planning)"
+        default=None,
+        description="Parent goal ID if this is a sub-goal (for hierarchical planning)",
     )

@@ -289,7 +289,9 @@ class GmailToolkit(AsyncBaseToolkit):
 
         # Initialize Gmail service
         self.gmail_service = GmailService(
-            credentials_file=credentials_file, token_file=token_file, access_token=access_token
+            credentials_file=credentials_file,
+            token_file=token_file,
+            access_token=access_token,
         )
 
         if not access_token and not credentials_file:
@@ -503,7 +505,9 @@ class GmailToolkit(AsyncBaseToolkit):
 
             # Get emails
             emails = await self.gmail_service.get_recent_emails(
-                max_results=20, query=query, time_filter=time_filter  # Check more emails for verification codes
+                max_results=20,
+                query=query,
+                time_filter=time_filter,  # Check more emails for verification codes
             )
 
             if not emails:

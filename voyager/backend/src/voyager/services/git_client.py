@@ -100,7 +100,7 @@ class GitClient:
         def _status() -> dict[str, Any]:
             repo = Repo(str(repo_path))
             return {
-                "branch": repo.active_branch.name if not repo.head.is_detached else "DETACHED",
+                "branch": (repo.active_branch.name if not repo.head.is_detached else "DETACHED"),
                 "is_dirty": repo.is_dirty(untracked_files=True),
                 "untracked_files": repo.untracked_files,
                 "changed_files": [item.a_path for item in repo.index.diff(None)],

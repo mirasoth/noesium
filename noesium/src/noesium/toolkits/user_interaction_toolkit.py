@@ -111,7 +111,10 @@ class UserInteractionToolkit(AsyncBaseToolkit):
             return ""
 
     async def ask_user(
-        self, question: str, expected_type: str = "text", validation_pattern: Optional[str] = None
+        self,
+        question: str,
+        expected_type: str = "text",
+        validation_pattern: Optional[str] = None,
     ) -> str:
         """
         Ask the user a question and wait for their response.
@@ -168,7 +171,11 @@ class UserInteractionToolkit(AsyncBaseToolkit):
             if expected_type == "yes_no":
                 response = response.lower()
                 if response not in ["yes", "no", "y", "n", "true", "false", "1", "0"]:
-                    return await self.ask_user("Please answer with yes/no (or y/n):", expected_type, validation_pattern)
+                    return await self.ask_user(
+                        "Please answer with yes/no (or y/n):",
+                        expected_type,
+                        validation_pattern,
+                    )
                 # Normalize response
                 response = "yes" if response in ["yes", "y", "true", "1"] else "no"
 
@@ -176,14 +183,20 @@ class UserInteractionToolkit(AsyncBaseToolkit):
                 try:
                     float(response)  # Validate it's a number
                 except ValueError:
-                    return await self.ask_user("Please enter a valid number:", expected_type, validation_pattern)
+                    return await self.ask_user(
+                        "Please enter a valid number:",
+                        expected_type,
+                        validation_pattern,
+                    )
 
             elif validation_pattern:
                 import re
 
                 if not re.match(validation_pattern, response):
                     return await self.ask_user(
-                        f"Invalid format. Please try again: {question}", expected_type, validation_pattern
+                        f"Invalid format. Please try again: {question}",
+                        expected_type,
+                        validation_pattern,
                     )
 
         # Record the interaction

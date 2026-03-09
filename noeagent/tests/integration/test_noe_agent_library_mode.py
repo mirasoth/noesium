@@ -255,12 +255,24 @@ class TestProgressExposure:
                     "messages": [
                         AIMessage(
                             content="",
-                            tool_calls=[{"name": "test_tool", "args": {"x": 1}, "id": "call_1", "type": "tool_call"}],
+                            tool_calls=[
+                                {
+                                    "name": "test_tool",
+                                    "args": {"x": 1},
+                                    "id": "call_1",
+                                    "type": "tool_call",
+                                }
+                            ],
                         )
                     ]
                 }
             }
-            yield {"tool_node": {"tool_results": [{"tool": "test_tool", "result": "ok"}], "messages": []}}
+            yield {
+                "tool_node": {
+                    "tool_results": [{"tool": "test_tool", "result": "ok"}],
+                    "messages": [],
+                }
+            }
             yield {"finalize": {"final_answer": "Done.", "messages": []}}
 
         mock_compiled.astream = fake_astream

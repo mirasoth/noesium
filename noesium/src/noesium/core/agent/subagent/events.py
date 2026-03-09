@@ -85,7 +85,10 @@ class SubagentProgressEvent:
 
     def is_terminal(self) -> bool:
         """Check if this is a terminal event (END or ERROR)."""
-        return self.event_type in (SubagentEventType.SUBAGENT_END, SubagentEventType.SUBAGENT_ERROR)
+        return self.event_type in (
+            SubagentEventType.SUBAGENT_END,
+            SubagentEventType.SUBAGENT_ERROR,
+        )
 
     def is_hitl_request(self) -> bool:
         """Check if this event requires human input."""

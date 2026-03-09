@@ -3,7 +3,13 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
-from ...adapters.llm_adapter import BaseChatModel, BaseMessage, ContentImage, ContentText, SystemMessage
+from ...adapters.llm_adapter import (
+    BaseChatModel,
+    BaseMessage,
+    ContentImage,
+    ContentText,
+    SystemMessage,
+)
 from ...browser.views import BrowserStateSummary
 from ...filesystem.file_system import FileSystem
 from ...observability import observe_debug
@@ -282,7 +288,8 @@ class MessageManager:
                 elif step_number > 0:
                     # Error case for steps > 0
                     history_item = HistoryItem(
-                        step_number=step_number, error="Agent failed to output in the right format."
+                        step_number=step_number,
+                        error="Agent failed to output in the right format.",
                     )
                     self.state.agent_history_items.append(history_item)
         else:
@@ -544,7 +551,10 @@ class MessageManager:
 
         from ...adapters.llm_adapter import SystemMessage
 
-        messages = [SystemMessage(content=system_prompt), UserMessage(content=compaction_input)]
+        messages = [
+            SystemMessage(content=system_prompt),
+            UserMessage(content=compaction_input),
+        ]
         try:
             response = await llm.ainvoke(messages)
             summary = (response.completion or "").strip()

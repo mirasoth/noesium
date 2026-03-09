@@ -52,7 +52,7 @@ class MemuProvider(MemoryProvider):
         item = MemoryItem(
             id=key,
             content=str(value),
-            memory_type=content_type if content_type in ("message", "fact", "note") else "fact",
+            memory_type=(content_type if content_type in ("message", "fact", "note") else "fact"),
             metadata=metadata or {},
         )
         await self._store.add(item)

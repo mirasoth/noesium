@@ -110,7 +110,8 @@ class Element:
             # Method 1: Try DOM.getContentQuads first (best for inline elements and complex layouts)
             try:
                 content_quads_result = await self._client.send.DOM.getContentQuads(
-                    params={"backendNodeId": self._backend_node_id}, session_id=self._session_id
+                    params={"backendNodeId": self._backend_node_id},
+                    session_id=self._session_id,
                 )
                 if "quads" in content_quads_result and content_quads_result["quads"]:
                     quads = content_quads_result["quads"]
@@ -121,7 +122,8 @@ class Element:
             if not quads:
                 try:
                     box_model = await self._client.send.DOM.getBoxModel(
-                        params={"backendNodeId": self._backend_node_id}, session_id=self._session_id
+                        params={"backendNodeId": self._backend_node_id},
+                        session_id=self._session_id,
                     )
                     if "model" in box_model and "content" in box_model["model"]:
                         content_quad = box_model["model"]["content"]
@@ -146,7 +148,8 @@ class Element:
             if not quads:
                 try:
                     result = await self._client.send.DOM.resolveNode(
-                        params={"backendNodeId": self._backend_node_id}, session_id=self._session_id
+                        params={"backendNodeId": self._backend_node_id},
+                        session_id=self._session_id,
                     )
                     if "object" in result and "objectId" in result["object"]:
                         object_id = result["object"]["objectId"]
@@ -174,7 +177,12 @@ class Element:
                         if "result" in bounds_result and "value" in bounds_result["result"]:
                             rect = bounds_result["result"]["value"]
                             # Convert rect to quad format
-                            x, y, w, h = rect["x"], rect["y"], rect["width"], rect["height"]
+                            x, y, w, h = (
+                                rect["x"],
+                                rect["y"],
+                                rect["width"],
+                                rect["height"],
+                            )
                             quads = [
                                 [
                                     x,
@@ -194,7 +202,8 @@ class Element:
             if not quads:
                 try:
                     result = await self._client.send.DOM.resolveNode(
-                        params={"backendNodeId": self._backend_node_id}, session_id=self._session_id
+                        params={"backendNodeId": self._backend_node_id},
+                        session_id=self._session_id,
                     )
                     if "object" not in result or "objectId" not in result["object"]:
                         raise Exception(
@@ -261,7 +270,8 @@ class Element:
             # Scroll element into view
             try:
                 await self._client.send.DOM.scrollIntoViewIfNeeded(
-                    params={"backendNodeId": self._backend_node_id}, session_id=self._session_id
+                    params={"backendNodeId": self._backend_node_id},
+                    session_id=self._session_id,
                 )
                 await asyncio.sleep(0.05)  # Wait for scroll to complete
             except Exception:
@@ -330,7 +340,8 @@ class Element:
                 # Fall back to JavaScript click via CDP
                 try:
                     result = await self._client.send.DOM.resolveNode(
-                        params={"backendNodeId": self._backend_node_id}, session_id=self._session_id
+                        params={"backendNodeId": self._backend_node_id},
+                        session_id=self._session_id,
                     )
                     if "object" not in result or "objectId" not in result["object"]:
                         raise Exception(
@@ -1082,7 +1093,12 @@ class Element:
         return False
 
     async def _focus_element_simple(
-        self, backend_node_id: int, object_id: str, cdp_client, session_id: str, input_coordinates=None
+        self,
+        backend_node_id: int,
+        object_id: str,
+        cdp_client,
+        session_id: str,
+        input_coordinates=None,
     ) -> bool:
         """Focus element using multiple strategies with robust fallbacks."""
         try:

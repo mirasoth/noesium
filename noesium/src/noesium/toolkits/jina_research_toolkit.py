@@ -136,7 +136,9 @@ Please provide a clear, concise answer based on the content above. If the conten
 
         try:
             response = self.llm_client.completion(
-                messages=[{"role": "user", "content": prompt}], temperature=0.1, max_tokens=500
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=500,
             )
             return response.strip()
         except Exception as e:
@@ -154,7 +156,9 @@ Please list any URLs, links, or references mentioned in the content that could p
 
         try:
             response = self.llm_client.completion(
-                messages=[{"role": "user", "content": prompt}], temperature=0.1, max_tokens=200
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=200,
             )
             return response.strip()
         except Exception as e:

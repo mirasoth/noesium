@@ -44,7 +44,14 @@ def get_test_variables(prompt_name: str) -> dict:
 def test_all_prompts_load():
     """Test all prompts load from package resources."""
     pm = get_prompt_manager()
-    prompt_names = ["ask_system", "agent_system", "planning", "reflection", "revise_plan", "finalize"]
+    prompt_names = [
+        "ask_system",
+        "agent_system",
+        "planning",
+        "reflection",
+        "revise_plan",
+        "finalize",
+    ]
 
     for name in prompt_names:
         variables = get_test_variables(name)

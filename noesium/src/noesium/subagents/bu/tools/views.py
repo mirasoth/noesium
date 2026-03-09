@@ -27,7 +27,8 @@ class InputTextAction(BaseModel):
     index: int = Field(ge=0, description="index of the element to input text into, 0 is the page")
     text: str
     clear_existing: bool = Field(
-        default=True, description="set True to clear existing text, False to append to existing text"
+        default=True,
+        description="set True to clear existing text, False to append to existing text",
     )
 
 

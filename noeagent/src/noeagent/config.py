@@ -128,7 +128,13 @@ DEFAULT_AGENT_SUBAGENTS = [
         description="Web automation agent for browser interaction, form filling, and real-time web data extraction",
         enabled=True,
         requires_explicit_command=False,  # Can be auto-routed by LLM
-        task_types=["web_browsing", "form_filling", "web_scraping", "dom_interaction", "screenshot"],
+        task_types=[
+            "web_browsing",
+            "form_filling",
+            "web_scraping",
+            "dom_interaction",
+            "screenshot",
+        ],
         use_cases=[
             "Find real-time stock prices from financial websites",
             "Book flights or hotels on travel sites",
@@ -137,8 +143,23 @@ DEFAULT_AGENT_SUBAGENTS = [
             "Extract data from interactive web applications",
             "Take screenshots of web pages",
         ],
-        keywords=["browser", "click", "navigate", "form", "button", "website", "real-time", "stock price", "booking"],
-        preferred_for=["real-time data", "interactive websites", "form submission", "multi-step web workflows"],
+        keywords=[
+            "browser",
+            "click",
+            "navigate",
+            "form",
+            "button",
+            "website",
+            "real-time",
+            "stock price",
+            "booking",
+        ],
+        preferred_for=[
+            "real-time data",
+            "interactive websites",
+            "form submission",
+            "multi-step web workflows",
+        ],
     ),
     AgentSubagentConfig(
         name=SUBAGENT_TACITUS,
@@ -146,7 +167,12 @@ DEFAULT_AGENT_SUBAGENTS = [
         description="Research agent with iterative query generation, multi-source web search, and answer synthesis",
         enabled=True,
         requires_explicit_command=True,  # MUST be invoked via /research or /deep_research command
-        task_types=["web_research", "information_synthesis", "multi_source_search", "fact_checking"],
+        task_types=[
+            "web_research",
+            "information_synthesis",
+            "multi_source_search",
+            "fact_checking",
+        ],
         use_cases=[
             "Research a topic from multiple sources",
             "Find and synthesize information from the web",
@@ -154,8 +180,21 @@ DEFAULT_AGENT_SUBAGENTS = [
             "Verify facts across different sources",
             "Generate comprehensive research reports",
         ],
-        keywords=["research", "search", "synthesize", "information", "multiple sources", "analyze", "compare"],
-        preferred_for=["information gathering", "multi-source research", "complex questions", "fact verification"],
+        keywords=[
+            "research",
+            "search",
+            "synthesize",
+            "information",
+            "multiple sources",
+            "analyze",
+            "compare",
+        ],
+        preferred_for=[
+            "information gathering",
+            "multi-source research",
+            "complex questions",
+            "fact verification",
+        ],
     ),
 ]
 
@@ -183,7 +222,9 @@ def _builtin_from_global_config(
                 description=s.description or (d.description if d else None),
                 enabled=getattr(s, "enabled", d.enabled if d else True),
                 requires_explicit_command=getattr(
-                    s, "requires_explicit_command", d.requires_explicit_command if d else False
+                    s,
+                    "requires_explicit_command",
+                    d.requires_explicit_command if d else False,
                 ),
                 task_types=list(getattr(s, "task_types", d.task_types if d else [])),
                 use_cases=list(getattr(s, "use_cases", d.use_cases if d else [])),
@@ -292,7 +333,8 @@ class NoeConfig(BaseModel):
 
     # LLM warm-up configuration
     llm_warmup_on_init: bool = Field(
-        default=True, description="Send warm-up request to LLM during initialization to reduce first-query latency"
+        default=True,
+        description="Send warm-up request to LLM during initialization to reduce first-query latency",
     )
     llm_warmup_timeout: int = Field(default=30, description="Timeout in seconds for LLM warm-up request")
 

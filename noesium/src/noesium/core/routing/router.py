@@ -92,7 +92,9 @@ class ModelRouter:
             )
 
     def get_recommended_model_params(
-        self, routing_result: RoutingResult, model_configs: Optional[Dict[ModelTier, Dict[str, Any]]] = None
+        self,
+        routing_result: RoutingResult,
+        model_configs: Optional[Dict[ModelTier, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Get recommended model parameters based on routing result.
@@ -133,7 +135,9 @@ class ModelRouter:
         return default_configs.get(tier, default_configs[ModelTier.FAST])
 
     def route_and_configure(
-        self, query: str, model_configs: Optional[Dict[ModelTier, Dict[str, Any]]] = None
+        self,
+        query: str,
+        model_configs: Optional[Dict[ModelTier, Dict[str, Any]]] = None,
     ) -> tuple[RoutingResult, Dict[str, Any]]:
         """
         Route query and return both result and recommended model configuration.
@@ -199,7 +203,9 @@ class ModelRouter:
         logger.info(f"Registered new routing strategy: {name}")
 
     def _setup_lite_client(
-        self, lite_client: Optional[BaseLLMClient], lite_client_config: Optional[Dict[str, Any]]
+        self,
+        lite_client: Optional[BaseLLMClient],
+        lite_client_config: Optional[Dict[str, Any]],
     ) -> Optional[BaseLLMClient]:
         """Setup lite model client if needed."""
         if lite_client:
