@@ -36,7 +36,7 @@ jobs:
 
     - name: Build package
       working-directory: noesium
-      run: uv build
+      run: uv build --out-dir dist/
 
     - name: Verify build artifacts
       working-directory: noesium
@@ -53,6 +53,6 @@ jobs:
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        packages-dir: dist/
+        packages-dir: noesium/dist/
         verbose: true
         print-hash: true
