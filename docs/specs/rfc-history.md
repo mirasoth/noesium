@@ -2,8 +2,8 @@
 
 This document tracks all RFC lifecycle events in chronological order (newest first).
 
-**Last Updated**: 2026-03-07
-**Refinement**: Corrected RFC numbers in historical entries to reflect renumbering
+**Last Updated**: 2026-03-09
+**Refinement**: Removed deprecated event-sourcing infrastructure from all specs
 
 ---
 
@@ -21,6 +21,28 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 ---
 
 ## Change History
+
+### 2026-03-09 (Complete Removal)
+
+Complete removal of deprecated event-sourcing infrastructure from specs. Specs now align with current codebase implementation.
+
+**Removed from all specs**:
+- EventEnvelope, AgentRef, TraceContext, SignatureBlock, DomainEvent
+- EventStore, EnvelopeBridge, ProjectionEngine, BaseProjection
+- EventSourcedProvider, DurableMemory, CognitiveProjection
+- KernelExecutor with event emission
+
+**Retained Implementation**:
+- ProgressEvent for TUI streaming
+- CognitiveContext (RFC-1010) for state continuity
+- MemuProvider for persistent memory
+- Local changelog in CapabilityRegistry
+
+- **Rewritten**: RFC-1001 - Event and Progress Streaming Specification; simplified to document ProgressEvent-based streaming; removed EventEnvelope, AgentRef, TraceContext, SignatureBlock sections entirely; reduced from 465 to ~100 lines
+- **Rewritten**: RFC-2001 - Core Framework Implementation Design; removed Event System (EventEnvelope/EventStore/DomainEvent), Projection Layer, Kernel Executor sections; updated to document current package structure; reduced from 934 to ~221 lines
+- **Rewritten**: RFC-2102 - Memory Implementation Design; removed EventSourcedProvider section entirely; MemuProvider is now the primary persistent provider; reduced from 549 to ~280 lines
+- **Rewritten**: RFC-2103 - Tool Implementation Design; removed DomainEvent-based tool events; simplified ToolExecutor without event emission; reduced from 527 to ~310 lines
+- **Reference Updated**: rfc-history.md - Documented complete removal
 
 ### 2026-03-08
 

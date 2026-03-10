@@ -2,8 +2,8 @@
 
 Authoritative terminology reference for noesium RFC specifications.
 
-**Last Updated**: 2026-03-07
-**Refinement**: Updated all RFC references to reflect renumbering from rfc-renumbering-map.md
+**Last Updated**: 2026-03-09
+**Refinement**: Removed deprecated terms (AgentRef, TraceContext, SignatureBlock, DomainEvent, EventEnvelope, EventStore, etc.) following implementation simplification
 
 ---
 
@@ -23,7 +23,6 @@ Authoritative terminology reference for noesium RFC specifications.
 | Agent Kernel | RFC-0001 §5.2 | Deterministic, graph-based execution runtime within each agent |
 | Agent Kernel Pod | RFC-1003 §5.1 | Control plane pod responsible for ToolCall generation, capability validation, and effect executor dispatch |
 | AgentAction | RFC-1005 §12.1 | NoeAgent action model containing thought and exactly one of: tool_calls, subagent, or text_response |
-| AgentRef | RFC-1001 §5 | Producer identity structure containing agent_id, agent_type, runtime_id, instance_id |
 | AtomicTool | RFC-2003 §6 | Smallest executable unit in the tool system with schema and capability metadata |
 | BaseAgent | RFC-1001 §11 | Abstract base class for all Noesium agents |
 | BaseGraphicAgent | RFC-1001 §11 | Base class for LangGraph-based agents |
@@ -31,33 +30,22 @@ Authoritative terminology reference for noesium RFC specifications.
 | TacitusAgent | RFC-1002 §5.3 | Research agent with iterative loops and source management |
 | BaseSubagentRuntime | RFC-1006 §5.5 | Protocol for subagent execution: invoke, invoke_stream, cancel, cleanup |
 | Capability | RFC-1003 §4.1 | Typed contract declaring an agent's available functions |
-| Capability Registry | RFC-1003 §4.3 | Projection-based registry for capability discovery |
-| Causation ID | RFC-1001 §7.1 | References the event_id that directly caused an event |
+| Capability Registry | RFC-1003 §4.3 | Registry for capability discovery with local changelog |
 | Cognitive Loop | RFC-1005 §7 | Continuous runtime loop that drives autonomous execution by repeatedly selecting goals, generating reasoning, performing actions, and updating memory |
-| Cognitive Projection | RFC-1002 §4.3.2 | Deterministic structural projection for knowledge (conversation history, reasoning trace) |
 | CognitiveContext | RFC-1010 §5 | Minimal cognitive state model with 3 fields (goal, findings, scratchpad) for context continuity |
 | Conversation Agent | RFC-1002 §5.2 | Agent archetype for multi-turn HITL conversations |
-| Correlation ID | RFC-1001 §7.2 | Logical grouping identifier shared by related events |
 | Core Layer | RFC-1007 §5.3.1 | Framework primitives (noesium.core); zero knowledge of application |
 | Dependency Direction | RFC-1007 §4 | Rule: core ← toolkits ← subagents ← noeagent; lower layers cannot import higher |
 | Determinism Class | RFC-1003 §4.1 | Classification: deterministic or nondeterministic |
-| Domain Event | RFC-1001 §6.2 | Typed business-level event that produces an EventEnvelope |
-| Durable Memory | RFC-1002 §5.2 | Event-sourced canonical memory layer (task history, structured knowledge) |
 | Effect Executor | RFC-1004 §5.2 | Isolated sandboxed unit that runs one ToolCall and returns EffectResult; distinct from Subagent (cognitive agent) |
 | Effect Node | RFC-1004 §10 | Record of external tool execution with input hash, tool spec, metadata, output, and exit status |
 | Effect Result | RFC-1004 §7 | Structured result returned from sandboxed tool execution containing tool_id, exit_code, output, and metadata |
-| Envelope Bridge | RFC-1001 §6.4 | Bidirectional adapter between bubus BaseEvent and EventEnvelope |
 | Ephemeral Memory | RFC-1002 §5.1 | Session-scoped working memory, cleared on restart |
 | Event Bus | RFC-0001 §5.1 | Topic-based transport layer for inter-agent event routing |
-| Event Envelope | RFC-1001 §3 | Canonical immutable structure wrapping every event in the system |
 | Event Queue | RFC-1007 §10 | Internal queue maintaining pending events and processing state for sequential deterministic execution |
-| Event Store | RFC-0001 §5.3 | Append-only event log per agent |
 | Event System | RFC-1007 §1 | Reactive layer enabling the autonomous agent runtime to detect and respond to environment changes through unified event model and trigger rules |
-| EventSourcedProvider | RFC-2002 §6.2 | Persistent memory provider wrapping EventStore and CognitiveProjection |
 | Execution Mode | RFC-1001 §12.3 | Configuration: strict (event-mediated), pragmatic (direct), or sandbox |
 | GitHub Client | RFC-9001 §9.3 | Backend service for Git operations (clone, pull, commit, push) |
-| Execution Projection | RFC-1002 §4.3.1 | Strict deterministic projection for workflow state, task graph, retry counters |
-| Federated Projection | RFC-1002 §6.3 | Composite projection across multiple agents |
 | FrameworkConfig | RFC-1007 §5.3.1 | Framework-level configuration (renamed from core config) |
 | Goal | RFC-1006 §5 | Objective the agent should attempt to complete, with id, description, priority, status, and lifecycle |
 | Goal Engine | RFC-1005 §6 | Minimal component managing goal creation, prioritization, scheduling, and lifecycle without performing reasoning |
@@ -65,21 +53,15 @@ Authoritative terminology reference for noesium RFC specifications.
 | GraphMemoryProvider | RFC-2002 §6.4 | Future memory provider for entity-relation graph storage |
 | HITL | RFC-1002 §9 | Human-in-the-loop: interrupt/resume pattern for human interaction |
 | Indexed Memory | RFC-2001 §5.3 | Semantic search overlay tier derived from Persistent Memory |
-| Kernel Executor | RFC-1001 §7.1 | Wrapper over LangGraph with event emission and checkpointing |
 | Memory Entry | RFC-2002 §4.1 | Keyed memory record with content_type, metadata, and provider_id |
-| Memory Hierarchy | RFC-1002 §5 | Three-layer memory: ephemeral, durable, semantic |
 | Memory Manager | RFC-2002 §8 | Unified facade routing operations to registered memory providers |
 | Memory Provider | RFC-2001 §6.1 | Abstract contract for memory backends with write/read/search/delete |
 | Memory Tier | RFC-2001 §5 | Classification: working, persistent, or indexed |
 | MemuProvider | RFC-2002 §6.3 | Persistent memory provider wrapping MemU file-based memory system |
 | Voyager | RFC-9000 §1 | Personal coding assistant webserver built on NoeAgent |
-| Node Result | RFC-1001 §7.1 | Output from a graph node: state_delta + emitted events |
 | OpenSandbox Executor | RFC-1003 §5.3 | Data plane component providing hardened container isolation for tool execution |
-| Partition Key | RFC-1001 §8.2 | Determines event stream partition for ordering guarantees |
 | Persistent Memory | RFC-2001 §5.2 | Cross-session durable memory tier surviving restarts |
-| Projection | RFC-1002 §4.2 | Deterministic fold over event stream: P(State, Event) → State |
-| Projection Engine | RFC-1001 §8.2 | Manages projection lifecycle: build, cache, invalidate, rebuild |
-| Projection Layer | RFC-0001 §5.4 | Derives current agent state from the event log |
+| ProgressEvent | RFC-1010 §8 | Simple event for TUI streaming with type, message, metadata, timestamp |
 | Recall Protocol | RFC-2001 §9 | Unified query interface across all memory providers with result merging |
 | Recall Query | RFC-2002 §4.3 | Structured query with scope, content_types, and metadata filters |
 | Repository | RFC-9001 §6.1 | Cloned Git repository with URL, local path, and sync state |
@@ -90,7 +72,6 @@ Authoritative terminology reference for noesium RFC specifications.
 | Session Worker | RFC-1003 §5.2 | Logical worker representing a user session with memory namespace, execution stack, and capability scope |
 | State Manager | RFC-9001 §9.4 | File-based persistence service for tasks, sessions, and configuration |
 | Side-Effect Class | RFC-1003 §4.1 | Classification: pure, idempotent, or external |
-| Signature Block | RFC-1001 §11 | Optional cryptographic signature covering the canonicalized envelope |
 | Skill | RFC-2003 §9 | Named composition of AtomicTools with input/output contract and orchestration logic |
 | Skill Registry | RFC-2004 §9 | Registry for skill discovery and management |
 | Subagent | RFC-1005 §5.1 | Delegated cognitive agent (AGENT/CLI_AGENT); extends orchestrator's reasoning; stateful, session-scoped |
@@ -113,7 +94,7 @@ Authoritative terminology reference for noesium RFC specifications.
 | Tool Call | RFC-1005 §5.1 | Execution modality invoking a stateless capability as a procedure |
 | Tool Call Action | RFC-1005 §12.1 | NoeAgent action representing a single tool invocation with name and args |
 | Tool Context | RFC-2004 §4.2 | Execution context with agent identity, permissions, and trace |
-| Tool Executor | RFC-2004 §5 | Event-wrapping execution engine for AtomicTools with permission checking |
+| Tool Executor | RFC-2004 §5 | Execution engine for AtomicTools with permission checking |
 | Tool Node | RFC-1005 §12.3 | LangGraph node executing tool calls via ToolExecutor |
 | Tool Permission | RFC-2003 §10 | Declared permission requirement: fs:read, shell:execute, net:outbound, etc. |
 | Tool Registry | RFC-2004 §8 | Capability-based registry for AtomicTool discovery and lookup |
@@ -121,7 +102,6 @@ Authoritative terminology reference for noesium RFC specifications.
 | Toolkits Layer | RFC-1007 §5.3.2 | noesium.toolkits; built-in tool implementations depending on core |
 | Toolify | RFC-1001 §12 | Tool system with registry, configuration, and MCP integration |
 | Toolkit Registry | RFC-1001 §12 | Auto-discovery registry for built-in and custom toolkits |
-| Trace Context | RFC-1001 §6 | Distributed tracing structure: trace_id, span_id, parent_span_id, depth |
 | Trigger Rules | RFC-1007 §8 | Rules that convert events into goals by defining conditions and goal templates |
 | Working Memory | RFC-2001 §5.1 | Session-scoped ephemeral memory tier, dict-backed, no IO |
 | WorkingMemoryProvider | RFC-2002 §6.1 | Working memory provider wrapping in-process dict storage |
