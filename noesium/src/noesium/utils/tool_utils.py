@@ -12,8 +12,6 @@ from typing import Any
 
 from noesium.core.capability.providers import ToolCapabilityProvider
 from noesium.core.capability.registry import CapabilityRegistry
-from noesium.core.event.envelope import AgentRef
-from noesium.core.event.store import InMemoryEventStore
 from noesium.core.toolify.adapters.builtin_adapter import BuiltinAdapter
 from noesium.core.toolify.atomic import ToolContext, ToolPermission
 from noesium.core.toolify.executor import ToolExecutor
@@ -68,15 +66,8 @@ class ToolHelper:
         if self._initialized:
             return
 
-        # Create event store
-        event_store = InMemoryEventStore()
-        producer = AgentRef(agent_id=self.agent_id, agent_type="subagent")
-
-        # Create tool executor
-        self.tool_executor = ToolExecutor(
-            event_store=event_store,
-            producer=producer,
-        )
+        # Create tool executor (simplified per RFC-1009)
+        self.tool_executor = ToolExecutor()
 
         # Create tool context with permissions
         self.tool_context = ToolContext(

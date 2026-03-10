@@ -508,7 +508,8 @@ class TestNoeConfig:
     def test_default_builtin_subagents(self):
         """Test that default built-in subagents are loaded."""
         cfg = NoeConfig()
-        assert len(cfg.builtin) == 2
+        # 5 builtin subagents: browser_use, tacitus, plan, explore, davinci
+        assert len(cfg.builtin) == 5
 
         browser_use = cfg.get_builtin_subagent("browser_use")
         assert browser_use is not None
@@ -524,7 +525,8 @@ class TestNoeConfig:
         """Test filtering enabled built-in subagents."""
         cfg = NoeConfig()
         enabled = cfg.get_enabled_builtin_subagents()
-        assert len(enabled) == 2
+        # 4 enabled: browser_use, tacitus, plan, explore (davinci is disabled)
+        assert len(enabled) == 4
         assert all(s.enabled for s in enabled)
 
     def test_create_browser_use_agent_respects_headless_config(self):
