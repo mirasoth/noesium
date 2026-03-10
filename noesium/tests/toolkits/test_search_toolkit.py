@@ -2,7 +2,7 @@
 Tests for JinaResearchToolkit functionality.
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -53,6 +53,8 @@ class TestJinaResearchToolkit:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.text = AsyncMock(return_value="# Test Content\n\nThis is test content.")
+        # raise_for_status is a sync method, use MagicMock not AsyncMock
+        mock_response.raise_for_status = MagicMock()
         mock_get.return_value.__aenter__.return_value = mock_response
 
         result = await jina_toolkit.get_web_content("https://example.com")

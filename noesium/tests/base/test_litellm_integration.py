@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from noesium.core.llm.litellm import LLMClient
 
 
-class TestResponse(BaseModel):
+class StructuredResponse(BaseModel):
     """Test Pydantic model for structured output."""
 
     answer: str
@@ -111,11 +111,13 @@ class TestLiteLLMIntegration:
         ]
 
         try:
-            response = client.structured_completion(messages=messages, response_model=TestResponse, temperature=0.1)
+            response = client.structured_completion(
+                messages=messages, response_model=StructuredResponse, temperature=0.1
+            )
 
             # Assertions
             assert response is not None
-            assert isinstance(response, TestResponse)
+            assert isinstance(response, StructuredResponse)
             assert response.answer.lower() == "paris"
             assert 0 <= response.confidence <= 1
             assert len(response.reasoning) > 0

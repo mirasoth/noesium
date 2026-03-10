@@ -99,7 +99,8 @@ class TestImageToolkit:
         """Test error handling when loading image from URL."""
         mock_response = AsyncMock()
         mock_response.status = 404
-        mock_response.raise_for_status.side_effect = Exception("HTTP 404")
+        # raise_for_status is a sync method, use MagicMock not AsyncMock
+        mock_response.raise_for_status = MagicMock(side_effect=Exception("HTTP 404"))
         mock_get.return_value.__aenter__.return_value = mock_response
 
         with pytest.raises(Exception):

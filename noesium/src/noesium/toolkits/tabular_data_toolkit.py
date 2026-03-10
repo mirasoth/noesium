@@ -229,7 +229,8 @@ class TabularDataToolkit(AsyncBaseToolkit):
 
                 # Additional statistics
                 null_count = df[col].isnull().sum()
-                null_percentage = (null_count / len(df)) * 100
+                # Avoid division by zero for empty dataframes
+                null_percentage = (null_count / len(df)) * 100 if len(df) > 0 else 0.0
                 unique_count = df[col].nunique()
 
                 col_info = {
