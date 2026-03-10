@@ -531,6 +531,8 @@ class TestNoeConfig:
 
     def test_create_browser_use_agent_respects_headless_config(self):
         """Test headless precedence: env var > config > default."""
+        from unittest.mock import patch
+
         from noeagent.agent import NoeAgent
         from noeagent.config import AgentSubagentConfig
 
@@ -539,64 +541,68 @@ class TestNoeConfig:
         # Save original env var state
         original_env = os.getenv("BROWSER_USE_HEADLESS")
 
-        try:
-            # Test 1: Config is used when no env var is set
-            os.environ.pop("BROWSER_USE_HEADLESS", None)
-            agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
+        # Mock LLM client to avoid API key requirement
+        mock_llm = MagicMock()
 
-            cfg_headed = AgentSubagentConfig(
-                name="browser_use",
-                agent_type="browser_use",
-                description="Web automation",
-                config={"headless": False},
-            )
-            bu_headed = agent._create_browser_use_agent(cfg_headed)
-            assert bu_headed.browser_profile.headless is False, "Config headless=False should work"
-
-            cfg_headless = AgentSubagentConfig(
-                name="browser_use",
-                agent_type="browser_use",
-                description="Web automation",
-                config={"headless": True},
-            )
-            bu_headless = agent._create_browser_use_agent(cfg_headless)
-            assert bu_headless.browser_profile.headless is True, "Config headless=True should work"
-
-            # Test 2: Default is used when neither env nor config is set
-            cfg_default = AgentSubagentConfig(
-                name="browser_use",
-                agent_type="browser_use",
-                description="Web automation",
-            )
-            bu_default = agent._create_browser_use_agent(cfg_default)
-            assert bu_default.browser_profile.headless is DEFAULT_HEADLESS, "Default should be used"
-
-            # Test 3: Env var overrides config (false overrides true)
-            os.environ["BROWSER_USE_HEADLESS"] = "false"
-            cfg_true = AgentSubagentConfig(
-                name="browser_use",
-                agent_type="browser_use",
-                config={"headless": True},
-            )
-            bu_override = agent._create_browser_use_agent(cfg_true)
-            assert bu_override.browser_profile.headless is False, "Env var should override config"
-
-            # Test 4: Env var overrides config (true overrides false)
-            os.environ["BROWSER_USE_HEADLESS"] = "true"
-            cfg_false = AgentSubagentConfig(
-                name="browser_use",
-                agent_type="browser_use",
-                config={"headless": False},
-            )
-            bu_override2 = agent._create_browser_use_agent(cfg_false)
-            assert bu_override2.browser_profile.headless is True, "Env var should override config"
-
-        finally:
-            # Restore original env var state
-            if original_env is not None:
-                os.environ["BROWSER_USE_HEADLESS"] = original_env
-            else:
+        with patch("noesium.core.llm.get_llm_client", return_value=mock_llm):
+            try:
+                # Test 1: Config is used when no env var is set
                 os.environ.pop("BROWSER_USE_HEADLESS", None)
+                agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT))
+
+                cfg_headed = AgentSubagentConfig(
+                    name="browser_use",
+                    agent_type="browser_use",
+                    description="Web automation",
+                    config={"headless": False},
+                )
+                bu_headed = agent._create_browser_use_agent(cfg_headed)
+                assert bu_headed.browser_profile.headless is False, "Config headless=False should work"
+
+                cfg_headless = AgentSubagentConfig(
+                    name="browser_use",
+                    agent_type="browser_use",
+                    description="Web automation",
+                    config={"headless": True},
+                )
+                bu_headless = agent._create_browser_use_agent(cfg_headless)
+                assert bu_headless.browser_profile.headless is True, "Config headless=True should work"
+
+                # Test 2: Default is used when neither env nor config is set
+                cfg_default = AgentSubagentConfig(
+                    name="browser_use",
+                    agent_type="browser_use",
+                    description="Web automation",
+                )
+                bu_default = agent._create_browser_use_agent(cfg_default)
+                assert bu_default.browser_profile.headless is DEFAULT_HEADLESS, "Default should be used"
+
+                # Test 3: Env var overrides config (false overrides true)
+                os.environ["BROWSER_USE_HEADLESS"] = "false"
+                cfg_true = AgentSubagentConfig(
+                    name="browser_use",
+                    agent_type="browser_use",
+                    config={"headless": True},
+                )
+                bu_override = agent._create_browser_use_agent(cfg_true)
+                assert bu_override.browser_profile.headless is False, "Env var should override config"
+
+                # Test 4: Env var overrides config (true overrides false)
+                os.environ["BROWSER_USE_HEADLESS"] = "true"
+                cfg_false = AgentSubagentConfig(
+                    name="browser_use",
+                    agent_type="browser_use",
+                    config={"headless": False},
+                )
+                bu_override2 = agent._create_browser_use_agent(cfg_false)
+                assert bu_override2.browser_profile.headless is True, "Env var should override config"
+
+            finally:
+                # Restore original env var state
+                if original_env is not None:
+                    os.environ["BROWSER_USE_HEADLESS"] = original_env
+                else:
+                    os.environ.pop("BROWSER_USE_HEADLESS", None)
 
     def test_ask_mode_overrides(self):
         cfg = NoeConfig(mode=NoeMode.ASK).effective()

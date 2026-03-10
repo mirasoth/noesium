@@ -147,6 +147,11 @@ class LLMClient(BaseLLMClient):
         error_str = str(e)
         return "max_tokens" in error_str and "Range of" in error_str
 
+    def _is_incomplete_response_error(self, e: Exception) -> bool:
+        """Check if the exception is due to incomplete response from max_tokens limit."""
+        error_str = str(e).lower()
+        return "incomplete" in error_str and "max_tokens" in error_str
+
     def _is_content_filter_error(self, e: Exception) -> bool:
         """Check if the exception is a content filtering/policy error (non-retryable).
 
@@ -335,6 +340,16 @@ class LLMClient(BaseLLMClient):
                     capped = self._extract_max_tokens_upper_limit(e)
                     logger.warning(f"max_tokens value out of range, capping to {capped} and retrying")
                     effective_max_tokens = capped
+                    continue
+                # Handle incomplete response due to max_tokens limit
+                if self._is_incomplete_response_error(e):
+                    # Double the max_tokens and retry (up to a reasonable limit)
+                    new_max_tokens = min((effective_max_tokens or 4096) * 2, 32768)
+                    logger.warning(
+                        f"Response incomplete due to max_tokens limit, "
+                        f"increasing from {effective_max_tokens} to {new_max_tokens} and retrying"
+                    )
+                    effective_max_tokens = new_max_tokens
                     continue
                 last_err = e
                 if i < attempts - 1:

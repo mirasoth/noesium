@@ -62,7 +62,7 @@ class PlanAgent(BaseGraphicAgent):
         llm_provider: str = "openai",
         max_planning_loops: int = 3,
         planning_temperature: float = 0.7,
-        planning_max_tokens: int = 4000,
+        planning_max_tokens: int = 8192,
         agent_id: str | None = None,
         working_directory: str | None = None,
     ):
@@ -72,7 +72,7 @@ class PlanAgent(BaseGraphicAgent):
             llm_provider: LLM provider to use
             max_planning_loops: Maximum planning refinement loops
             planning_temperature: Temperature for planning
-            planning_max_tokens: Max tokens for planning
+            planning_max_tokens: Max tokens for planning (default 8192 for complex structured output)
             agent_id: Optional agent ID (auto-generated if None)
             working_directory: Working directory for file operations
         """
@@ -238,7 +238,13 @@ Return ONLY the JSON object, no other text.
                 try:
                     # Sanitize file path: strip leading / to make it relative
                     if isinstance(file_path, str):
-                        file_path = file_path.lstrip("/")
+                        # Remove leading slashes and any leading ./ or ../
+                        sanitized_path = file_path.lstrip("/").lstrip("./")
+                        # Also handle paths like "docs/README.md" that might have been
+                        # returned with absolute path prefix
+                        if sanitized_path.startswith("../"):
+                            sanitized_path = sanitized_path[3:]
+                        file_path = sanitized_path
                     else:
                         logger.warning(f"Skipping non-string file path: {file_path}")
                         continue
@@ -277,20 +283,33 @@ Return ONLY the JSON object, no other text.
                 try:
                     # Handle search pattern - could be string or dict
                     if isinstance(search_item, dict):
+                        # Try to extract pattern from common keys
                         search_pattern = (
                             search_item.get("pattern")
                             or search_item.get("query")
                             or search_item.get("search")
-                            or str(search_item)
+                            or search_item.get("text")
+                            or search_item.get("term")
                         )
+                        # If no pattern found, convert dict to string representation
+                        if search_pattern is None:
+                            # Use a simple string representation, not the full dict
+                            search_pattern = str(search_item)[:100]
                     elif isinstance(search_item, str):
                         search_pattern = search_item
                     else:
                         logger.warning(f"Skipping invalid search item: {search_item}")
                         continue
 
-                    if not search_pattern or not isinstance(search_pattern, str):
+                    # Ensure search_pattern is a string
+                    if not search_pattern:
                         continue
+                    if not isinstance(search_pattern, str):
+                        search_pattern = str(search_pattern)
+
+                    # Truncate very long patterns to avoid issues
+                    if len(search_pattern) > 200:
+                        search_pattern = search_pattern[:200]
 
                     result = await tool_helper.execute_tool(
                         "file_edit:search_in_files",

@@ -1487,9 +1487,9 @@ class TestBrowserUseAgentProgressStreaming:
         from noesium.core.event import ProgressEventType
         from noesium.subagents.bu.agent import BrowserUseAgent
 
-        # Create agent with mock LLM
+        # Create agent with mock LLM (parameter is 'llm', not 'llm_client')
         mock_llm = MagicMock()
-        agent = BrowserUseAgent(llm_client=mock_llm)
+        agent = BrowserUseAgent(llm=mock_llm)
 
         # Mock the underlying Agent.run to avoid actual browser interaction
         mock_result = MagicMock()
@@ -1532,7 +1532,7 @@ class TestBrowserUseAgentProgressStreaming:
         from noesium.subagents.bu.agent import BrowserUseAgent
 
         mock_llm = MagicMock()
-        agent = BrowserUseAgent(llm_client=mock_llm)
+        agent = BrowserUseAgent(llm=mock_llm)
 
         with patch("noesium.subagents.bu.agent.Agent") as MockAgent:
             mock_agent_instance = MagicMock()
@@ -1570,7 +1570,9 @@ class TestTacitusAgentProgressStreaming:
         mock_llm.structured_completion = MagicMock(return_value=MagicMock(query=["query1", "query2"], rationale="test"))
         mock_llm.completion = MagicMock(return_value="Test response")
 
-        agent = TacitusAgent(query_generation_llm=mock_llm, reflection_llm=mock_llm)
+        # Mock get_llm_client to return our mock LLM
+        with patch("noesium.core.llm.get_llm_client", return_value=mock_llm):
+            agent = TacitusAgent(query_generation_llm=mock_llm, reflection_llm=mock_llm)
 
         # Mock the graph.astream to avoid actual web searches
         async def mock_astream(initial_state):
@@ -1616,7 +1618,10 @@ class TestTacitusAgentProgressStreaming:
         from noesium.subagents.tacitus.agent import TacitusAgent
 
         mock_llm = MagicMock()
-        agent = TacitusAgent(query_generation_llm=mock_llm, reflection_llm=mock_llm, max_research_loops=2)
+
+        # Mock get_llm_client to return our mock LLM
+        with patch("noesium.core.llm.get_llm_client", return_value=mock_llm):
+            agent = TacitusAgent(query_generation_llm=mock_llm, reflection_llm=mock_llm, max_research_loops=2)
 
         # Mock graph with multi-loop research
         async def mock_astream(initial_state):
@@ -1671,79 +1676,83 @@ class TestEndToEndStreamingIntegration:
         from noesium.core.agent.subagent import SubagentManager
         from noesium.core.event import ProgressEvent, ProgressEventType
 
-        agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
-        agent._subagent_manager = SubagentManager()
+        # Mock LLM client to avoid API key requirement
+        mock_llm = MagicMock()
 
-        # Mock invoke_subagent to emit progress events into the queue
-        async def fake_invoke_subagent(subagent_id, message, **kwargs):
-            # These events are fired via the subagent_event_queue inside astream_progress
-            fake_events = [
-                ProgressEvent(
-                    type=ProgressEventType.SUBAGENT_PROGRESS,
-                    subagent_id=subagent_id,
-                    summary=f"[{subagent_id}] Navigating to page...",
-                ),
-                ProgressEvent(
-                    type=ProgressEventType.SUBAGENT_PROGRESS,
-                    subagent_id=subagent_id,
-                    summary=f"[{subagent_id}] Extracting content...",
-                ),
-                ProgressEvent(
-                    type=ProgressEventType.SUBAGENT_END,
-                    subagent_id=subagent_id,
-                    summary=f"[{subagent_id}] completed",
-                    detail="Browser task done",
-                ),
-            ]
-            for event in fake_events:
-                await agent._fire_callbacks(event)
-                if agent._subagent_event_queue is not None:
-                    agent._subagent_event_queue.put_nowait(event)
-            return "Browser task done"
+        with patch("noesium.core.llm.get_llm_client", return_value=mock_llm):
+            agent = NoeAgent(NoeConfig(mode=NoeMode.AGENT, enable_session_logging=False))
+            agent._subagent_manager = SubagentManager()
 
-        agent.invoke_subagent = fake_invoke_subagent
+            # Mock invoke_subagent to emit progress events into the queue
+            async def fake_invoke_subagent(subagent_id, message, **kwargs):
+                # These events are fired via the subagent_event_queue inside astream_progress
+                fake_events = [
+                    ProgressEvent(
+                        type=ProgressEventType.SUBAGENT_PROGRESS,
+                        subagent_id=subagent_id,
+                        summary=f"[{subagent_id}] Navigating to page...",
+                    ),
+                    ProgressEvent(
+                        type=ProgressEventType.SUBAGENT_PROGRESS,
+                        subagent_id=subagent_id,
+                        summary=f"[{subagent_id}] Extracting content...",
+                    ),
+                    ProgressEvent(
+                        type=ProgressEventType.SUBAGENT_END,
+                        subagent_id=subagent_id,
+                        summary=f"[{subagent_id}] completed",
+                        detail="Browser task done",
+                    ),
+                ]
+                for event in fake_events:
+                    await agent._fire_callbacks(event)
+                    if agent._subagent_event_queue is not None:
+                        agent._subagent_event_queue.put_nowait(event)
+                return "Browser task done"
 
-        mock_compiled = AsyncMock()
+            agent.invoke_subagent = fake_invoke_subagent
 
-        async def fake_astream(initial):
-            # Simulate the graph actually calling invoke_subagent inside subagent_node
-            await fake_invoke_subagent("browser_use", "Navigate")
-            # Yield control so _forward_subagent_events can pick up the queued events
-            await asyncio.sleep(0)
-            yield {
-                "subagent": {
-                    "messages": [
-                        AIMessage(
-                            content="",
-                            additional_kwargs={
-                                "subagent_action": {
-                                    "action": "invoke_builtin",
-                                    "name": "browser_use",
-                                    "message": "Navigate",
-                                }
-                            },
-                        )
-                    ],
-                    "tool_results": [{"tool": "subagent:browser_use", "result": "Browser task done"}],
+            mock_compiled = AsyncMock()
+
+            async def fake_astream(initial):
+                # Simulate the graph actually calling invoke_subagent inside subagent_node
+                await fake_invoke_subagent("browser_use", "Navigate")
+                # Yield control so _forward_subagent_events can pick up the queued events
+                await asyncio.sleep(0)
+                yield {
+                    "subagent": {
+                        "messages": [
+                            AIMessage(
+                                content="",
+                                additional_kwargs={
+                                    "subagent_action": {
+                                        "action": "invoke_builtin",
+                                        "name": "browser_use",
+                                        "message": "Navigate",
+                                    }
+                                },
+                            )
+                        ],
+                        "tool_results": [{"tool": "subagent:browser_use", "result": "Browser task done"}],
+                    }
                 }
-            }
-            yield {"finalize": {"final_answer": "Done.", "messages": []}}
+                yield {"finalize": {"final_answer": "Done.", "messages": []}}
 
-        mock_compiled.astream = fake_astream
-        agent._build_graph = MagicMock()
-        agent._build_graph.return_value.compile.return_value = mock_compiled
+            mock_compiled.astream = fake_astream
+            agent._build_graph = MagicMock()
+            agent._build_graph.return_value.compile.return_value = mock_compiled
 
-        events = []
-        async for event in agent.astream_progress("Browse to example.com"):
-            events.append(event)
+            events = []
+            async for event in agent.astream_progress("Browse to example.com"):
+                events.append(event)
 
-        # Should have SUBAGENT_PROGRESS events in the stream
-        progress_events = [e for e in events if e.type == ProgressEventType.SUBAGENT_PROGRESS]
-        assert len(progress_events) >= 2
+            # Should have SUBAGENT_PROGRESS events in the stream
+            progress_events = [e for e in events if e.type == ProgressEventType.SUBAGENT_PROGRESS]
+            assert len(progress_events) >= 2
 
-        # Should have SUBAGENT_END event
-        end_events = [e for e in events if e.type == ProgressEventType.SUBAGENT_END]
-        assert len(end_events) >= 1
+            # Should have SUBAGENT_END event
+            end_events = [e for e in events if e.type == ProgressEventType.SUBAGENT_END]
+            assert len(end_events) >= 1
 
     @pytest.mark.asyncio
     @pytest.mark.integration

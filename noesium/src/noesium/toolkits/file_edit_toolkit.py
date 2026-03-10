@@ -266,6 +266,13 @@ class FileEditToolkit(AsyncBaseToolkit):
         """
         encoding = encoding or self.default_encoding
 
+        # Defensive type checking - ensure file_path is a string
+        if not isinstance(file_path, str):
+            file_path = str(file_path) if file_path is not None else ""
+
+        if not file_path:
+            return "Error: Empty file path"
+
         try:
             resolved_path = self._resolve_filepath(file_path)
 
@@ -457,6 +464,17 @@ class FileEditToolkit(AsyncBaseToolkit):
             Search results with file names and line numbers
         """
         try:
+            # Defensive type checking - ensure pattern is a string
+            if not isinstance(pattern, str):
+                pattern = str(pattern) if pattern is not None else ""
+            if not isinstance(file_pattern, str):
+                file_pattern = str(file_pattern) if file_pattern is not None else "*"
+            if not isinstance(directory, str):
+                directory = str(directory) if directory is not None else "."
+
+            if not pattern:
+                return "Error: Empty search pattern"
+
             if directory == ".":
                 dir_path = self.work_dir
             else:

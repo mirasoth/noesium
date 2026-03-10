@@ -320,6 +320,18 @@ def _tui_field(global_config: Any, key: str, default: Any) -> Any:
     return getattr(tui, key, default)
 
 
+# Default CLI subagent for Claude Code
+DEFAULT_CLAUDE_CLI_CONFIG = CliSubagentConfig(
+    name="claude",
+    command="claude",
+    args=["-p", "--output-format", "stream-json", "--verbose"],
+    mode="oneshot",
+    timeout=300,
+    task_types=["coding", "code_generation", "code_analysis", "refactoring", "debugging"],
+    skip_permissions=True,
+)
+
+
 class NoeConfig(BaseModel):
     """Configuration for Noe.
 
@@ -413,7 +425,10 @@ class NoeConfig(BaseModel):
     builtin: list[AgentSubagentConfig] = Field(
         default_factory=lambda: [AgentSubagentConfig(**s.model_dump()) for s in DEFAULT_AGENT_SUBAGENTS]
     )
-    external: list[CliSubagentConfig] = Field(default_factory=list)
+    # CLI subagents (claude, etc.) - external CLI tools
+    external: list[CliSubagentConfig] = Field(
+        default_factory=lambda: [CliSubagentConfig(**DEFAULT_CLAUDE_CLI_CONFIG.model_dump())]
+    )
 
     # LLM warm-up configuration
     llm_warmup_on_init: bool = Field(
@@ -501,6 +516,13 @@ class NoeConfig(BaseModel):
         # Get planning model
         planning_model = global_config.agent.planning_model
 
+        # Get external CLI subagents, merging with defaults
+        external_configs = [CliSubagentConfig(**s.model_dump()) for s in global_config.subagents.external]
+        # Ensure claude CLI is always available unless explicitly disabled
+        claude_names = {c.name for c in external_configs if c.name == "claude"}
+        if "claude" not in claude_names and global_config.subagents.enabled:
+            external_configs.insert(0, CliSubagentConfig(**DEFAULT_CLAUDE_CLI_CONFIG.model_dump()))
+
         return cls(
             mode=NoeMode(global_config.agent.mode),
             llm_provider=global_config.llm.provider,
@@ -532,5 +554,5 @@ class NoeConfig(BaseModel):
             enable_subagents=global_config.subagents.enabled,
             subagent_max_depth=global_config.subagents.max_depth,
             builtin=_builtin_from_global_config(global_config.subagents.builtin),
-            external=[CliSubagentConfig(**s.model_dump()) for s in global_config.subagents.external],
+            external=external_configs,
         )
