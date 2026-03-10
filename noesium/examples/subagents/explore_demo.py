@@ -29,7 +29,6 @@ async def main():
 
     # Stream progress events
     total_findings = 0
-    total_sources = 0
 
     async for event in agent.astream_progress(target):
         event_type = event.type.value

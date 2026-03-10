@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import logging
 import os
-from pathlib import Path
 from typing import Any
 
-from noesium.core.capability.registry import CapabilityRegistry
 from noesium.core.capability.providers import ToolCapabilityProvider
+from noesium.core.capability.registry import CapabilityRegistry
 from noesium.core.event.envelope import AgentRef
 from noesium.core.event.store import InMemoryEventStore
 from noesium.core.toolify.adapters.builtin_adapter import BuiltinAdapter
@@ -196,11 +195,13 @@ class ToolHelper:
         tools = []
         for provider in self.registry.list_providers():
             desc = provider.descriptor
-            tools.append({
-                "name": desc.capability_id,
-                "description": desc.description,
-                "input_schema": desc.input_schema,
-            })
+            tools.append(
+                {
+                    "name": desc.capability_id,
+                    "description": desc.description,
+                    "input_schema": desc.input_schema,
+                }
+            )
 
         return tools
 

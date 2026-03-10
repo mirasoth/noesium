@@ -23,7 +23,6 @@ except ImportError:
 from uuid_extensions import uuid7str
 
 from noesium.core.agent import BaseGraphicAgent
-from noesium.core.llm import BaseLLMClient
 from noesium.core.utils.logging import get_logger
 from noesium.core.utils.typing import override
 from noesium.toolkits import TOOLKIT_FILE_EDIT, TOOLKIT_USER_INTERACTION
@@ -32,11 +31,9 @@ from noesium.utils.tool_utils import ToolHelper, create_tool_helper
 from .prompts import (
     CLARIFICATION_PROMPT,
     PLAN_GENERATION_PROMPT,
-    PLAN_REFINEMENT_PROMPT,
     PLAN_SYSTEM_PROMPT,
     TASK_ANALYSIS_PROMPT,
 )
-from .schemas import ClarificationQuestion, PlanResult, PlanStep
 from .state import PlanState
 
 logger = get_logger(__name__)
@@ -210,23 +207,27 @@ Return ONLY the JSON list, no other text.
 
                     files_read.append(file_path)
                     file_contents[file_path] = result
-                    tool_results.append({
-                        "tool": "read_file",
-                        "file_path": file_path,
-                        "success": True,
-                        "size": len(result),
-                    })
+                    tool_results.append(
+                        {
+                            "tool": "read_file",
+                            "file_path": file_path,
+                            "success": True,
+                            "size": len(result),
+                        }
+                    )
 
                     logger.info(f"Read file: {file_path} ({len(result)} bytes)")
 
                 except Exception as e:
                     logger.warning(f"Failed to read file {file_path}: {e}")
-                    tool_results.append({
-                        "tool": "read_file",
-                        "file_path": file_path,
-                        "success": False,
-                        "error": str(e),
-                    })
+                    tool_results.append(
+                        {
+                            "tool": "read_file",
+                            "file_path": file_path,
+                            "success": False,
+                            "error": str(e),
+                        }
+                    )
 
         except Exception as e:
             logger.error(f"Error in read_context_node: {e}")
@@ -494,7 +495,7 @@ Return ONLY the JSON list, no other text.
 
                     elif node_name == "read_context":
                         tool_results = node_output.get("tool_results", [])
-                        files_read = node_output.get("files_read", [])
+                        node_output.get("files_read", [])
 
                         # Emit tool events based on actual tool execution
                         for tool_result in tool_results:

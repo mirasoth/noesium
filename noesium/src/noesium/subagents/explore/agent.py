@@ -21,7 +21,6 @@ except ImportError:
 from uuid_extensions import uuid7str
 
 from noesium.core.agent import BaseGraphicAgent
-from noesium.core.llm import BaseLLMClient
 from noesium.core.utils.logging import get_logger
 from noesium.core.utils.typing import override
 from noesium.toolkits import (
@@ -37,12 +36,10 @@ from noesium.toolkits import (
 from noesium.utils.tool_utils import ToolHelper, create_tool_helper
 
 from .prompts import (
-    EXPLORATION_STRATEGY_PROMPT,
     EXPLORE_SYSTEM_PROMPT,
     SYNTHESIS_PROMPT,
     TARGET_ANALYSIS_PROMPT,
 )
-from .schemas import ExplorationFinding, ExplorationResult, ExplorationSource
 from .state import ExploreState
 
 logger = get_logger(__name__)
@@ -198,34 +195,42 @@ class ExploreAgent(BaseGraphicAgent):
                 query=target,
                 path=".",
             )
-            tool_results.append({
-                "tool": "search_in_files",
-                "success": True,
-                "result": search_result,
-            })
+            tool_results.append(
+                {
+                    "tool": "search_in_files",
+                    "success": True,
+                    "result": search_result,
+                }
+            )
 
             # Parse search results into findings
             for match in search_result.get("matches", [])[:10]:
-                findings.append({
-                    "title": f"Found in {match['file']}",
-                    "description": match.get("context", ""),
-                    "source": match["file"],
-                    "relevance": "high",
-                    "details": match,
-                })
-                sources.append({
-                    "type": "file",
-                    "name": match["file"],
-                    "location": match["file"],
-                    "summary": match.get("context", "")[:100],
-                })
+                findings.append(
+                    {
+                        "title": f"Found in {match['file']}",
+                        "description": match.get("context", ""),
+                        "source": match["file"],
+                        "relevance": "high",
+                        "details": match,
+                    }
+                )
+                sources.append(
+                    {
+                        "type": "file",
+                        "name": match["file"],
+                        "location": match["file"],
+                        "summary": match.get("context", "")[:100],
+                    }
+                )
         except Exception as e:
             logger.warning(f"Search failed: {e}")
-            tool_results.append({
-                "tool": "search_in_files",
-                "success": False,
-                "error": str(e),
-            })
+            tool_results.append(
+                {
+                    "tool": "search_in_files",
+                    "success": False,
+                    "error": str(e),
+                }
+            )
 
         # Strategy 2: List relevant files
         try:
@@ -234,19 +239,23 @@ class ExploreAgent(BaseGraphicAgent):
                 path=".",
                 pattern="**/*.py",  # Could be made dynamic based on target
             )
-            tool_results.append({
-                "tool": "list_files",
-                "success": True,
-                "result": list_result,
-            })
+            tool_results.append(
+                {
+                    "tool": "list_files",
+                    "success": True,
+                    "result": list_result,
+                }
+            )
 
             for file_path in list_result.get("files", [])[:20]:
-                sources.append({
-                    "type": "file",
-                    "name": file_path,
-                    "location": file_path,
-                    "summary": "Discovered during exploration",
-                })
+                sources.append(
+                    {
+                        "type": "file",
+                        "name": file_path,
+                        "location": file_path,
+                        "summary": "Discovered during exploration",
+                    }
+                )
         except Exception as e:
             logger.warning(f"List files failed: {e}")
 
@@ -262,20 +271,24 @@ class ExploreAgent(BaseGraphicAgent):
                     "file_edit:read_file",
                     file_path=file_path,
                 )
-                tool_results.append({
-                    "tool": "read_file",
-                    "file_path": file_path,
-                    "success": True,
-                    "size": len(read_result),
-                })
+                tool_results.append(
+                    {
+                        "tool": "read_file",
+                        "file_path": file_path,
+                        "success": True,
+                        "size": len(read_result),
+                    }
+                )
 
-                findings.append({
-                    "title": f"Content of {file_path}",
-                    "description": read_result[:500],
-                    "source": file_path,
-                    "relevance": "medium",
-                    "details": {"full_content": read_result},
-                })
+                findings.append(
+                    {
+                        "title": f"Content of {file_path}",
+                        "description": read_result[:500],
+                        "source": file_path,
+                        "relevance": "medium",
+                        "details": {"full_content": read_result},
+                    }
+                )
             except Exception as e:
                 logger.warning(f"Failed to read {file_path}: {e}")
 
@@ -488,7 +501,7 @@ class ExploreAgent(BaseGraphicAgent):
                                         summary=f"Read {file_path}",
                                     )
                                 else:
-                                    result = tool_result.get("result", {})
+                                    tool_result.get("result", {})
                                     yield ProgressEvent(
                                         type=ProgressEventType.TOOL_END,
                                         session_id=session_id,
