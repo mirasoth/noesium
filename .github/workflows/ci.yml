@@ -64,7 +64,7 @@ jobs:
       run: uv sync --all-packages --extra dev
 
     - name: Run noeagent tests
-      run: uv run pytest noeagent/tests/ -v
+      run: uv run pytest noeagent/tests/ -v -m "not llm"
 
     - name: Build noeagent package
       run: cd noeagent && uv build

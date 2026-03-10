@@ -72,7 +72,7 @@ async def main():
 
     explore_agent = ExploreAgent(
         llm_provider="openai",
-        max_exploration_depth=2,
+        max_loops=2,
         working_directory=working_dir,
     )
 
@@ -87,11 +87,11 @@ async def main():
         print("\nStep 1: Exploring codebase...")
         exploration_target = "Find authentication-related code and user models"
 
-        explore_result = await explore_agent.run(exploration_target)
+        explore_result = await explore_agent.run_structured(exploration_target)
 
-        print(f"\nExploration found {explore_result.finding_count} findings:")
+        print(f"\nExploration found {len(explore_result.findings)} findings:")
         for i, finding in enumerate(explore_result.findings[:3], 1):
-            print(f"  {i}. {finding.title}: {finding.summary[:60]}...")
+            print(f"  {i}. {finding.title}: {finding.description[:60]}...")
 
         # Step 2: Use exploration results as context for planning
         print("\nStep 2: Creating plan with exploration context...")
@@ -99,7 +99,7 @@ async def main():
         # Build context from exploration
         context = {
             "exploration_summary": explore_result.summary,
-            "key_findings": [{"title": f.title, "summary": f.summary} for f in explore_result.findings[:5]],
+            "key_findings": [{"title": f.title, "description": f.description} for f in explore_result.findings[:5]],
         }
 
         plan_result = await plan_agent2.run(

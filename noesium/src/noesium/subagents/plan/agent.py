@@ -236,6 +236,16 @@ Return ONLY the JSON object, no other text.
             # Read files
             for file_path in exploration_plan.get("files", [])[:5]:
                 try:
+                    # Sanitize file path: strip leading / to make it relative
+                    if isinstance(file_path, str):
+                        file_path = file_path.lstrip("/")
+                    else:
+                        logger.warning(f"Skipping non-string file path: {file_path}")
+                        continue
+
+                    if not file_path:
+                        continue
+
                     result = await tool_helper.execute_tool(
                         "file_edit:read_file",
                         file_path=file_path,
@@ -263,8 +273,25 @@ Return ONLY the JSON object, no other text.
                     )
 
             # Run searches
-            for search_pattern in exploration_plan.get("searches", [])[:3]:
+            for search_item in exploration_plan.get("searches", [])[:3]:
                 try:
+                    # Handle search pattern - could be string or dict
+                    if isinstance(search_item, dict):
+                        search_pattern = (
+                            search_item.get("pattern")
+                            or search_item.get("query")
+                            or search_item.get("search")
+                            or str(search_item)
+                        )
+                    elif isinstance(search_item, str):
+                        search_pattern = search_item
+                    else:
+                        logger.warning(f"Skipping invalid search item: {search_item}")
+                        continue
+
+                    if not search_pattern or not isinstance(search_pattern, str):
+                        continue
+
                     result = await tool_helper.execute_tool(
                         "file_edit:search_in_files",
                         pattern=search_pattern,
@@ -279,7 +306,7 @@ Return ONLY the JSON object, no other text.
                         }
                     )
                 except Exception as e:
-                    logger.warning(f"Search failed for '{search_pattern}': {e}")
+                    logger.warning(f"Search failed for '{search_item}': {e}")
 
         except Exception as e:
             logger.error(f"Error in explore_resources_node: {e}")
@@ -631,28 +658,47 @@ Return ONLY the JSON object, no other text.
                             tool_name = tool_result.get("tool", "unknown")
                             success = tool_result.get("success", False)
 
+                            # Build specific target name for progress message
+                            if tool_name == "read_file":
+                                target = tool_result.get("file_path", "unknown file")
+                            elif tool_name == "search_in_files":
+                                target = f"pattern '{tool_result.get('query', 'unknown')}'"
+                            else:
+                                target = tool_result.get("file_path", tool_result.get("query", "unknown target"))
+
                             yield ProgressEvent(
                                 type=ProgressEventType.TOOL_START,
                                 session_id=session_id,
                                 tool_name=tool_name,
-                                summary=f"Exploring: {tool_result.get('file_path', tool_result.get('query', ''))}",
+                                summary=f"Exploring: {target}",
                             )
 
                             if success:
+                                # Build detailed success message
+                                if tool_name == "read_file":
+                                    size = tool_result.get("size", 0)
+                                    detail = f"{size} bytes" if size else "content loaded"
+                                elif tool_name == "search_in_files":
+                                    matches = tool_result.get("matches", 0)
+                                    detail = f"{matches} matches" if matches else "search complete"
+                                else:
+                                    detail = "Success"
+
                                 yield ProgressEvent(
                                     type=ProgressEventType.TOOL_END,
                                     session_id=session_id,
                                     tool_name=tool_name,
-                                    tool_result="Success",
-                                    summary=f"Explored successfully",
+                                    tool_result=detail,
+                                    summary=f"Explored {target}: {detail}",
                                 )
                             else:
+                                error_msg = tool_result.get("error", "unknown error")
                                 yield ProgressEvent(
                                     type=ProgressEventType.TOOL_END,
                                     session_id=session_id,
                                     tool_name=tool_name,
-                                    tool_result=f"Failed: {tool_result.get('error', '')}",
-                                    summary="Exploration failed",
+                                    tool_result=f"Failed: {error_msg}",
+                                    summary=f"Failed to explore {target}: {error_msg[:50]}",
                                 )
 
                     elif node_name == "analyze_requirements":

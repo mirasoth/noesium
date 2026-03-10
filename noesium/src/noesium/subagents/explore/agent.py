@@ -677,6 +677,56 @@ class ExploreAgent(BaseGraphicAgent):
 
         return result.get("summary", "Exploration failed")
 
+    async def run_structured(
+        self,
+        user_message: str,
+        context: Dict[str, Any] = None,
+        config: Optional[RunnableConfig] = None,
+    ) -> "ExploreResult":
+        """Run the exploration agent and return the structured result.
+
+        Args:
+            user_message: What to explore
+            context: Additional context
+            config: Runtime configuration
+
+        Returns:
+            ExploreResult object with findings, sources, and summary
+        """
+        initial_state: ExploreState = {
+            "messages": [HumanMessage(content=user_message)],
+            "context": context or {},
+            "target": user_message,
+            "target_type": "general",
+            "search_strategy": [],
+            "findings": [],
+            "sources": [],
+            "tool_results": [],
+            "reflection": None,
+            "exploration_loops": 0,
+            "max_loops": self.max_loops,
+            "is_sufficient": False,
+            "summary": None,
+            "confidence_score": 0.0,
+        }
+
+        result = await self.graph.ainvoke(initial_state, config=config)
+
+        # Return structured ExploreResult
+        explore_result_dict = result.get("explore_result", {})
+        if explore_result_dict:
+            return ExploreResult(**explore_result_dict)
+
+        # Fallback: construct minimal result
+        return ExploreResult(
+            target=user_message,
+            summary=result.get("summary", "Exploration failed"),
+            findings=[],
+            sources=[],
+            confidence_score=result.get("confidence_score", 0.0),
+            exploration_depth=result.get("exploration_loops", 0),
+        )
+
     async def astream_progress(
         self,
         user_message: str,

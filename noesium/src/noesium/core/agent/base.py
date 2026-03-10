@@ -36,8 +36,28 @@ class BaseAgent(ABC):
         self.logger = get_logger(self.__class__.__name__)
         self.llm_provider = llm_provider
         self.model_name = model_name
-        self.llm = get_llm_client(provider=llm_provider, chat_model=model_name)
+        self._llm: Optional[Any] = None  # Lazy initialization
+        self._llm_initialized = False
         self.logger.info(f"Initialized {self.__class__.__name__} with {llm_provider} provider")
+
+    @property
+    def llm(self) -> Any:
+        """Lazy LLM client initialization.
+
+        The LLM client is created on first access, allowing tests to mock
+        the client before it's needed, and avoiding API key requirements
+        for unit tests that don't actually call the LLM.
+        """
+        if not self._llm_initialized:
+            self._llm = get_llm_client(provider=self.llm_provider, chat_model=self.model_name)
+            self._llm_initialized = True
+        return self._llm
+
+    @llm.setter
+    def llm(self, value: Any) -> None:
+        """Allow setting the LLM client directly (useful for testing)."""
+        self._llm = value
+        self._llm_initialized = True
 
     @abstractmethod
     async def run(
