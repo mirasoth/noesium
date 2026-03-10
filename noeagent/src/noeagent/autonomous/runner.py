@@ -22,8 +22,6 @@ from noeagent.autonomous.goal_engine import GoalEngine
 from noeagent.autonomous.kernel.agent_kernel import AgentKernel
 from noeagent.autonomous.trigger import Trigger
 
-from noesium.core.event.store import InMemoryEventStore
-
 from .cognitive_loop import CognitiveLoop, CognitiveLoopMetrics
 
 if TYPE_CHECKING:
@@ -78,9 +76,6 @@ class AutonomousRunner:
         # Initialize event bus
         self.event_bus = EventBus()
 
-        # Initialize event store
-        self.event_store = InMemoryEventStore()
-
         # Get memory provider for goals
         # Try to get persistent provider, fallback to working memory
         try:
@@ -92,8 +87,6 @@ class AutonomousRunner:
         # Initialize Goal Engine (RFC-1006)
         self.goal_engine = GoalEngine(
             memory_provider=goal_memory,
-            event_store=self.event_store,
-            producer=agent.producer,
         )
 
         # Initialize Cognitive Loop with SubagentManager (RFC-1005)

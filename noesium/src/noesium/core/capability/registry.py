@@ -1,15 +1,12 @@
-"""Unified capability registry with hybrid event sourcing (RFC-0005).
+"""Unified capability registry (RFC-0005).
 
 Provider-first design: the in-memory provider dict is the source of truth for
-fast reads.  An append-only changelog is maintained for audit.  When an
-``EventStore`` is supplied, changelog entries are flushed asynchronously for
-persistence and cross-process replay.  ``rebuild_from_events()`` reconstructs
-the provider dict from a persisted event stream on cold start.
+fast reads. An append-only changelog is maintained for audit.
 
 Health model:
 - Stateless providers (TOOL, MCP_TOOL, SKILL): ``health()`` always returns True.
 - Stateful providers (AGENT, CLI_AGENT): monitored by a background heartbeat
-  task that polls ``provider.health()`` at a configurable interval.  Cached
+  task that polls ``provider.health()`` at a configurable interval. Cached
   health status is used by ``resolve()`` to skip unhealthy providers.
 """
 
@@ -22,9 +19,6 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from noesium.core.event.envelope import AgentRef, TraceContext
-from noesium.core.event.store import EventStore
-from noesium.core.event.types import CapabilityRegistered
 from noesium.core.exceptions import CapabilityNotFoundError
 
 from .models import (
@@ -61,18 +55,12 @@ class CapabilityRegistry:
 
     def __init__(
         self,
-        event_store: EventStore | None = None,
-        producer: AgentRef | None = None,
         health_interval: float = 10.0,
     ) -> None:
         self._providers: dict[str, list[CapabilityProvider]] = {}
         self._by_name: dict[str, CapabilityProvider] = {}
         self._changelog: list[RegistryEvent] = []
         self._listeners: list[RegistryListener] = []
-
-        self._event_store = event_store
-        self._producer = producer or AgentRef(agent_id="registry", agent_type="system")
-        self._trace = TraceContext()
 
         self._health_cache: dict[str, bool] = {}
         self._health_interval = health_interval
@@ -101,7 +89,6 @@ class CapabilityRegistry:
         )
         self._changelog.append(evt)
         self._notify(evt)
-        self._flush_event_async(d)
 
     def register_many(self, providers: list[CapabilityProvider]) -> None:
         for p in providers:
@@ -325,80 +312,3 @@ class CapabilityRegistry:
     def get_health(self, capability_id: str) -> bool | None:
         """Return cached health for a capability, or None if not tracked."""
         return self._health_cache.get(capability_id)
-
-    # ------------------------------------------------------------------
-    # Hybrid event sourcing
-    # ------------------------------------------------------------------
-
-    def _flush_event_async(self, descriptor: CapabilityDescriptor) -> None:
-        """Fire-and-forget: emit a CapabilityRegistered event to EventStore."""
-        if self._event_store is None:
-            return
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return
-        loop.create_task(self._flush_event(descriptor))
-
-    async def _flush_event(self, descriptor: CapabilityDescriptor) -> None:
-        if self._event_store is None:
-            return
-        try:
-            event = CapabilityRegistered(
-                capability_id=descriptor.capability_id,
-                version=descriptor.version,
-                agent_id=self._producer.agent_id,
-            )
-            envelope = event.to_envelope(producer=self._producer, trace=self._trace)
-            envelope.payload.update(
-                {
-                    "capability_type": descriptor.capability_type.value,
-                    "description": descriptor.description,
-                    "tags": descriptor.tags,
-                    "determinism": descriptor.determinism.value,
-                    "side_effects": descriptor.side_effects.value,
-                    "latency": descriptor.latency.value,
-                    "input_schema": descriptor.input_schema,
-                    "output_schema": descriptor.output_schema,
-                }
-            )
-            await self._event_store.append(envelope)
-        except Exception:
-            logger.debug("Failed to flush capability event to EventStore", exc_info=True)
-
-    async def rebuild_from_events(self, event_store: EventStore) -> int:
-        """Reconstruct changelog from a persisted event stream (cold-start).
-
-        Returns the number of events replayed.  Does NOT reconstruct live
-        providers -- those must be re-registered by the agent on startup.
-        The changelog is useful for audit replay.
-        """
-        events = await event_store.read()
-        count = 0
-        for env in events:
-            if env.event_type == "capability.registered":
-                p = env.payload
-                self._changelog.append(
-                    RegistryEvent(
-                        action="registered",
-                        capability_id=p.get("capability_id", ""),
-                        version=p.get("version", "1.0.0"),
-                        capability_type=p.get("capability_type", "tool"),
-                        timestamp=(env.timestamp.timestamp() if env.timestamp else time.time()),
-                        detail={k: v for k, v in p.items() if k not in ("capability_id", "version")},
-                    )
-                )
-                count += 1
-            elif env.event_type == "capability.deprecated":
-                p = env.payload
-                self._changelog.append(
-                    RegistryEvent(
-                        action="unregistered",
-                        capability_id=p.get("capability_id", ""),
-                        version=p.get("version", "1.0.0"),
-                        capability_type="unknown",
-                        timestamp=(env.timestamp.timestamp() if env.timestamp else time.time()),
-                    )
-                )
-                count += 1
-        return count

@@ -25,7 +25,7 @@ Usage Examples:
     save_config(config)
 
     # Memory systems
-    from noesium import MemoryManager, DurableMemory
+    from noesium import MemoryManager
 
     memory = MemoryManager()
     await memory.remember("important fact", metadata={"type": "fact"})
@@ -57,10 +57,6 @@ from noesium.core.config import (
 
 # Events
 from noesium.core.event import (
-    EventEnvelope,
-    EventStore,
-    FileEventStore,
-    InMemoryEventStore,
     ProgressCallback,
     ProgressEvent,
     ProgressEventType,
@@ -90,7 +86,6 @@ from noesium.core.llm import get_llm_client
 
 # Memory
 from noesium.core.memory import (
-    DurableMemory,
     EphemeralMemory,
     MemoryManager,
     SemanticMemory,
@@ -187,7 +182,6 @@ __all__ = [
     "BaseGraphicAgent",
     # Tier 2: Core Systems
     "MemoryManager",
-    "DurableMemory",
     "EphemeralMemory",
     "SemanticMemory",
     "AtomicTool",
@@ -195,10 +189,6 @@ __all__ = [
     "ToolkitRegistry",
     "get_toolkit",
     "get_toolkits_map",
-    "EventEnvelope",
-    "EventStore",
-    "InMemoryEventStore",
-    "FileEventStore",
     "ProgressEvent",
     "ProgressEventType",
     "ProgressCallback",

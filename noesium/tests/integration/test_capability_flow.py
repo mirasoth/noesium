@@ -1,6 +1,5 @@
 """Integration test: capability registration -> discovery -> resolution via unified registry."""
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
 import pytest
@@ -12,7 +11,6 @@ from noesium.core.capability.models import (
     DeterminismClass,
 )
 from noesium.core.capability.registry import CapabilityRegistry
-from noesium.core.event.store import InMemoryEventStore
 from noesium.core.exceptions import CapabilityNotFoundError
 
 
@@ -42,8 +40,7 @@ def _make_provider(
 class TestCapabilityFlow:
     @pytest.mark.asyncio
     async def test_register_discover_resolve(self):
-        store = InMemoryEventStore()
-        reg = CapabilityRegistry(event_store=store)
+        reg = CapabilityRegistry()
 
         reg.register(
             _make_provider(
@@ -139,36 +136,6 @@ class TestCapabilityFlow:
 
         resolved = await reg.resolve("agent:backup")
         assert resolved.descriptor.capability_id == "agent:backup"
-
-    @pytest.mark.asyncio
-    async def test_event_store_audit_trail(self):
-        store = InMemoryEventStore()
-        reg = CapabilityRegistry(event_store=store)
-
-        reg.register(_make_provider("tool_a"))
-        reg.register(_make_provider("tool_b"))
-
-        await asyncio.sleep(0.1)
-
-        events = await store.read()
-        assert len(events) >= 2
-        ids = [e.payload.get("capability_id") for e in events]
-        assert "tool_a" in ids
-        assert "tool_b" in ids
-
-    @pytest.mark.asyncio
-    async def test_rebuild_from_events(self):
-        store = InMemoryEventStore()
-        reg1 = CapabilityRegistry(event_store=store)
-        for name in ["a", "b", "c"]:
-            reg1.register(_make_provider(name))
-
-        await asyncio.sleep(0.1)
-
-        reg2 = CapabilityRegistry()
-        count = await reg2.rebuild_from_events(store)
-        assert count == 3
-        assert len(reg2.changelog) == 3
 
     @pytest.mark.asyncio
     async def test_listener_observes_lifecycle(self):

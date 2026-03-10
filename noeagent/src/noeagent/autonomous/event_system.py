@@ -9,8 +9,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 from uuid_extensions import uuid7str
 
-from noesium.core.event.envelope import AgentRef, EventEnvelope
-
 
 class AutonomousEvent(BaseModel):
     """Generic event for autonomous system (RFC-1007 Section 6).
@@ -30,26 +28,3 @@ class AutonomousEvent(BaseModel):
         description="Event timestamp",
     )
     payload: dict[str, Any] = Field(default_factory=dict, description="Event-specific data")
-
-    def to_envelope(self, producer: AgentRef) -> EventEnvelope:
-        """Convert to RFC-1001 compliant envelope.
-
-        Args:
-            producer: Producer identity
-
-        Returns:
-            EventEnvelope instance
-        """
-        from noesium.core.event.envelope import TraceContext
-
-        return EventEnvelope(
-            event_type=self.type,
-            producer=producer,
-            payload=self.payload,
-            metadata={
-                "source": self.source,
-                "event_id": self.id,
-                "timestamp": self.timestamp.isoformat(),
-            },
-            trace=TraceContext(),
-        )

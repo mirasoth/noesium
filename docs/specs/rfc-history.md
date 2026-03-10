@@ -22,6 +22,13 @@ This document tracks all RFC lifecycle events in chronological order (newest fir
 
 ## Change History
 
+### 2026-03-08
+
+- **Created**: RFC-1010 - CognitiveContext for Agent State Continuity; defines minimal cognitive state model for context continuity across TUI conversations and subagent interactions; 3-field model (goal, findings, scratchpad) with optional memory integration
+- **Reference Updated**: rfc-namings.md - Added CognitiveContext term
+- **Reference Updated**: rfc-index.md - Registered RFC-1010 under Core & Agent Architecture (1xxx)
+- **Reference Updated**: rfc-history.md - Added RFC-1010 creation entry
+
 ### 2026-03-07
 
 - **Updated**: RFC-0001 - Event-Sourced Multi-Agent Kernel Architecture; added implementation status notes; updated Section 3 to prefer mutable state and direct invocation with event-sourced as alternative; rewrote Section 5.2 (Agent Kernel) to document LangGraph-based implementation; rewrote Section 6 (Execution Semantics) to describe direct invocation patterns; added Section 13 (Alternative Architectural Patterns) documenting event-sourced patterns as optional approaches; added Section 14 (Event Infrastructure Overview)

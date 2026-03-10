@@ -9,7 +9,6 @@ This module provides the autonomous execution layer for NoeAgent:
 - Event system: AutonomousEvent, EventProcessor, EventQueue
 - Trigger rules: Trigger, TriggerRule
 - Event sources: TimerEventSource, FileSystemEventSource, WatchdogFileSystemEventSource
-- Event replay: EventReplayer
 - Decision schema: Decision, DecisionAction, *Decision (for Agent Kernel)
 """
 
@@ -26,7 +25,6 @@ from .decision_schema import (
 )
 from .event_processor import EventProcessor
 from .event_queue import EventQueue
-from .event_replay import EventReplayer
 from .event_sources import (
     WATCHDOG_AVAILABLE,
     FileSystemEventSource,
@@ -65,7 +63,6 @@ __all__ = [
     "AutonomousEvent",
     "EventProcessor",
     "EventQueue",
-    "EventReplayer",
     "Trigger",
     "TriggerRule",
     # Event Sources

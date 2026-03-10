@@ -20,9 +20,9 @@ import time
 import uuid
 from typing import Any, Dict, List
 
-from noesium.core.vector_store import PGVectorStore
+from utils import get_embed_client
 
-from .utils import get_embed_client
+from noesium.core.vector_store import PGVectorStore
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

@@ -35,6 +35,7 @@ Authoritative terminology reference for noesium RFC specifications.
 | Causation ID | RFC-1001 §7.1 | References the event_id that directly caused an event |
 | Cognitive Loop | RFC-1005 §7 | Continuous runtime loop that drives autonomous execution by repeatedly selecting goals, generating reasoning, performing actions, and updating memory |
 | Cognitive Projection | RFC-1002 §4.3.2 | Deterministic structural projection for knowledge (conversation history, reasoning trace) |
+| CognitiveContext | RFC-1010 §5 | Minimal cognitive state model with 3 fields (goal, findings, scratchpad) for context continuity |
 | Conversation Agent | RFC-1002 §5.2 | Agent archetype for multi-turn HITL conversations |
 | Correlation ID | RFC-1001 §7.2 | Logical grouping identifier shared by related events |
 | Core Layer | RFC-1007 §5.3.1 | Framework primitives (noesium.core); zero knowledge of application |

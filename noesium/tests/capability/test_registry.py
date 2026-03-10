@@ -1,6 +1,5 @@
 """Tests for unified CapabilityRegistry (RFC-1003, RFC-2003)."""
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
 import pytest
@@ -12,7 +11,6 @@ from noesium.core.capability.models import (
     DeterminismClass,
 )
 from noesium.core.capability.registry import CapabilityRegistry, RegistryEvent
-from noesium.core.event.store import InMemoryEventStore
 from noesium.core.exceptions import CapabilityNotFoundError
 
 
@@ -251,32 +249,3 @@ class TestListener:
         reg.unregister("t")
         assert len(events) == 2
         assert events[1].action == "unregistered"
-
-
-class TestHybridEventSourcing:
-    @pytest.mark.asyncio
-    async def test_flush_to_event_store(self):
-        store = InMemoryEventStore()
-        reg = CapabilityRegistry(event_store=store)
-        reg.register(_make_provider("flushed"))
-
-        await asyncio.sleep(0.1)
-
-        events = await store.read()
-        assert len(events) >= 1
-        assert events[0].event_type == "capability.registered"
-        assert events[0].payload["capability_id"] == "flushed"
-
-    @pytest.mark.asyncio
-    async def test_rebuild_from_events(self):
-        store = InMemoryEventStore()
-        reg1 = CapabilityRegistry(event_store=store)
-        reg1.register(_make_provider("a"))
-        reg1.register(_make_provider("b"))
-
-        await asyncio.sleep(0.1)
-
-        reg2 = CapabilityRegistry()
-        count = await reg2.rebuild_from_events(store)
-        assert count == 2
-        assert len(reg2.changelog) == 2

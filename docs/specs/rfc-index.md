@@ -40,6 +40,7 @@ Master index of all RFC specifications.
 | [RFC-1007](RFC-1007.md) | Event System & Triggers | Architecture Design | Draft | 2026-03-07 | 2026-03-07 | 001 |
 | [RFC-1008](RFC-1008.md) | Extensible Subagent Interface for Core Agent Framework | Architecture Design | Draft | 2026-03-05 | 2026-03-07 | 001 |
 | [RFC-1009](RFC-1009.md) | Noesium Framework Layered Impl Architecture | Architecture Design | Draft | 2026-03-05 | 2026-03-07 | 001 |
+| [RFC-1010](RFC-1010.md) | CognitiveContext for Agent State Continuity | Architecture Design | Draft | 2026-03-08 | 2026-03-08 | 001 |
 
 #### Sub-range 1100-1199: Memory Architecture
 
@@ -113,19 +114,19 @@ Master index of all RFC specifications.
 ### By Kind
 
 - **Conceptual Design**: [RFC-0001](RFC-0001.md), [RFC-9000](RFC-9000.md)
-- **Architecture Design**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md), [RFC-1003](RFC-1003.md), [RFC-1004](RFC-1004.md), [RFC-1005](RFC-1005.md), [RFC-1006](RFC-1006.md), [RFC-1007](RFC-1007.md), [RFC-1008](RFC-1008.md), [RFC-1009](RFC-1009.md), [RFC-1101](RFC-1101.md), [RFC-1201](RFC-1201.md), [RFC-9001](RFC-9001.md)
+- **Architecture Design**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md), [RFC-1003](RFC-1003.md), [RFC-1004](RFC-1004.md), [RFC-1005](RFC-1005.md), [RFC-1006](RFC-1006.md), [RFC-1007](RFC-1007.md), [RFC-1008](RFC-1008.md), [RFC-1009](RFC-1009.md), [RFC-1010](RFC-1010.md), [RFC-1101](RFC-1101.md), [RFC-1201](RFC-1201.md), [RFC-9001](RFC-9001.md)
 - **Implementation Interface Design**: [RFC-2001](RFC-2001.md), [RFC-2002](RFC-2002.md), [RFC-2003](RFC-2003.md), [RFC-2004](RFC-2004.md), [RFC-2101](RFC-2101.md), [RFC-2102](RFC-2102.md), [RFC-2103](RFC-2103.md)
 
 ### By Status
 
-- **Draft**: RFC-0001, RFC-1001, RFC-1002, RFC-1003, RFC-1004, RFC-1005, RFC-1006, RFC-1007, RFC-1008, RFC-1009, RFC-1101, RFC-1201, RFC-2001, RFC-2002, RFC-2003, RFC-2004, RFC-2101, RFC-2102, RFC-2103, RFC-9000, RFC-9001
+- **Draft**: RFC-0001, RFC-1001, RFC-1002, RFC-1003, RFC-1004, RFC-1005, RFC-1006, RFC-1007, RFC-1008, RFC-1009, RFC-1010, RFC-1101, RFC-1201, RFC-2001, RFC-2002, RFC-2003, RFC-2004, RFC-2101, RFC-2102, RFC-2103, RFC-9000, RFC-9001
 - **Review**: _None yet_
 - **Frozen**: _None yet_
 
 ### By Category
 
 - **Conceptual Design (0xxx)**: [RFC-0001](RFC-0001.md)
-- **Architecture Design (1xxx)**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md), [RFC-1003](RFC-1003.md), [RFC-1004](RFC-1004.md), [RFC-1005](RFC-1005.md), [RFC-1006](RFC-1006.md), [RFC-1007](RFC-1007.md), [RFC-1008](RFC-1008.md), [RFC-1009](RFC-1009.md), [RFC-1101](RFC-1101.md), [RFC-1201](RFC-1201.md), [RFC-9001](RFC-9001.md)
+- **Architecture Design (1xxx)**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md), [RFC-1003](RFC-1003.md), [RFC-1004](RFC-1004.md), [RFC-1005](RFC-1005.md), [RFC-1006](RFC-1006.md), [RFC-1007](RFC-1007.md), [RFC-1008](RFC-1008.md), [RFC-1009](RFC-1009.md), [RFC-1010](RFC-1010.md), [RFC-1101](RFC-1101.md), [RFC-1201](RFC-1201.md), [RFC-9001](RFC-9001.md)
 - **Implementation Interface Design (2xxx)**: [RFC-2001](RFC-2001.md), [RFC-2002](RFC-2002.md), [RFC-2003](RFC-2003.md), [RFC-2004](RFC-2004.md), [RFC-2101](RFC-2101.md), [RFC-2102](RFC-2102.md), [RFC-2103](RFC-2103.md)
 - **Applications & Research (9xxx)**: [RFC-9000](RFC-9000.md), [RFC-9001](RFC-9001.md)
 

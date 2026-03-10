@@ -10,10 +10,6 @@ import logging
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from noesium.core.event.envelope import AgentRef, TraceContext
-from noesium.core.event.store import EventStore
-
-from .goal_events import GoalCompleted, GoalCreated, GoalFailed, GoalUpdated
 from .models import Goal, GoalStatus
 
 if TYPE_CHECKING:
@@ -53,20 +49,13 @@ class GoalEngine:
     def __init__(
         self,
         memory_provider: MemoryProvider,
-        event_store: EventStore | None = None,
-        producer: AgentRef | None = None,
     ):
         """Initialize Goal Engine.
 
         Args:
             memory_provider: Memory provider for goal persistence
-            event_store: Optional event store for emitting domain events
-            producer: Optional producer identity for events
         """
         self._storage = memory_provider
-        self._event_store = event_store
-        self._producer = producer or AgentRef(agent_id="goal_engine", agent_type="system")
-        self._trace = TraceContext()
         self._queue: list[Goal] = []
         self._goals_by_id: dict[str, Goal] = {}
         logger.info("Goal Engine initialized")
@@ -95,17 +84,6 @@ class GoalEngine:
     def _sort_queue(self) -> None:
         """Sort queue by (priority DESC, created_at ASC) for deterministic scheduling."""
         self._queue.sort(key=lambda g: (-g.priority, g.created_at))
-
-    async def _emit_event(self, event: GoalCreated | GoalUpdated | GoalCompleted | GoalFailed) -> None:
-        """Emit domain event to event store if available."""
-        if self._event_store is None:
-            return
-
-        try:
-            envelope = event.to_envelope(producer=self._producer, trace=self._trace)
-            await self._event_store.append(envelope)
-        except Exception:
-            logger.debug("Failed to emit goal event to EventStore", exc_info=True)
 
     async def create_goal(
         self,
@@ -151,15 +129,6 @@ class GoalEngine:
         self._goals_by_id[goal.id] = goal
         self._queue.append(goal)
         self._sort_queue()
-
-        # Emit event
-        await self._emit_event(
-            GoalCreated(
-                goal_id=goal.id,
-                description=description,
-                priority=priority,
-            )
-        )
 
         logger.info(f"Created goal {goal.id[:8]}: {description} (priority={priority})")
         return goal
@@ -260,15 +229,6 @@ class GoalEngine:
                     break
             self._sort_queue()
 
-        # Emit event
-        await self._emit_event(
-            GoalUpdated(
-                goal_id=goal_id,
-                old_status=(old_status.value if isinstance(old_status, GoalStatus) else old_status),
-                new_status=status.value if isinstance(status, GoalStatus) else status,
-            )
-        )
-
         logger.info(
             f"Updated goal {goal_id[:8]}: {old_status if isinstance(old_status, str) else old_status.value} → {status if isinstance(status, str) else status.value}"
         )
@@ -284,13 +244,6 @@ class GoalEngine:
             Completed goal instance
         """
         goal = await self.update_goal(goal_id, GoalStatus.COMPLETED)
-
-        await self._emit_event(
-            GoalCompleted(
-                goal_id=goal_id,
-                description=goal.description,
-            )
-        )
 
         logger.info(f"Completed goal {goal_id[:8]}: {goal.description}")
         return goal
@@ -333,27 +286,10 @@ class GoalEngine:
                 + (f" - {error}" if error else "")
             )
 
-            # Emit retry event as GoalUpdated
-            await self._emit_event(
-                GoalUpdated(
-                    goal_id=goal_id,
-                    old_status="active",
-                    new_status="pending",
-                )
-            )
-
             return goal
 
         # No retry available, mark as permanently failed
         goal = await self.update_goal(goal_id, GoalStatus.FAILED)
-
-        await self._emit_event(
-            GoalFailed(
-                goal_id=goal_id,
-                description=goal.description,
-                error=error,
-            )
-        )
 
         logger.warning(f"Failed goal {goal_id[:8]}: {goal.description}" + (f" - {error}" if error else ""))
         return goal
