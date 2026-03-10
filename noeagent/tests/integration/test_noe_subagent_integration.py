@@ -1482,6 +1482,7 @@ class TestBrowserUseAgentProgressStreaming:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
+    @pytest.mark.llm
     async def test_astream_progress_event_sequence(self):
         """astream_progress should yield events in correct sequence."""
         from noesium.core.event import ProgressEventType
@@ -1560,6 +1561,7 @@ class TestTacitusAgentProgressStreaming:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
+    @pytest.mark.llm
     async def test_astream_progress_event_sequence(self):
         """astream_progress should yield events in correct sequence for research."""
         from noesium.core.event import ProgressEventType
@@ -1612,6 +1614,7 @@ class TestTacitusAgentProgressStreaming:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
+    @pytest.mark.llm
     async def test_astream_progress_reflection_events(self):
         """astream_progress should emit reflection events for research loops."""
         from noesium.core.event import ProgressEventType
@@ -1668,6 +1671,7 @@ class TestEndToEndStreamingIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
+    @pytest.mark.llm
     async def test_subagent_progress_in_astream_progress(self):
         """SUBAGENT_PROGRESS events should appear in NoeAgent.astream_progress()."""
         from langchain_core.messages import AIMessage

@@ -529,6 +529,7 @@ class TestNoeConfig:
         assert len(enabled) == 4
         assert all(s.enabled for s in enabled)
 
+    @pytest.mark.llm
     def test_create_browser_use_agent_respects_headless_config(self):
         """Test headless precedence: env var > config > default."""
         from unittest.mock import patch

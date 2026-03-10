@@ -1,4 +1,4 @@
-name: Release
+name: Release Noesium
 
 on:
   release:
@@ -9,7 +9,7 @@ permissions:
   id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
 
 jobs:
-  deploy:
+  deploy-noesium:
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -27,14 +27,17 @@ jobs:
       run: uv python install 3.12
 
     - name: Install dependencies
+      working-directory: noesium
       run: uv sync --extra dev --extra all
 
     - name: Run tests
-      run: uv run make test-unit
+      working-directory: noesium
+      run: uv run pytest tests/ -v -m "not integration"
 
     - name: Build package
+      working-directory: noesium
       run: |
-        uv run make build
+        uv build
         ls -la dist/
         if [ ! -f dist/*.whl ] || [ ! -f dist/*.tar.gz ]; then
           echo "❌ Missing build artifacts"
@@ -44,5 +47,6 @@ jobs:
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
+        packages-dir: noesium/dist/
         verbose: true
         print-hash: true
