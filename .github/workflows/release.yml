@@ -36,13 +36,19 @@ jobs:
 
     - name: Build package
       working-directory: noesium
+      run: uv build
+
+    - name: Verify build artifacts
+      working-directory: noesium
       run: |
-        uv build
         ls -la dist/
-        if [ ! -f dist/*.whl ] || [ ! -f dist/*.tar.gz ]; then
+        WHL_COUNT=$(ls dist/*.whl 2>/dev/null | wc -l)
+        TGZ_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l)
+        if [ "$WHL_COUNT" -eq 0 ] || [ "$TGZ_COUNT" -eq 0 ]; then
           echo "❌ Missing build artifacts"
           exit 1
         fi
+        echo "✅ Build artifacts verified"
 
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
