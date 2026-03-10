@@ -1,7 +1,11 @@
-"""PlanAgent implementation for creating implementation plans."""
+"""PlanAgent implementation for creating domain-agnostic plans.
+
+A general-purpose planning agent that generates detailed, actionable plans
+with structured steps, resource requirements, dependencies, and verification criteria.
+Applicable to diverse domains including software, research, workflows, and projects.
+"""
 
 import json
-import re
 from typing import Any, AsyncGenerator, Dict, List, Optional, Type
 
 try:
@@ -29,25 +33,28 @@ from noesium.toolkits import TOOLKIT_FILE_EDIT, TOOLKIT_USER_INTERACTION
 from noesium.utils.tool_utils import ToolHelper, create_tool_helper
 
 from .prompts import (
-    CLARIFICATION_PROMPT,
+    CONTEXT_EVALUATION_PROMPT,
     PLAN_GENERATION_PROMPT,
     PLAN_SYSTEM_PROMPT,
     TASK_ANALYSIS_PROMPT,
 )
+from .schemas import ContextEvaluation, DetailedPlan
 from .state import PlanState
 
 logger = get_logger(__name__)
 
 
 class PlanAgent(BaseGraphicAgent):
-    """Planning agent for creating implementation plans.
+    """General-purpose planning agent for creating domain-agnostic plans.
 
     This agent:
-    1. Analyzes tasks and requirements
-    2. Reads relevant files to understand codebase
-    3. Breaks down complex tasks into actionable steps
-    4. Asks clarifying questions when needed
-    5. Creates comprehensive implementation plans
+    1. Evaluates context sufficiency (smart context detection)
+    2. Explores resources if context is insufficient
+    3. Analyzes requirements and constraints
+    4. Generates detailed, structured plans
+    5. Defines verification criteria for each step
+
+    Supports plan types: implementation, research, workflow, project, general
     """
 
     def __init__(
@@ -107,57 +114,85 @@ class PlanAgent(BaseGraphicAgent):
 
     @override
     def _build_graph(self) -> StateGraph:
-        """Build the planning workflow graph."""
+        """Build the planning workflow graph with unified context handling."""
         workflow = StateGraph(PlanState)
 
         # Add nodes
-        workflow.add_node("analyze_task", self._analyze_task_node)
-        workflow.add_node("read_context", self._read_context_node)
+        workflow.add_node("evaluate_context", self._evaluate_context_node)
+        workflow.add_node("explore_resources", self._explore_resources_node)
+        workflow.add_node("analyze_requirements", self._analyze_requirements_node)
         workflow.add_node("generate_plan", self._generate_plan_node)
-        workflow.add_node("validate_plan", self._validate_plan_node)
+        workflow.add_node("define_verification", self._define_verification_node)
         workflow.add_node("finalize_plan", self._finalize_plan_node)
 
         # Set entry point
-        workflow.add_edge(START, "analyze_task")
+        workflow.add_edge(START, "evaluate_context")
 
-        # Add edges
-        workflow.add_edge("analyze_task", "read_context")
-        workflow.add_edge("read_context", "generate_plan")
-        workflow.add_edge("generate_plan", "validate_plan")
+        # Conditional edge: explore if context insufficient
         workflow.add_conditional_edges(
-            "validate_plan",
-            self._should_finalize,
-            ["finalize_plan", "read_context"],
+            "evaluate_context",
+            self._should_explore,
+            ["explore_resources", "analyze_requirements"],
         )
+
+        # Continue after exploration
+        workflow.add_edge("explore_resources", "analyze_requirements")
+        workflow.add_edge("analyze_requirements", "generate_plan")
+        workflow.add_edge("generate_plan", "define_verification")
+        workflow.add_edge("define_verification", "finalize_plan")
         workflow.add_edge("finalize_plan", END)
 
         return workflow.compile()
 
-    async def _analyze_task_node(self, state: PlanState, config: RunnableConfig) -> Dict[str, Any]:
-        """Analyze the task and identify what needs to be understood."""
-        task = self._get_task_from_messages(state["messages"])
+    def _should_explore(self, state: PlanState) -> str:
+        """Determine if context exploration is needed."""
+        if state.get("context_sufficient", False):
+            return "analyze_requirements"
+        return "explore_resources"
 
-        prompt = TASK_ANALYSIS_PROMPT.format(
-            task=task,
-            context=state.get("context", {}),
+    async def _evaluate_context_node(self, state: PlanState, config: RunnableConfig) -> Dict[str, Any]:
+        """Evaluate context sufficiency for planning."""
+        objective = self._get_objective_from_messages(state["messages"])
+        context = state.get("context", {})
+
+        prompt = CONTEXT_EVALUATION_PROMPT.format(
+            objective=objective,
+            context=json.dumps(context, indent=2) if context else "No context provided",
         )
 
-        response = self.llm.completion(
-            messages=[
-                {"role": "system", "content": PLAN_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=self.planning_temperature,
-            max_tokens=self.planning_max_tokens,
-        )
+        try:
+            # Use structured output for context evaluation
+            result: ContextEvaluation = self.llm.structured_completion(
+                messages=[
+                    {"role": "system", "content": PLAN_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                response_model=ContextEvaluation,
+                temperature=0.3,
+                max_tokens=1000,
+            )
 
-        return {
-            "messages": [AIMessage(content=response)],
-        }
+            logger.info(f"Context evaluation: sufficient={result.is_sufficient}, type={result.detected_plan_type}")
 
-    async def _read_context_node(self, state: PlanState, config: RunnableConfig) -> Dict[str, Any]:
-        """Read relevant files using actual tools."""
-        task = self._get_task_from_messages(state["messages"])
+            return {
+                "context_sufficient": result.is_sufficient,
+                "plan_type": result.detected_plan_type,
+                "messages": [AIMessage(content=f"Context evaluation: {result.reasoning}")],
+            }
+
+        except Exception as e:
+            logger.warning(f"Structured context evaluation failed, using fallback: {e}")
+            # Fallback: assume context is insufficient if empty
+            is_sufficient = bool(context)
+            return {
+                "context_sufficient": is_sufficient,
+                "plan_type": "general",
+                "messages": [AIMessage(content=f"Context evaluation fallback: sufficient={is_sufficient}")],
+            }
+
+    async def _explore_resources_node(self, state: PlanState, config: RunnableConfig) -> Dict[str, Any]:
+        """Explore resources to gather context."""
+        objective = self._get_objective_from_messages(state["messages"])
 
         # Ensure tool helper is ready
         tool_helper = await self._ensure_tool_helper()
@@ -165,47 +200,47 @@ class PlanAgent(BaseGraphicAgent):
         # Get tool descriptions for LLM
         tool_desc = tool_helper.get_tool_descriptions()
 
-        # Use LLM to identify which files to read
-        file_identification_prompt = f"""
-You are planning: {task}
+        # Use LLM to identify which resources to explore
+        exploration_prompt = f"""
+You are planning: {objective}
 
 Available tools:
 {tool_desc}
 
-Identify which files should be read to create a comprehensive plan.
-Return a JSON list of file paths to read, e.g.: ["file1.py", "src/module.py"]
+Identify resources to explore for creating a comprehensive plan.
+Return a JSON object with:
+- files: list of file paths to read
+- searches: list of search queries to run
 
-Return ONLY the JSON list, no other text.
+Return ONLY the JSON object, no other text.
 """
 
-        files_read = []
+        explored_resources = []
         file_contents = {}
         tool_results = []
+        context = state.get("context", {})
 
         try:
-            # Get file list from LLM
             response = self.llm.completion(
-                messages=[{"role": "user", "content": file_identification_prompt}],
+                messages=[{"role": "user", "content": exploration_prompt}],
                 temperature=0.3,
                 max_tokens=500,
             )
 
-            # Parse file paths
+            # Parse exploration plan
             try:
-                file_paths = json.loads(response.strip())
+                exploration_plan = json.loads(response.strip())
             except json.JSONDecodeError:
-                # Fallback: try to extract paths from text
-                file_paths = re.findall(r'["\']([^"\']+\.py)["\']', response)
+                exploration_plan = {"files": [], "searches": []}
 
-            # Read each file using actual tools
-            for file_path in file_paths[:5]:  # Limit to 5 files
+            # Read files
+            for file_path in exploration_plan.get("files", [])[:5]:
                 try:
                     result = await tool_helper.execute_tool(
                         "file_edit:read_file",
                         file_path=file_path,
                     )
-
-                    files_read.append(file_path)
+                    explored_resources.append(file_path)
                     file_contents[file_path] = result
                     tool_results.append(
                         {
@@ -215,9 +250,7 @@ Return ONLY the JSON list, no other text.
                             "size": len(result),
                         }
                     )
-
                     logger.info(f"Read file: {file_path} ({len(result)} bytes)")
-
                 except Exception as e:
                     logger.warning(f"Failed to read file {file_path}: {e}")
                     tool_results.append(
@@ -229,125 +262,168 @@ Return ONLY the JSON list, no other text.
                         }
                     )
 
+            # Run searches
+            for search_pattern in exploration_plan.get("searches", [])[:3]:
+                try:
+                    result = await tool_helper.execute_tool(
+                        "file_edit:search_in_files",
+                        pattern=search_pattern,
+                        directory=".",
+                    )
+                    tool_results.append(
+                        {
+                            "tool": "search_in_files",
+                            "query": search_pattern,
+                            "success": True,
+                            "matches": len(result.get("matches", [])) if isinstance(result, dict) else 0,
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Search failed for '{search_pattern}': {e}")
+
         except Exception as e:
-            logger.error(f"Error in read_context_node: {e}")
+            logger.error(f"Error in explore_resources_node: {e}")
+
+        # Update context with explored content
+        context["explored_files"] = file_contents
+        context["exploration_results"] = tool_results
 
         return {
-            "files_read": files_read,
+            "explored_resources": explored_resources,
             "file_contents": file_contents,
             "tool_results": tool_results,
+            "context": context,
+            "context_sufficient": True,  # After exploration, proceed
+        }
+
+    async def _analyze_requirements_node(self, state: PlanState, config: RunnableConfig) -> Dict[str, Any]:
+        """Analyze requirements and constraints from the objective."""
+        objective = self._get_objective_from_messages(state["messages"])
+        context = state.get("context", {})
+
+        prompt = TASK_ANALYSIS_PROMPT.format(
+            objective=objective,
+            context=json.dumps(context, indent=2) if context else "No additional context",
+        )
+
+        response = self.llm.completion(
+            messages=[
+                {"role": "system", "content": PLAN_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=self.planning_temperature,
+            max_tokens=self.planning_max_tokens,
+        )
+
+        return {
+            "messages": [AIMessage(content=response)],
         }
 
     async def _generate_plan_node(self, state: PlanState, config: RunnableConfig) -> Dict[str, Any]:
-        """Generate the implementation plan."""
-        task = self._get_task_from_messages(state["messages"])
-        files_analyzed = state.get("files_read", [])
+        """Generate the detailed plan using structured output."""
+        objective = self._get_objective_from_messages(state["messages"])
+        context = state.get("context", {})
+        plan_type = state.get("plan_type", "general")
 
-        # Extract key findings from messages
-        key_findings = self._extract_key_findings(state["messages"])
+        # Include explored content in context
+        file_contents = state.get("file_contents", {})
+        if file_contents:
+            context["file_contents_summary"] = {
+                k: v[:500] + "..." if len(v) > 500 else v for k, v in file_contents.items()
+            }
 
         prompt = PLAN_GENERATION_PROMPT.format(
-            task=task,
-            files_analyzed=files_analyzed,
-            key_findings=key_findings,
+            objective=objective,
+            context=json.dumps(context, indent=2) if context else "No additional context",
+            plan_type=plan_type,
         )
 
-        response = self.llm.completion(
-            messages=[
-                {"role": "system", "content": PLAN_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=self.planning_temperature,
-            max_tokens=self.planning_max_tokens,
-        )
+        try:
+            # Use structured output for plan generation
+            result: DetailedPlan = self.llm.structured_completion(
+                messages=[
+                    {"role": "system", "content": PLAN_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                response_model=DetailedPlan,
+                temperature=self.planning_temperature,
+                max_tokens=self.planning_max_tokens,
+            )
 
-        # Parse the plan into structured steps
-        plan_steps = self._parse_plan_steps(response)
+            # Convert to dict for state
+            plan_steps = [step.model_dump() for step in result.plan_steps]
+            dependencies = [dep.model_dump() for dep in result.dependencies]
+
+            logger.info(f"Generated plan with {len(plan_steps)} steps")
+
+            return {
+                "plan_steps": plan_steps,
+                "dependencies": dependencies,
+                "messages": [AIMessage(content=f"Generated {result.plan_type} plan: {result.title}")],
+            }
+
+        except Exception as e:
+            logger.warning(f"Structured plan generation failed, using fallback: {e}")
+            # Fallback to text-based planning
+            response = self.llm.completion(
+                messages=[
+                    {"role": "system", "content": PLAN_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=self.planning_temperature,
+                max_tokens=self.planning_max_tokens,
+            )
+
+            plan_steps = self._parse_plan_steps(response)
+
+            return {
+                "plan_steps": plan_steps,
+                "dependencies": [],
+                "messages": [AIMessage(content=response)],
+            }
+
+    async def _define_verification_node(self, state: PlanState, config: RunnableConfig) -> Dict[str, Any]:
+        """Define verification criteria for plan steps."""
+        plan_steps = state.get("plan_steps", [])
+
+        # Extract verification steps from plan_steps (already included in structured output)
+        verification_steps = []
+        for step in plan_steps:
+            if step.get("verification"):
+                verification_steps.append(
+                    {
+                        "step_id": step.get("step_id"),
+                        "verification": step.get("verification"),
+                    }
+                )
 
         return {
-            "messages": [AIMessage(content=response)],
-            "plan_steps": plan_steps,
-        }
-
-    async def _validate_plan_node(self, state: PlanState, config: RunnableConfig) -> Dict[str, Any]:
-        """Validate the plan and check if clarification is needed."""
-        task = self._get_task_from_messages(state["messages"])
-        files_read = state.get("files_read", [])
-
-        # Extract current understanding from messages
-        current_understanding = self._extract_current_understanding(state["messages"])
-
-        prompt = CLARIFICATION_PROMPT.format(
-            task=task,
-            files_read=files_read,
-            current_understanding=current_understanding,
-        )
-
-        response = self.llm.completion(
-            messages=[
-                {"role": "system", "content": PLAN_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=self.planning_temperature,
-            max_tokens=self.planning_max_tokens,
-        )
-
-        # Parse clarification questions
-        clarification_questions = self._parse_clarification_questions(response)
-
-        return {
-            "messages": [AIMessage(content=response)],
-            "clarification_questions": clarification_questions,
+            "verification_steps": verification_steps,
         }
 
     async def _finalize_plan_node(self, state: PlanState, config: RunnableConfig) -> Dict[str, Any]:
-        """Finalize the plan."""
-        # Extract the final plan from messages
-        final_plan = self._extract_final_plan(state["messages"])
+        """Finalize and format the plan."""
+        plan_steps = state.get("plan_steps", [])
+        plan_type = state.get("plan_type", "general")
+        dependencies = state.get("dependencies", [])
+
+        # Format plan as readable text
+        plan_text = self._format_plan_text(plan_type, plan_steps, dependencies)
 
         return {
-            "final_plan": final_plan,
-            "messages": [AIMessage(content=final_plan)],
+            "final_plan": plan_text,
+            "messages": [AIMessage(content=plan_text)],
         }
 
-    def _should_finalize(self, state: PlanState) -> str:
-        """Determine if planning should finalize or continue."""
-        clarification_questions = state.get("clarification_questions", [])
-        current_step = state.get("current_step_index", 0)
-
-        # If no clarification needed or max loops reached, finalize
-        if not clarification_questions or current_step >= self.max_planning_loops:
-            return "finalize_plan"
-
-        # Otherwise, continue gathering context
-        return "read_context"
-
-    def _get_task_from_messages(self, messages: List[AnyMessage]) -> str:
-        """Extract task from messages."""
+    def _get_objective_from_messages(self, messages: List[AnyMessage]) -> str:
+        """Extract objective from messages."""
         for message in reversed(messages):
             if isinstance(message, HumanMessage):
                 return message.content
         return ""
 
-    def _extract_key_findings(self, messages: List[AnyMessage]) -> str:
-        """Extract key findings from messages."""
-        findings = []
-        for message in messages:
-            if isinstance(message, AIMessage):
-                findings.append(message.content)
-        return "\n\n".join(findings[-2:]) if findings else "No findings yet"
-
-    def _extract_current_understanding(self, messages: List[AnyMessage]) -> str:
-        """Extract current understanding from messages."""
-        understandings = []
-        for message in messages[-3:]:
-            if isinstance(message, AIMessage):
-                understandings.append(message.content)
-        return "\n\n".join(understandings) if understandings else "Initial analysis"
-
     def _parse_plan_steps(self, plan_text: str) -> List[Dict[str, Any]]:
-        """Parse plan text into structured steps."""
-        # Simple parsing - in production, would use structured output
+        """Parse plan text into structured steps (fallback)."""
         steps = []
         lines = plan_text.split("\n")
 
@@ -361,40 +437,89 @@ Return ONLY the JSON list, no other text.
                     steps.append(current_step)
                 step_num += 1
                 current_step = {
-                    "step_number": step_num,
+                    "step_id": f"step-{step_num:03d}",
                     "description": line,
-                    "rationale": "",
-                    "files_to_read": [],
-                    "estimated_complexity": "medium",
+                    "action_type": "execute",
+                    "target": None,
+                    "details": [],
                     "dependencies": [],
+                    "verification": None,
+                    "estimated_effort": "medium",
+                    "resources_required": [],
                 }
             elif current_step and line:
-                # Add to rationale
-                current_step["rationale"] += " " + line
+                # Add to details
+                if not current_step.get("details"):
+                    current_step["details"] = []
+                current_step["details"].append(
+                    {
+                        "aspect": "detail",
+                        "action": line,
+                        "content": None,
+                        "rationale": "",
+                    }
+                )
 
         if current_step:
             steps.append(current_step)
 
         return steps
 
-    def _parse_clarification_questions(self, text: str) -> List[str]:
-        """Parse clarification questions from text."""
-        questions = []
-        lines = text.split("\n")
+    def _format_plan_text(
+        self,
+        plan_type: str,
+        plan_steps: List[Dict[str, Any]],
+        dependencies: List[Dict[str, Any]],
+    ) -> str:
+        """Format plan as readable text."""
+        lines = [
+            f"# {plan_type.title()} Plan",
+            "",
+            f"## Steps ({len(plan_steps)} total)",
+            "",
+        ]
 
-        for line in lines:
-            line = line.strip()
-            if line and ("?" in line or line.startswith("Q:") or line.startswith("Question:")):
-                questions.append(line)
+        for step in plan_steps:
+            step_id = step.get("step_id", "")
+            desc = step.get("description", "")
+            action = step.get("action_type", "execute")
+            target = step.get("target", "")
+            effort = step.get("estimated_effort", "medium")
 
-        return questions[:3]  # Limit to 3 questions
+            lines.append(f"### {step_id}: {desc}")
+            lines.append(f"- **Action**: {action}")
+            if target:
+                lines.append(f"- **Target**: {target}")
+            lines.append(f"- **Effort**: {effort}")
 
-    def _extract_final_plan(self, messages: List[AnyMessage]) -> str:
-        """Extract final plan from messages."""
-        for message in reversed(messages):
-            if isinstance(message, AIMessage):
-                return message.content
-        return "Plan creation failed"
+            # Details
+            details = step.get("details", [])
+            if details:
+                lines.append("- **Details**:")
+                for detail in details:
+                    lines.append(f"  - {detail.get('action', '')}")
+                    if detail.get("rationale"):
+                        lines.append(f"    *Rationale: {detail.get('rationale')}*")
+
+            # Verification
+            verification = step.get("verification")
+            if verification:
+                lines.append(f"- **Verification**: {verification.get('type', 'manual')}")
+                if verification.get("method"):
+                    lines.append(f"  - Method: {verification.get('method')}")
+                if verification.get("expected_outcome"):
+                    lines.append(f"  - Expected: {verification.get('expected_outcome')}")
+
+            lines.append("")
+
+        # Dependencies
+        if dependencies:
+            lines.append("## Dependencies")
+            lines.append("")
+            for dep in dependencies:
+                lines.append(f"- {dep.get('from_step')} depends on {dep.get('to_step')}: {dep.get('reason', '')}")
+
+        return "\n".join(lines)
 
     @override
     async def run(
@@ -406,21 +531,26 @@ Return ONLY the JSON list, no other text.
         """Run the planning agent and return the plan.
 
         Args:
-            user_message: The task to plan
-            context: Additional context
+            user_message: The objective to plan for
+            context: Additional context (unified handling)
             config: Runtime configuration
 
         Returns:
-            The implementation plan as text
+            The plan as formatted text
         """
         initial_state: PlanState = {
             "messages": [HumanMessage(content=user_message)],
             "context": context or {},
-            "files_read": [],
-            "file_contents": {},
-            "tool_results": [],
+            "context_sufficient": False,
+            "explored_resources": [],
+            "requirements": [],
+            "constraints": [],
+            "plan_type": "general",
             "plan_steps": [],
-            "current_step_index": 0,
+            "dependencies": [],
+            "verification_steps": [],
+            "tool_results": [],
+            "file_contents": {},
             "clarification_questions": [],
             "final_plan": None,
         }
@@ -438,15 +568,13 @@ Return ONLY the JSON list, no other text.
         """Stream progress events during planning.
 
         Args:
-            user_message: The task to plan
+            user_message: The objective to plan for
             context: Additional context
             config: Runtime configuration
 
         Yields:
             ProgressEvent: Events describing planning progress
         """
-        from uuid_extensions import uuid7str
-
         from noesium.core.event import ProgressEvent, ProgressEventType
 
         session_id = uuid7str()
@@ -462,74 +590,77 @@ Return ONLY the JSON list, no other text.
         initial_state: PlanState = {
             "messages": [HumanMessage(content=user_message)],
             "context": context or {},
-            "files_read": [],
-            "file_contents": {},
-            "tool_results": [],
+            "context_sufficient": False,
+            "explored_resources": [],
+            "requirements": [],
+            "constraints": [],
+            "plan_type": "general",
             "plan_steps": [],
-            "current_step_index": 0,
+            "dependencies": [],
+            "verification_steps": [],
+            "tool_results": [],
+            "file_contents": {},
             "clarification_questions": [],
             "final_plan": None,
         }
 
         try:
-            # Yield thinking event
             yield ProgressEvent(
                 type=ProgressEventType.THINKING,
                 session_id=session_id,
-                summary="Analyzing task requirements...",
+                summary="Evaluating context...",
             )
 
-            # Stream graph execution
             async for event in self.graph.astream(initial_state):
                 for node_name, node_output in event.items():
                     if not isinstance(node_output, dict):
                         continue
 
-                    # Handle different nodes
-                    if node_name == "analyze_task":
+                    if node_name == "evaluate_context":
+                        plan_type = node_output.get("plan_type", "general")
+                        sufficient = node_output.get("context_sufficient", False)
                         yield ProgressEvent(
                             type=ProgressEventType.THINKING,
                             session_id=session_id,
-                            summary="Analyzing task structure...",
+                            summary=f"Context evaluation: {plan_type} plan, sufficient={sufficient}",
                         )
 
-                    elif node_name == "read_context":
+                    elif node_name == "explore_resources":
                         tool_results = node_output.get("tool_results", [])
-                        node_output.get("files_read", [])
-
-                        # Emit tool events based on actual tool execution
                         for tool_result in tool_results:
                             tool_name = tool_result.get("tool", "unknown")
-                            file_path = tool_result.get("file_path", "")
                             success = tool_result.get("success", False)
 
-                            # Emit TOOL_START
                             yield ProgressEvent(
                                 type=ProgressEventType.TOOL_START,
                                 session_id=session_id,
                                 tool_name=tool_name,
-                                summary=f"Reading {file_path}...",
+                                summary=f"Exploring: {tool_result.get('file_path', tool_result.get('query', ''))}",
                             )
 
-                            # Emit TOOL_END
                             if success:
-                                size = tool_result.get("size", 0)
                                 yield ProgressEvent(
                                     type=ProgressEventType.TOOL_END,
                                     session_id=session_id,
                                     tool_name=tool_name,
-                                    tool_result=f"Successfully read {file_path} ({size} bytes)",
-                                    summary=f"Read {file_path}",
+                                    tool_result="Success",
+                                    summary=f"Explored successfully",
                                 )
                             else:
-                                error = tool_result.get("error", "Unknown error")
                                 yield ProgressEvent(
                                     type=ProgressEventType.TOOL_END,
                                     session_id=session_id,
                                     tool_name=tool_name,
-                                    tool_result=f"Failed to read {file_path}: {error}",
-                                    summary=f"Failed to read {file_path}",
+                                    tool_result=f"Failed: {tool_result.get('error', '')}",
+                                    summary="Exploration failed",
                                 )
+
+                    elif node_name == "analyze_requirements":
+                        yield ProgressEvent(
+                            type=ProgressEventType.THINKING,
+                            session_id=session_id,
+                            summary="Analyzing requirements...",
+                        )
 
                     elif node_name == "generate_plan":
                         plan_steps = node_output.get("plan_steps", [])
@@ -539,24 +670,12 @@ Return ONLY the JSON list, no other text.
                             summary=f"Generated plan with {len(plan_steps)} steps",
                             plan_snapshot={
                                 "steps": [
-                                    {
-                                        "description": step.get("description", ""),
-                                        "status": "pending",
-                                    }
+                                    {"description": step.get("description", ""), "status": "pending"}
                                     for step in plan_steps
                                 ],
                                 "goal": user_message,
                             },
                         )
-
-                    elif node_name == "validate_plan":
-                        questions = node_output.get("clarification_questions", [])
-                        if questions:
-                            yield ProgressEvent(
-                                type=ProgressEventType.THINKING,
-                                session_id=session_id,
-                                summary=f"Identified {len(questions)} clarification questions",
-                            )
 
                     elif node_name == "finalize_plan":
                         final_plan = node_output.get("final_plan", "")
@@ -578,7 +697,6 @@ Return ONLY the JSON list, no other text.
             raise
 
         finally:
-            # Yield SESSION_END
             yield ProgressEvent(
                 type=ProgressEventType.SESSION_END,
                 session_id=session_id,

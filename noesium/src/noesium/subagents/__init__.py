@@ -8,8 +8,8 @@ Available Subagents:
     - AskuraAgent: General-purpose conversation agent
     - TacitusAgent: Research agent with iterative query generation
     - BrowserUseAgent: Web automation agent (lazy-loaded due to heavy dependencies)
-    - PlanAgent: Planning agent for creating implementation plans
-    - ExploreAgent: Exploration agent for gathering information from codebases
+    - PlanAgent: General-purpose planning agent for domain-agnostic plans
+    - ExploreAgent: Exploration agent for gathering information from diverse sources
     - DavinciAgent: Scientific research agent (placeholder, lazy-loaded)
 
 Usage:
@@ -48,16 +48,17 @@ from noesium.subagents.askura import (
     AskuraState,
 )
 from noesium.subagents.explore import (
-    ExplorationFinding,
-    ExplorationResult,
-    ExplorationSource,
     ExploreAgent,
+    ExploreResult,
     ExploreState,
+    Finding,
+    ReflectionResult,
+    Source,
 )
 from noesium.subagents.plan import (
-    ClarificationQuestion,
+    ContextEvaluation,
+    DetailedPlan,
     PlanAgent,
-    PlanResult,
     PlanState,
     PlanStep,
 )
@@ -82,13 +83,14 @@ __all__ = [
     "PlanAgent",
     "PlanState",
     "PlanStep",
-    "PlanResult",
-    "ClarificationQuestion",
+    "DetailedPlan",
+    "ContextEvaluation",
     "ExploreAgent",
     "ExploreState",
-    "ExplorationFinding",
-    "ExplorationResult",
-    "ExplorationSource",
+    "ExploreResult",
+    "Finding",
+    "Source",
+    "ReflectionResult",
     "BrowserUseAgent",  # Lazy-loaded
     "DavinciAgent",  # Lazy-loaded
 ]

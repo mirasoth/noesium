@@ -1,5 +1,11 @@
-"""ExploreAgent implementation for gathering information."""
+"""ExploreAgent implementation for gathering information from diverse sources.
 
+A general-purpose exploration agent that discovers and synthesizes essential
+information from files, documents, media, data, and structured content.
+Features a reflection loop for iterative quality control.
+"""
+
+import json
 from typing import Any, AsyncGenerator, Dict, List, Optional, Type
 
 try:
@@ -37,29 +43,36 @@ from noesium.utils.tool_utils import ToolHelper, create_tool_helper
 
 from .prompts import (
     EXPLORE_SYSTEM_PROMPT,
+    REFLECTION_PROMPT,
+    STRATEGY_GENERATION_PROMPT,
     SYNTHESIS_PROMPT,
     TARGET_ANALYSIS_PROMPT,
 )
+from .schemas import ExploreResult, Finding, Source
 from .state import ExploreState
 
 logger = get_logger(__name__)
 
 
 class ExploreAgent(BaseGraphicAgent):
-    """Exploration agent for gathering information from codebases and data.
+    """Exploration agent for gathering information from diverse sources.
 
     This agent:
-    1. Analyzes exploration targets
-    2. Uses comprehensive read-only toolkits
-    3. Gathers information systematically
-    4. Tracks findings and sources
-    5. Synthesizes results into clear summaries
+    1. Analyzes exploration targets and determines target type
+    2. Generates multi-pronged search strategies
+    3. Executes exploration using comprehensive read-only toolkits
+    4. Reflects on completeness and loops if needed
+    5. Synthesizes findings into structured results
+
+    Workflow:
+    START → analyze_target → generate_strategy → explore_sources →
+    reflect → [loop if insufficient] → synthesize → END
     """
 
     def __init__(
         self,
         llm_provider: str = "openai",
-        max_exploration_depth: int = 3,
+        max_loops: int = 3,
         exploration_temperature: float = 0.5,
         exploration_max_tokens: int = 4000,
         agent_id: str | None = None,
@@ -69,7 +82,7 @@ class ExploreAgent(BaseGraphicAgent):
 
         Args:
             llm_provider: LLM provider to use
-            max_exploration_depth: Maximum exploration depth
+            max_loops: Maximum exploration loops (reflection iterations)
             exploration_temperature: Temperature for exploration
             exploration_max_tokens: Max tokens for exploration
             agent_id: Optional agent ID (auto-generated if None)
@@ -77,7 +90,7 @@ class ExploreAgent(BaseGraphicAgent):
         """
         super().__init__(llm_provider=llm_provider)
 
-        self.max_exploration_depth = max_exploration_depth
+        self.max_loops = max_loops
         self.exploration_temperature = exploration_temperature
         self.exploration_max_tokens = exploration_max_tokens
 
@@ -136,31 +149,70 @@ class ExploreAgent(BaseGraphicAgent):
 
     @override
     def _build_graph(self) -> StateGraph:
-        """Build the exploration workflow graph."""
+        """Build the exploration workflow graph with reflection loop."""
         workflow = StateGraph(ExploreState)
 
         # Add nodes
         workflow.add_node("analyze_target", self._analyze_target_node)
+        workflow.add_node("generate_strategy", self._generate_strategy_node)
         workflow.add_node("explore_sources", self._explore_sources_node)
+        workflow.add_node("reflect", self._reflect_node)
         workflow.add_node("synthesize", self._synthesize_node)
 
         # Set entry point
         workflow.add_edge(START, "analyze_target")
 
-        # Add edges
-        workflow.add_edge("analyze_target", "explore_sources")
-        workflow.add_edge("explore_sources", "synthesize")
+        # Linear flow to exploration
+        workflow.add_edge("analyze_target", "generate_strategy")
+        workflow.add_edge("generate_strategy", "explore_sources")
+        workflow.add_edge("explore_sources", "reflect")
+
+        # Conditional branching from reflect
+        workflow.add_conditional_edges(
+            "reflect",
+            self._should_continue_exploring,
+            {
+                "continue": "explore_sources",
+                "synthesize": "synthesize",
+            },
+        )
+
+        # End after synthesis
         workflow.add_edge("synthesize", END)
 
         return workflow.compile()
 
+    def _should_continue_exploring(self, state: ExploreState) -> str:
+        """Determine whether to continue exploring or synthesize."""
+        reflection = state.get("reflection")
+        current_loop = state.get("exploration_loops", 0)
+        max_loops = state.get("max_loops", self.max_loops)
+
+        # Check if we have reflection results
+        if reflection:
+            is_sufficient = reflection.get("is_sufficient", False)
+            if is_sufficient:
+                return "synthesize"
+
+        # Check loop limit
+        if current_loop >= max_loops:
+            logger.info(f"Max exploration loops ({max_loops}) reached, synthesizing")
+            return "synthesize"
+
+        # Continue exploring if we have follow-up queries
+        if reflection and reflection.get("follow_up_queries"):
+            return "continue"
+
+        return "synthesize"
+
     async def _analyze_target_node(self, state: ExploreState, config: RunnableConfig) -> Dict[str, Any]:
-        """Analyze the exploration target and determine approach."""
+        """Analyze the exploration target and determine target type."""
         target = state.get("target", "")
+        context = state.get("context", {})
 
         prompt = TARGET_ANALYSIS_PROMPT.format(
             target=target,
-            context=state.get("context", {}),
+            context=json.dumps(context, indent=2) if context else "No additional context",
         )
 
         response = self.llm.completion(
@@ -172,121 +224,234 @@ class ExploreAgent(BaseGraphicAgent):
             max_tokens=self.exploration_max_tokens,
         )
 
+        # Parse target type from response
+        target_type = "general"
+        try:
+            # Attempt to parse JSON from response
+            response_data = json.loads(response)
+            target_type = response_data.get("target_type", "general")
+        except (json.JSONDecodeError, TypeError):
+            # Infer target type from keywords
+            target_lower = target.lower()
+            if any(kw in target_lower for kw in ["code", "function", "class", "module", "implement"]):
+                target_type = "code"
+            elif any(kw in target_lower for kw in ["pdf", "document", "word", "doc"]):
+                target_type = "document"
+            elif any(kw in target_lower for kw in ["csv", "excel", "data", "table"]):
+                target_type = "data"
+            elif any(kw in target_lower for kw in ["image", "audio", "video", "media"]):
+                target_type = "media"
+
         return {
             "messages": [AIMessage(content=response)],
+            "target_type": target_type,
+            "exploration_loops": 0,
+            "max_loops": self.max_loops,
+            "is_sufficient": False,
+        }
+
+    async def _generate_strategy_node(self, state: ExploreState, config: RunnableConfig) -> Dict[str, Any]:
+        """Generate exploration strategy based on target analysis."""
+        target = state.get("target", "")
+        messages = state.get("messages", [])
+
+        # Get analysis from previous node
+        analysis = ""
+        for msg in reversed(messages):
+            if isinstance(msg, AIMessage):
+                analysis = msg.content
+                break
+
+        prompt = STRATEGY_GENERATION_PROMPT.format(
+            target=target,
+            analysis=analysis,
+        )
+
+        response = self.llm.completion(
+            messages=[
+                {"role": "system", "content": EXPLORE_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=self.exploration_temperature,
+            max_tokens=self.exploration_max_tokens,
+        )
+
+        # Parse search strategy from response
+        search_strategy = []
+        try:
+            # Try to extract strategy from structured response
+            response_lines = response.split("\n")
+            for line in response_lines:
+                if "query" in line.lower() or "search" in line.lower():
+                    search_strategy.append({"query": line.strip(), "priority": "medium"})
+        except Exception:
+            # Fallback: create basic strategy from target
+            search_strategy = [{"query": target, "priority": "high"}]
+
+        return {
+            "messages": state.get("messages", []) + [AIMessage(content=response)],
+            "search_strategy": search_strategy,
         }
 
     async def _explore_sources_node(self, state: ExploreState, config: RunnableConfig) -> Dict[str, Any]:
         """Explore sources using actual tools."""
         target = state.get("target", "")
-        current_depth = state.get("exploration_depth", 0)
+        current_loop = state.get("exploration_loops", 0)
+        reflection = state.get("reflection")
+
+        # Get follow-up queries from reflection if available
+        follow_up_queries = []
+        if reflection:
+            follow_up_queries = reflection.get("follow_up_queries", [])
 
         # Ensure tool helper is ready
         tool_helper = await self._ensure_tool_helper()
 
-        findings = []
-        sources = []
+        # Get existing findings and sources
+        findings = list(state.get("findings", []))
+        sources = list(state.get("sources", []))
         tool_results = []
 
-        # Strategy 1: Search for relevant files
-        try:
-            search_result = await tool_helper.execute_tool(
-                "file_edit:search_in_files",
-                query=target,
-                path=".",
-            )
-            tool_results.append(
-                {
-                    "tool": "search_in_files",
-                    "success": True,
-                    "result": search_result,
-                }
-            )
+        # Determine search queries
+        search_queries = follow_up_queries if follow_up_queries else [target]
 
-            # Parse search results into findings
-            for match in search_result.get("matches", [])[:10]:
-                findings.append(
+        for query in search_queries[:3]:  # Limit queries per loop
+            # Strategy 1: Search for relevant files
+            try:
+                # Use correct parameter names: pattern, directory
+                search_result = await tool_helper.execute_tool(
+                    "file_edit:search_in_files",
+                    pattern=query,
+                    directory=".",
+                )
+                tool_results.append(
                     {
-                        "title": f"Found in {match['file']}",
-                        "description": match.get("context", ""),
-                        "source": match["file"],
-                        "relevance": "high",
-                        "details": match,
+                        "tool": "search_in_files",
+                        "query": query,
+                        "success": True,
+                        "result": search_result[:500] if isinstance(search_result, str) else str(search_result)[:500],
                     }
                 )
-                sources.append(
+
+                # Parse search results from string (format: "file:line: content")
+                if isinstance(search_result, str) and not search_result.startswith("Error"):
+                    lines = search_result.strip().split("\n")
+                    for line in lines[:10]:  # Limit to 10 matches
+                        if ":" in line:
+                            parts = line.split(":", 2)
+                            if len(parts) >= 2:
+                                file_name = parts[0].strip()
+                                context = parts[-1].strip() if len(parts) > 2 else ""
+                                finding_id = f"finding-{uuid7str()[:8]}"
+                                findings.append(
+                                    {
+                                        "finding_id": finding_id,
+                                        "title": f"Found in {file_name}",
+                                        "description": context[:200],
+                                        "source": file_name,
+                                        "relevance": "high",
+                                        "finding_type": "fact",
+                                        "details": {"line": line},
+                                    }
+                                )
+                                if file_name not in [s.get("location") for s in sources]:
+                                    sources.append(
+                                        {
+                                            "source_id": f"source-{uuid7str()[:8]}",
+                                            "type": "file",
+                                            "name": file_name,
+                                            "location": file_name,
+                                            "summary": context[:100],
+                                            "accessed_at": uuid7str(),
+                                        }
+                                    )
+            except Exception as e:
+                logger.warning(f"Search failed for query '{query}': {e}")
+                tool_results.append(
                     {
-                        "type": "file",
-                        "name": match["file"],
-                        "location": match["file"],
-                        "summary": match.get("context", "")[:100],
+                        "tool": "search_in_files",
+                        "query": query,
+                        "success": False,
+                        "error": str(e),
                     }
                 )
-        except Exception as e:
-            logger.warning(f"Search failed: {e}")
-            tool_results.append(
-                {
-                    "tool": "search_in_files",
-                    "success": False,
-                    "error": str(e),
-                }
-            )
 
-        # Strategy 2: List relevant files
-        try:
-            list_result = await tool_helper.execute_tool(
-                "file_edit:list_files",
-                path=".",
-                pattern="**/*.py",  # Could be made dynamic based on target
-            )
-            tool_results.append(
-                {
-                    "tool": "list_files",
-                    "success": True,
-                    "result": list_result,
-                }
-            )
-
-            for file_path in list_result.get("files", [])[:20]:
-                sources.append(
+        # Strategy 2: List relevant files (only on first loop)
+        if current_loop == 0:
+            try:
+                # Use correct parameter names: directory, pattern
+                list_result = await tool_helper.execute_tool(
+                    "file_edit:list_files",
+                    directory=".",
+                    pattern="*",  # List all files
+                )
+                tool_results.append(
                     {
-                        "type": "file",
-                        "name": file_path,
-                        "location": file_path,
-                        "summary": "Discovered during exploration",
+                        "tool": "list_files",
+                        "success": True,
+                        "result": list_result[:500] if isinstance(list_result, str) else str(list_result)[:500],
                     }
                 )
-        except Exception as e:
-            logger.warning(f"List files failed: {e}")
+
+                # Parse list results from string
+                if (
+                    isinstance(list_result, str)
+                    and not list_result.startswith("Error")
+                    and not list_result.startswith("No files")
+                ):
+                    lines = list_result.strip().split("\n")
+                    for line in lines[:20]:
+                        file_name = line.strip()
+                        if file_name:
+                            # Extract just the filename if it has formatting like "[FILE] name"
+                            if file_name.startswith("["):
+                                file_name = file_name.split("]")[-1].strip()
+                            if file_name and file_name not in [s.get("location") for s in sources]:
+                                sources.append(
+                                    {
+                                        "source_id": f"source-{uuid7str()[:8]}",
+                                        "type": "file",
+                                        "name": file_name,
+                                        "location": file_name,
+                                        "summary": "Discovered during exploration",
+                                        "accessed_at": uuid7str(),
+                                    }
+                                )
+            except Exception as e:
+                logger.warning(f"List files failed: {e}")
 
         # Strategy 3: Read key files found in search
         key_files = set()
-        for finding in findings[:3]:
+        for finding in findings[-5:]:  # Last 5 findings
             if finding.get("source"):
                 key_files.add(finding["source"])
 
-        for file_path in list(key_files)[:5]:
+        for file_path in list(key_files)[:3]:
             try:
                 read_result = await tool_helper.execute_tool(
                     "file_edit:read_file",
                     file_path=file_path,
                 )
+                content = read_result if isinstance(read_result, str) else str(read_result)
                 tool_results.append(
                     {
                         "tool": "read_file",
                         "file_path": file_path,
                         "success": True,
-                        "size": len(read_result),
+                        "size": len(content),
                     }
                 )
 
+                finding_id = f"finding-{uuid7str()[:8]}"
                 findings.append(
                     {
+                        "finding_id": finding_id,
                         "title": f"Content of {file_path}",
-                        "description": read_result[:500],
+                        "description": content[:500],
                         "source": file_path,
                         "relevance": "medium",
-                        "details": {"full_content": read_result},
+                        "finding_type": "reference",
+                        "details": {"full_content": content[:2000]},
                     }
                 )
             except Exception as e:
@@ -296,14 +461,87 @@ class ExploreAgent(BaseGraphicAgent):
             "findings": findings,
             "sources": sources,
             "tool_results": tool_results,
-            "exploration_depth": current_depth + 1,
+            "exploration_loops": current_loop + 1,
         }
 
-    async def _synthesize_node(self, state: ExploreState, config: RunnableConfig) -> Dict[str, Any]:
-        """Synthesize findings into a summary."""
+    async def _reflect_node(self, state: ExploreState, config: RunnableConfig) -> Dict[str, Any]:
+        """Reflect on exploration progress and decide whether to continue."""
         target = state.get("target", "")
         findings = state.get("findings", [])
         sources = state.get("sources", [])
+        current_loop = state.get("exploration_loops", 0)
+        max_loops = state.get("max_loops", self.max_loops)
+
+        # Format findings and sources for prompt
+        findings_text = self._format_findings(findings)
+        sources_text = self._format_sources(sources)
+
+        prompt = REFLECTION_PROMPT.format(
+            target=target,
+            findings=findings_text,
+            sources=sources_text,
+            current_loop=current_loop,
+            max_loops=max_loops,
+        )
+
+        response = self.llm.completion(
+            messages=[
+                {"role": "system", "content": EXPLORE_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,  # Lower temperature for reflection
+            max_tokens=1000,
+        )
+
+        # Parse reflection result
+        reflection = {
+            "is_sufficient": False,
+            "knowledge_gaps": [],
+            "follow_up_queries": [],
+            "confidence": 0.5,
+            "reasoning": response,
+        }
+
+        try:
+            # Try to parse JSON response
+            response_data = json.loads(response)
+            reflection = {
+                "is_sufficient": response_data.get("is_sufficient", False),
+                "knowledge_gaps": response_data.get("knowledge_gaps", []),
+                "follow_up_queries": response_data.get("follow_up_queries", []),
+                "confidence": response_data.get("confidence", 0.5),
+                "reasoning": response_data.get("reasoning", response),
+            }
+        except (json.JSONDecodeError, TypeError):
+            # Parse from text response
+            response_lower = response.lower()
+            if "sufficient" in response_lower and "not" not in response_lower.split("sufficient")[0][-20:]:
+                reflection["is_sufficient"] = True
+            # Extract confidence from text
+            if "confidence" in response_lower:
+                try:
+                    import re
+
+                    match = re.search(r"confidence[:\s]+(\d+\.?\d*)", response_lower)
+                    if match:
+                        reflection["confidence"] = float(match.group(1))
+                except Exception:
+                    pass
+
+        return {
+            "reflection": reflection,
+            "is_sufficient": reflection["is_sufficient"],
+            "confidence_score": reflection["confidence"],
+        }
+
+    async def _synthesize_node(self, state: ExploreState, config: RunnableConfig) -> Dict[str, Any]:
+        """Synthesize findings into a comprehensive summary."""
+        target = state.get("target", "")
+        target_type = state.get("target_type", "general")
+        findings = state.get("findings", [])
+        sources = state.get("sources", [])
+        exploration_loops = state.get("exploration_loops", 0)
+        confidence_score = state.get("confidence_score", 0.5)
 
         # Format findings and sources for prompt
         findings_text = self._format_findings(findings)
@@ -313,6 +551,7 @@ class ExploreAgent(BaseGraphicAgent):
             target=target,
             findings=findings_text,
             sources=sources_text,
+            exploration_depth=exploration_loops,
         )
 
         response = self.llm.completion(
@@ -324,38 +563,79 @@ class ExploreAgent(BaseGraphicAgent):
             max_tokens=self.exploration_max_tokens,
         )
 
+        # Build structured ExploreResult
+        structured_findings = []
+        for f in findings:
+            structured_findings.append(
+                Finding(
+                    finding_id=f.get("finding_id", f"finding-{uuid7str()[:8]}"),
+                    title=f.get("title", "Unknown"),
+                    description=f.get("description", ""),
+                    source=f.get("source", "unknown"),
+                    relevance=f.get("relevance", "medium"),
+                    finding_type=f.get("finding_type", "fact"),
+                    details=f.get("details", {}),
+                )
+            )
+
+        structured_sources = []
+        for s in sources:
+            structured_sources.append(
+                Source(
+                    source_id=s.get("source_id", f"source-{uuid7str()[:8]}"),
+                    type=s.get("type", "file"),
+                    name=s.get("name", "unknown"),
+                    location=s.get("location", ""),
+                    summary=s.get("summary", ""),
+                    accessed_at=s.get("accessed_at", ""),
+                )
+            )
+
+        explore_result = ExploreResult(
+            target=target,
+            summary=response,
+            findings=structured_findings,
+            sources=structured_sources,
+            confidence_score=confidence_score,
+            exploration_depth=exploration_loops,
+            metadata={
+                "target_type": target_type,
+                "max_loops": state.get("max_loops", self.max_loops),
+            },
+        )
+
         return {
-            "messages": [AIMessage(content=response)],
+            "messages": state.get("messages", []) + [AIMessage(content=response)],
             "summary": response,
+            "explore_result": explore_result.model_dump(),
         }
 
-    def _extract_analysis(self, messages: List[AnyMessage]) -> str:
-        """Extract analysis from messages."""
-        for message in reversed(messages):
-            if isinstance(message, AIMessage):
-                return message.content
-        return ""
-
     def _format_findings(self, findings: List[Dict[str, Any]]) -> str:
-        """Format findings for synthesis prompt."""
+        """Format findings for prompts."""
         formatted = []
         for i, finding in enumerate(findings, 1):
             formatted.append(
                 f"{i}. {finding.get('title', 'Unknown')}\n"
-                f"   Description: {finding.get('description', 'No description')}\n"
+                f"   Description: {finding.get('description', 'No description')[:200]}\n"
                 f"   Source: {finding.get('source', 'Unknown')}\n"
-                f"   Relevance: {finding.get('relevance', 'high')}"
+                f"   Relevance: {finding.get('relevance', 'medium')}\n"
+                f"   Type: {finding.get('finding_type', 'fact')}"
             )
         return "\n\n".join(formatted) if formatted else "No findings yet"
 
     def _format_sources(self, sources: List[Dict[str, Any]]) -> str:
-        """Format sources for synthesis prompt."""
+        """Format sources for prompts."""
         formatted = []
+        seen = set()
         for source in sources:
+            loc = source.get("location", "unknown")
+            if loc in seen:
+                continue
+            seen.add(loc)
             formatted.append(
-                f"- {source.get('type', 'unknown')}: {source.get('name', 'unknown')}\n"
-                f"  Location: {source.get('location', 'unknown')}\n"
-                f"  Summary: {source.get('summary', 'No summary')}"
+                f"- [{source.get('type', 'unknown')}] {source.get('name', 'unknown')}\n"
+                f"  Location: {loc}\n"
+                f"  Summary: {source.get('summary', 'No summary')[:100]}"
             )
         return "\n".join(formatted) if formatted else "No sources tracked"
 
@@ -380,12 +660,17 @@ class ExploreAgent(BaseGraphicAgent):
             "messages": [HumanMessage(content=user_message)],
             "context": context or {},
             "target": user_message,
+            "target_type": "general",
+            "search_strategy": [],
             "findings": [],
             "sources": [],
             "tool_results": [],
-            "exploration_depth": 0,
-            "max_exploration_depth": self.max_exploration_depth,
+            "reflection": None,
+            "exploration_loops": 0,
+            "max_loops": self.max_loops,
+            "is_sufficient": False,
             "summary": None,
+            "confidence_score": 0.0,
         }
 
         result = await self.graph.ainvoke(initial_state, config=config)
@@ -408,8 +693,6 @@ class ExploreAgent(BaseGraphicAgent):
         Yields:
             ProgressEvent: Events describing exploration progress
         """
-        from uuid_extensions import uuid7str
-
         from noesium.core.event import ProgressEvent, ProgressEventType
 
         session_id = uuid7str()
@@ -426,25 +709,24 @@ class ExploreAgent(BaseGraphicAgent):
             "messages": [HumanMessage(content=user_message)],
             "context": context or {},
             "target": user_message,
+            "target_type": "general",
+            "search_strategy": [],
             "findings": [],
             "sources": [],
             "tool_results": [],
-            "exploration_depth": 0,
-            "max_exploration_depth": self.max_exploration_depth,
+            "reflection": None,
+            "exploration_loops": 0,
+            "max_loops": self.max_loops,
+            "is_sufficient": False,
             "summary": None,
+            "confidence_score": 0.0,
         }
 
         try:
-            # Yield thinking event
-            yield ProgressEvent(
-                type=ProgressEventType.THINKING,
-                session_id=session_id,
-                summary="Analyzing exploration target...",
-            )
-
             # Stream graph execution
             total_findings = 0
             total_sources = 0
+            current_loop = 0
 
             async for event in self.graph.astream(initial_state):
                 for node_name, node_output in event.items():
@@ -452,17 +734,25 @@ class ExploreAgent(BaseGraphicAgent):
                         continue
 
                     if node_name == "analyze_target":
+                        target_type = node_output.get("target_type", "general")
                         yield ProgressEvent(
                             type=ProgressEventType.THINKING,
                             session_id=session_id,
-                            summary="Determining exploration strategy...",
+                            summary=f"Target analysis: {target_type} type detected",
+                        )
+
+                    elif node_name == "generate_strategy":
+                        yield ProgressEvent(
+                            type=ProgressEventType.THINKING,
+                            session_id=session_id,
+                            summary="Generating exploration strategy...",
                         )
 
                     elif node_name == "explore_sources":
                         findings = node_output.get("findings", [])
                         sources = node_output.get("sources", [])
                         tool_results = node_output.get("tool_results", [])
-                        depth = node_output.get("exploration_depth", 0)
+                        current_loop = node_output.get("exploration_loops", 0)
 
                         total_findings = len(findings)
                         total_sources = len(sources)
@@ -471,8 +761,8 @@ class ExploreAgent(BaseGraphicAgent):
                         yield ProgressEvent(
                             type=ProgressEventType.STEP_START,
                             session_id=session_id,
-                            step_index=depth - 1,
-                            summary=f"Exploration depth {depth}/{self.max_exploration_depth}",
+                            step_index=current_loop - 1,
+                            summary=f"Exploration loop {current_loop}/{self.max_loops}",
                         )
 
                         # Emit tool events based on actual tool execution
@@ -480,7 +770,6 @@ class ExploreAgent(BaseGraphicAgent):
                             tool_name = tool_result.get("tool", "unknown")
                             success = tool_result.get("success", False)
 
-                            # Emit TOOL_START
                             yield ProgressEvent(
                                 type=ProgressEventType.TOOL_START,
                                 session_id=session_id,
@@ -488,7 +777,6 @@ class ExploreAgent(BaseGraphicAgent):
                                 summary=f"Executing {tool_name}...",
                             )
 
-                            # Emit TOOL_END
                             if success:
                                 if tool_name == "read_file":
                                     file_path = tool_result.get("file_path", "")
@@ -501,7 +789,6 @@ class ExploreAgent(BaseGraphicAgent):
                                         summary=f"Read {file_path}",
                                     )
                                 else:
-                                    tool_result.get("result", {})
                                     yield ProgressEvent(
                                         type=ProgressEventType.TOOL_END,
                                         session_id=session_id,
@@ -520,29 +807,48 @@ class ExploreAgent(BaseGraphicAgent):
                                 )
 
                         # Yield partial results
-                        if findings:
+                        yield ProgressEvent(
+                            type=ProgressEventType.PARTIAL_RESULT,
+                            session_id=session_id,
+                            text=f"Loop {current_loop}: {total_findings} findings, {total_sources} sources",
+                            summary=f"Found {total_findings} findings",
+                        )
+
+                    elif node_name == "reflect":
+                        reflection = node_output.get("reflection", {})
+                        is_sufficient = reflection.get("is_sufficient", False)
+                        confidence = reflection.get("confidence", 0.5)
+                        gaps = reflection.get("knowledge_gaps", [])
+
+                        yield ProgressEvent(
+                            type=ProgressEventType.THINKING,
+                            session_id=session_id,
+                            summary=f"Reflection: {'sufficient' if is_sufficient else 'need more'} (confidence: {confidence:.1%})",
+                        )
+
+                        if gaps:
                             yield ProgressEvent(
                                 type=ProgressEventType.PARTIAL_RESULT,
                                 session_id=session_id,
-                                text=f"Found {total_findings} items so far",
-                                summary=f"Found {total_findings} findings",
+                                text=f"Knowledge gaps: {', '.join(gaps[:3])}",
+                                summary="Identified gaps",
                             )
 
                     elif node_name == "synthesize":
-                        summary = node_output.get("summary", "")
-
                         yield ProgressEvent(
                             type=ProgressEventType.THINKING,
                             session_id=session_id,
                             summary="Synthesizing findings...",
                         )
 
+                        summary = node_output.get("summary", "")
+
                         # Yield final answer
                         yield ProgressEvent(
                             type=ProgressEventType.FINAL_ANSWER,
                             session_id=session_id,
                             text=summary,
-                            summary=f"Exploration complete ({total_findings} findings, {total_sources} sources)",
+                            summary=f"Complete: {total_findings} findings, {total_sources} sources, {current_loop} loops",
                         )
 
         except Exception as e:
@@ -561,3 +867,52 @@ class ExploreAgent(BaseGraphicAgent):
                 type=ProgressEventType.SESSION_END,
                 session_id=session_id,
             )
+
+    async def explore(
+        self,
+        target: str,
+        context: Dict[str, Any] = None,
+    ) -> ExploreResult:
+        """Run exploration and return structured result.
+
+        Args:
+            target: What to explore
+            context: Additional context
+
+        Returns:
+            ExploreResult with structured findings
+        """
+        initial_state: ExploreState = {
+            "messages": [HumanMessage(content=target)],
+            "context": context or {},
+            "target": target,
+            "target_type": "general",
+            "search_strategy": [],
+            "findings": [],
+            "sources": [],
+            "tool_results": [],
+            "reflection": None,
+            "exploration_loops": 0,
+            "max_loops": self.max_loops,
+            "is_sufficient": False,
+            "summary": None,
+            "confidence_score": 0.0,
+        }
+
+        result = await self.graph.ainvoke(initial_state)
+
+        # Return structured result
+        explore_result_data = result.get("explore_result", {})
+        if explore_result_data:
+            return ExploreResult(**explore_result_data)
+
+        # Fallback: construct from state
+        return ExploreResult(
+            target=target,
+            summary=result.get("summary", "Exploration failed"),
+            findings=[],
+            sources=[],
+            confidence_score=result.get("confidence_score", 0.0),
+            exploration_depth=result.get("exploration_loops", 0),
+            metadata={},
+        )

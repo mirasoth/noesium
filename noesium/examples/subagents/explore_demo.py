@@ -5,6 +5,7 @@ information from codebases and data sources.
 """
 
 import asyncio
+import os
 
 from noesium.subagents import ExploreAgent
 
@@ -16,12 +17,15 @@ async def main():
     print("=" * 80)
     print()
 
-    # Initialize ExploreAgent
-    agent = ExploreAgent()
+    # Initialize ExploreAgent with working directory
+    # Use the noesium source directory as the exploration target
+    workspace = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    agent = ExploreAgent(working_directory=workspace)
 
     # Example exploration target
-    target = "Explore the authentication module and find all password validation functions"
+    target = "Find code related to agent base classes"
 
+    print(f"Working directory: {workspace}")
     print(f"Target: {target}")
     print()
     print("Streaming progress events...")

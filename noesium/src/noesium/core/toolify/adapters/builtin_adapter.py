@@ -59,8 +59,10 @@ class BuiltinAdapter:
         atomic_tools: list[AtomicTool] = []
         for name, func in tools_map.items():
             schema = _extract_schema(func)
+            # Use prefixed name format: toolkit_name:tool_name
+            prefixed_name = f"{toolkit_name}:{name}"
             tool = AtomicTool(
-                name=name,
+                name=prefixed_name,
                 description=func.__doc__ or f"Tool: {name}",
                 input_schema=schema,
                 source=ToolSource.BUILTIN,

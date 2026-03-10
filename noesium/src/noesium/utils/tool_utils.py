@@ -89,10 +89,18 @@ class ToolHelper:
         """Load enabled toolkits into registry."""
         for toolkit_name in self.enabled_toolkits:
             try:
-                # Get toolkit config
-                config = self.toolkit_configs.get(toolkit_name, {})
-                config.setdefault("workspace_root", self.working_directory)
-                config.setdefault("work_dir", self.working_directory)
+                # Get toolkit-specific config
+                toolkit_config = self.toolkit_configs.get(toolkit_name, {})
+
+                # Ensure working directory is set in nested config
+                toolkit_config.setdefault("workspace_root", self.working_directory)
+                toolkit_config.setdefault("work_dir", self.working_directory)
+
+                # Wrap in proper ToolkitConfig structure
+                config = {
+                    "name": toolkit_name,
+                    "config": toolkit_config,  # Toolkit-specific params go in nested config
+                }
 
                 # Create toolkit
                 toolkit = ToolkitRegistry.create_toolkit(toolkit_name, config)

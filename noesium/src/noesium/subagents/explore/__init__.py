@@ -1,13 +1,26 @@
-"""ExploreAgent - Exploration agent for gathering information."""
+"""ExploreAgent - General-purpose exploration agent for gathering information."""
 
 from .agent import ExploreAgent
-from .schemas import ExplorationFinding, ExplorationResult, ExplorationSource
+from .schemas import (
+    ExploreResult,
+    Finding,
+    ReflectionResult,
+    SearchQuery,
+    SearchStrategy,
+    Source,
+    TargetAnalysis,
+)
 from .state import ExploreState
 
 __all__ = [
     "ExploreAgent",
     "ExploreState",
-    "ExplorationFinding",
-    "ExplorationResult",
-    "ExplorationSource",
+    # Schemas
+    "Finding",
+    "Source",
+    "ReflectionResult",
+    "ExploreResult",
+    "SearchQuery",
+    "TargetAnalysis",
+    "SearchStrategy",
 ]

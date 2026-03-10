@@ -37,8 +37,8 @@ async def main():
         if event.type.name == "PLAN_CREATED":
             steps = event.plan_snapshot.get("steps", [])
             print(f"\n  Plan has {len(steps)} steps:")
-            for i, step in enumerate(steps, 1):
-                print(f"    {i}. {step.get('description', 'Unknown')}")
+            for _, step in enumerate(steps, 1):
+                print(f"    {step.get('description', 'Unknown')}")
             print()
 
         elif event.type.name == "FINAL_ANSWER":

@@ -1,29 +1,53 @@
-"""State definitions for ExploreAgent."""
+"""State definitions for ExploreAgent.
 
-from typing import Any, TypedDict
+Defines the state model with target type classification and reflection loop support
+for domain-agnostic exploration across files, documents, data, and media.
+"""
+
+from typing import Any, Dict, List, Literal, Optional, TypedDict
 
 
 class ExploreState(TypedDict):
-    """State for exploration workflow.
+    """State for exploration workflow with reflection loop.
 
     Attributes:
-        messages: Conversation messages
+        messages: Conversation messages (LangChain format)
+        target: What to explore (query or description)
+        target_type: Classification of the target type
         context: Additional context for exploration
-        target: What to explore
-        findings: List of findings
-        sources: List of sources found
-        tool_results: Tool execution results
-        exploration_depth: Current exploration depth
-        max_exploration_depth: Maximum exploration depth
-        summary: Summary of findings
+
+        search_strategy: List of search queries to execute
+        findings: Accumulated findings from exploration
+        sources: Sources accessed during exploration
+        tool_results: Results from tool executions
+
+        reflection: Result of reflection on exploration progress
+        exploration_loops: Current exploration loop count
+        max_loops: Maximum exploration loops allowed
+        is_sufficient: Whether gathered info is sufficient
+
+        summary: Final synthesized summary
+        confidence_score: Confidence in the findings (0-1)
     """
 
-    messages: list[Any]
-    context: dict[str, Any]
+    # Input
+    messages: List[Any]
     target: str
-    findings: list[dict[str, Any]]
-    sources: list[dict[str, Any]]
-    tool_results: list[dict[str, Any]]
-    exploration_depth: int
-    max_exploration_depth: int
-    summary: str | None
+    target_type: Literal["code", "document", "data", "media", "general"]
+    context: Dict[str, Any]
+
+    # Exploration
+    search_strategy: List[Dict[str, Any]]
+    findings: List[Dict[str, Any]]
+    sources: List[Dict[str, Any]]
+    tool_results: List[Dict[str, Any]]
+
+    # Reflection loop
+    reflection: Optional[Dict[str, Any]]
+    exploration_loops: int
+    max_loops: int
+    is_sufficient: bool
+
+    # Output
+    summary: Optional[str]
+    confidence_score: float
