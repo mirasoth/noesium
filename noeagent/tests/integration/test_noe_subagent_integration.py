@@ -1572,9 +1572,13 @@ class TestTacitusAgentProgressStreaming:
         mock_llm.structured_completion = MagicMock(return_value=MagicMock(query=["query1", "query2"], rationale="test"))
         mock_llm.completion = MagicMock(return_value="Test response")
 
-        # Mock get_llm_client to return our mock LLM
+        # Create agent and set the mock LLM directly to avoid API key requirement
         with patch("noesium.core.llm.get_llm_client", return_value=mock_llm):
             agent = TacitusAgent(query_generation_llm=mock_llm, reflection_llm=mock_llm)
+            # Set the mock LLM directly on the agent to prevent lazy initialization from calling get_llm_client
+            agent.llm = mock_llm
+            agent.query_generation_llm = mock_llm
+            agent.reflection_llm = mock_llm
 
         # Mock the graph.astream to avoid actual web searches
         async def mock_astream(initial_state):
