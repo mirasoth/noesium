@@ -135,7 +135,7 @@ jobs:
       run: uv sync --all-packages --extra dev
 
     - name: Check formatting
-      run: uv run black --check noesium/src noeagent/src voyager/backend/src
+      run: make format-check
 
     - name: Run linter
-      run: uv run ruff check noesium/src noeagent/src voyager/backend/src
+      run: make lint

@@ -146,8 +146,8 @@ format: ## Format code (black, isort, autoflake)
 
 format-check: ## Check if code is properly formatted
 	@echo "$(BLUE)🔍 Checking code formatting...$(RESET)"
-	@$(UV) run black --check $(PYTHON_MODULES) || (echo "$(RED)❌ Code formatting check failed. Run 'make format' to fix.$(RESET)" && exit 1)
-	@$(UV) run isort --check-only $(PYTHON_MODULES) || (echo "$(RED)❌ Import sorting check failed. Run 'make format' to fix.$(RESET)" && exit 1)
+	@$(UV) run black --check $(PYTHON_MODULES) --line-length $(LINE_LENGTH) || (echo "$(RED)❌ Code formatting check failed. Run 'make format' to fix.$(RESET)" && exit 1)
+	@$(UV) run isort --check-only $(PYTHON_MODULES) --line-length $(LINE_LENGTH) || (echo "$(RED)❌ Import sorting check failed. Run 'make format' to fix.$(RESET)" && exit 1)
 
 lint: ## Lint code
 	@echo "$(BLUE)🔍 Running linters...$(RESET)"
