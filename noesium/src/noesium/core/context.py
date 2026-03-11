@@ -31,7 +31,7 @@ class CognitiveContext(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    memory_manager: "ProviderMemoryManager"  # REQUIRED
+    memory_manager: Any  # REQUIRED - ProviderMemoryManager instance (Any to allow mocks in tests)
     session_id: str  # REQUIRED for persistence key
     goal: str = ""
     findings: list[str] = Field(default_factory=list)
