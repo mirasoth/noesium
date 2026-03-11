@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from noesium.core.memory.provider_manager import ProviderMemoryManager
+    pass
 
 
 class CognitiveContext(BaseModel):
