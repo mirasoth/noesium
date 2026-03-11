@@ -9,4 +9,4 @@ CognitiveContext.model_rebuild()
 # Enable colorful logging by default for noesium
 setup_logging(level="INFO", enable_colors=True)
 
-__all__ = ["set_noesium_home", "CognitiveContext"]
+__all__ = ["set_noesium_home", "CognitiveContext", "ProviderMemoryManager"]

@@ -148,6 +148,7 @@ class NoeAgent(BaseGraphicAgent):
             # Fallback (should not happen with proper config validation)
             logger.warning("Memory manager not initialized, context persistence disabled")
             from noesium.core.context import CognitiveContext as _CC
+
             self._context = _CC.__new__(_CC)
             self._context.goal = ""
             self._context.findings = []
@@ -195,7 +196,7 @@ class NoeAgent(BaseGraphicAgent):
                     logger.warning(f"Failed to save context during cleanup: {e}")
             # Close memory providers gracefully
             for provider in self._memory_manager._providers:
-                if hasattr(provider, 'close'):
+                if hasattr(provider, "close"):
                     try:
                         await provider.close()
                     except Exception as e:
@@ -238,12 +239,14 @@ class NoeAgent(BaseGraphicAgent):
             for key in keys:
                 result = await self._memory_manager.read(key)
                 if result and isinstance(result.value, dict):
-                    sessions.append({
-                        "session_id": key.replace("context:", ""),
-                        "goal": result.value.get("goal", ""),
-                        "findings_count": len(result.value.get("findings", [])),
-                        "timestamp": result.metadata.get("created_at", "")
-                    })
+                    sessions.append(
+                        {
+                            "session_id": key.replace("context:", ""),
+                            "goal": result.value.get("goal", ""),
+                            "findings_count": len(result.value.get("findings", [])),
+                            "timestamp": result.metadata.get("created_at", ""),
+                        }
+                    )
         except Exception as e:
             logger.warning(f"Failed to list sessions: {e}")
 
@@ -760,7 +763,7 @@ class NoeAgent(BaseGraphicAgent):
                     def add_finding(self, finding: str) -> None:
                         self.findings.append(finding)
                         if len(self.findings) > self.max_findings:
-                            self.findings = self.findings[-self.max_findings:]
+                            self.findings = self.findings[-self.max_findings :]
 
                     def set_scratchpad(self, key: str, value: Any) -> None:
                         self.scratchpad[key] = value
@@ -872,11 +875,7 @@ class NoeAgent(BaseGraphicAgent):
             """Run LangGraph stream in background, forwarding raw events to _merged_q."""
             try:
                 # Pass thread_id for checkpointer to enable message persistence
-                config: RunnableConfig = {
-                    "configurable": {
-                        "thread_id": self.config.session_id
-                    }
-                }
+                config: RunnableConfig = {"configurable": {"thread_id": self.config.session_id}}
                 async for _raw in compiled.astream(initial, config=config):
                     await _merged_q.put(("graph", _raw))
             except Exception as _exc:
