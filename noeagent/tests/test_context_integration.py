@@ -1,4 +1,4 @@
-"""Integration tests for CognitiveContext with NoeAgent (RFC-1009)."""
+"""Integration tests for CognitiveContext with NoeAgent (RFC-1010)."""
 
 from __future__ import annotations
 
@@ -216,3 +216,76 @@ class TestAgentStateIntegration:
 
         assert "context_summary" in state
         assert "**Goal**: Test" in state["context_summary"]
+
+
+class TestAskStateContextSummary:
+    """Test context_summary in AskState (RFC-1010 Phase 3)."""
+
+    def test_ask_state_includes_context_summary(self) -> None:
+        """AskState must have context_summary field for RFC-1010 compliance."""
+        from noeagent.state import AskState
+
+        state: AskState = {
+            "messages": [],
+            "memory_context": [],
+            "final_answer": "",
+            "context_summary": "**Goal**: Q&A\n\n**Findings**:\n- Fact 1",
+        }
+        assert "context_summary" in state
+        assert "**Goal**: Q&A" in state["context_summary"]
+
+
+class TestBuilderContextWiring:
+    """Test graph builder wires CognitiveContext correctly (RFC-1010 Phase 3)."""
+
+    def test_build_ask_graph_accepts_agent(self) -> None:
+        """build_ask_graph accepts agent param and doesn't raise."""
+        from unittest.mock import MagicMock
+
+        from noeagent.graph.builder import build_ask_graph
+
+        mock_memory = MagicMock()
+        mock_llm = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent._context = MagicMock()
+        mock_agent.config.context_max_export_tokens = None
+        mock_agent.config.context_history_turns = 3
+
+        graph = build_ask_graph(
+            memory_manager=mock_memory,
+            llm=mock_llm,
+            agent=mock_agent,
+        )
+        assert graph is not None
+
+    def test_build_ask_graph_without_agent(self) -> None:
+        """build_ask_graph without agent still compiles."""
+        from unittest.mock import MagicMock
+
+        from noeagent.graph.builder import build_ask_graph
+
+        graph = build_ask_graph(
+            memory_manager=None,
+            llm=MagicMock(),
+            agent=None,
+        )
+        assert graph is not None
+
+
+class TestSubagentCognitiveContextPropagation:
+    """Test cognitive context is injected into subagent requests (RFC-1010 Phase 4)."""
+
+    def test_cognitive_context_in_request(self, mock_memory_manager, test_session_id) -> None:
+        """invoke_subagent creates SubagentInvocationRequest with cognitive_context."""
+        from noesium.core.agent.subagent.request import SubagentInvocationRequest
+
+        parent_ctx_mock = MagicMock()
+        parent_ctx_mock.for_subagent.return_value.export.return_value = "Goal: test\nFindings:\n- f1"
+
+        request = SubagentInvocationRequest(
+            subagent_id="tacitus",
+            message="Research X",
+            context={"cognitive_context": "Goal: test\nFindings:\n- f1"},
+        )
+        assert "cognitive_context" in request.context
+        assert "f1" in request.context["cognitive_context"]

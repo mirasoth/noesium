@@ -1,4 +1,4 @@
-"""Unit tests for CognitiveContext (RFC-1009)."""
+"""Unit tests for CognitiveContext (RFC-1010)."""
 
 from __future__ import annotations
 
@@ -138,8 +138,8 @@ class TestExport:
         ctx.set_scratchpad("note", "important info")
         result = ctx.export(include_scratchpad=True)
 
-        assert "**Notes**:" in result
-        assert "note: important info" in result
+        assert "**Scratchpad**:" in result
+        assert "important info" in result
 
 
 class TestForSubagent:
@@ -282,7 +282,7 @@ class TestMemoryIntegration:
 
     @pytest.mark.asyncio
     async def test_enrich_with_custom_query(self, mock_memory_manager, test_session_id) -> None:
-        """Test enrich with custom query."""
+        """Test enrich with custom query uses RecallQuery."""
         ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
         ctx.set_goal("Main goal")
 
@@ -290,7 +290,11 @@ class TestMemoryIntegration:
 
         await ctx.enrich(query="custom search")
 
-        mock_memory_manager.recall.assert_called_once_with("custom search", limit=3)
+        mock_memory_manager.recall.assert_called_once()
+        call_args = mock_memory_manager.recall.call_args
+        recall_query = call_args[0][0]
+        assert recall_query.query == "custom search"
+        assert recall_query.limit == 3
 
 
 class TestPydanticIntegration:
@@ -325,3 +329,160 @@ class TestPydanticIntegration:
         assert ctx.findings == ["f1", "f2"]
         assert ctx.scratchpad == {"k": "v"}
         assert ctx.max_findings == 5
+
+
+class TestExportMaxTokens:
+    """Test token-budgeted export (RFC-1010 Section 13)."""
+
+    def test_export_no_limit(self, mock_memory_manager, test_session_id) -> None:
+        """Export without max_tokens returns full content."""
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
+        ctx.set_goal("Research Python async")
+        for i in range(5):
+            ctx.add_finding(f"Finding {i}: " + "x" * 100)
+        result = ctx.export(max_tokens=None)
+        assert "**Goal**:" in result
+        assert "Finding 4" in result
+
+    def test_export_with_token_limit_trims(self, mock_memory_manager, test_session_id) -> None:
+        """Export with tight max_tokens trims findings."""
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
+        ctx.set_goal("Research Python async")
+        for i in range(10):
+            ctx.add_finding(f"Finding {i}: " + "x" * 200)
+        full = ctx.export(max_tokens=None)
+        trimmed = ctx.export(max_tokens=50)
+        assert len(trimmed) < len(full)
+        assert "**Goal**:" in trimmed
+
+
+class TestExtractFinding:
+    """Test finding extraction modes (RFC-1010 Section 13.3)."""
+
+    @pytest.mark.asyncio
+    async def test_truncate_mode(self, mock_memory_manager, test_session_id) -> None:
+        """Truncate mode hard-cuts at max_length."""
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
+        raw = "A" * 500
+        finding = await ctx.extract_finding("tool", raw, mode="truncate", max_length=50)
+        assert len(finding) <= 50
+
+    @pytest.mark.asyncio
+    async def test_smart_mode(self, mock_memory_manager, test_session_id) -> None:
+        """Smart mode truncates at sentence boundary."""
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
+        raw = "First sentence. Second sentence. Third sentence that is very long."
+        finding = await ctx.extract_finding("tool", raw, mode="smart", max_length=60)
+        assert finding.endswith(".")
+        assert len(finding) <= 60
+
+    @pytest.mark.asyncio
+    async def test_smart_mode_short_input(self, mock_memory_manager, test_session_id) -> None:
+        """Smart mode returns short input as-is with prefix."""
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
+        raw = "Short result"
+        finding = await ctx.extract_finding("web_search", raw, mode="smart", max_length=200)
+        assert "web_search" in finding
+        assert "Short result" in finding
+
+    @pytest.mark.asyncio
+    async def test_empty_raw_input(self, mock_memory_manager, test_session_id) -> None:
+        """Empty raw input produces a no-output finding."""
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
+        finding = await ctx.extract_finding("tool", "", mode="smart", max_length=200)
+        assert "no output" in finding.lower() or "tool" in finding.lower()
+
+    @pytest.mark.asyncio
+    async def test_llm_mode_without_llm_falls_back(self, mock_memory_manager, test_session_id) -> None:
+        """LLM mode without llm client falls back to smart mode (may add '...')."""
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
+        raw = "A" * 500
+        finding = await ctx.extract_finding("tool", raw, llm=None, mode="llm", max_length=100)
+        # smart mode may append "..." so allow up to max_length + 3
+        assert len(finding) <= 103
+
+
+class TestConversationHistoryHelper:
+    """Test _build_conversation_history from nodes.py."""
+
+    def test_empty_messages(self) -> None:
+        from noeagent.graph.nodes import _build_conversation_history
+
+        result = _build_conversation_history([], max_turns=3)
+        assert result == []
+
+    def test_single_message(self) -> None:
+        from langchain_core.messages import HumanMessage
+        from noeagent.graph.nodes import _build_conversation_history
+
+        result = _build_conversation_history([HumanMessage(content="hi")], max_turns=3)
+        assert result == []
+
+    def test_extracts_turns(self) -> None:
+        from langchain_core.messages import AIMessage, HumanMessage
+        from noeagent.graph.nodes import _build_conversation_history
+
+        msgs = [
+            HumanMessage(content="q1"),
+            AIMessage(content="a1"),
+            HumanMessage(content="q2"),
+            AIMessage(content="a2"),
+            HumanMessage(content="q3"),  # current message (excluded)
+        ]
+        result = _build_conversation_history(msgs, max_turns=2)
+        user_msgs = [m for m in result if m["role"] == "user"]
+        assert len(user_msgs) <= 2
+
+    def test_respects_max_turns(self) -> None:
+        from langchain_core.messages import AIMessage, HumanMessage
+        from noeagent.graph.nodes import _build_conversation_history
+
+        msgs = [
+            HumanMessage(content="q1"),
+            AIMessage(content="a1"),
+            HumanMessage(content="q2"),
+            AIMessage(content="a2"),
+            HumanMessage(content="q3"),
+            AIMessage(content="a3"),
+            HumanMessage(content="q4"),  # current
+        ]
+        result = _build_conversation_history(msgs, max_turns=1)
+        user_msgs = [m for m in result if m["role"] == "user"]
+        assert len(user_msgs) == 1
+
+
+class TestSubagentContextInjection:
+    """Test cognitive context injection into subagent tasks (RFC-1010 Section 8)."""
+
+    def test_for_subagent_inherits_findings(self, mock_memory_manager, test_session_id) -> None:
+        """for_subagent() copies parent findings to child."""
+        parent = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
+        parent.set_goal("Main task")
+        parent.add_finding("Finding A")
+        parent.add_finding("Finding B")
+
+        child = parent.for_subagent(task="Sub task")
+        assert child.goal == "Sub task"
+        assert child.findings == ["Finding A", "Finding B"]
+        assert child.scratchpad == {}
+
+    def test_for_subagent_child_isolation(self, mock_memory_manager, test_session_id) -> None:
+        """Mutations on child don't affect parent."""
+        parent = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
+        parent.add_finding("Parent finding")
+
+        child = parent.for_subagent(task="Child task")
+        child.add_finding("Child-only finding")
+
+        assert "Child-only finding" not in parent.findings
+        assert len(parent.findings) == 1
+
+    def test_child_context_export(self, mock_memory_manager, test_session_id) -> None:
+        """Child context export includes inherited findings."""
+        parent = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
+        parent.add_finding("Inherited finding")
+        child = parent.for_subagent(task="Child research")
+
+        export = child.export()
+        assert "Child research" in export
+        assert "Inherited finding" in export

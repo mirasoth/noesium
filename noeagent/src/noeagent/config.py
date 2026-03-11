@@ -400,7 +400,7 @@ class NoeConfig(BaseModel):
     memu_user_id: str = "default_user"
     persist_memory: bool = True
 
-    # CognitiveContext settings (RFC-1009)
+    # CognitiveContext settings (RFC-1010)
     context_auto_recall: bool = Field(
         default=False,
         description="Auto-recall relevant memories before planning",
@@ -409,8 +409,24 @@ class NoeConfig(BaseModel):
         default=8,
         description="Maximum findings to retain in CognitiveContext (FIFO)",
     )
+    context_finding_mode: str = Field(
+        default="smart",
+        description="Finding extraction mode: truncate | smart | llm",
+    )
+    context_finding_max_length: int = Field(
+        default=200,
+        description="Maximum character length per finding",
+    )
+    context_max_export_tokens: int | None = Field(
+        default=None,
+        description="Token budget for CognitiveContext.export() (None = unlimited)",
+    )
+    context_history_turns: int = Field(
+        default=3,
+        description="Number of recent conversation turns to include in LLM context",
+    )
 
-    # Session persistence settings (RFC-1009)
+    # Session persistence settings (RFC-1010)
     resume_session: bool = Field(
         default=False,
         description="Attempt to resume previous session if session_id exists",

@@ -191,7 +191,7 @@ class NoeAgent(BaseGraphicAgent):
         if self._memory_manager and self.config.persist_memory:
             if self._context:
                 try:
-                    await self._context.save(key=f"context:{self.config.session_id}")
+                    await self._context.save()
                 except Exception as e:
                     logger.warning(f"Failed to save context during cleanup: {e}")
             # Close memory providers gracefully
@@ -609,6 +609,7 @@ class NoeAgent(BaseGraphicAgent):
             return builder.build_ask_graph(
                 memory_manager=self._memory_manager,
                 llm=self.llm,
+                agent=self,
             )
         return builder.build_agent_graph(
             planner=self._planner,
@@ -624,16 +625,33 @@ class NoeAgent(BaseGraphicAgent):
     # Progress helpers
     # ------------------------------------------------------------------
 
-    def _update_context_from_event(self, event: ProgressEvent) -> None:
-        """Update CognitiveContext based on progress events (RFC-1009)."""
+    async def _update_context_from_event(self, event: ProgressEvent) -> None:
+        """Update CognitiveContext based on progress events (RFC-1010)."""
+        mode = self.config.context_finding_mode
+        max_len = self.config.context_finding_max_length
+
         if event.type == ProgressEventType.TOOL_END:
             tool_name = event.tool_name or "tool"
             result = event.tool_result or event.summary or ""
-            self._context.add_finding(f"{tool_name}: {result[:80]}")
+            finding = await self._context.extract_finding(
+                tool_name,
+                result,
+                llm=self.llm if mode == "llm" else None,
+                mode=mode,
+                max_length=max_len,
+            )
+            self._context.add_finding(finding)
         elif event.type == ProgressEventType.SUBAGENT_END:
             subagent_id = event.subagent_id or "subagent"
             detail = event.detail or event.summary or ""
-            self._context.add_finding(f"[{subagent_id}] {detail[:80]}")
+            finding = await self._context.extract_finding(
+                f"[{subagent_id}]",
+                detail,
+                llm=self.llm if mode == "llm" else None,
+                mode=mode,
+                max_length=max_len,
+            )
+            self._context.add_finding(finding)
         elif event.type == ProgressEventType.PLAN_CREATED:
             if event.plan_snapshot:
                 self._context.set_scratchpad("current_plan", event.plan_snapshot)
@@ -652,12 +670,15 @@ class NoeAgent(BaseGraphicAgent):
                 logger.debug("Progress callback error: %s", exc)
 
     def _build_initial_state(self) -> dict[str, Any]:
+        context_export = self._context.export(max_tokens=self.config.context_max_export_tokens) if self._context else ""
+
         initial: dict[str, Any] = {
             "messages": [HumanMessage(content="")],
             "final_answer": "",
         }
         if self.config.mode == NoeMode.ASK:
             initial["memory_context"] = []
+            initial["context_summary"] = context_export  # RFC-1010
         else:
             initial.update(
                 {
@@ -665,7 +686,7 @@ class NoeAgent(BaseGraphicAgent):
                     "iteration": 0,
                     "tool_results": [],
                     "reflection": "",
-                    "context_summary": self._context.export(),  # RFC-1009
+                    "context_summary": context_export,  # RFC-1010
                 }
             )
         return initial
@@ -771,8 +792,7 @@ class NoeAgent(BaseGraphicAgent):
                     def get_scratchpad(self, key: str, default: Any = None) -> Any:
                         return self.scratchpad.get(key, default)
 
-                    def export(self, include_scratchpad: bool = False) -> str:
-                        """Export context as a string for prompt injection."""
+                    def export(self, include_scratchpad: bool = False, max_tokens: int | None = None) -> str:
                         parts: list[str] = []
                         if self.goal:
                             parts.append(f"**Goal**: {self.goal}")
@@ -780,9 +800,24 @@ class NoeAgent(BaseGraphicAgent):
                             findings_str = "\n".join(f"- {f}" for f in self.findings)
                             parts.append(f"**Findings**:\n{findings_str}")
                         if include_scratchpad and self.scratchpad:
-                            scratchpad_items = "\n".join(f"- {k}: {v}" for k, v in self.scratchpad.items())
-                            parts.append(f"**Notes**:\n{scratchpad_items}")
+                            import json as _json
+
+                            parts.append(f"**Scratchpad**: {_json.dumps(self.scratchpad)}")
                         return "\n\n".join(parts) if parts else ""
+
+                    async def extract_finding(self, source: str, raw: str, **kwargs: Any) -> str:
+                        max_length = kwargs.get("max_length", 200)
+                        text = f"{source}: {raw[:max_length]}"
+                        return text[:max_length]
+
+                    async def save(self, key: str | None = None, memory: Any = None) -> None:
+                        pass
+
+                    def for_subagent(self, task: str = "") -> "_FallbackContext":
+                        child = _FallbackContext()
+                        child.goal = task
+                        child.findings = list(self.findings)
+                        return child
 
                 self._context = _FallbackContext()
 
@@ -813,8 +848,13 @@ class NoeAgent(BaseGraphicAgent):
             "Running main graph: %.80s",
             user_message,
         )
-        # Set context goal for this session (RFC-1009)
+        # Set context goal and optionally enrich from memory (RFC-1010 Section 7.2)
         self._context.set_goal(user_message)
+        if self.config.context_auto_recall and self._memory_manager:
+            try:
+                await self._context.enrich(memory=self._memory_manager)
+            except Exception as e:
+                logger.warning("Context auto-recall failed: %s", e)
         compiled = self._get_compiled_graph()
         self.graph = compiled
 
@@ -835,7 +875,7 @@ class NoeAgent(BaseGraphicAgent):
 
         async def _emit(evt: ProgressEvent) -> None:
             await self._fire_callbacks(evt)
-            self._update_context_from_event(evt)  # RFC-1009
+            await self._update_context_from_event(evt)  # RFC-1010
 
         def _brief_args(args: dict[str, Any], max_len: int = 60) -> str:
             if not args:
@@ -1105,10 +1145,10 @@ class NoeAgent(BaseGraphicAgent):
                     break
             self._subagent_event_queue = None
             await self._cleanup_subagents()
-            # Persist context before ending session
+            # Persist context after each turn (RFC-1010 Section 7.2)
             if self._context and self._context.auto_save:
                 try:
-                    await self._context.save(key=f"context:{self.config.session_id}")
+                    await self._context.save()
                 except Exception as e:
                     logger.warning(f"Failed to save context: {e}")
             end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended")
@@ -1203,17 +1243,20 @@ class NoeAgent(BaseGraphicAgent):
             logger.warning("invoke_subagent called but SubagentManager not initialized")
             return f"Subagent '{subagent_id}' unavailable (manager not initialized)"
 
+        # RFC-1010: Create scoped context for subagent with inherited findings
+        child_context = self._context.for_subagent(task=message)
+        child_export = child_context.export(max_tokens=self.config.context_max_export_tokens)
+
         request = SubagentInvocationRequest(
             subagent_id=subagent_id,
             message=message,
             timeout_s=timeout_s,
+            context={"cognitive_context": child_export},
         )
-        # RFC-1009: Create scoped context for subagent and pass via shared_memory
-        child_context = self._context.for_subagent(task=message)
         context = SubagentContext(
             session_id=self._agent_id,
             parent_id=self._agent_id,
-            shared_memory=child_context,  # Pass cognitive context to subagent
+            shared_memory=child_context,
             depth=getattr(self, "_depth", 0),
             max_depth=self.config.subagent_max_depth,
         )

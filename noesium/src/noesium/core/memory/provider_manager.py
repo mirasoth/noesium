@@ -107,6 +107,22 @@ class ProviderMemoryManager:
                 return True
         return False
 
+    async def list_keys(
+        self,
+        *,
+        content_types: list[str] | None = None,
+        prefix: str | None = None,
+    ) -> list[str]:
+        """List keys across all registered providers."""
+        all_keys: set[str] = set()
+        for provider in self._providers.values():
+            try:
+                keys = await provider.list_keys(content_types=content_types, prefix=prefix)
+                all_keys.update(keys)
+            except NotImplementedError:
+                continue
+        return sorted(all_keys)
+
     async def close(self) -> None:
         for provider in self._providers.values():
             await provider.close()

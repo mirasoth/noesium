@@ -154,6 +154,40 @@ async def _persist_plan_to_memory(
 
 
 # ---------------------------------------------------------------------------
+# Conversation history helper (RFC-1010 Section 13)
+# ---------------------------------------------------------------------------
+
+
+def _build_conversation_history(
+    messages: list,
+    max_turns: int = 3,
+) -> list[dict[str, str]]:
+    """Extract recent human/AI turn pairs from LangGraph message history.
+
+    Walks backwards through messages (excluding the current/last one) and
+    collects up to ``max_turns`` user messages and their preceding assistant
+    responses.  Returns the result in chronological order.
+    """
+    if not messages or len(messages) <= 1:
+        return []
+
+    pairs: list[dict[str, str]] = []
+    turns_remaining = max_turns
+
+    for msg in reversed(messages[:-1]):
+        msg_type = getattr(msg, "type", None)
+        if msg_type == "human":
+            pairs.append({"role": "user", "content": msg.content})
+            turns_remaining -= 1
+            if turns_remaining <= 0:
+                break
+        elif msg_type == "ai":
+            pairs.append({"role": "assistant", "content": msg.content})
+
+    return list(reversed(pairs))
+
+
+# ---------------------------------------------------------------------------
 # Ask-mode nodes
 # ---------------------------------------------------------------------------
 
@@ -179,19 +213,34 @@ async def generate_answer_node(
     state: AskState,
     *,
     llm: Any,
+    context: Any = None,
+    max_export_tokens: int | None = None,
+    history_turns: int = 3,
 ) -> dict[str, Any]:
     mem_ctx = state.get("memory_context") or []
     mem_text = "\n".join(f"- {m.get('key', '')}: {m.get('value', '')}" for m in mem_ctx) or "No memory context."
+
+    # RFC-1010: Include CognitiveContext for cross-turn continuity in Ask mode
+    if context and hasattr(context, "export"):
+        context_summary = context.export(max_tokens=max_export_tokens)
+    else:
+        context_summary = state.get("context_summary", "")
+    context_block = f"\n\n## Context\n{context_summary}" if context_summary else ""
+
     pm = get_prompt_manager()
     system = pm.render("ask_system", memory_context=mem_text, current_datetime=_get_current_datetime())
+    if context_block:
+        system = system + context_block
+
+    # RFC-1010: Build conversation history for cross-turn context
     user_msg = state["messages"][-1].content if state["messages"] else ""
+    history = _build_conversation_history(state["messages"], max_turns=history_turns)
+    llm_messages = [{"role": "system", "content": system}] + history + [{"role": "user", "content": user_msg}]
+
     answer = await _run_llm_async(
         llm,
         "completion",
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user_msg},
-        ],
+        messages=llm_messages,
         temperature=0.3,
     )
     return {"final_answer": answer}
@@ -228,6 +277,9 @@ async def execute_step_node(
     memory_manager: Any = None,
     max_tool_calls: int = 5,
     tool_desc_cache: str | None = None,
+    context: Any = None,
+    max_export_tokens: int | None = None,
+    history_turns: int = 3,
 ) -> dict[str, Any]:
     """Execute current plan step via structured LLM output with tool access.
 
@@ -254,8 +306,11 @@ async def execute_step_node(
     )
     tool_desc = tool_desc_cache if tool_desc_cache is not None else _build_tool_descriptions(registry)
 
-    # RFC-1009: Include cognitive context summary if available
-    context_summary = state.get("context_summary", "")
+    # RFC-1010: Use live CognitiveContext for dynamic export, fallback to state
+    if context and hasattr(context, "export"):
+        context_summary = context.export(max_tokens=max_export_tokens)
+    else:
+        context_summary = state.get("context_summary", "")
     context_block = f"\n\n## Context\n{context_summary}" if context_summary else ""
 
     pm = get_prompt_manager()
@@ -267,24 +322,23 @@ async def execute_step_node(
         tool_descriptions=tool_desc,
         current_datetime=_get_current_datetime(),
     )
-    # Inject context block after the rendered prompt
     if context_block:
         system = system + context_block
+
+    # RFC-1010: Build conversation history for cross-turn context
     user_msg = state["messages"][-1].content if state["messages"] else ""
+    history = _build_conversation_history(state["messages"], max_turns=history_turns)
+    llm_messages = [{"role": "system", "content": system}] + history + [{"role": "user", "content": user_msg}]
 
     try:
         action: AgentAction = await _run_llm_async(
             llm,
             "structured_completion",
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_msg},
-            ],
+            messages=llm_messages,
             response_model=AgentAction,
             temperature=0.2,
         )
     except Exception as exc:
-        # Content filter errors should not be retried with fallback
         if _is_content_filter_error(exc):
             logger.error("Content policy violation: %s", exc)
             return {"messages": [AIMessage(content=_content_filter_error_message(exc))]}
@@ -294,15 +348,11 @@ async def execute_step_node(
             text = await _run_llm_async(
                 llm,
                 "completion",
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user_msg},
-                ],
+                messages=llm_messages,
                 temperature=0.2,
             )
             return {"messages": [AIMessage(content=str(text))]}
         except Exception as fallback_exc:
-            # Check if fallback also hit content filter
             if _is_content_filter_error(fallback_exc):
                 logger.error("Content policy violation in fallback: %s", fallback_exc)
                 return {"messages": [AIMessage(content=_content_filter_error_message(fallback_exc))]}

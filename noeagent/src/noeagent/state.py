@@ -76,3 +76,4 @@ class AskState(TypedDict):
     messages: Annotated[list, add_messages]
     memory_context: list[dict[str, Any]]
     final_answer: str
+    context_summary: str  # RFC-1010: injected from CognitiveContext.export()

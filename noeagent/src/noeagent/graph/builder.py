@@ -24,25 +24,38 @@ if TYPE_CHECKING:
 
 
 def build_ask_graph(
-    memory_manager: ProviderMemoryManager | None,
+    memory_manager: "ProviderMemoryManager | None",
     llm: Any,
+    agent: Any = None,
 ) -> StateGraph:
     """Build Ask mode state graph.
 
     Args:
         memory_manager: Memory manager for context
         llm: LLM client for generation
+        agent: NoeAgent instance (for live CognitiveContext access)
 
     Returns:
         Compiled StateGraph
     """
+    _context = getattr(agent, "_context", None) if agent else None
+    _config = getattr(agent, "config", None) if agent else None
+    _max_export = getattr(_config, "context_max_export_tokens", None) if _config else None
+    _history_turns = getattr(_config, "context_history_turns", 3) if _config else 3
+
     workflow = StateGraph(AskState)
 
     async def _recall(state: "AskState") -> dict:
         return await nodes.recall_memory_node(state, memory_manager=memory_manager)
 
     async def _answer(state: "AskState") -> dict:
-        return await nodes.generate_answer_node(state, llm=llm)
+        return await nodes.generate_answer_node(
+            state,
+            llm=llm,
+            context=_context,
+            max_export_tokens=_max_export,
+            history_turns=_history_turns,
+        )
 
     workflow.add_node("recall_memory", _recall)
     workflow.add_node("generate_answer", _answer)
@@ -84,6 +97,10 @@ def build_agent_graph(
             memory_manager=memory_manager,
         )
 
+    _context = getattr(agent, "_context", None) if agent else None
+    _max_export = getattr(config, "context_max_export_tokens", None)
+    _history_turns = getattr(config, "context_history_turns", 3)
+
     async def _execute(state: "AgentState") -> dict:
         return await nodes.execute_step_node(
             state,
@@ -92,6 +109,9 @@ def build_agent_graph(
             memory_manager=memory_manager,
             max_tool_calls=config.max_tool_calls_per_step,
             tool_desc_cache=tool_desc_cache,
+            context=_context,
+            max_export_tokens=_max_export,
+            history_turns=_history_turns,
         )
 
     async def _tools(state: "AgentState") -> dict:

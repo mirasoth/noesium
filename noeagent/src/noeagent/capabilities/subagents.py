@@ -79,8 +79,17 @@ class NoeChildSubagentRuntime(BaseSubagentRuntime):
         task: str,
         **kwargs: Any,
     ) -> AsyncGenerator[SubagentProgressEvent, None]:
-        """Execute task by delegating to child NoeAgent.astream_progress."""
+        """Execute task by delegating to child NoeAgent.astream_progress.
+
+        If ``cognitive_context`` is provided in kwargs (RFC-1010), it is
+        prepended to the task so the child agent receives parent findings.
+        """
         request_id = kwargs.get("request_id", "unknown")
+        cognitive_ctx = kwargs.get("cognitive_context", "")
+
+        effective_task = task
+        if cognitive_ctx:
+            effective_task = f"[Parent Context]\n{cognitive_ctx}\n\n[Task]\n{task}"
 
         yield SubagentProgressEvent.start(
             request_id=request_id,
@@ -92,7 +101,7 @@ class NoeChildSubagentRuntime(BaseSubagentRuntime):
             from noesium.core.event import ProgressEventType
 
             final_text = ""
-            async for event in self._agent.astream_progress(task):
+            async for event in self._agent.astream_progress(effective_task):
                 if event.type == ProgressEventType.FINAL_ANSWER:
                     final_text = event.text or ""
                 elif event.type == ProgressEventType.THINKING:
@@ -196,8 +205,17 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
         task: str,
         **kwargs: Any,
     ) -> AsyncGenerator[SubagentProgressEvent, None]:
-        """Execute task via the built-in agent, yielding SubagentProgressEvents."""
+        """Execute task via the built-in agent, yielding SubagentProgressEvents.
+
+        If ``cognitive_context`` is provided in kwargs (RFC-1010), it is
+        prepended to the task so the subagent LLM receives parent findings.
+        """
         request_id = kwargs.get("request_id", "unknown")
+        cognitive_ctx = kwargs.get("cognitive_context", "")
+
+        effective_task = task
+        if cognitive_ctx:
+            effective_task = f"[Parent Context]\n{cognitive_ctx}\n\n[Task]\n{task}"
 
         yield SubagentProgressEvent.start(
             request_id=request_id,
@@ -212,7 +230,7 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
                 from noesium.core.event import ProgressEventType
 
                 final_text = ""
-                async for event in agent.astream_progress(task):
+                async for event in agent.astream_progress(effective_task):
                     etype = event.type
                     if etype == ProgressEventType.FINAL_ANSWER:
                         final_text = event.text or ""
@@ -319,9 +337,9 @@ class NoeBuiltinSubagentRuntime(BaseSubagentRuntime):
             else:
                 # Non-streaming fallback
                 if hasattr(agent, "arun"):
-                    result = await agent.arun(task)
+                    result = await agent.arun(effective_task)
                 elif hasattr(agent, "research"):
-                    res = await agent.research(task)
+                    res = await agent.research(effective_task)
                     result = res.content if hasattr(res, "content") else str(res)
                 else:
                     raise RuntimeError(f"Agent {self._subagent_id} has no astream_progress/arun/research method")

@@ -344,7 +344,7 @@ class TestStreamEvents:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, **kwargs):
             yield {"plan": {"plan": plan, "messages": []}}
 
         mock_compiled.astream = fake_astream
@@ -374,7 +374,7 @@ class TestStreamEvents:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, **kwargs):
             yield {"finalize": {"final_answer": "The answer.", "messages": []}}
 
         mock_compiled.astream = fake_astream
@@ -408,7 +408,7 @@ class TestStreamEvents:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, **kwargs):
             yield {"execute_step": {"messages": [msg], "iteration": 1}}
 
         mock_compiled.astream = fake_astream
@@ -437,7 +437,7 @@ class TestStreamEvents:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, **kwargs):
             yield {"reflect": {"reflection": "Good progress so far.", "messages": []}}
 
         mock_compiled.astream = fake_astream
@@ -465,7 +465,7 @@ class TestStreamEvents:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, **kwargs):
             yield {"finalize": {"final_answer": "Done.", "messages": []}}
 
         mock_compiled.astream = fake_astream
@@ -944,17 +944,17 @@ class TestTodoPersistence:
 
 
 class TestRouting:
-    """Tests for routing logic - require LLM API key for agent initialization."""
+    """Tests for routing logic using standalone routing functions."""
 
-    def _make_agent(self):
-        from noeagent.agent import NoeAgent
-
-        return NoeAgent(NoeConfig(mode=NoeMode.AGENT))
+    def _make_config(self):
+        return NoeConfig(mode=NoeMode.AGENT)
 
     @pytest.mark.integration
     @pytest.mark.llm
     def test_route_finalize_when_plan_complete(self):
-        agent = self._make_agent()
+        from noeagent.graph.routing import route_after_execute
+
+        config = self._make_config()
         plan = TaskPlan(goal="x", steps=[], is_complete=True)
         state: AgentState = {
             "messages": [],
@@ -964,14 +964,15 @@ class TestRouting:
             "reflection": "",
             "final_answer": "",
         }
-        assert agent._route_after_execute(state) == "finalize"
+        assert route_after_execute(state, config) == "finalize"
 
     @pytest.mark.integration
     @pytest.mark.llm
     def test_route_tool_node_when_tool_calls(self):
         from langchain_core.messages import AIMessage
+        from noeagent.graph.routing import route_after_execute
 
-        agent = self._make_agent()
+        config = self._make_config()
         msg = AIMessage(
             content="test",
             tool_calls=[{"name": "run_bash", "args": {}, "id": "c1"}],
@@ -984,14 +985,15 @@ class TestRouting:
             "reflection": "",
             "final_answer": "",
         }
-        assert agent._route_after_execute(state) == "tool_node"
+        assert route_after_execute(state, config) == "tool_node"
 
     @pytest.mark.integration
     @pytest.mark.llm
     def test_route_subagent_when_subagent_action(self):
         from langchain_core.messages import AIMessage
+        from noeagent.graph.routing import route_after_execute
 
-        agent = self._make_agent()
+        config = self._make_config()
         msg = AIMessage(content="delegate")
         msg.additional_kwargs["subagent_action"] = {"action": "spawn", "name": "x"}
         state: AgentState = {
@@ -1002,14 +1004,15 @@ class TestRouting:
             "reflection": "",
             "final_answer": "",
         }
-        assert agent._route_after_execute(state) == "subagent_node"
+        assert route_after_execute(state, config) == "subagent_node"
 
     @pytest.mark.integration
     @pytest.mark.llm
     def test_route_reflect_at_interval(self):
         from langchain_core.messages import AIMessage
+        from noeagent.graph.routing import route_after_execute
 
-        agent = self._make_agent()
+        config = self._make_config()
         msg = AIMessage(content="done")
         state: AgentState = {
             "messages": [msg],
@@ -1019,12 +1022,13 @@ class TestRouting:
             "reflection": "",
             "final_answer": "",
         }
-        assert agent._route_after_execute(state) == "reflect"
+        assert route_after_execute(state, config) == "reflect"
 
     @pytest.mark.integration
     @pytest.mark.llm
     def test_route_after_reflect_revise(self):
-        agent = self._make_agent()
+        from noeagent.graph.routing import route_after_reflect
+
         state: AgentState = {
             "messages": [],
             "plan": TaskPlan(goal="x", steps=[TaskStep(description="y")]),
@@ -1033,12 +1037,13 @@ class TestRouting:
             "reflection": "We need to REVISE the plan.",
             "final_answer": "",
         }
-        assert agent._route_after_reflect(state) == "revise_plan"
+        assert route_after_reflect(state) == "revise_plan"
 
     @pytest.mark.integration
     @pytest.mark.llm
     def test_route_after_reflect_continue(self):
-        agent = self._make_agent()
+        from noeagent.graph.routing import route_after_reflect
+
         state: AgentState = {
             "messages": [],
             "plan": TaskPlan(goal="x", steps=[TaskStep(description="y")]),
@@ -1047,7 +1052,7 @@ class TestRouting:
             "reflection": "Progress is good, continue.",
             "final_answer": "",
         }
-        assert agent._route_after_reflect(state) == "execute_step"
+        assert route_after_reflect(state) == "execute_step"
 
 
 # ---------------------------------------------------------------------------
