@@ -70,7 +70,37 @@ Before ending a session, AI agents MUST:
 
 Template: `docs/worklogs/_template.md`
 
-### 4. Persistent Plan Documentation
+### 4. CI Validation Script Usage
+
+**AI agents MUST run `scripts/validate_ci.sh` locally after making code changes to ensure CI will pass.**
+
+This script runs all validation steps from the GitHub Actions CI workflow:
+- Code formatting checks (Black, isort)
+- Linting (Ruff, Flake8)
+- Running tests for all packages
+- Building packages
+
+**Usage:**
+```bash
+# Run full CI validation
+./scripts/validate_ci.sh
+
+# Quick validation (format + lint only)
+./scripts/validate_ci.sh --quick
+
+# Skip specific steps
+./scripts/validate_ci.sh --skip-tests --skip-build
+```
+
+**When to run:**
+- Before committing code changes
+- Before creating pull requests
+- After significant refactoring
+- When modifying build or test configurations
+
+This ensures code quality and prevents CI failures in GitHub Actions.
+
+### 5. Persistent Plan Documentation
 
 **For tasks requiring planning and multi-step implementation, AI agents MUST create persistent plan files in `docs/plans/` for audit and reference.**
 
