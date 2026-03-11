@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Optional, Type
 try:
     from langchain_core.messages import HumanMessage
     from langchain_core.runnables import RunnableConfig
+    from langgraph.checkpoint.memory import MemorySaver
     from langgraph.graph import StateGraph
 except ImportError:
     raise ImportError(
@@ -94,7 +95,9 @@ class NoeAgent(BaseGraphicAgent):
         self._tool_desc_provider_count: int = -1
         self._subagent_event_queue: asyncio.Queue[ProgressEvent] | None = None
         self._subagent_manager: SubagentManager | None = None
-        self._context = CognitiveContext(max_findings=self.config.context_max_findings)
+        self._checkpointer: MemorySaver = MemorySaver()
+        # Context will be initialized in initialize() after memory_manager is set up
+        self._context: CognitiveContext | None = None
 
     # ------------------------------------------------------------------
     # Properties for autonomous runner / cognitive loop (RFC-1005)
@@ -128,6 +131,30 @@ class NoeAgent(BaseGraphicAgent):
         if self._initialized:
             return
         await self._setup_memory()
+
+        # Initialize context with memory_manager and session_id
+        if self._memory_manager is not None:
+            self._context = CognitiveContext(
+                memory_manager=self._memory_manager,
+                session_id=self.config.session_id,
+                max_findings=self.config.context_max_findings,
+                auto_save=self.config.persist_memory,
+            )
+
+            # Load previous context if resuming session
+            if self.config.resume_session:
+                await self._context.load(key=f"context:{self.config.session_id}")
+        else:
+            # Fallback (should not happen with proper config validation)
+            logger.warning("Memory manager not initialized, context persistence disabled")
+            from noesium.core.context import CognitiveContext as _CC
+
+            self._context = _CC.__new__(_CC)
+            self._context.goal = ""
+            self._context.findings = []
+            self._context.scratchpad = {}
+            self._context.max_findings = self.config.context_max_findings
+
         if self.config.mode == NoeMode.AGENT:
             await self._setup_capabilities()
             self._subagent_manager = SubagentManager(
@@ -158,6 +185,72 @@ class NoeAgent(BaseGraphicAgent):
         self._tool_desc_cache = None
         await self._cleanup_subagents()
         await self.initialize()
+
+    async def cleanup(self) -> None:
+        """Persist state before shutdown."""
+        if self._memory_manager and self.config.persist_memory:
+            if self._context:
+                try:
+                    await self._context.save(key=f"context:{self.config.session_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to save context during cleanup: {e}")
+            # Close memory providers gracefully
+            for provider in self._memory_manager._providers:
+                if hasattr(provider, "close"):
+                    try:
+                        await provider.close()
+                    except Exception as e:
+                        logger.warning(f"Failed to close provider: {e}")
+
+    @classmethod
+    async def resume_session(cls, session_id: str, config: NoeConfig | None = None) -> "NoeAgent":
+        """Resume a previous session by ID.
+
+        Args:
+            session_id: Session ID to resume
+            config: Optional config override
+
+        Returns:
+            NoeAgent instance with restored context and messages
+        """
+        if config is None:
+            config = NoeConfig()
+
+        config.session_id = session_id
+        config.resume_session = True
+
+        agent = cls(config)
+        await agent.initialize()
+        return agent
+
+    async def list_available_sessions(self) -> list[dict[str, Any]]:
+        """List all saved sessions from memory.
+
+        Returns:
+            List of session metadata (session_id, timestamp, goal, findings count)
+        """
+        if not self._memory_manager:
+            return []
+
+        # Query MemuProvider for all context:* keys
+        sessions = []
+        try:
+            keys = await self._memory_manager.list_keys(prefix="context:")
+            for key in keys:
+                result = await self._memory_manager.read(key)
+                if result and isinstance(result.value, dict):
+                    sessions.append(
+                        {
+                            "session_id": key.replace("context:", ""),
+                            "goal": result.value.get("goal", ""),
+                            "findings_count": len(result.value.get("findings", [])),
+                            "timestamp": result.metadata.get("created_at", ""),
+                        }
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to list sessions: {e}")
+
+        return sessions
 
     def _get_planning_llm(self) -> Any:
         """Lazy creation of planning LLM client (O5)."""
@@ -203,7 +296,7 @@ class NoeAgent(BaseGraphicAgent):
         """Return cached compiled graph, rebuilding only on mode change (O1/O2)."""
         if self._compiled_graph is not None and self._compiled_mode == self.config.mode:
             return self._compiled_graph
-        self._compiled_graph = self._build_graph().compile()
+        self._compiled_graph = self._build_graph().compile(checkpointer=self._checkpointer)
         self._compiled_mode = self.config.mode
         return self._compiled_graph
 
@@ -644,6 +737,55 @@ class NoeAgent(BaseGraphicAgent):
 
         await self.initialize()
 
+        # Ensure context is available (fallback for tests that mock initialize)
+        if self._context is None:
+            logger.warning("Context not initialized, creating fallback context")
+            if self._memory_manager is not None:
+                self._context = CognitiveContext(
+                    memory_manager=self._memory_manager,
+                    session_id=self.config.session_id,
+                    max_findings=self.config.context_max_findings,
+                )
+            else:
+                # Create a minimal in-memory context without persistence
+                # This is a fallback for tests that mock initialize
+                class _FallbackContext:
+                    def __init__(self):
+                        self.goal = ""
+                        self.findings = []
+                        self.scratchpad = {}
+                        self.max_findings = 8
+                        self.auto_save = False
+
+                    def set_goal(self, goal: str) -> None:
+                        self.goal = goal
+
+                    def add_finding(self, finding: str) -> None:
+                        self.findings.append(finding)
+                        if len(self.findings) > self.max_findings:
+                            self.findings = self.findings[-self.max_findings :]
+
+                    def set_scratchpad(self, key: str, value: Any) -> None:
+                        self.scratchpad[key] = value
+
+                    def get_scratchpad(self, key: str, default: Any = None) -> Any:
+                        return self.scratchpad.get(key, default)
+
+                    def export(self, include_scratchpad: bool = False) -> str:
+                        """Export context as a string for prompt injection."""
+                        parts: list[str] = []
+                        if self.goal:
+                            parts.append(f"**Goal**: {self.goal}")
+                        if self.findings:
+                            findings_str = "\n".join(f"- {f}" for f in self.findings)
+                            parts.append(f"**Findings**:\n{findings_str}")
+                        if include_scratchpad and self.scratchpad:
+                            scratchpad_items = "\n".join(f"- {k}: {v}" for k, v in self.scratchpad.items())
+                            parts.append(f"**Notes**:\n{scratchpad_items}")
+                        return "\n\n".join(parts) if parts else ""
+
+                self._context = _FallbackContext()
+
         # Normalize to list: subagent_names takes precedence, then subagent_name
         names: list[str] = []
         if subagent_names:
@@ -732,7 +874,9 @@ class NoeAgent(BaseGraphicAgent):
         async def _run_graph() -> None:
             """Run LangGraph stream in background, forwarding raw events to _merged_q."""
             try:
-                async for _raw in compiled.astream(initial):
+                # Pass thread_id for checkpointer to enable message persistence
+                config: RunnableConfig = {"configurable": {"thread_id": self.config.session_id}}
+                async for _raw in compiled.astream(initial, config=config):
                     await _merged_q.put(("graph", _raw))
             except Exception as _exc:
                 await _merged_q.put(("error", _exc))
@@ -961,6 +1105,12 @@ class NoeAgent(BaseGraphicAgent):
                     break
             self._subagent_event_queue = None
             await self._cleanup_subagents()
+            # Persist context before ending session
+            if self._context and self._context.auto_save:
+                try:
+                    await self._context.save(key=f"context:{self.config.session_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to save context: {e}")
             end_evt = _evt(ProgressEventType.SESSION_END, summary="Session ended")
             await _emit(end_evt)
             yield end_evt

@@ -63,7 +63,7 @@ class TestNoeAgentLibraryMode:
         # Mock the graph compilation and execution
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {"finalize": {"final_answer": "The answer is 42.", "messages": []}}
 
         mock_compiled.astream = fake_astream
@@ -88,7 +88,7 @@ class TestNoeAgentLibraryMode:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {"finalize": {"final_answer": "Sync result.", "messages": []}}
 
         mock_compiled.astream = fake_astream
@@ -112,7 +112,7 @@ class TestNoeAgentLibraryMode:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {"finalize": {"final_answer": "Streamed answer.", "messages": []}}
 
         mock_compiled.astream = fake_astream
@@ -146,7 +146,7 @@ class TestProgressExposure:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {"plan": MagicMock(goal="Test", steps=[], is_complete=True)}
             yield {"finalize": {"final_answer": "Done.", "messages": []}}
 
@@ -177,7 +177,7 @@ class TestProgressExposure:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {"finalize": {"final_answer": "Done.", "messages": []}}
 
         mock_compiled.astream = fake_astream
@@ -221,7 +221,7 @@ class TestProgressExposure:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {"finalize": {"final_answer": "Done.", "messages": []}}
 
         mock_compiled.astream = fake_astream
@@ -249,7 +249,7 @@ class TestProgressExposure:
         mock_compiled = AsyncMock()
 
         # Simulate a tool call
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {
                 "execute_step": {
                     "messages": [
@@ -299,7 +299,7 @@ class TestProgressExposure:
         mock_compiled = AsyncMock()
 
         # Make astream raise an error
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             raise RuntimeError("Test error")
             yield  # Make it a generator
 
@@ -337,7 +337,7 @@ class TestTaskRunningStatus:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {"finalize": {"final_answer": "Done.", "messages": []}}
 
         mock_compiled.astream = fake_astream
@@ -371,7 +371,7 @@ class TestTaskRunningStatus:
             steps=[TaskStep(description="Step 1"), TaskStep(description="Step 2")],
         )
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             # The agent checks for TaskPlan instances, so we yield the plan object
             yield {"plan": mock_plan}
             yield {"finalize": {"final_answer": "Done.", "messages": []}}
@@ -413,7 +413,7 @@ class TestTaskRunningStatus:
             ],
         )
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {"plan": mock_plan}
             yield {"finalize": {"final_answer": "Done.", "messages": []}}
 
@@ -449,7 +449,7 @@ class TestBackwardCompatibility:
 
         mock_compiled = AsyncMock()
 
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {"finalize": {"final_answer": "Done.", "messages": []}}
 
         mock_compiled.astream = fake_astream

@@ -8,26 +8,36 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from noesium.core.memory.provider_manager import ProviderMemoryManager
+    pass
 
 
 class CognitiveContext(BaseModel):
     """Minimal cognitive state for agent context continuity.
 
+    Memory persistence is MANDATORY. All instances must have memory_manager and session_id.
+
     Attributes:
+        memory_manager: REQUIRED - Memory manager for persistence (mandatory)
+        session_id: REQUIRED - Unique identifier for this session (used as persistence key)
         goal: Current task/question the agent is working on
         findings: Recent discoveries/results (auto-trimmed to max_findings)
         scratchpad: Flexible key-value store for intermediate state
         max_findings: Maximum number of findings to retain (FIFO)
+        auto_save: Automatically save context on changes (default True)
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    memory_manager: Any  # REQUIRED - ProviderMemoryManager instance (Any to allow mocks in tests)
+    session_id: str  # REQUIRED for persistence key
     goal: str = ""
     findings: list[str] = Field(default_factory=list)
     scratchpad: dict[str, Any] = Field(default_factory=dict)
     max_findings: int = 8
+    auto_save: bool = True
 
     def set_goal(self, goal: str) -> None:
         """Set the current goal/task."""
@@ -81,10 +91,13 @@ class CognitiveContext(BaseModel):
             New CognitiveContext with task as goal, inheriting findings
         """
         return CognitiveContext(
+            memory_manager=self.memory_manager,
+            session_id=f"{self.session_id}:subagent",
             goal=task,
             findings=self.findings.copy(),  # Inherit parent findings
             scratchpad={},  # Fresh scratchpad for subagent
             max_findings=self.max_findings,
+            auto_save=self.auto_save,
         )
 
     def clear(self) -> None:
@@ -93,32 +106,37 @@ class CognitiveContext(BaseModel):
         self.findings = []
         self.scratchpad = {}
 
-    # Optional memory integration methods
+    # Memory integration methods (MANDATORY)
 
-    async def save(self, memory: "ProviderMemoryManager", key: str = "context") -> None:
-        """Save context to memory (optional persistence).
+    async def save(self, key: str | None = None) -> None:
+        """Save context to memory (mandatory persistence).
 
         Args:
-            memory: Memory manager instance
-            key: Storage key (default "context")
+            key: Storage key (defaults to "context:{session_id}")
         """
-        await memory.store(
-            key=key,
-            value=self.model_dump(),
+        storage_key = key or f"context:{self.session_id}"
+        await self.memory_manager.store(
+            key=storage_key,
+            value={
+                "goal": self.goal,
+                "findings": self.findings,
+                "scratchpad": self.scratchpad,
+                "max_findings": self.max_findings,
+            },
             content_type="cognitive_context",
         )
 
-    async def load(self, memory: "ProviderMemoryManager", key: str = "context") -> bool:
-        """Load context from memory (optional restore).
+    async def load(self, key: str | None = None) -> bool:
+        """Load context from memory (mandatory restore).
 
         Args:
-            memory: Memory manager instance
-            key: Storage key (default "context")
+            key: Storage key (defaults to "context:{session_id}")
 
         Returns:
             True if loaded successfully, False otherwise
         """
-        result = await memory.read(key)
+        storage_key = key or f"context:{self.session_id}"
+        result = await self.memory_manager.read(storage_key)
         if result and isinstance(result.value, dict):
             self.goal = result.value.get("goal", "")
             self.findings = result.value.get("findings", [])
@@ -129,14 +147,12 @@ class CognitiveContext(BaseModel):
 
     async def enrich(
         self,
-        memory: "ProviderMemoryManager",
         query: str | None = None,
         limit: int = 3,
     ) -> list[str]:
         """Enrich context with relevant memories.
 
         Args:
-            memory: Memory manager instance
             query: Search query (defaults to goal if not provided)
             limit: Max memories to recall
 
@@ -147,7 +163,7 @@ class CognitiveContext(BaseModel):
         if not search_query:
             return []
 
-        results = await memory.recall(search_query, limit=limit)
+        results = await self.memory_manager.recall(search_query, limit=limit)
         recalled: list[str] = []
         for r in results:
             value_str = str(r.entry.value)[:200]  # Truncate long values

@@ -167,7 +167,7 @@ class TestBrowserUseSubagent:
         mock_compiled = AsyncMock()
 
         # Simulate subagent spawn and result
-        async def fake_astream(initial):
+        async def fake_astream(initial, config=None):
             yield {
                 "subagent": {
                     "messages": [
@@ -1722,7 +1722,7 @@ class TestEndToEndStreamingIntegration:
 
             mock_compiled = AsyncMock()
 
-            async def fake_astream(initial):
+            async def fake_astream(initial, config=None):
                 # Simulate the graph actually calling invoke_subagent inside subagent_node
                 await fake_invoke_subagent("browser_use", "Navigate")
                 # Yield control so _forward_subagent_events can pick up the queued events

@@ -2,8 +2,28 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
+import pytest
+
 from noesium.core.context import CognitiveContext
 from noesium.core.event import ProgressEvent, ProgressEventType
+
+
+@pytest.fixture
+def mock_memory_manager():
+    """Create a mock memory manager for testing."""
+    manager = MagicMock()
+    manager.store = MagicMock()
+    manager.read = MagicMock(return_value=None)
+    manager.recall = MagicMock(return_value=[])
+    return manager
+
+
+@pytest.fixture
+def test_session_id():
+    """Provide a test session ID."""
+    return "test-session-123"
 
 
 class TestContextIntegration:
@@ -17,9 +37,9 @@ class TestContextIntegration:
         assert config.context_max_findings == 5
         assert config.context_auto_recall is False
 
-    def test_context_update_from_tool_end_event(self) -> None:
+    def test_context_update_from_tool_end_event(self, mock_memory_manager, test_session_id) -> None:
         """Test context is updated from TOOL_END events."""
-        ctx = CognitiveContext()
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
         ctx.set_goal("Test goal")
 
         # Simulate TOOL_END event handling
@@ -40,9 +60,9 @@ class TestContextIntegration:
         assert "web_search" in ctx.findings[0]
         assert "Python" in ctx.findings[0]
 
-    def test_context_update_from_subagent_end_event(self) -> None:
+    def test_context_update_from_subagent_end_event(self, mock_memory_manager, test_session_id) -> None:
         """Test context is updated from SUBAGENT_END events."""
-        ctx = CognitiveContext()
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
         ctx.set_goal("Research task")
 
         # Simulate SUBAGENT_END event handling
@@ -62,9 +82,9 @@ class TestContextIntegration:
         assert len(ctx.findings) == 1
         assert "[tacitus]" in ctx.findings[0]
 
-    def test_context_update_from_plan_created_event(self) -> None:
+    def test_context_update_from_plan_created_event(self, mock_memory_manager, test_session_id) -> None:
         """Test context scratchpad is updated from PLAN_CREATED events."""
-        ctx = CognitiveContext()
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
 
         # Simulate PLAN_CREATED event handling
         plan_snapshot = {
@@ -87,9 +107,9 @@ class TestContextIntegration:
 
         assert ctx.get_scratchpad("current_plan") == plan_snapshot
 
-    def test_context_for_subagent_scoping(self) -> None:
+    def test_context_for_subagent_scoping(self, mock_memory_manager, test_session_id) -> None:
         """Test context scoping for subagent invocation."""
-        parent_ctx = CognitiveContext()
+        parent_ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
         parent_ctx.set_goal("Main research task")
         parent_ctx.add_finding("Found initial resource")
         parent_ctx.set_scratchpad("parent_note", "important")
@@ -107,9 +127,9 @@ class TestContextIntegration:
         assert parent_ctx.goal == "Main research task"
         assert parent_ctx.get_scratchpad("parent_note") == "important"
 
-    def test_context_export_for_prompt(self) -> None:
+    def test_context_export_for_prompt(self, mock_memory_manager, test_session_id) -> None:
         """Test context export generates valid prompt injection text."""
-        ctx = CognitiveContext()
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
         ctx.set_goal("Analyze Python code")
         ctx.add_finding("web_search: Found 5 relevant docs")
         ctx.add_finding("[tacitus] Synthesized research summary")
@@ -121,9 +141,9 @@ class TestContextIntegration:
         assert "web_search: Found 5 relevant docs" in export
         assert "[tacitus] Synthesized research summary" in export
 
-    def test_context_persists_across_iterations(self) -> None:
+    def test_context_persists_across_iterations(self, mock_memory_manager, test_session_id) -> None:
         """Test context accumulates findings across multiple iterations."""
-        ctx = CognitiveContext(max_findings=5)
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id, max_findings=5)
         ctx.set_goal("Multi-step research")
 
         # Simulate multiple tool calls across iterations
@@ -134,9 +154,9 @@ class TestContextIntegration:
         assert ctx.findings[0] == "tool_0: result 0"
         assert ctx.findings[2] == "tool_2: result 2"
 
-    def test_context_auto_trim_maintains_recent(self) -> None:
+    def test_context_auto_trim_maintains_recent(self, mock_memory_manager, test_session_id) -> None:
         """Test context auto-trim keeps most recent findings."""
-        ctx = CognitiveContext(max_findings=3)
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id, max_findings=3)
 
         # Add more findings than max
         for i in range(5):
@@ -150,11 +170,11 @@ class TestContextIntegration:
 class TestContextWithSubagentContext:
     """Test CognitiveContext integration with SubagentContext."""
 
-    def test_subagent_context_shared_memory(self) -> None:
+    def test_subagent_context_shared_memory(self, mock_memory_manager, test_session_id) -> None:
         """Test CognitiveContext can be passed via SubagentContext.shared_memory."""
         from noesium.core.agent.subagent import SubagentContext
 
-        parent_ctx = CognitiveContext()
+        parent_ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
         parent_ctx.set_goal("Research AI trends")
         parent_ctx.add_finding("Initial finding from web search")
 

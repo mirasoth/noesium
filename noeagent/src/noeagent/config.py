@@ -18,7 +18,7 @@ import os
 from enum import Enum
 from typing import Any, Callable, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from uuid_extensions import uuid7str
 
 from noesium.subagents import (
@@ -410,6 +410,12 @@ class NoeConfig(BaseModel):
         description="Maximum findings to retain in CognitiveContext (FIFO)",
     )
 
+    # Session persistence settings (RFC-1009)
+    resume_session: bool = Field(
+        default=False,
+        description="Attempt to resume previous session if session_id exists",
+    )
+
     working_directory: str | None = None
     permissions: list[str] = Field(
         default_factory=lambda: [
@@ -438,6 +444,16 @@ class NoeConfig(BaseModel):
     llm_warmup_timeout: int = Field(default=30, description="Timeout in seconds for LLM warm-up request")
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @model_validator(mode="after")
+    def validate_persistence_config(self):
+        """Ensure configuration is consistent with mandatory memory."""
+        if self.persist_memory and "memu" not in self.memory_providers:
+            raise ValueError(
+                "persist_memory=True requires 'memu' in memory_providers. "
+                "Memory persistence is mandatory for cognitive context."
+            )
+        return self
 
     def effective(self) -> NoeConfig:
         """Return config with ask-mode overrides applied."""
