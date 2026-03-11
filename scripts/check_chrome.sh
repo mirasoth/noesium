@@ -30,39 +30,62 @@ extract_version_number() {
 }
 
 get_chrome_version() {
-  # Try common Chrome binaries on macOS and Linux.
+  # Try common Chrome and Chromium binaries on macOS and Linux.
   local chrome_cmd=""
 
-  # macOS default path
+  # macOS default paths - check both Chrome and Chromium
   if [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then
     chrome_cmd="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+  elif [ -x "/Applications/Chromium.app/Contents/MacOS/Chromium" ]; then
+    chrome_cmd="/Applications/Chromium.app/Contents/MacOS/Chromium"
   elif command -v google-chrome >/dev/null 2>&1; then
     chrome_cmd="google-chrome"
   elif command -v google-chrome-stable >/dev/null 2>&1; then
     chrome_cmd="google-chrome-stable"
+  elif command -v chromium >/dev/null 2>&1; then
+    chrome_cmd="chromium"
+  elif command -v chromium-browser >/dev/null 2>&1; then
+    chrome_cmd="chromium-browser"
   elif command -v chrome >/dev/null 2>&1; then
     chrome_cmd="chrome"
   fi
 
   if [ -z "${chrome_cmd}" ]; then
-    echo_err "Google Chrome binary not found. Please install Chrome or adjust this script."
+    echo_err "Neither Google Chrome nor Chromium found."
     return 1
   fi
 
   local raw
   if ! raw="$("${chrome_cmd}" --version 2>/dev/null)"; then
-    echo_err "Failed to retrieve Chrome version using '${chrome_cmd} --version'."
+    echo_err "Failed to retrieve version using '${chrome_cmd} --version'."
     return 1
   fi
 
   local version
   version="$(printf "%s\n" "${raw}" | extract_version_number)"
   if [ -z "${version}" ]; then
-    echo_err "Could not parse Chrome version from: ${raw}"
+    echo_err "Could not parse version from: ${raw}"
     return 1
   fi
 
   printf "%s\n" "${version}"
+}
+
+install_chrome() {
+  echo_info "Checking for Homebrew..."
+  if ! command -v brew >/dev/null 2>&1; then
+    echo_err "Homebrew is required to install Google Chrome automatically."
+    echo_err "Please install Homebrew from https://brew.sh or install Chrome manually."
+    return 1
+  fi
+
+  echo_info "Installing Google Chrome via Homebrew..."
+  if ! brew install --cask google-chrome; then
+    echo_err "Failed to install Google Chrome via Homebrew."
+    return 1
+  fi
+
+  echo_ok "Google Chrome installed successfully."
 }
 
 get_chromedriver_version() {
@@ -268,12 +291,22 @@ if [ "${1-}" = "-h" ] || [ "${1-}" = "--help" ]; then
   exit 0
 fi
 
-echo_info "Detecting Google Chrome version..."
+echo_info "Detecting Google Chrome or Chromium version..."
 if ! chrome_version="$(get_chrome_version)"; then
-  exit 1
+  echo_info "Neither Chrome nor Chromium found; will attempt to install Google Chrome."
+  if ! install_chrome; then
+    echo_err "Could not install Google Chrome automatically."
+    exit 1
+  fi
+
+  echo_info "Re-checking Chrome version after installation..."
+  if ! chrome_version="$(get_chrome_version)"; then
+    echo_err "Installed Chrome but still cannot determine its version."
+    exit 1
+  fi
 fi
 chrome_major="${chrome_version%%.*}"
-echo_ok "Google Chrome version: ${chrome_version} (major ${chrome_major})"
+echo_ok "Chrome/Chromium version: ${chrome_version} (major ${chrome_major})"
 
 echo_info "Detecting chromedriver version..."
 had_chromedriver=true
