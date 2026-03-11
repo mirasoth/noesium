@@ -283,15 +283,14 @@ class TestMemoryIntegration:
     @pytest.mark.asyncio
     async def test_enrich_with_custom_query(self, mock_memory_manager, test_session_id) -> None:
         """Test enrich with custom query."""
-        ctx = CognitiveContext()
+        ctx = CognitiveContext(memory_manager=mock_memory_manager, session_id=test_session_id)
         ctx.set_goal("Main goal")
 
-        mock_memory = AsyncMock()
-        mock_memory.recall.return_value = []
+        mock_memory_manager.recall.return_value = []
 
-        await ctx.enrich(mock_memory, query="custom search")
+        await ctx.enrich(query="custom search")
 
-        mock_memory.recall.assert_called_once_with("custom search", limit=3)
+        mock_memory_manager.recall.assert_called_once_with("custom search", limit=3)
 
 
 class TestPydanticIntegration:
