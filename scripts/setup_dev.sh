@@ -87,31 +87,10 @@ OPENAI_API_KEY=sk-your-key-here
 # Shared Services
 WEAVIATE_URL=http://localhost:8080
 POSTGRES_URL=postgresql://user:password@localhost:5432/vectordb
-
-# Voyager Configuration
-VOYAGER_SECRET_KEY=your-secret-key-here
-VOYAGER_DATABASE_URL=sqlite:///./voyager.db
 EOF
         echo -e "${GREEN}✅ Basic .env created${NC}"
         echo -e "${YELLOW}⚠️  Please edit .env with your configuration${NC}"
     fi
-fi
-
-# Install frontend dependencies for Voyager
-echo -e "${BLUE}📦 Checking Voyager frontend dependencies...${NC}"
-if [ -d "voyager/frontend" ]; then
-    if command -v npm &> /dev/null; then
-        echo -e "${BLUE}Installing Node.js dependencies...${NC}"
-        cd voyager/frontend
-        npm install
-        cd ../..
-        echo -e "${GREEN}✅ Frontend dependencies installed${NC}"
-    else
-        echo -e "${YELLOW}⚠️  npm not found, skipping frontend setup${NC}"
-        echo -e "${YELLOW}   Install Node.js to work with Voyager frontend${NC}"
-    fi
-else
-    echo -e "${YELLOW}⚠️  Voyager frontend not found${NC}"
 fi
 
 # Print summary
@@ -134,5 +113,4 @@ echo ""
 echo -e "${BLUE}Subprojects:${NC}"
 echo -e "  • ${GREEN}noesium${NC}    - Core framework (${YELLOW}cd noesium && uv run python${NC})"
 echo -e "  • ${GREEN}noeagent${NC}   - CLI/TUI app (${YELLOW}cd noeagent && uv run noeagent${NC})"
-echo -e "  • ${GREEN}voyager${NC}    - Web app (${YELLOW}cd voyager/backend && uv run voyager${NC})"
 echo ""

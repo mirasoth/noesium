@@ -2,8 +2,8 @@
 PYTHON = python3
 UV = uv
 PYTEST = pytest
-PYTHON_MODULES = noesium noeagent voyager/backend/src
-COVERAGE_MODULES = noesium noeagent voyager
+PYTHON_MODULES = noesium noeagent
+COVERAGE_MODULES = noesium noeagent
 TEST_DIR = tests
 LINE_LENGTH = 120
 
@@ -33,13 +33,6 @@ install: ## Install all dependencies (production + dev + extras) for all workspa
 	@echo "$(BLUE)🔧 Installing Python dependencies...$(RESET)"
 	@$(UV) sync --all-packages --all-extras
 	@echo "$(GREEN)✅ Python dependencies installed$(RESET)"
-	@echo "$(BLUE)📦 Installing frontend dependencies...$(RESET)"
-	@if command -v npm >/dev/null 2>&1; then \
-		cd voyager/frontend && npm install; \
-		echo "$(GREEN)✅ Frontend dependencies installed$(RESET)"; \
-	else \
-		echo "$(YELLOW)⚠️  npm not found, skipping frontend dependencies$(RESET)"; \
-	fi
 
 install-python: ## Install Python dependencies only (production + dev + extras)
 	@echo "$(BLUE)🔧 Installing Python dependencies...$(RESET)"
@@ -49,8 +42,7 @@ install-python: ## Install Python dependencies only (production + dev + extras)
 install-frontend: ## Install frontend dependencies only
 	@echo "$(BLUE)📦 Installing frontend dependencies...$(RESET)"
 	@if command -v npm >/dev/null 2>&1; then \
-		cd voyager/frontend && npm install; \
-		echo "$(GREEN)✅ Frontend dependencies installed$(RESET)"; \
+		echo "$(GREEN)✅ Frontend dependencies ready$(RESET)"; \
 	else \
 		echo "$(RED)❌ npm not found. Please install Node.js first.$(RESET)"; \
 		exit 1; \
@@ -58,15 +50,10 @@ install-frontend: ## Install frontend dependencies only
 
 install-clean: ## Clean install - remove caches and reinstall everything
 	@echo "$(BLUE)🧹 Cleaning all caches...$(RESET)"
-	@rm -rf .venv voyager/frontend/node_modules voyager/frontend/package-lock.json
+	@rm -rf .venv
 	@$(UV) sync --all-packages --all-extras
-	@echo "$(BLUE)📦 Installing frontend dependencies...$(RESET)"
-	@if command -v npm >/dev/null 2>&1; then \
-		cd voyager/frontend && npm install; \
-		echo "$(GREEN)✅ Clean installation complete$(RESET)"; \
-	else \
-		echo "$(YELLOW)⚠️  npm not found, skipping frontend dependencies$(RESET)"; \
-	fi
+	@echo "$(BLUE)📦 Installing dependencies...$(RESET)"
+	@echo "$(GREEN)✅ Clean installation complete$(RESET)"
 
 install-workspace: install-python ## Install all workspace packages (deprecated: use install-python)
 	@echo "$(GREEN)✅ Workspace ready$(RESET)"
@@ -86,7 +73,7 @@ check-env: ## Check environment setup
 # =============================================================================
 
 .PHONY: test test-unit test-integration test-coverage test-watch
-.PHONY: test-noesium test-noeagent test-voyager test-all
+.PHONY: test-noesium test-noeagent test-all
 
 test: ## Run all tests.
 	@echo "$(BLUE)🧪 Running all tests...$(RESET)"
@@ -96,13 +83,11 @@ test-unit: ## Run unit tests only (all packages)
 	@echo "$(BLUE)🧪 Running unit tests...$(RESET)"
 	@cd noesium && $(UV) run $(PYTEST) tests/ -v -m "not integration"
 	@cd noeagent && $(UV) run $(PYTEST) tests/ -v -m "not integration"
-	@cd voyager/backend && $(UV) run $(PYTEST) tests/ -v -m "not integration"
 
 test-integration: ## Run integration tests only (all packages)
 	@echo "$(BLUE)🧪 Running integration tests...$(RESET)"
 	@cd noesium && $(UV) run $(PYTEST) tests/ -v -m "integration" --runintegration --runslow
 	@cd noeagent && $(UV) run $(PYTEST) tests/ -v -m "integration" --runintegration --runslow
-	@cd voyager/backend && $(UV) run $(PYTEST) tests/ -v -m "integration" --runintegration --runslow
 
 test-coverage: ## Run tests with coverage
 	@echo "$(BLUE)🧪 Running tests with coverage...$(RESET)"
@@ -121,15 +106,7 @@ test-noeagent: ## Run noeagent package tests
 	@echo "$(BLUE)🧪 Running noeagent tests...$(RESET)"
 	cd noeagent && $(UV) run $(PYTEST) tests/ -v
 
-test-voyager: ## Run voyager backend tests
-	@echo "$(BLUE)🧪 Running voyager backend tests...$(RESET)"
-	@if [ -d "voyager/backend/tests" ]; then \
-		cd voyager/backend && $(UV) run $(PYTEST) tests/ -v; \
-	else \
-		echo "$(YELLOW)⚠️  No tests found for voyager backend$(RESET)"; \
-	fi
-
-test-all: test-noesium test-noeagent test-voyager ## Run all package tests
+test-all: test-noesium test-noeagent ## Run all package tests
 	@echo "$(GREEN)✅ All package tests completed$(RESET)"
 
 # =============================================================================
@@ -168,7 +145,7 @@ autofix: lint-fix format ## Auto-fix all code quality issues
 # =============================================================================
 
 .PHONY: build build-wheel build-sdist package
-.PHONY: build-noesium build-noeagent build-voyager build-all
+.PHONY: build-noesium build-noeagent build-all
 
 build: ## Build package
 	@echo "$(BLUE)🔨 Building package...$(RESET)"
@@ -193,11 +170,7 @@ build-noeagent: ## Build noeagent package
 	@echo "$(BLUE)🔨 Building noeagent package...$(RESET)"
 	cd noeagent && $(UV) build
 
-build-voyager: ## Build voyager backend package
-	@echo "$(BLUE)🔨 Building voyager backend package...$(RESET)"
-	cd voyager/backend && $(UV) build
-
-build-all: build-noesium build-noeagent build-voyager ## Build all packages
+build-all: build-noesium build-noeagent ## Build all packages
 	@echo "$(GREEN)✅ All packages built$(RESET)"
 
 # =============================================================================

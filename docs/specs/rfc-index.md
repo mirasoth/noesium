@@ -79,8 +79,6 @@ Master index of all RFC specifications.
 
 | RFC | Title | Kind | Status | Created | Last Updated | Version |
 |-----|-------|------|--------|---------|--------------|---------|
-| [RFC-9000](RFC-9000.md) | Voyager Design Philosophy and Principles | Conceptual Design | Draft | 2026-03-04 | 2026-03-07 | 001 |
-| [RFC-9001](RFC-9001.md) | Voyager Architecture Design | Architecture Design | Draft | 2026-03-04 | 2026-03-07 | 001 |
 
 ---
 
@@ -113,8 +111,8 @@ Master index of all RFC specifications.
 
 ### By Kind
 
-- **Conceptual Design**: [RFC-0001](RFC-0001.md), [RFC-9000](RFC-9000.md)
-- **Architecture Design**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md), [RFC-1003](RFC-1003.md), [RFC-1004](RFC-1004.md), [RFC-1005](RFC-1005.md), [RFC-1006](RFC-1006.md), [RFC-1007](RFC-1007.md), [RFC-1008](RFC-1008.md), [RFC-1009](RFC-1009.md), [RFC-1010](RFC-1010.md), [RFC-1101](RFC-1101.md), [RFC-1201](RFC-1201.md), [RFC-9001](RFC-9001.md)
+- **Conceptual Design**: [RFC-0001](RFC-0001.md)
+- **Architecture Design**: [RFC-1001](RFC-1001.md), [RFC-1002](RFC-1002.md), [RFC-1003](RFC-1003.md), [RFC-1004](RFC-1004.md), [RFC-1005](RFC-1005.md), [RFC-1006](RFC-1006.md), [RFC-1007](RFC-1007.md), [RFC-1008](RFC-1008.md), [RFC-1009](RFC-1009.md), [RFC-1010](RFC-1010.md), [RFC-1101](RFC-1101.md), [RFC-1201](RFC-1201.md)
 - **Implementation Interface Design**: [RFC-2001](RFC-2001.md), [RFC-2002](RFC-2002.md), [RFC-2003](RFC-2003.md), [RFC-2004](RFC-2004.md), [RFC-2101](RFC-2101.md), [RFC-2102](RFC-2102.md), [RFC-2103](RFC-2103.md)
 
 ### By Status

@@ -348,7 +348,6 @@ make lint       # Run linters
 ## Applications Built on Noesium
 
 - **[NoeAgent](../noeagent/)** - Multi-agent system implementation
-- **[Voyager](../voyager/)** - 24/7 digital companion
 
 ## License
 

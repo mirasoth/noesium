@@ -20,7 +20,6 @@ A monorepo workspace containing the Noesium framework and applications built on 
 noesium/
 ├── noesium/        # Core cognitive agentic framework
 ├── noeagent/       # Multi-agent system implementation
-├── voyager/        # 24/7 digital companion application
 └── docs/           # Shared documentation
 ```
 
@@ -50,18 +49,6 @@ Features:
 
 **Quick Guide**: [docs/quick_guide_noeagent.md](docs/quick_guide_noeagent.md)
 
-### [Voyager](voyager/) — Digital Companion
-
-**A 24/7 digital companion** built on NoeAgent, providing continuous assistance through web-based interface.
-
-Features:
-- Web-based coding assistant
-- Continuous availability
-- Session management
-- Project context awareness
-
-**Quick Guide**: [docs/quick_guide_voyager.md](docs/quick_guide_voyager.md)
-
 ## Design Philosophy
 
 Noesium follows an **event-sourced multi-agent kernel architecture** for durability, replayability, and distributed coordination:
@@ -76,39 +63,36 @@ Goals: long-running autonomous agents, durable/resumable execution, multi-agent 
 ## Global Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Applications Layer                        │
-│                                                                  │
-│  ┌──────────────────┐              ┌────────────────────────┐  │
-│  │    NoeAgent      │              │       Voyager          │  │
-│  │ Multi-Agent      │──────────────│   Digital Companion    │  │
-│  │ System           │              │   (24/7 Assistant)     │  │
-│  └────────┬─────────┘              └───────────┬────────────┘  │
-│           │                                    │                │
-│           │  Built on                          │  Built on      │
-│           │                                    │                │
-└───────────┼────────────────────────────────────┼────────────────┘
-            │                                    │
-            └────────────────┬───────────────────┘
-                             │
-                             ▼
-            ┌────────────────────────────────────┐
-            │     Noesium Framework Core         │
-            │                                    │
-            │  ┌──────────────┬────────────────┐ │
-            │  │  Toolkits    │  Subagents     │ │
-            │  │  (17+ tools) │  (reusable)    │ │
-            │  └──────────────┴────────────────┘ │
-            │                                    │
-            │  ┌────────────────────────────────┐ │
-            │  │  Core Framework                │ │
-            │  │  - Agent Kernel                │ │
-            │  │  - Event Bus & Store           │ │
-            │  │  - Memory Management           │ │
-            │  │  - LLM Integration             │ │
-            │  │  - Tool Registry               │ │
-            │  └────────────────────────────────┘ │
-            └────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│        Applications Layer               │
+│                                         │
+│    ┌─────────────────────┐              │
+│    │     NoeAgent        │              │
+│    │  Multi-Agent System │              │
+│    └──────────┬──────────┘              │
+│               │                         │
+│         Built on                        │
+│               │                         │
+└───────────────┼─────────────────────────┘
+                │
+                ▼
+    ┌───────────────────────────┐
+    │   Noesium Framework Core  │
+    │                           │
+    │  ┌─────────┬───────────┐  │
+    │  │Toolkits │ Subagents │  │
+    │  │ (17+)   │(reusable) │  │
+    │  └─────────┴───────────┘  │
+    │                           │
+    │  ┌─────────────────────┐  │
+    │  │   Core Framework    │  │
+    │  │ • Agent Kernel      │  │
+    │  │ • Event Bus & Store │  │
+    │  │ • Memory Management │  │
+    │  │ • LLM Integration   │  │
+    │  │ • Tool Registry     │  │
+    │  └─────────────────────┘  │
+    └───────────────────────────┘
 ```
 
 ### Architecture Layers
@@ -117,22 +101,21 @@ Goals: long-running autonomous agents, durable/resumable execution, multi-agent 
 |---------|-------|---------|------------|
 | **Noesium** | Framework | Core primitives, tools, memory, events | Python, LangGraph |
 | **NoeAgent** | Application | Multi-agent orchestration, TUI | Python, Rich |
-| **Voyager** | Application | Web interface, continuous service | FastAPI, React |
 
 ### Data Flow
 
 ```
-User Request → NoeAgent/Voyager → Noesium Framework
-                                        ↓
-                                   Agent Kernel
-                                        ↓
-                               Tool Execution
-                                        ↓
-                            Subagent Delegation (if needed)
-                                        ↓
-                              Memory Update
-                                        ↓
-                                Response
+User Request → NoeAgent → Noesium Framework
+                              ↓
+                        Agent Kernel
+                              ↓
+                       Tool Execution
+                              ↓
+                    Subagent Delegation (if needed)
+                              ↓
+                        Memory Update
+                              ↓
+                         Response
 ```
 
 ## Installation and Usage
@@ -209,18 +192,6 @@ python
 
 **Run Voyager:**
 
-```bash
-# Backend
-cd voyager/backend
-uv run uvicorn main:app --reload
-
-# Frontend
-cd voyager/frontend
-npm install && npm run dev
-```
-
-📖 **[Full Quick Guide](docs/quick_guide_voyager.md)**
-
 ## Development
 
 ### Workspace Setup
@@ -252,7 +223,6 @@ make install
 make test              # All tests
 make test-noesium      # Noesium tests only
 make test-noeagent     # NoeAgent tests only
-make test-voyager      # Voyager tests only
 
 # Code quality
 make quality           # Run all quality checks
@@ -276,7 +246,6 @@ noesium/
 │   ├── user_guides/             # User guides
 │   │   ├── quick_guide_noesium.md
 │   │   ├── quick_guide_noeagent.md
-│   │   ├── quick_guide_voyager.md
 │   │   └── dev_guide.md
 │   └── specs/                   # Specifications
 ├── examples/                     # Usage examples
@@ -290,10 +259,7 @@ noesium/
 │   ├── tests/
 │   ├── README.md
 │   └── pyproject.toml
-├── voyager/                      # Voyager application
-│   ├── backend/
-│   ├── frontend/
-│   └── README.md
+├── scripts/                      # Utility scripts
 ├── scripts/                      # Utility scripts
 ├── Makefile                      # Build automation
 ├── pyproject.toml               # Workspace config
@@ -324,7 +290,6 @@ export SERPER_API_KEY="..."            # Web search
 - **[Quick Start Guides](docs/user_guides/)**:
   - [Noesium Framework](docs/user_guides/quick_guide_noesium.md)
   - [NoeAgent](docs/user_guides/quick_guide_noeagent.md)
-  - [Voyager](docs/user_guides/quick_guide_voyager.md)
 - **[Development Guide](docs/user_guides/dev_guide.md)** - Framework development
 - **[AGENTS.md](AGENTS.md)** - AI agent development guide
 - **[Specifications](docs/specs/)** - Technical specifications

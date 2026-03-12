@@ -51,24 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integration with Noesium framework
 - Support for local and cloud LLMs
 
-## [voyager-v0.1.0] - 2026-03-05
-
-### Added
-- Initial release of Voyager
-- FastAPI backend with WebSocket support
-- React + TypeScript frontend with Tailwind CSS
-- Task management system
-- Git integration
-- Real-time progress updates
-- Repository browser
-
-### Features
-- Create and manage coding tasks
-- Live task progress via WebSocket
-- Multi-repository support
-- Agent-powered task execution
-- Modern responsive UI
-
 ## Release History
 
 ### v0.3.x Series (Framework Development)
@@ -120,7 +102,6 @@ The project uses independent versioning for each package:
 
 - **noesium**: Core framework (follows semantic versioning)
 - **noeagent**: Application versioning
-- **voyager**: Backend API versioning
 
 ### Version Format
 

@@ -8,13 +8,11 @@ requires-python = ">=3.11"
 members = [
     "noesium",
     "noeagent",
-    "voyager/backend",
 ]
 
 [tool.uv.sources]
 noesium = { workspace = true }
 noeagent = { workspace = true }
-voyager = { workspace = true }
 
 [tool.ruff]
 line-length = 120
@@ -35,5 +33,4 @@ line-length = 120
 "noeagent/src/noeagent/tui.py" = ["E402"]
 "noeagent/tests/**/*.py" = ["E402"]
 "examples/**/*.py" = ["E402"]
-"voyager/backend/src/**/*.py" = ["E402"]
 "noeagent/src/**/*.py" = ["E402"]

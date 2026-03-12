@@ -58,7 +58,6 @@ Authoritative terminology reference for noesium RFC specifications.
 | Memory Provider | RFC-2001 §6.1 | Abstract contract for memory backends with write/read/search/delete |
 | Memory Tier | RFC-2001 §5 | Classification: working, persistent, or indexed |
 | MemuProvider | RFC-2002 §6.3 | Persistent memory provider wrapping MemU file-based memory system |
-| Voyager | RFC-9000 §1 | Personal coding assistant webserver built on NoeAgent |
 | OpenSandbox Executor | RFC-1003 §5.3 | Data plane component providing hardened container isolation for tool execution |
 | Persistent Memory | RFC-2001 §5.2 | Cross-session durable memory tier surviving restarts |
 | ProgressEvent | RFC-1010 §8 | Simple event for TUI streaming with type, message, metadata, timestamp |
@@ -85,10 +84,6 @@ Authoritative terminology reference for noesium RFC specifications.
 | SubagentProvider | RFC-1006 §4 | Registration and lazy factory wrapping descriptor + runtime |
 | SubagentRoutingPolicy | RFC-1006 §7 | Routing constraints: allow_auto_routing, max_depth, permission_profile |
 | Subagents Layer | RFC-1007 §5.3.3 | noesium.subagents; reusable subagent implementations depending on core and toolkits |
-| Task | RFC-9000 §6.1 | Primary abstraction in Voyager; discrete unit of coding work with lifecycle |
-| Task Orchestrator | RFC-9001 §9.2 | Service managing task lifecycle and NoeAgent integration |
-| Task Status | RFC-9001 §6.1 | Lifecycle state: created, planning, executing, reflecting, completed, failed |
-| Task Step | RFC-9001 §6.1 | Individual execution step within a task with status and result |
 | Subagent Call | RFC-1005 §5.1 | Execution modality delegating autonomous reasoning to a cognitive worker |
 | Task Agent | RFC-1002 §5.4 | Agent archetype for linear or branching task execution |
 | Tool Call | RFC-1005 §5.1 | Execution modality invoking a stateless capability as a procedure |

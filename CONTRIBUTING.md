@@ -9,7 +9,6 @@ Thank you for your interest in contributing to Noesium! This guide will help you
 - **Python >= 3.11** - The project uses modern Python features
 - **uv** - Fast Python package manager (recommended)
 - **Git** - Version control
-- **Node.js >= 18** - For Voyager frontend development
 
 ### Install uv
 
@@ -49,13 +48,6 @@ noesium/
 │   ├── src/noeagent/     # Application source
 │   ├── tests/            # Test suite
 │   └── pyproject.toml
-├── voyager/              # Web application
-│   ├── backend/          # FastAPI backend
-│   │   ├── src/voyager/
-│   │   └── pyproject.toml
-│   └── frontend/         # React frontend
-│       ├── src/
-│       └── package.json
 ├── docs/                 # Documentation
 ├── examples/             # Example code
 └── pyproject.toml        # Workspace configuration
@@ -74,11 +66,6 @@ noesium/
    - Task planning
    - Ask/Agent dual modes
 
-3. **voyager** - Web-based coding assistant
-   - FastAPI backend with WebSocket
-   - React + TypeScript frontend
-   - Git integration
-
 ## Development Workflow
 
 ### Running Tests
@@ -90,7 +77,6 @@ make test-all
 # Run tests for specific package
 make test-noesium
 make test-noeagent
-make test-voyager
 
 # Run unit tests only
 make test-unit
@@ -130,7 +116,6 @@ make build-all
 # Build specific package
 make build-noesium
 make build-noeagent
-make build-voyager
 ```
 
 ### Running Applications
@@ -139,14 +124,6 @@ make build-voyager
 # Run noeagent TUI
 cd noeagent
 uv run noeagent
-
-# Run voyager backend
-cd voyager/backend
-uv run voyager
-
-# Run voyager frontend
-cd voyager/frontend
-npm run dev
 ```
 
 ## Making Changes
@@ -335,7 +312,6 @@ Versions are managed independently for each package:
 
 - **noesium**: Core framework version
 - **noeagent**: Application version
-- **voyager**: Backend version (frontend follows backend)
 
 ### Creating a Release
 

@@ -144,7 +144,6 @@ MIT License - see [LICENSE](../LICENSE) for details.
 ## Related Projects
 
 - [Noesium](../noesium/) - Core cognitive agentic framework
-- [Voyager](../voyager/) - Web-based coding assistant
 
 ## Contributing
 

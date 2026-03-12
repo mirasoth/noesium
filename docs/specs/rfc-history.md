@@ -87,14 +87,6 @@ Complete removal of deprecated event-sourcing infrastructure from specs. Specs n
 - **Created**: RFC-1006 - Extensible Subagent Interface for Core Agent Framework (formerly RFC-9003)
 - **Reference Updated**: rfc-index.md - Registered RFC-1006 and RFC-1007 under Core Framework (1xxx), deleted RFC-9003/RFC-9004, updated quick links
 
-### 2026-03-04
-
-- **Created**: RFC-9000 - Voyager Design Philosophy and Principles; personal coding assistant webserver design philosophy; task-centric workflow; single-user model; autonomous execution; GitHub integration boundaries
-- **Created**: RFC-9001 - Voyager Architecture Design; three-tier architecture (Frontend SPA, Backend FastAPI, Execution NoeAgent); WebSocket streaming; file-based state persistence; GitHub client integration; REST API design; task orchestrator
-- **Reference Updated**: rfc-index.md - Registered RFC-9000 and RFC-9001 under Experimental (9xxx)
-- **Reference Updated**: rfc-history.md - Added Voyager RFC creation entries
-- **Reference Updated**: rfc-namings.md - Added Voyager terminology (Voyager, Task, Task Orchestrator, Task Status, Task Step, Repository, Session, Session Manager, State Manager, GitHub Client, CodeChange, Artifact)
-
 ### 2026-03-03
 
 - **Created**: RFC-1005 - Tool Call vs Subagent Call Distinction; ontological distinction between tools and subagents; control flow semantics; state and memory model; temporal scope; failure semantics; decision heuristics; implementation mapping in NoeAgent LangGraph workflow; anti-patterns; cost and performance considerations

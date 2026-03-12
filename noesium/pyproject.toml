@@ -171,7 +171,6 @@ line-length = 120
 "src/noesium/subagents/bu/tokens/service.py" = ["E402"]
 "noesium/tests/**/*.py" = ["E402"]
 "examples/**/*.py" = ["E402"]
-"voyager/backend/src/**/*.py" = ["E402"]
 "noeagent/src/**/*.py" = ["E402"]
 
 [tool.pytest.ini_options]

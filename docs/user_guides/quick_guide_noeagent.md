@@ -1111,6 +1111,5 @@ noeagent config set llm.provider openrouter  # Set config value
 ## Next Steps
 
 - **[Noesium Guide](quick_guide_noesium.md)**: Learn the framework
-- **[Voyager Guide](quick_guide_voyager.md)**: 24/7 companion app
 - **[Developer Guide](dev_guide.md)**: Detailed framework development
 - **[Examples](../../examples/)**: Usage examples

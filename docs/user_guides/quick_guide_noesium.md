@@ -1089,6 +1089,5 @@ The `noesium` module exports the following classes and functions:
 ## Next Steps
 
 - **[NoeAgent Guide](quick_guide_noeagent.md)**: Learn about NoeAgent
-- **[Voyager Guide](quick_guide_voyager.md)**: 24/7 companion app
 - **[Developer Guide](dev_guide.md)**: Detailed framework development
 - **[Examples](../../examples/)**: Real-world usage examples

@@ -220,5 +220,3 @@ run_workdir
 tabular_cache
 thirdparty/
 full-specs.md
-voyager/frontend/node_modules/
-voyager/frontend/package-lock.json
