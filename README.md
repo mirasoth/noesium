@@ -34,7 +34,7 @@ Provides the foundation for building AI agents with:
 - Persistent memory and state management
 - Subagent coordination and delegation
 
-**Quick Guide**: [docs/quick_guide_noesium.md](docs/quick_guide_noesium.md)
+**Quick Guide**: [QuickGuide of Noesim](docs/user_guides/quick_guide_noesium.md)
 
 ### [NoeAgent](noeagent/) — Multi-Agent System
 
@@ -47,7 +47,7 @@ Features:
 - Subagent coordination and delegation
 - Multi-provider LLM support
 
-**Quick Guide**: [docs/quick_guide_noeagent.md](docs/quick_guide_noeagent.md)
+**Quick Guide**: [QuickGuide of NoeAgent](docs/user_guides/quick_guide_noeagent.md)
 
 ## Design Philosophy
 
