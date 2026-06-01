@@ -10,6 +10,8 @@
 
 </div>
 
+> ⚠️ This project is in inactive maintenance; for new progress, see the active [soothe](https://github.com/mirasoth/soothe) project.
+
 # Noesium Workspace
 
 A monorepo workspace containing the Noesium framework and applications built on it.
